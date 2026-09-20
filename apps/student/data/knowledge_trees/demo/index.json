@@ -1,0 +1,787 @@
+{
+  "generated_at": "2026-06-16T06:09:59.916Z",
+  "textbooks": [
+    {
+      "subject": "chinese",
+      "subject_label": "语文",
+      "textbook_id": 4686,
+      "textbook_name": "小学语文 4年级上册",
+      "grade": 4,
+      "term": "上册",
+      "file": "1_4_上册_4686.json",
+      "statistics": {
+        "total_nodes": 281,
+        "total_catalogs": 69,
+        "root_nodes": 4,
+        "catalog_roots": 8,
+        "knowledge_points": 66,
+        "testing_points": 192,
+        "knowledge_nodes": 23
+      },
+      "chapters": [
+        {
+          "catalog_id": 188293,
+          "name": "第一单元",
+          "ordinal": 0,
+          "section_count": 7,
+          "sections": [
+            {
+              "catalog_id": 188294,
+              "name": "1 观潮",
+              "ordinal": 0
+            },
+            {
+              "catalog_id": 188295,
+              "name": "2 走月亮",
+              "ordinal": 1
+            },
+            {
+              "catalog_id": 188296,
+              "name": "3*现代诗二首",
+              "ordinal": 2
+            },
+            {
+              "catalog_id": 188299,
+              "name": "4*繁星",
+              "ordinal": 3
+            },
+            {
+              "catalog_id": 188300,
+              "name": "口语交际：我们与环境",
+              "ordinal": 4
+            },
+            {
+              "catalog_id": 188301,
+              "name": "习作：推荐一个好地方",
+              "ordinal": 5
+            },
+            {
+              "catalog_id": 188302,
+              "name": "语文园地",
+              "ordinal": 6
+            }
+          ]
+        },
+        {
+          "catalog_id": 188303,
+          "name": "第二单元",
+          "ordinal": 1,
+          "section_count": 7,
+          "sections": [
+            {
+              "catalog_id": 188304,
+              "name": "5 一个豆荚里的五粒豆",
+              "ordinal": 0
+            },
+            {
+              "catalog_id": 188305,
+              "name": "6 夜间飞行的秘密",
+              "ordinal": 1
+            },
+            {
+              "catalog_id": 188306,
+              "name": "7 呼风唤雨的世纪",
+              "ordinal": 2
+            },
+            {
+              "catalog_id": 188307,
+              "name": "8*蝴蝶的家",
+              "ordinal": 3
+            },
+            {
+              "catalog_id": 271141,
+              "name": "习作：我的家人",
+              "ordinal": 4
+            },
+            {
+              "catalog_id": 188308,
+              "name": "习作：小小“动物园”（旧）",
+              "ordinal": 5
+            },
+            {
+              "catalog_id": 188309,
+              "name": "语文园地",
+              "ordinal": 6
+            }
+          ]
+        },
+        {
+          "catalog_id": 188310,
+          "name": "第三单元",
+          "ordinal": 2,
+          "section_count": 6,
+          "sections": [
+            {
+              "catalog_id": 188311,
+              "name": "9 古诗三首",
+              "ordinal": 0
+            },
+            {
+              "catalog_id": 188315,
+              "name": "10 爬山虎的脚",
+              "ordinal": 1
+            },
+            {
+              "catalog_id": 188316,
+              "name": "11 蟋蟀的住宅",
+              "ordinal": 2
+            },
+            {
+              "catalog_id": 188317,
+              "name": "口语交际：爱护眼睛，保护视力",
+              "ordinal": 3
+            },
+            {
+              "catalog_id": 188318,
+              "name": "习作：写观察日记",
+              "ordinal": 4
+            },
+            {
+              "catalog_id": 188319,
+              "name": "语文园地",
+              "ordinal": 5
+            }
+          ]
+        },
+        {
+          "catalog_id": 188320,
+          "name": "第四单元",
+          "ordinal": 3,
+          "section_count": 7,
+          "sections": [
+            {
+              "catalog_id": 188321,
+              "name": "12 盘古开天地",
+              "ordinal": 0
+            },
+            {
+              "catalog_id": 188322,
+              "name": "13 精卫填海",
+              "ordinal": 1
+            },
+            {
+              "catalog_id": 188323,
+              "name": "14 普罗米修斯",
+              "ordinal": 2
+            },
+            {
+              "catalog_id": 188324,
+              "name": "15*女娲补天",
+              "ordinal": 3
+            },
+            {
+              "catalog_id": 188325,
+              "name": "习作：我和____过一天",
+              "ordinal": 4
+            },
+            {
+              "catalog_id": 188326,
+              "name": "语文园地",
+              "ordinal": 5
+            },
+            {
+              "catalog_id": 188327,
+              "name": "快乐读书吧：很久很久以前",
+              "ordinal": 6
+            }
+          ]
+        },
+        {
+          "catalog_id": 188328,
+          "name": "第五单元",
+          "ordinal": 4,
+          "section_count": 4,
+          "sections": [
+            {
+              "catalog_id": 196511,
+              "name": "16 麻雀",
+              "ordinal": 0
+            },
+            {
+              "catalog_id": 196512,
+              "name": "17 爬天都峰",
+              "ordinal": 1
+            },
+            {
+              "catalog_id": 188331,
+              "name": "习作例文",
+              "ordinal": 2
+            },
+            {
+              "catalog_id": 188334,
+              "name": "习作：生活万花筒",
+              "ordinal": 3
+            }
+          ]
+        },
+        {
+          "catalog_id": 188335,
+          "name": "第六单元",
+          "ordinal": 5,
+          "section_count": 6,
+          "sections": [
+            {
+              "catalog_id": 188336,
+              "name": "18 牛和鹅",
+              "ordinal": 0
+            },
+            {
+              "catalog_id": 188337,
+              "name": "19 一只窝囊的大老虎",
+              "ordinal": 1
+            },
+            {
+              "catalog_id": 188338,
+              "name": "20 陀螺",
+              "ordinal": 2
+            },
+            {
+              "catalog_id": 188339,
+              "name": "口语交际：安慰",
+              "ordinal": 3
+            },
+            {
+              "catalog_id": 188340,
+              "name": "习作：记一次游戏",
+              "ordinal": 4
+            },
+            {
+              "catalog_id": 188341,
+              "name": "语文园地",
+              "ordinal": 5
+            }
+          ]
+        },
+        {
+          "catalog_id": 188342,
+          "name": "第七单元",
+          "ordinal": 6,
+          "section_count": 6,
+          "sections": [
+            {
+              "catalog_id": 188343,
+              "name": "21 古诗三首",
+              "ordinal": 0
+            },
+            {
+              "catalog_id": 188347,
+              "name": "22 为中华之崛起而读书",
+              "ordinal": 1
+            },
+            {
+              "catalog_id": 188348,
+              "name": "23*梅兰芳蓄须",
+              "ordinal": 2
+            },
+            {
+              "catalog_id": 188349,
+              "name": "24*延安，我把你追寻",
+              "ordinal": 3
+            },
+            {
+              "catalog_id": 188350,
+              "name": "习作：写信",
+              "ordinal": 4
+            },
+            {
+              "catalog_id": 188351,
+              "name": "语文园地",
+              "ordinal": 5
+            }
+          ]
+        },
+        {
+          "catalog_id": 188352,
+          "name": "第八单元",
+          "ordinal": 7,
+          "section_count": 6,
+          "sections": [
+            {
+              "catalog_id": 188353,
+              "name": "25 王戎不取道旁李",
+              "ordinal": 0
+            },
+            {
+              "catalog_id": 188354,
+              "name": "26 西门豹治邺",
+              "ordinal": 1
+            },
+            {
+              "catalog_id": 188355,
+              "name": "27*故事二则",
+              "ordinal": 2
+            },
+            {
+              "catalog_id": 188358,
+              "name": "口语交际：讲历史人物故事",
+              "ordinal": 3
+            },
+            {
+              "catalog_id": 188359,
+              "name": "习作：我的心儿怦怦跳",
+              "ordinal": 4
+            },
+            {
+              "catalog_id": 188360,
+              "name": "语文园地",
+              "ordinal": 5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "subject": "math",
+      "subject_label": "数学",
+      "textbook_id": 2964,
+      "textbook_name": "小学数学 4年级上册",
+      "grade": 4,
+      "term": "上册",
+      "file": "2_4_上册_2964.json",
+      "statistics": {
+        "total_nodes": 971,
+        "total_catalogs": 46,
+        "root_nodes": 3,
+        "catalog_roots": 11,
+        "knowledge_points": 536,
+        "testing_points": 231,
+        "knowledge_nodes": 204
+      },
+      "chapters": [
+        {
+          "catalog_id": 117464,
+          "name": "一 认识更大的数",
+          "ordinal": 0,
+          "section_count": 6,
+          "sections": [
+            {
+              "catalog_id": 117467,
+              "name": "数一数",
+              "ordinal": 0
+            },
+            {
+              "catalog_id": 117469,
+              "name": "认识更大的数",
+              "ordinal": 1
+            },
+            {
+              "catalog_id": 117473,
+              "name": "人口普查",
+              "ordinal": 2
+            },
+            {
+              "catalog_id": 117476,
+              "name": "国土面积",
+              "ordinal": 3
+            },
+            {
+              "catalog_id": 117480,
+              "name": "近似数",
+              "ordinal": 4
+            },
+            {
+              "catalog_id": 117483,
+              "name": "从结绳计数说起",
+              "ordinal": 5
+            }
+          ]
+        },
+        {
+          "catalog_id": 117487,
+          "name": "二 线与角",
+          "ordinal": 1,
+          "section_count": 6,
+          "sections": [
+            {
+              "catalog_id": 117490,
+              "name": "线的认识",
+              "ordinal": 0
+            },
+            {
+              "catalog_id": 117492,
+              "name": "相交与垂直",
+              "ordinal": 1
+            },
+            {
+              "catalog_id": 117496,
+              "name": "平移与平行",
+              "ordinal": 2
+            },
+            {
+              "catalog_id": 117499,
+              "name": "旋转与角",
+              "ordinal": 3
+            },
+            {
+              "catalog_id": 117503,
+              "name": "角的度量（一）",
+              "ordinal": 4
+            },
+            {
+              "catalog_id": 117506,
+              "name": "角的度量（二）",
+              "ordinal": 5
+            }
+          ]
+        },
+        {
+          "catalog_id": 117509,
+          "name": "三 乘法",
+          "ordinal": 2,
+          "section_count": 4,
+          "sections": [
+            {
+              "catalog_id": 117513,
+              "name": "卫星运行时间",
+              "ordinal": 0
+            },
+            {
+              "catalog_id": 117516,
+              "name": "有多少名观众",
+              "ordinal": 1
+            },
+            {
+              "catalog_id": 117519,
+              "name": "神奇的计算工具",
+              "ordinal": 2
+            },
+            {
+              "catalog_id": 117522,
+              "name": "有趣的算式",
+              "ordinal": 3
+            }
+          ]
+        },
+        {
+          "catalog_id": 117526,
+          "name": "整理与复习",
+          "ordinal": 3,
+          "section_count": 0,
+          "sections": []
+        },
+        {
+          "catalog_id": 117530,
+          "name": "四 运算律",
+          "ordinal": 4,
+          "section_count": 5,
+          "sections": [
+            {
+              "catalog_id": 117534,
+              "name": "买文具",
+              "ordinal": 0
+            },
+            {
+              "catalog_id": 117538,
+              "name": "加法交换律和乘法交换律",
+              "ordinal": 1
+            },
+            {
+              "catalog_id": 117541,
+              "name": "加法结合律",
+              "ordinal": 2
+            },
+            {
+              "catalog_id": 117545,
+              "name": "乘法结合律",
+              "ordinal": 3
+            },
+            {
+              "catalog_id": 117547,
+              "name": "乘法分配律",
+              "ordinal": 4
+            }
+          ]
+        },
+        {
+          "catalog_id": 117550,
+          "name": "五 方向与位置",
+          "ordinal": 5,
+          "section_count": 2,
+          "sections": [
+            {
+              "catalog_id": 117554,
+              "name": "去图书馆",
+              "ordinal": 0
+            },
+            {
+              "catalog_id": 117557,
+              "name": "确定位置",
+              "ordinal": 1
+            }
+          ]
+        },
+        {
+          "catalog_id": 117561,
+          "name": "六 除法",
+          "ordinal": 6,
+          "section_count": 5,
+          "sections": [
+            {
+              "catalog_id": 117564,
+              "name": "买文具",
+              "ordinal": 0
+            },
+            {
+              "catalog_id": 117568,
+              "name": "参观花圃",
+              "ordinal": 1
+            },
+            {
+              "catalog_id": 117571,
+              "name": "秋游",
+              "ordinal": 2
+            },
+            {
+              "catalog_id": 117575,
+              "name": "商不变的规律",
+              "ordinal": 3
+            },
+            {
+              "catalog_id": 117578,
+              "name": "路程、时间与速度",
+              "ordinal": 4
+            }
+          ]
+        },
+        {
+          "catalog_id": 117582,
+          "name": "七 生活中的负数",
+          "ordinal": 7,
+          "section_count": 2,
+          "sections": [
+            {
+              "catalog_id": 117588,
+              "name": "温度",
+              "ordinal": 0
+            },
+            {
+              "catalog_id": 117591,
+              "name": "正负数",
+              "ordinal": 1
+            }
+          ]
+        },
+        {
+          "catalog_id": 117594,
+          "name": "数学好玩",
+          "ordinal": 8,
+          "section_count": 3,
+          "sections": [
+            {
+              "catalog_id": 117598,
+              "name": "滴水实验",
+              "ordinal": 0
+            },
+            {
+              "catalog_id": 117601,
+              "name": "编码",
+              "ordinal": 1
+            },
+            {
+              "catalog_id": 117605,
+              "name": "数图形的学问",
+              "ordinal": 2
+            }
+          ]
+        },
+        {
+          "catalog_id": 117608,
+          "name": "八 可能性",
+          "ordinal": 9,
+          "section_count": 2,
+          "sections": [
+            {
+              "catalog_id": 117612,
+              "name": "不确定性",
+              "ordinal": 0
+            },
+            {
+              "catalog_id": 117615,
+              "name": "摸球游戏",
+              "ordinal": 1
+            }
+          ]
+        },
+        {
+          "catalog_id": 168083,
+          "name": "总复习",
+          "ordinal": 10,
+          "section_count": 0,
+          "sections": []
+        }
+      ]
+    },
+    {
+      "subject": "english",
+      "subject_label": "英语",
+      "textbook_id": 5275,
+      "textbook_name": "小学英语 4年级上册",
+      "grade": 4,
+      "term": "上册",
+      "file": "3_4_上册_5275.json",
+      "statistics": {
+        "total_nodes": 2867,
+        "total_catalogs": 28,
+        "root_nodes": 6,
+        "catalog_roots": 4,
+        "knowledge_points": 111,
+        "testing_points": 2726,
+        "knowledge_nodes": 30
+      },
+      "chapters": [
+        {
+          "catalog_id": 205685,
+          "name": "Module 1 Getting to know you",
+          "ordinal": 0,
+          "section_count": 6,
+          "sections": [
+            {
+              "catalog_id": 205686,
+              "name": "Unit 1 Meeting new people",
+              "ordinal": 0
+            },
+            {
+              "catalog_id": 205687,
+              "name": "Unit 2 Can you swim?",
+              "ordinal": 1
+            },
+            {
+              "catalog_id": 205688,
+              "name": "Unit 3 Are you happy?",
+              "ordinal": 2
+            },
+            {
+              "catalog_id": 205689,
+              "name": "Revision 1",
+              "ordinal": 3
+            },
+            {
+              "catalog_id": 205690,
+              "name": "Project 1",
+              "ordinal": 4
+            },
+            {
+              "catalog_id": 205691,
+              "name": "本单元综合与测试",
+              "ordinal": 5
+            }
+          ]
+        },
+        {
+          "catalog_id": 205692,
+          "name": "Module 2 My family, my friends and me",
+          "ordinal": 1,
+          "section_count": 6,
+          "sections": [
+            {
+              "catalog_id": 205693,
+              "name": "Unit 4 Do you have any cousins?",
+              "ordinal": 0
+            },
+            {
+              "catalog_id": 205694,
+              "name": "Unit 5 My friends",
+              "ordinal": 1
+            },
+            {
+              "catalog_id": 205695,
+              "name": "Unit 6 My parents",
+              "ordinal": 2
+            },
+            {
+              "catalog_id": 205696,
+              "name": "Revision 2",
+              "ordinal": 3
+            },
+            {
+              "catalog_id": 205697,
+              "name": "Project 2",
+              "ordinal": 4
+            },
+            {
+              "catalog_id": 205698,
+              "name": "本单元综合与测试",
+              "ordinal": 5
+            }
+          ]
+        },
+        {
+          "catalog_id": 205699,
+          "name": "Module 3 Places and activities",
+          "ordinal": 2,
+          "section_count": 6,
+          "sections": [
+            {
+              "catalog_id": 205700,
+              "name": "Unit 7 At school",
+              "ordinal": 0
+            },
+            {
+              "catalog_id": 205701,
+              "name": "Unit 8 At the shop",
+              "ordinal": 1
+            },
+            {
+              "catalog_id": 205702,
+              "name": "Unit 9 At home",
+              "ordinal": 2
+            },
+            {
+              "catalog_id": 205703,
+              "name": "Revision 3",
+              "ordinal": 3
+            },
+            {
+              "catalog_id": 205704,
+              "name": "Project 3",
+              "ordinal": 4
+            },
+            {
+              "catalog_id": 205705,
+              "name": "本单元综合与测试",
+              "ordinal": 5
+            }
+          ]
+        },
+        {
+          "catalog_id": 205706,
+          "name": "Module 4 The world around us",
+          "ordinal": 3,
+          "section_count": 6,
+          "sections": [
+            {
+              "catalog_id": 205707,
+              "name": "Unit 10 Around my home",
+              "ordinal": 0
+            },
+            {
+              "catalog_id": 205708,
+              "name": "Unit 11 Shapes",
+              "ordinal": 1
+            },
+            {
+              "catalog_id": 205709,
+              "name": "Unit 12 Weather",
+              "ordinal": 2
+            },
+            {
+              "catalog_id": 205710,
+              "name": "Revision 4",
+              "ordinal": 3
+            },
+            {
+              "catalog_id": 205711,
+              "name": "Project 4",
+              "ordinal": 4
+            },
+            {
+              "catalog_id": 205712,
+              "name": "本单元综合与测试",
+              "ordinal": 5
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

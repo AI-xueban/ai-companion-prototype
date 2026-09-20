@@ -1,0 +1,7 @@
+{
+  "name": "AI伴学V2.0",
+  "description": "面向 5-9 年级学生的平板端 AI 伴学产品，覆盖任务规划、学科地图、错题复习、成长激励与教师协同。",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

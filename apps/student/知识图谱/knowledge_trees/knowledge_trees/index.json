@@ -1,0 +1,460 @@
+{
+  "generated_at": "2026-06-12T11:12:16.176748",
+  "total_textbooks": 54,
+  "total_extracted": 54,
+  "subjects": {
+    "语文": {
+      "count": 18,
+      "files": [
+        "1_1_上册_6620.json",
+        "1_1_下册_7102.json",
+        "1_2_上册_7425.json",
+        "1_2_下册_7824.json",
+        "1_3_上册_7426.json",
+        "1_3_下册_7823.json",
+        "1_4_上册_4686.json",
+        "1_4_下册_4687.json",
+        "1_5_上册_4688.json",
+        "1_5_下册_4689.json",
+        "1_6_上册_4690.json",
+        "1_6_下册_4691.json",
+        "10_7_上册_6580.json",
+        "10_7_下册_7109.json",
+        "10_8_上册_7411.json",
+        "10_8_下册_7810.json",
+        "10_9_上册_4473.json",
+        "10_9_下册_4478.json"
+      ],
+      "textbooks": [
+        {
+          "textbook_id": 6620,
+          "grade": 1,
+          "term": "上册",
+          "name": "小学语文 1年级上册",
+          "file": "1_1_上册_6620.json"
+        },
+        {
+          "textbook_id": 7102,
+          "grade": 1,
+          "term": "下册",
+          "name": "小学语文 1年级下册",
+          "file": "1_1_下册_7102.json"
+        },
+        {
+          "textbook_id": 7425,
+          "grade": 2,
+          "term": "上册",
+          "name": "小学语文 2年级上册",
+          "file": "1_2_上册_7425.json"
+        },
+        {
+          "textbook_id": 7824,
+          "grade": 2,
+          "term": "下册",
+          "name": "小学语文 2年级下册",
+          "file": "1_2_下册_7824.json"
+        },
+        {
+          "textbook_id": 7426,
+          "grade": 3,
+          "term": "上册",
+          "name": "小学语文 3年级上册",
+          "file": "1_3_上册_7426.json"
+        },
+        {
+          "textbook_id": 7823,
+          "grade": 3,
+          "term": "下册",
+          "name": "小学语文 3年级下册",
+          "file": "1_3_下册_7823.json"
+        },
+        {
+          "textbook_id": 4686,
+          "grade": 4,
+          "term": "上册",
+          "name": "小学语文 4年级上册",
+          "file": "1_4_上册_4686.json"
+        },
+        {
+          "textbook_id": 4687,
+          "grade": 4,
+          "term": "下册",
+          "name": "小学语文 4年级下册",
+          "file": "1_4_下册_4687.json"
+        },
+        {
+          "textbook_id": 4688,
+          "grade": 5,
+          "term": "上册",
+          "name": "小学语文 5年级上册",
+          "file": "1_5_上册_4688.json"
+        },
+        {
+          "textbook_id": 4689,
+          "grade": 5,
+          "term": "下册",
+          "name": "小学语文 5年级下册",
+          "file": "1_5_下册_4689.json"
+        },
+        {
+          "textbook_id": 4690,
+          "grade": 6,
+          "term": "上册",
+          "name": "小学语文 6年级上册",
+          "file": "1_6_上册_4690.json"
+        },
+        {
+          "textbook_id": 4691,
+          "grade": 6,
+          "term": "下册",
+          "name": "小学语文 6年级下册",
+          "file": "1_6_下册_4691.json"
+        },
+        {
+          "textbook_id": 6580,
+          "grade": 7,
+          "term": "上册",
+          "name": "初中语文 7年级上册",
+          "file": "10_7_上册_6580.json"
+        },
+        {
+          "textbook_id": 7109,
+          "grade": 7,
+          "term": "下册",
+          "name": "初中语文 7年级下册",
+          "file": "10_7_下册_7109.json"
+        },
+        {
+          "textbook_id": 7411,
+          "grade": 8,
+          "term": "上册",
+          "name": "初中语文 8年级上册",
+          "file": "10_8_上册_7411.json"
+        },
+        {
+          "textbook_id": 7810,
+          "grade": 8,
+          "term": "下册",
+          "name": "初中语文 8年级下册",
+          "file": "10_8_下册_7810.json"
+        },
+        {
+          "textbook_id": 4473,
+          "grade": 9,
+          "term": "上册",
+          "name": "初中语文 9年级上册",
+          "file": "10_9_上册_4473.json"
+        },
+        {
+          "textbook_id": 4478,
+          "grade": 9,
+          "term": "下册",
+          "name": "初中语文 9年级下册",
+          "file": "10_9_下册_4478.json"
+        }
+      ]
+    },
+    "数学": {
+      "count": 18,
+      "files": [
+        "2_1_上册_6610.json",
+        "2_1_下册_7097.json",
+        "2_2_上册_6611.json",
+        "2_2_下册_7786.json",
+        "2_3_上册_7371.json",
+        "2_3_下册_7787.json",
+        "2_4_上册_2964.json",
+        "2_4_下册_2965.json",
+        "2_5_上册_2966.json",
+        "2_5_下册_2967.json",
+        "2_6_上册_2968.json",
+        "2_6_下册_2969.json",
+        "11_7_上册_6589.json",
+        "11_7_下册_7070.json",
+        "11_8_上册_7413.json",
+        "11_8_下册_7789.json",
+        "11_9_上册_1353.json",
+        "11_9_下册_1354.json"
+      ],
+      "textbooks": [
+        {
+          "textbook_id": 6610,
+          "grade": 1,
+          "term": "上册",
+          "name": "小学数学 1年级上册",
+          "file": "2_1_上册_6610.json"
+        },
+        {
+          "textbook_id": 7097,
+          "grade": 1,
+          "term": "下册",
+          "name": "小学数学 1年级下册",
+          "file": "2_1_下册_7097.json"
+        },
+        {
+          "textbook_id": 6611,
+          "grade": 2,
+          "term": "上册",
+          "name": "小学数学 2年级上册",
+          "file": "2_2_上册_6611.json"
+        },
+        {
+          "textbook_id": 7786,
+          "grade": 2,
+          "term": "下册",
+          "name": "小学数学 2年级下册",
+          "file": "2_2_下册_7786.json"
+        },
+        {
+          "textbook_id": 7371,
+          "grade": 3,
+          "term": "上册",
+          "name": "小学数学 3年级上册",
+          "file": "2_3_上册_7371.json"
+        },
+        {
+          "textbook_id": 7787,
+          "grade": 3,
+          "term": "下册",
+          "name": "小学数学 3年级下册",
+          "file": "2_3_下册_7787.json"
+        },
+        {
+          "textbook_id": 2964,
+          "grade": 4,
+          "term": "上册",
+          "name": "小学数学 4年级上册",
+          "file": "2_4_上册_2964.json"
+        },
+        {
+          "textbook_id": 2965,
+          "grade": 4,
+          "term": "下册",
+          "name": "小学数学 4年级下册",
+          "file": "2_4_下册_2965.json"
+        },
+        {
+          "textbook_id": 2966,
+          "grade": 5,
+          "term": "上册",
+          "name": "小学数学 5年级上册",
+          "file": "2_5_上册_2966.json"
+        },
+        {
+          "textbook_id": 2967,
+          "grade": 5,
+          "term": "下册",
+          "name": "小学数学 5年级下册",
+          "file": "2_5_下册_2967.json"
+        },
+        {
+          "textbook_id": 2968,
+          "grade": 6,
+          "term": "上册",
+          "name": "小学数学 6年级上册",
+          "file": "2_6_上册_2968.json"
+        },
+        {
+          "textbook_id": 2969,
+          "grade": 6,
+          "term": "下册",
+          "name": "小学数学 6年级下册",
+          "file": "2_6_下册_2969.json"
+        },
+        {
+          "textbook_id": 6589,
+          "grade": 7,
+          "term": "上册",
+          "name": "初中数学 7年级上册",
+          "file": "11_7_上册_6589.json"
+        },
+        {
+          "textbook_id": 7070,
+          "grade": 7,
+          "term": "下册",
+          "name": "初中数学 7年级下册",
+          "file": "11_7_下册_7070.json"
+        },
+        {
+          "textbook_id": 7413,
+          "grade": 8,
+          "term": "上册",
+          "name": "初中数学 8年级上册",
+          "file": "11_8_上册_7413.json"
+        },
+        {
+          "textbook_id": 7789,
+          "grade": 8,
+          "term": "下册",
+          "name": "初中数学 8年级下册",
+          "file": "11_8_下册_7789.json"
+        },
+        {
+          "textbook_id": 1353,
+          "grade": 9,
+          "term": "上册",
+          "name": "初中数学 9年级上册",
+          "file": "11_9_上册_1353.json"
+        },
+        {
+          "textbook_id": 1354,
+          "grade": 9,
+          "term": "下册",
+          "name": "初中数学 9年级下册",
+          "file": "11_9_下册_1354.json"
+        }
+      ]
+    },
+    "英语": {
+      "count": 18,
+      "files": [
+        "3_1_上册_7557.json",
+        "3_1_下册_7910.json",
+        "3_2_上册_7559.json",
+        "3_2_下册_7911.json",
+        "3_3_上册_5273.json",
+        "3_3_下册_5274.json",
+        "3_4_上册_5275.json",
+        "3_4_下册_5276.json",
+        "3_5_上册_5277.json",
+        "3_5_下册_5278.json",
+        "3_6_上册_5279.json",
+        "3_6_下册_5280.json",
+        "12_7_上册_6772.json",
+        "12_7_下册_7145.json",
+        "12_8_上册_7387.json",
+        "12_8_下册_7841.json",
+        "12_9_上册_2163.json",
+        "12_9_下册_2164.json"
+      ],
+      "textbooks": [
+        {
+          "textbook_id": 7557,
+          "grade": 1,
+          "term": "上册",
+          "name": "小学英语 1年级上册",
+          "file": "3_1_上册_7557.json"
+        },
+        {
+          "textbook_id": 7910,
+          "grade": 1,
+          "term": "下册",
+          "name": "小学英语 1年级下册",
+          "file": "3_1_下册_7910.json"
+        },
+        {
+          "textbook_id": 7559,
+          "grade": 2,
+          "term": "上册",
+          "name": "小学英语 2年级上册",
+          "file": "3_2_上册_7559.json"
+        },
+        {
+          "textbook_id": 7911,
+          "grade": 2,
+          "term": "下册",
+          "name": "小学英语 2年级下册",
+          "file": "3_2_下册_7911.json"
+        },
+        {
+          "textbook_id": 5273,
+          "grade": 3,
+          "term": "上册",
+          "name": "小学英语 3年级上册",
+          "file": "3_3_上册_5273.json"
+        },
+        {
+          "textbook_id": 5274,
+          "grade": 3,
+          "term": "下册",
+          "name": "小学英语 3年级下册",
+          "file": "3_3_下册_5274.json"
+        },
+        {
+          "textbook_id": 5275,
+          "grade": 4,
+          "term": "上册",
+          "name": "小学英语 4年级上册",
+          "file": "3_4_上册_5275.json"
+        },
+        {
+          "textbook_id": 5276,
+          "grade": 4,
+          "term": "下册",
+          "name": "小学英语 4年级下册",
+          "file": "3_4_下册_5276.json"
+        },
+        {
+          "textbook_id": 5277,
+          "grade": 5,
+          "term": "上册",
+          "name": "小学英语 5年级上册",
+          "file": "3_5_上册_5277.json"
+        },
+        {
+          "textbook_id": 5278,
+          "grade": 5,
+          "term": "下册",
+          "name": "小学英语 5年级下册",
+          "file": "3_5_下册_5278.json"
+        },
+        {
+          "textbook_id": 5279,
+          "grade": 6,
+          "term": "上册",
+          "name": "小学英语 6年级上册",
+          "file": "3_6_上册_5279.json"
+        },
+        {
+          "textbook_id": 5280,
+          "grade": 6,
+          "term": "下册",
+          "name": "小学英语 6年级下册",
+          "file": "3_6_下册_5280.json"
+        },
+        {
+          "textbook_id": 6772,
+          "grade": 7,
+          "term": "上册",
+          "name": "初中英语 7年级上册",
+          "file": "12_7_上册_6772.json"
+        },
+        {
+          "textbook_id": 7145,
+          "grade": 7,
+          "term": "下册",
+          "name": "初中英语 7年级下册",
+          "file": "12_7_下册_7145.json"
+        },
+        {
+          "textbook_id": 7387,
+          "grade": 8,
+          "term": "上册",
+          "name": "初中英语 8年级上册",
+          "file": "12_8_上册_7387.json"
+        },
+        {
+          "textbook_id": 7841,
+          "grade": 8,
+          "term": "下册",
+          "name": "初中英语 8年级下册",
+          "file": "12_8_下册_7841.json"
+        },
+        {
+          "textbook_id": 2163,
+          "grade": 9,
+          "term": "上册",
+          "name": "初中英语 9年级上册",
+          "file": "12_9_上册_2163.json"
+        },
+        {
+          "textbook_id": 2164,
+          "grade": 9,
+          "term": "下册",
+          "name": "初中英语 9年级下册",
+          "file": "12_9_下册_2164.json"
+        }
+      ]
+    }
+  }
+}

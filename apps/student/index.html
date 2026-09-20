@@ -1,0 +1,96 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>AI伴学V2.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Nunito', 'sans-serif'],
+            },
+            colors: {
+              brand: {
+                DEFAULT: '#6C5DD3', // Purple
+                dark: '#5b4cc4',
+                light: '#8B80F9'
+              },
+              accent: {
+                DEFAULT: '#FFCE51', // Yellow
+                hover: '#ffd66b'
+              },
+              text: {
+                main: '#1F2937',
+                muted: '#6B7280'
+              },
+              surface: '#F5F7FA'
+            },
+            boxShadow: {
+              'soft': '0 10px 40px -10px rgba(108, 93, 211, 0.2)',
+              'glow': '0 0 20px rgba(108, 93, 211, 0.4)',
+              'float': '0 15px 30px rgba(0,0,0,0.1)'
+            },
+            animation: {
+              'shimmer': 'shimmer 3s infinite linear',
+              'spin-slow': 'spin 12s linear infinite',
+              'tilt': 'tilt 10s infinite linear',
+              'fade-in-up': 'fadeInUp 0.8s cubic-bezier(0.25, 0.1, 0.25, 1) forwards',
+              'breath-light': 'breathLight 3s ease-in-out infinite',
+              'text-reveal': 'textReveal 0.8s cubic-bezier(0.25, 0.1, 0.25, 1) forwards',
+              'pulse-slow': 'pulseSlow 2.4s ease-in-out infinite',
+            },
+            keyframes: {
+              shimmer: {
+                '0%': { transform: 'translateX(-100%) skewX(-20deg)' },
+                '100%': { transform: 'translateX(300%) skewX(-20deg)' },
+              },
+              tilt: {
+                '0%, 50%, 100%': { transform: 'rotate(0deg)' },
+                '25%': { transform: 'rotate(0.5deg)' },
+                '75%': { transform: 'rotate(-0.5deg)' },
+              },
+              fadeInUp: {
+                '0%': { opacity: '0', transform: 'translateY(20px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' }
+              },
+              breathLight: {
+                '0%, 100%': { opacity: '0.8', transform: 'scale(1)' },
+                '50%': { opacity: '1', transform: 'scale(1.1)' }
+              },
+              textReveal: {
+                '0%': { opacity: '0', transform: 'translateY(10px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' }
+              },
+              pulseSlow: {
+                '0%, 100%': { boxShadow: '0 0 0 0 rgba(168,139,250,0.0)' },
+                '50%': { boxShadow: '0 0 0 10px rgba(168,139,250,0.45)' }
+              }
+            }
+          },
+        },
+      }
+    </script>
+    <style>
+      /* Hide scrollbar for Chrome, Safari and Opera */
+      .no-scrollbar::-webkit-scrollbar {
+          display: none;
+      }
+      /* Hide scrollbar for IE, Edge and Firefox */
+      .no-scrollbar {
+          -ms-overflow-style: none;  /* IE and Edge */
+          scrollbar-width: none;  /* Firefox */
+      }
+
+    </style>
+</head>
+  <body class="ai-v2-clean bg-gray-900 text-text-main antialiased selection:bg-brand selection:text-white">
+    <div id="root"></div>
+    <div id="modal-root" class="absolute inset-0 z-[100] pointer-events-none flex items-center justify-center"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

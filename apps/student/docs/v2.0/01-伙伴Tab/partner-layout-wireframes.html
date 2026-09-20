@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>伙伴 Tab · 线框稿 v0.3</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: #1c1c1c; color: #eee; font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+    .page { max-width: 1100px; margin: 0 auto; padding: 28px 24px 80px; }
+    h1 { font-size: 26px; font-weight: 700; margin: 0 0 8px; letter-spacing: -0.02em; }
+    .sub { color: #b3b3b3; font-size: 14px; line-height: 1.6; margin: 0 0 18px; max-width: 780px; }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .meta span { border: 1px solid #555; color: #ccc; font-size: 12px; padding: 4px 8px; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .tabs button {
+      background: transparent; color: #ddd; border: 1px solid #666;
+      padding: 8px 12px; cursor: pointer; font-size: 13px;
+    }
+    .tabs button.active { background: #eee; color: #111; border-color: #eee; }
+    .frame-wrap { background: #111; padding: 18px; overflow: auto; }
+    .phone {
+      width: 390px; height: 780px; margin: 0 auto; background: #fff; color: #111;
+      border: 2px solid #000; display: flex; flex-direction: column; font-size: 12px;
+    }
+    .topbar, .tabbar {
+      display: flex; align-items: center; min-height: 44px; padding: 0 12px;
+      gap: 8px; flex-shrink: 0;
+    }
+    .topbar { border-bottom: 1px solid #000; justify-content: space-between; font-weight: 700; }
+    .topbar .title { position: absolute; left: 50%; transform: translateX(-50%); }
+    .topbar-wrap { position: relative; }
+    .ghost { border: 1px solid #000; padding: 4px 10px; background: #fff; font-size: 12px; }
+    .tabbar { border-top: 1px solid #000; justify-content: space-around; font-weight: 700; min-height: 48px; }
+    .tabbar .on { text-decoration: underline; }
+    .body {
+      flex: 1; min-height: 0; overflow: auto;
+      background: repeating-linear-gradient(45deg, #fafafa, #fafafa 10px, #f3f3f3 10px, #f3f3f3 20px);
+      padding: 16px 14px 20px;
+    }
+    .presence { text-align: center; margin-bottom: 14px; }
+    .avatar {
+      width: 96px; height: 96px; margin: 8px auto 10px; border: 2px dashed #000;
+      border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 13px;
+    }
+    .presence-line {
+      display: inline-block; border: 1px solid #000; background: #fff;
+      padding: 6px 10px; font-size: 12px; line-height: 1.4;
+    }
+    .hero {
+      border: 2px solid #000; background: #fff; padding: 14px 14px 12px; margin-bottom: 10px;
+    }
+    .hero .label { font-size: 10px; color: #555; margin-bottom: 6px; }
+    .hero .q { font-size: 15px; font-weight: 700; line-height: 1.45; margin: 0 0 12px; }
+    .hero .cta { text-align: right; font-weight: 700; font-size: 12px; }
+    .secondaries { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+    .secondaries.one { grid-template-columns: 1fr; }
+    .sec {
+      border: 1px solid #000; background: #fff; padding: 10px; min-height: 88px;
+      display: flex; flex-direction: column; justify-content: space-between;
+    }
+    .sec .q { font-size: 12px; font-weight: 600; line-height: 1.4; margin: 0; }
+    .sec .go { text-align: right; font-weight: 700; font-size: 11px; margin-top: 8px; }
+    .divider {
+      display: flex; align-items: center; gap: 10px; color: #555; font-size: 11px;
+      margin: 4px 0 12px;
+    }
+    .divider::before, .divider::after {
+      content: ""; flex: 1; border-top: 1px solid #999;
+    }
+    .intents {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px;
+    }
+    .intent {
+      border: 1px solid #000; background: #fff; padding: 10px 8px; text-align: center;
+      font-size: 12px; font-weight: 700; line-height: 1.35; min-height: 52px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .free-cta {
+      border: 2px solid #000; background: #111; color: #fff; text-align: center;
+      padding: 12px; font-weight: 700; font-size: 14px;
+    }
+    .note-inline {
+      border: 1px dashed #666; color: #666; text-align: center; padding: 8px; margin-bottom: 12px;
+      font-size: 11px;
+    }
+    .session-char {
+      width: 64px; height: 64px; border: 2px dashed #000; border-radius: 50%;
+      background: #fff; display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; margin-bottom: 12px;
+    }
+    .bubble {
+      border: 1px solid #000; background: #fff; padding: 10px 12px; line-height: 1.45;
+      margin-bottom: 12px; max-width: 92%;
+    }
+    .inputbar {
+      display: flex; gap: 8px; align-items: center; border-top: 1px solid #000;
+      padding: 10px 12px; flex-shrink: 0;
+    }
+    .inputbox { flex: 1; border: 1px solid #000; padding: 10px; color: #666; }
+    .screen { display: none; }
+    .screen.show { display: block; }
+    .notes { margin-top: 16px; background: #2a2a2a; padding: 16px 18px; color: #ddd; font-size: 13px; line-height: 1.65; }
+    .notes h2 { font-size: 14px; margin: 0 0 8px; color: #fff; }
+    .notes ul { margin: 0; padding-left: 18px; }
+    .hint { color: #888; font-size: 12px; margin-top: 12px; }
+    .pull {
+      text-align: center; color: #777; font-size: 11px; margin-bottom: 8px;
+      border: 1px dashed #aaa; padding: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>伙伴 Tab · 线框稿 v0.3（已锁定日常火花）</h1>
+    <p class="sub">
+      已锁定方案 B。在场 → L1 今日邀约 → L2 陪伴火花（陪你笑 / 一起识成语…）→ L3 直接找小晤陪聊。
+      词条突出「陪你 / 一起」；一屏不滚动；不做讲题/作文/错题入口。
+    </p>
+    <div class="meta">
+      <span>已锁定 · 日常火花</span>
+      <span>一屏不滚动</span>
+      <span>L2 × 6</span>
+      <span>无类型标签</span>
+    </div>
+    <div class="tabs" id="tabs">
+      <button class="active" data-screen="b">一屏总览</button>
+      <button data-screen="d">点主邀约</button>
+      <button data-screen="e">点火花</button>
+      <button data-screen="f">自由聊</button>
+    </div>
+
+    <div class="frame-wrap">
+      <!-- locked sparks homepage -->
+      <div class="screen show" id="screen-b">
+        <div class="phone">
+          <div class="topbar topbar-wrap">
+            <span class="ghost">菜单</span>
+            <span class="title">伙伴</span>
+            <span class="ghost">衣柜</span>
+          </div>
+          <div class="body" style="overflow:hidden;display:flex;flex-direction:column;">
+            <div class="presence" style="flex:1;min-height:80px;">
+              <div class="avatar">角色</div>
+            </div>
+            <div class="hero" style="margin-bottom:8px;padding:10px;">
+              <p class="q" style="margin:0;font-size:13px;">「如果月亮突然消失一晚，地球会怎样？」</p>
+              <div class="cta" style="margin-top:8px;">去聊聊 →</div>
+            </div>
+            <div class="secondaries" style="margin-bottom:10px;">
+              <div class="sec" style="min-height:0;padding:8px;">
+                <p class="q">「这道应用题卡在哪了？」</p>
+              </div>
+              <div class="sec" style="min-height:0;padding:8px;">
+                <p class="q">「画完想听你怎么看」</p>
+              </div>
+            </div>
+            <div class="divider">想一起玩会儿</div>
+            <div class="intents" style="margin-bottom:10px;">
+              <div class="intent" style="min-height:44px;padding:8px;">陪你<br>笑一个</div>
+              <div class="intent" style="min-height:44px;padding:8px;">一起<br>识成语</div>
+              <div class="intent" style="min-height:44px;padding:8px;">聊个<br>世界之最</div>
+              <div class="intent" style="min-height:44px;padding:8px;">分享<br>冷知识</div>
+              <div class="intent" style="min-height:44px;padding:8px;">陪你<br>猜谜</div>
+              <div class="intent" style="min-height:44px;padding:8px;">一起念<br>绕口令</div>
+            </div>
+            <div class="free-cta" style="padding:10px;font-size:13px;">直接找小晤陪聊</div>
+          </div>
+          <div class="tabbar">
+            <span>首页</span><span class="on">伙伴</span><span>探索</span><span>我的</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- C -->
+      <div class="screen" id="screen-c">
+        <div class="phone">
+          <div class="topbar topbar-wrap">
+            <span class="ghost">菜单</span>
+            <span class="title">伙伴</span>
+            <span class="ghost">衣柜</span>
+          </div>
+          <div class="body">
+            <div class="presence">
+              <div class="avatar">角色</div>
+            </div>
+            <div class="hero">
+              <div class="label">今日邀约 · 主（学科优先日）</div>
+              <p class="q">「这道应用题卡在哪了？我们一起拆开看。」</p>
+              <div class="cta">去聊聊 →</div>
+            </div>
+            <div class="secondaries">
+              <div class="sec">
+                <p class="q">「如果月亮突然消失一晚，地球会怎样？」</p>
+                <div class="go">→</div>
+              </div>
+              <div class="sec">
+                <p class="q">「画完想听你怎么看」</p>
+                <div class="go">→</div>
+              </div>
+            </div>
+            <div class="note-inline">内部槽位可换，UI 仍不显示类型标签</div>
+            <div class="divider">想一起玩会儿</div>
+            <div class="intents">
+              <div class="intent">陪你<br>笑一个</div>
+              <div class="intent">一起<br>识成语</div>
+              <div class="intent">聊个<br>世界之最</div>
+              <div class="intent">分享<br>冷知识</div>
+              <div class="intent">陪你<br>猜谜</div>
+              <div class="intent">一起念<br>绕口令</div>
+            </div>
+            <div class="free-cta">直接找小晤陪聊</div>
+          </div>
+          <div class="tabbar">
+            <span>首页</span><span class="on">伙伴</span><span>探索</span><span>我的</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- D -->
+      <div class="screen" id="screen-d">
+        <div class="phone">
+          <div class="topbar topbar-wrap">
+            <span class="ghost">← 返回</span>
+            <span class="title">伙伴</span>
+            <span class="ghost">衣柜</span>
+          </div>
+          <div class="body">
+            <div class="session-char">角色</div>
+            <div class="bubble">小晤：月亮消失一晚…先想想潮汐会怎样？你先猜，还是要我直接讲？</div>
+            <div class="note-inline">对话流 · 由主邀约进入</div>
+          </div>
+          <div class="inputbar">
+            <div class="inputbox">输入…</div>
+            <span class="ghost">发送</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- E -->
+      <div class="screen" id="screen-e">
+        <div class="phone">
+          <div class="topbar topbar-wrap">
+            <span class="ghost">← 返回</span>
+            <span class="title">陪你笑一个</span>
+            <span class="ghost">衣柜</span>
+          </div>
+          <div class="body">
+            <div class="session-char">角色</div>
+            <div class="bubble">我陪你听一条课堂版笑话……要不要再来一个？</div>
+            <div class="note-inline">由 L2「陪你笑一个」进入 · 开场就给内容</div>
+          </div>
+          <div class="inputbar">
+            <div class="inputbox">输入…</div>
+            <span class="ghost">发送</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- F -->
+      <div class="screen" id="screen-f">
+        <div class="phone">
+          <div class="topbar topbar-wrap">
+            <span class="ghost">← 返回</span>
+            <span class="title">随便聊聊</span>
+            <span class="ghost">衣柜</span>
+          </div>
+          <div class="body">
+            <div class="session-char">角色</div>
+            <div class="bubble">想聊什么都可以。上面的邀约只是今天的灵感，不点也能直接跟我说。</div>
+            <div class="note-inline">空会话 · 无预设题</div>
+          </div>
+          <div class="inputbar">
+            <div class="inputbox">输入…</div>
+            <span class="ghost">发送</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- G -->
+      <div class="screen" id="screen-g">
+        <div class="phone">
+          <div class="topbar topbar-wrap">
+            <span class="ghost">菜单</span>
+            <span class="title">伙伴</span>
+            <span class="ghost">衣柜</span>
+          </div>
+          <div class="body">
+            <div class="pull">↓ 下拉刷新 · 仅重抽 L1 三题 · L2/L3 不动</div>
+            <div class="presence">
+              <div class="avatar">角色</div>
+            </div>
+            <div class="hero">
+              <div class="label">今日邀约 · 主（已换新）</div>
+              <p class="q">「地球突然停转，教室里的人会飞出去吗？」</p>
+              <div class="cta">去聊聊 →</div>
+            </div>
+            <div class="secondaries">
+              <div class="sec">
+                <p class="q">「0.999… 就是 1？老师说是，我不服」</p>
+                <div class="go">→</div>
+              </div>
+              <div class="sec">
+                <p class="q">「「的地得」要是三个人，谁最容易被点名？」</p>
+                <div class="go">→</div>
+              </div>
+            </div>
+            <div class="divider">想一起玩会儿</div>
+            <div class="intents">
+              <div class="intent">陪你<br>笑一个</div>
+              <div class="intent">一起<br>识成语</div>
+              <div class="intent">聊个<br>世界之最</div>
+              <div class="intent">分享<br>冷知识</div>
+              <div class="intent">陪你<br>猜谜</div>
+              <div class="intent">一起念<br>绕口令</div>
+            </div>
+            <div class="free-cta">直接找小晤陪聊</div>
+          </div>
+          <div class="tabbar">
+            <span>首页</span><span class="on">伙伴</span><span>探索</span><span>我的</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <h2>已锁定</h2>
+      <ul>
+        <li>L2 = 日常火花（方案 B）；废弃伴游做事对照</li>
+        <li>一屏完整展示，禁止上下滚动</li>
+        <li>不做讲题 / 作文 / 错题等功能入口</li>
+        <li>不做类型标签与技能名词墙</li>
+      </ul>
+      <p class="hint">对照实现：LumiHubStage + lumiHubData.HUB_SPARKS。</p>
+    </div>
+  </div>
+
+  <script>
+    const tabs = document.getElementById('tabs');
+    tabs.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-screen]');
+      if (!btn) return;
+      tabs.querySelectorAll('button').forEach((b) => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.screen').forEach((s) => s.classList.remove('show'));
+      document.getElementById('screen-' + btn.dataset.screen).classList.add('show');
+    });
+  </script>
+</body>
+</html>

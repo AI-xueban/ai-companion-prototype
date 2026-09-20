@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI学伴管理后台</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/layout-templates.css">
+  <link rel="stylesheet" href="assets/css/device.css">
+
+</head>
+<body>
+  <div class="layout">
+    <aside class="sider" id="sider">
+      <div class="sider-logo">AI学伴管理后台</div>
+      <nav class="sider-menu" id="sider-menu"></nav>
+    </aside>
+    <div class="layout-main">
+      <header class="header">
+        <button class="header-trigger" id="menu-toggle" aria-label="菜单">☰</button>
+        <div class="header-breadcrumb" id="breadcrumb"></div>
+        <div class="header-user">
+          <span class="user-avatar">超</span>
+          <span>超管</span>
+          <span class="user-arrow">▾</span>
+        </div>
+      </header>
+      <div class="tabs-bar" id="tabs-bar"></div>
+      <main class="content" id="main-content"></main>
+    </div>
+    <aside class="req-panel" id="req-panel" aria-label="需求说明">
+      <div class="req-panel-header">
+        <div class="req-panel-title">需求说明</div>
+        <label class="req-annotate-switch" title="开启后点击原型元素查看说明；关闭后恢复正常交互">
+          <span>注释</span>
+          <input type="checkbox" id="req-annotate-toggle">
+          <span class="req-annotate-slider" aria-hidden="true"></span>
+        </label>
+      </div>
+      <div class="req-panel-body" id="req-panel-body"></div>
+    </aside>
+  </div>
+  <div class="toast-container" id="toast-container"></div>
+  <div class="modal-overlay" id="modal-overlay" hidden>
+    <div class="modal modal-xl" id="modal">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="modal-title">添加内容</h3>
+          <p class="modal-subtitle" id="modal-subtitle">仅显示已启用内容</p>
+        </div>
+        <button type="button" class="modal-close" id="modal-close" aria-label="关闭">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-footer" id="modal-footer"></div>
+    </div>
+  </div>
+  <script src="assets/js/mock-data.js"></script>
+  <script src="assets/js/layout-templates.js"></script>
+  <script src="assets/js/layout.js"></script>
+  <script src="assets/js/req-notes.js?v=20260828a"></script>
+  <script src="assets/js/add-content-modal.js"></script>
+  <script src="assets/js/content-view-modal.js"></script>
+  <script src="assets/js/confirm-modal.js"></script>
+  <script src="assets/js/batch-import-modal.js"></script>
+  <script src="assets/js/batch-edit-tags-modal.js"></script>
+  <script src="assets/js/add-tag-modal.js"></script>
+  <script src="assets/js/manual-add-content-modal.js"></script>
+  <script src="assets/js/word-edit-modal.js"></script>
+  <script src="assets/js/add-cabinet-modal.js"></script>
+  <script src="assets/js/edit-tablet-modal.js"></script>
+
+  <script src="assets/js/mall-pages.js"></script>
+  <script src="assets/js/device-pages.js?v=20260828a"></script>
+  <script src="assets/js/restore-device-modal.js"></script>
+  <script src="assets/js/carousel-config.js?v=20260805d"></script>
+  <script src="assets/js/pages.js?v=20260828a"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

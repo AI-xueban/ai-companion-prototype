@@ -1,0 +1,13 @@
+{
+  "name": "ai-companion-prototype-workspace",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev:student": "npm --prefix apps/student run dev",
+    "check:student": "npm --prefix apps/student run check",
+    "build:student": "npm --prefix apps/student run build",
+    "dev:admin": "npm --prefix apps/admin run dev",
+    "build:admin": "npm --prefix apps/admin run build"
+  }
+}
+

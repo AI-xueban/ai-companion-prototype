@@ -1,0 +1,4374 @@
+{
+  "textbook_id": 4479,
+  "textbook_name": "小学语文 3年级上册",
+  "course_id": 1,
+  "course_name": "语文",
+  "grade": 3,
+  "term": "上册",
+  "statistics": {
+    "total_nodes": 371,
+    "total_catalogs": 64,
+    "root_nodes": 5,
+    "catalog_roots": 8,
+    "knowledge_points": 102,
+    "testing_points": 239,
+    "knowledge_nodes": 30
+  },
+  "catalog_tree": [
+    {
+      "catalog_id": 179816,
+      "name": "第一单元",
+      "ordinal": 0,
+      "parent_id": 0,
+      "children": [
+        {
+          "catalog_id": 179817,
+          "name": "1 大青树下的小学",
+          "ordinal": 0,
+          "parent_id": 179816,
+          "children": [],
+          "knowledge_points": []
+        },
+        {
+          "catalog_id": 179818,
+          "name": "2 花的学校",
+          "ordinal": 1,
+          "parent_id": 179816,
+          "children": [],
+          "knowledge_points": []
+        },
+        {
+          "catalog_id": 179819,
+          "name": "3*不懂就要问",
+          "ordinal": 2,
+          "parent_id": 179816,
+          "children": [],
+          "knowledge_points": []
+        },
+        {
+          "catalog_id": 179820,
+          "name": "口语交际：我的暑假生活",
+          "ordinal": 3,
+          "parent_id": 179816,
+          "children": [],
+          "knowledge_points": []
+        },
+        {
+          "catalog_id": 179821,
+          "name": "习作：猜猜他是谁",
+          "ordinal": 4,
+          "parent_id": 179816,
+          "children": [],
+          "knowledge_points": []
+        },
+        {
+          "catalog_id": 179822,
+          "name": "语文园地",
+          "ordinal": 5,
+          "parent_id": 179816,
+          "children": [],
+          "knowledge_points": [
+            {
+              "node_id": 71663,
+              "name": "袁枚",
+              "type": "TestingPoint",
+              "catalog_name": "语文园地",
+              "catalog_id": 179822,
+              "parent_id": 71662,
+              "children": []
+            }
+          ]
+        }
+      ],
+      "knowledge_points": []
+    },
+    {
+      "catalog_id": 179823,
+      "name": "第二单元",
+      "ordinal": 1,
+      "parent_id": 0,
+      "children": [
+        {
+          "catalog_id": 179824,
+          "name": "4 古诗三首",
+          "ordinal": 0,
+          "parent_id": 179823,
+          "children": [
+            {
+              "catalog_id": 209551,
+              "name": "山行",
+              "ordinal": 0,
+              "parent_id": 179824,
+              "children": [],
+              "knowledge_points": []
+            },
+            {
+              "catalog_id": 209552,
+              "name": "赠刘景文",
+              "ordinal": 1,
+              "parent_id": 179824,
+              "children": [],
+              "knowledge_points": []
+            },
+            {
+              "catalog_id": 209553,
+              "name": "夜书所见",
+              "ordinal": 2,
+              "parent_id": 179824,
+              "children": [],
+              "knowledge_points": []
+            }
+          ],
+          "knowledge_points": [
+            {
+              "node_id": 71604,
+              "name": "杜牧",
+              "type": "TestingPoint",
+              "catalog_name": "4 古诗三首",
+              "catalog_id": 179824,
+              "parent_id": 71603,
+              "children": []
+            },
+            {
+              "node_id": 71636,
+              "name": "叶绍翁",
+              "type": "TestingPoint",
+              "catalog_name": "4 古诗三首",
+              "catalog_id": 179824,
+              "parent_id": 71629,
+              "children": []
+            }
+          ]
+        },
+        {
+          "catalog_id": 179825,
+          "name": "5 铺满金色巴掌的水泥道",
+          "ordinal": 1,
+          "parent_id": 179823,
+          "children": [],
+          "knowledge_points": []
+        },
+        {
+          "catalog_id": 179826,
+          "name": "6 秋天的雨",
+          "ordinal": 2,
+          "parent_id": 179823,
+          "children": [],
+          "knowledge_points": []
+        },
+        {
+          "catalog_id": 179827,
+          "name": "7*听听，秋的声音",
+          "ordinal": 3,
+          "parent_id": 179823,
+          "children": [],
+          "knowledge_points": [
+            {
+              "node_id": 71588,
+              "name": "现代诗",
+              "type": "TestingPoint",
+              "catalog_name": "7*听听，秋的声音",
+              "catalog_id": 179827,
+              "parent_id": 67474,
+              "children": []
+            }
+          ]
+        },
+        {
+          "catalog_id": 179828,
+          "name": "习作：写日记",
+          "ordinal": 4,
+          "parent_id": 179823,
+          "children": [],
+          "knowledge_points": [
+            {
+              "node_id": 67529,
+              "name": "日记、周记、写信",
+              "type": "TestingPoint",
+              "catalog_name": "习作：写日记",
+              "catalog_id": 179828,
+              "parent_id": 65541,
+              "children": []
+            }
+          ]
+        },
+        {
+          "catalog_id": 179829,
+          "name": "语文园地",
+          "ordinal": 5,
+          "parent_id": 179823,
+          "children": [],
+          "knowledge_points": [
+            {
+              "node_id": 65478,
+              "name": "成语",
+              "type": "KnowledgePoint",
+              "catalog_name": "语文园地",
+              "catalog_id": 179829,
+              "parent_id": 65465,
+              "children": []
+            }
+          ]
+        }
+      ],
+      "knowledge_points": []
+    },
+    {
+      "catalog_id": 179830,
+      "name": "第三单元",
+      "ordinal": 2,
+      "parent_id": 0,
+      "children": [
+        {
+          "catalog_id": 196510,
+          "name": "8 卖火柴的小女孩",
+          "ordinal": 0,
+          "parent_id": 179830,
+          "children": [],
+          "knowledge_points": [
+            {
+              "node_id": 71993,
+              "name": "安徒生童话",
+              "type": "TestingPoint",
+              "catalog_name": "8 卖火柴的小女孩",
+              "catalog_id": 196510,
+              "parent_id": 71974,
+              "children": []
+            }
+          ]
+        },
+        {
+          "catalog_id": 179832,
+          "name": "9*那一定会很好",
+          "ordinal": 1,
+          "parent_id": 179830,
+          "children": [],
+          "knowledge_points": []
+        },
+        {
+          "catalog_id": 179833,
+          "name": "10 在牛肚子里旅行",
+          "ordinal": 2,
+          "parent_id": 179830,
+          "children": [],
+          "knowledge_points": []
+        },
+        {
+          "catalog_id": 179834,
+          "name": "11*一块奶酪",
+          "ordinal": 3,
+          "parent_id": 179830,
+          "children": [],
+          "knowledge_points": []
+        },
+        {
+          "catalog_id": 179835,
+          "name": "习作：我来编童话",
+          "ordinal": 4,
+          "parent_id": 179830,
+          "children": [],
+          "knowledge_points": [
+            {
+              "node_id": 67528,
+              "name": "童话作文",
+              "type": "TestingPoint",
+              "catalog_name": "习作：我来编童话",
+              "catalog_id": 179835,
+              "parent_id": 67308,
+              "children": []
+            }
+          ]
+        },
+        {
+          "catalog_id": 179836,
+          "name": "语文园地",
+          "ordinal": 5,
+          "parent_id": 179830,
+          "children": [],
+          "knowledge_points": []
+        },
+        {
+          "catalog_id": 179837,
+          "name": "快乐读书吧：在那奇妙的王国里",
+          "ordinal": 6,
+          "parent_id": 179830,
+          "children": [],
+          "knowledge_points": [
+            {
+              "node_id": 69169,
+              "name": "课外名著阅读",
+              "type": "KnowledgePoint",
+              "catalog_name": "快乐读书吧：在那奇妙的王国里",
+              "catalog_id": 179837,
+              "parent_id": 65524,
+              "children": [
+                {
+                  "node_id": 71974,
+                  "name": "外国名著",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 69169,
+                  "children": [
+                    {
+                      "node_id": 71993,
+                      "name": "安徒生童话",
+                      "type": "TestingPoint",
+                      "catalog_name": "8 卖火柴的小女孩",
+                      "catalog_id": 196510,
+                      "parent_id": 71974,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71998,
+                      "name": "昆虫记",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71974,
+                      "children": []
+                    },
+                    {
+                      "node_id": 72000,
+                      "name": "童年",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71974,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71975,
+                      "name": "鲁滨逊漂流记",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71974,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71991,
+                      "name": "汤姆索亚历险记",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71974,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "node_id": 71969,
+                  "name": "中国名著",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 69169,
+                  "children": [
+                    {
+                      "node_id": 71981,
+                      "name": "十万个为什么",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71969,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71970,
+                      "name": "红楼梦",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71969,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71971,
+                      "name": "西游记",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71969,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71972,
+                      "name": "水浒传",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71969,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71973,
+                      "name": "三国演义",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71969,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71989,
+                      "name": "草房子",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71969,
+                      "children": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "knowledge_points": []
+    },
+    {
+      "catalog_id": 179838,
+      "name": "第四单元",
+      "ordinal": 3,
+      "parent_id": 0,
+      "children": [
+        {
+          "catalog_id": 179839,
+          "name": "12 总也倒不了的老屋",
+          "ordinal": 0,
+          "parent_id": 179838,
+          "children": [],
+          "knowledge_points": []
+        },
+        {
+          "catalog_id": 179840,
+          "name": "13*胡萝卜先生的长胡子",
+          "ordinal": 1,
+          "parent_id": 179838,
+          "children": [],
+          "knowledge_points": []
+        },
+        {
+          "catalog_id": 179841,
+          "name": "14*小狗学叫",
+          "ordinal": 2,
+          "parent_id": 179838,
+          "children": [],
+          "knowledge_points": [
+            {
+              "node_id": 67439,
+              "name": "童话故事（现代文）",
+              "type": "KnowledgePoint",
+              "catalog_name": "14*小狗学叫",
+              "catalog_id": 179841,
+              "parent_id": 67306,
+              "children": []
+            }
+          ]
+        },
+        {
+          "catalog_id": 179842,
+          "name": "口语交际：名字里的故事",
+          "ordinal": 3,
+          "parent_id": 179838,
+          "children": [],
+          "knowledge_points": [
+            {
+              "node_id": 65533,
+              "name": "口语交际",
+              "type": "KnowledgePoint",
+              "catalog_name": "口语交际：名字里的故事",
+              "catalog_id": 179842,
+              "parent_id": 65532,
+              "children": []
+            }
+          ]
+        },
+        {
+          "catalog_id": 179843,
+          "name": "习作：续写故事",
+          "ordinal": 4,
+          "parent_id": 179838,
+          "children": [],
+          "knowledge_points": [
+            {
+              "node_id": 67525,
+              "name": "续写作文",
+              "type": "TestingPoint",
+              "catalog_name": "习作：续写故事",
+              "catalog_id": 179843,
+              "parent_id": 67308,
+              "children": []
+            }
+          ]
+        },
+        {
+          "catalog_id": 179844,
+          "name": "语文园地",
+          "ordinal": 5,
+          "parent_id": 179838,
+          "children": [],
+          "knowledge_points": [
+            {
+              "node_id": 65520,
+              "name": "谚语俗语",
+              "type": "KnowledgePoint",
+              "catalog_name": "语文园地",
+              "catalog_id": 179844,
+              "parent_id": 79561,
+              "children": []
+            }
+          ]
+        }
+      ],
+      "knowledge_points": []
+    },
+    {
+      "catalog_id": 179845,
+      "name": "第五单元",
+      "ordinal": 4,
+      "parent_id": 0,
+      "children": [
+        {
+          "catalog_id": 179846,
+          "name": "15 搭船的鸟",
+          "ordinal": 0,
+          "parent_id": 179845,
+          "children": [],
+          "knowledge_points": []
+        },
+        {
+          "catalog_id": 179847,
+          "name": "16 金色的草地",
+          "ordinal": 1,
+          "parent_id": 179845,
+          "children": [],
+          "knowledge_points": []
+        },
+        {
+          "catalog_id": 179848,
+          "name": "习作例文",
+          "ordinal": 2,
+          "parent_id": 179845,
+          "children": [
+            {
+              "catalog_id": 179849,
+              "name": "我家的小狗",
+              "ordinal": 0,
+              "parent_id": 179848,
+              "children": [],
+              "knowledge_points": [
+                {
+                  "node_id": 65526,
+                  "name": "记叙文",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "我家的小狗",
+                  "catalog_id": 179849,
+                  "parent_id": 65525,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "catalog_id": 179850,
+              "name": "我爱故乡的杨梅",
+              "ordinal": 1,
+              "parent_id": 179848,
+              "children": [],
+              "knowledge_points": []
+            }
+          ],
+          "knowledge_points": [
+            {
+              "node_id": 67517,
+              "name": "记叙文（记人）",
+              "type": "KnowledgeNode",
+              "catalog_name": "习作例文",
+              "catalog_id": 179848,
+              "parent_id": 67308,
+              "children": []
+            }
+          ]
+        },
+        {
+          "catalog_id": 179851,
+          "name": "习作：我们眼中的缤纷世界",
+          "ordinal": 3,
+          "parent_id": 179845,
+          "children": [],
+          "knowledge_points": [
+            {
+              "node_id": 67518,
+              "name": "记叙文（叙事）",
+              "type": "KnowledgeNode",
+              "catalog_name": "习作：我们眼中的缤纷世界",
+              "catalog_id": 179851,
+              "parent_id": 67308,
+              "children": []
+            }
+          ]
+        }
+      ],
+      "knowledge_points": []
+    },
+    {
+      "catalog_id": 179852,
+      "name": "第六单元",
+      "ordinal": 5,
+      "parent_id": 0,
+      "children": [
+        {
+          "catalog_id": 179853,
+          "name": "17 古诗三首",
+          "ordinal": 0,
+          "parent_id": 179852,
+          "children": [
+            {
+              "catalog_id": 209554,
+              "name": "望天门山",
+              "ordinal": 0,
+              "parent_id": 179853,
+              "children": [],
+              "knowledge_points": []
+            },
+            {
+              "catalog_id": 209555,
+              "name": "饮湖上初晴后雨",
+              "ordinal": 1,
+              "parent_id": 179853,
+              "children": [],
+              "knowledge_points": [
+                {
+                  "node_id": 71606,
+                  "name": "刘禹锡",
+                  "type": "TestingPoint",
+                  "catalog_name": "饮湖上初晴后雨",
+                  "catalog_id": 209555,
+                  "parent_id": 71603,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "catalog_id": 209556,
+              "name": "望洞庭",
+              "ordinal": 2,
+              "parent_id": 179853,
+              "children": [],
+              "knowledge_points": [
+                {
+                  "node_id": 71630,
+                  "name": "苏轼",
+                  "type": "TestingPoint",
+                  "catalog_name": "望洞庭",
+                  "catalog_id": 209556,
+                  "parent_id": 71629,
+                  "children": []
+                }
+              ]
+            }
+          ],
+          "knowledge_points": [
+            {
+              "node_id": 67475,
+              "name": "古诗",
+              "type": "TestingPoint",
+              "catalog_name": "17 古诗三首",
+              "catalog_id": 179853,
+              "parent_id": 67474,
+              "children": []
+            }
+          ]
+        },
+        {
+          "catalog_id": 179854,
+          "name": "18 富饶的西沙群岛",
+          "ordinal": 1,
+          "parent_id": 179852,
+          "children": [],
+          "knowledge_points": []
+        },
+        {
+          "catalog_id": 179855,
+          "name": "19 海滨小城",
+          "ordinal": 2,
+          "parent_id": 179852,
+          "children": [],
+          "knowledge_points": []
+        },
+        {
+          "catalog_id": 179856,
+          "name": "20 美丽的小兴安岭",
+          "ordinal": 3,
+          "parent_id": 179852,
+          "children": [],
+          "knowledge_points": [
+            {
+              "node_id": 65528,
+              "name": "散文",
+              "type": "KnowledgePoint",
+              "catalog_name": "20 美丽的小兴安岭",
+              "catalog_id": 179856,
+              "parent_id": 67306,
+              "children": []
+            }
+          ]
+        },
+        {
+          "catalog_id": 179857,
+          "name": "习作：这儿真美",
+          "ordinal": 4,
+          "parent_id": 179852,
+          "children": [],
+          "knowledge_points": [
+            {
+              "node_id": 67520,
+              "name": "记叙文（写景）",
+              "type": "KnowledgeNode",
+              "catalog_name": "习作：这儿真美",
+              "catalog_id": 179857,
+              "parent_id": 67308,
+              "children": []
+            }
+          ]
+        },
+        {
+          "catalog_id": 179858,
+          "name": "语文园地",
+          "ordinal": 5,
+          "parent_id": 179852,
+          "children": [],
+          "knowledge_points": [
+            {
+              "node_id": 67437,
+              "name": "课外搜集与积累",
+              "type": "KnowledgePoint",
+              "catalog_name": "语文园地",
+              "catalog_id": 179858,
+              "parent_id": 65515,
+              "children": []
+            },
+            {
+              "node_id": 71605,
+              "name": "李白",
+              "type": "TestingPoint",
+              "catalog_name": "语文园地",
+              "catalog_id": 179858,
+              "parent_id": 71603,
+              "children": []
+            }
+          ]
+        }
+      ],
+      "knowledge_points": []
+    },
+    {
+      "catalog_id": 179859,
+      "name": "第七单元",
+      "ordinal": 6,
+      "parent_id": 0,
+      "children": [
+        {
+          "catalog_id": 179860,
+          "name": "21 大自然的声音",
+          "ordinal": 0,
+          "parent_id": 179859,
+          "children": [],
+          "knowledge_points": []
+        },
+        {
+          "catalog_id": 179862,
+          "name": "22 读不完的大书",
+          "ordinal": 1,
+          "parent_id": 179859,
+          "children": [],
+          "knowledge_points": []
+        },
+        {
+          "catalog_id": 179861,
+          "name": "23 父亲、树林和鸟",
+          "ordinal": 2,
+          "parent_id": 179859,
+          "children": [],
+          "knowledge_points": []
+        },
+        {
+          "catalog_id": 179863,
+          "name": "口语交际：身边的“小事”",
+          "ordinal": 3,
+          "parent_id": 179859,
+          "children": [],
+          "knowledge_points": [
+            {
+              "node_id": 65532,
+              "name": "语言表达",
+              "type": "KnowledgeNode",
+              "catalog_name": "口语交际：身边的“小事”",
+              "catalog_id": 179863,
+              "parent_id": 0,
+              "children": [
+                {
+                  "node_id": 65533,
+                  "name": "口语交际",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "口语交际：名字里的故事",
+                  "catalog_id": 179842,
+                  "parent_id": 65532,
+                  "children": []
+                },
+                {
+                  "node_id": 67501,
+                  "name": "常见话题",
+                  "type": "KnowledgeNode",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65532,
+                  "children": [
+                    {
+                      "node_id": 67504,
+                      "name": "介绍推荐",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 67501,
+                      "children": []
+                    },
+                    {
+                      "node_id": 67505,
+                      "name": "劝告慰勉",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 67501,
+                      "children": []
+                    },
+                    {
+                      "node_id": 67503,
+                      "name": "口述见闻",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 67501,
+                      "children": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "catalog_id": 179864,
+          "name": "习作：我有一个想法",
+          "ordinal": 4,
+          "parent_id": 179859,
+          "children": [],
+          "knowledge_points": [
+            {
+              "node_id": 65537,
+              "name": "命题作文",
+              "type": "TestingPoint",
+              "catalog_name": "习作：我有一个想法",
+              "catalog_id": 179864,
+              "parent_id": 67308,
+              "children": []
+            }
+          ]
+        },
+        {
+          "catalog_id": 179865,
+          "name": "语文园地",
+          "ordinal": 5,
+          "parent_id": 179859,
+          "children": [],
+          "knowledge_points": [
+            {
+              "node_id": 71617,
+              "name": "王昌龄",
+              "type": "TestingPoint",
+              "catalog_name": "语文园地",
+              "catalog_id": 179865,
+              "parent_id": 71603,
+              "children": []
+            }
+          ]
+        }
+      ],
+      "knowledge_points": []
+    },
+    {
+      "catalog_id": 179866,
+      "name": "第八单元",
+      "ordinal": 7,
+      "parent_id": 0,
+      "children": [
+        {
+          "catalog_id": 179867,
+          "name": "24 司马光",
+          "ordinal": 0,
+          "parent_id": 179866,
+          "children": [],
+          "knowledge_points": [
+            {
+              "node_id": 65530,
+              "name": "文言文阅读",
+              "type": "KnowledgePoint",
+              "catalog_name": "24 司马光",
+              "catalog_id": 179867,
+              "parent_id": 65524,
+              "children": []
+            }
+          ]
+        },
+        {
+          "catalog_id": 179869,
+          "name": "25 灰雀",
+          "ordinal": 1,
+          "parent_id": 179866,
+          "children": [],
+          "knowledge_points": []
+        },
+        {
+          "catalog_id": 179870,
+          "name": "26 手术台就是阵地",
+          "ordinal": 2,
+          "parent_id": 179866,
+          "children": [],
+          "knowledge_points": []
+        },
+        {
+          "catalog_id": 225318,
+          "name": "27* 一个粗瓷大碗",
+          "ordinal": 3,
+          "parent_id": 179866,
+          "children": [],
+          "knowledge_points": []
+        },
+        {
+          "catalog_id": 179871,
+          "name": "口语交际：请教",
+          "ordinal": 4,
+          "parent_id": 179866,
+          "children": [],
+          "knowledge_points": []
+        },
+        {
+          "catalog_id": 179872,
+          "name": "习作：那次玩得真高兴",
+          "ordinal": 5,
+          "parent_id": 179866,
+          "children": [],
+          "knowledge_points": []
+        },
+        {
+          "catalog_id": 179873,
+          "name": "语文园地",
+          "ordinal": 6,
+          "parent_id": 179866,
+          "children": [],
+          "knowledge_points": []
+        }
+      ],
+      "knowledge_points": []
+    }
+  ],
+  "knowledge_tree": [
+    {
+      "node_id": 65532,
+      "name": "语言表达",
+      "type": "KnowledgeNode",
+      "catalog_name": "口语交际：身边的“小事”",
+      "catalog_id": 179863,
+      "parent_id": 0,
+      "children": [
+        {
+          "node_id": 65533,
+          "name": "口语交际",
+          "type": "KnowledgePoint",
+          "catalog_name": "口语交际：名字里的故事",
+          "catalog_id": 179842,
+          "parent_id": 65532,
+          "children": []
+        },
+        {
+          "node_id": 67501,
+          "name": "常见话题",
+          "type": "KnowledgeNode",
+          "catalog_name": "",
+          "catalog_id": 0,
+          "parent_id": 65532,
+          "children": [
+            {
+              "node_id": 67504,
+              "name": "介绍推荐",
+              "type": "TestingPoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 67501,
+              "children": []
+            },
+            {
+              "node_id": 67505,
+              "name": "劝告慰勉",
+              "type": "TestingPoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 67501,
+              "children": []
+            },
+            {
+              "node_id": 67503,
+              "name": "口述见闻",
+              "type": "TestingPoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 67501,
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "node_id": 65515,
+      "name": "积累运用",
+      "type": "KnowledgeNode",
+      "catalog_name": "",
+      "catalog_id": 0,
+      "parent_id": 0,
+      "children": [
+        {
+          "node_id": 67437,
+          "name": "课外搜集与积累",
+          "type": "KnowledgePoint",
+          "catalog_name": "语文园地",
+          "catalog_id": 179858,
+          "parent_id": 65515,
+          "children": []
+        },
+        {
+          "node_id": 71589,
+          "name": "文章作者",
+          "type": "KnowledgeNode",
+          "catalog_name": "",
+          "catalog_id": 0,
+          "parent_id": 65515,
+          "children": [
+            {
+              "node_id": 71694,
+              "name": "中国古代作家",
+              "type": "KnowledgeNode",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 71589,
+              "children": [
+                {
+                  "node_id": 71603,
+                  "name": "唐代",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71694,
+                  "children": [
+                    {
+                      "node_id": 71604,
+                      "name": "杜牧",
+                      "type": "TestingPoint",
+                      "catalog_name": "4 古诗三首",
+                      "catalog_id": 179824,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71605,
+                      "name": "李白",
+                      "type": "TestingPoint",
+                      "catalog_name": "语文园地",
+                      "catalog_id": 179858,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71606,
+                      "name": "刘禹锡",
+                      "type": "TestingPoint",
+                      "catalog_name": "饮湖上初晴后雨",
+                      "catalog_id": 209555,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71617,
+                      "name": "王昌龄",
+                      "type": "TestingPoint",
+                      "catalog_name": "语文园地",
+                      "catalog_id": 179865,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71719,
+                      "name": "骆宾王",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71611,
+                      "name": "白居易",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71620,
+                      "name": "王之涣",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71618,
+                      "name": "杜甫",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71621,
+                      "name": "贺知章",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71612,
+                      "name": "王维",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71613,
+                      "name": "韦应物",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71614,
+                      "name": "李商隐",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71616,
+                      "name": "王翰",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71715,
+                      "name": "高适",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71619,
+                      "name": "卢纶",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71615,
+                      "name": "林杰",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71622,
+                      "name": "张继",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71623,
+                      "name": "张志和",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 72016,
+                      "name": "虞世南",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71627,
+                      "name": "孟郊",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71624,
+                      "name": "孟浩然",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71607,
+                      "name": "王建",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71608,
+                      "name": "韩翃",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71609,
+                      "name": "李贺",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71610,
+                      "name": "韩愈",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71625,
+                      "name": "王勃",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71626,
+                      "name": "贾岛",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71628,
+                      "name": "其他唐代作家",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71727,
+                      "name": "柳宗元",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71728,
+                      "name": "戎昱",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 72204,
+                      "name": "李绅",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    },
+                    {
+                      "node_id": 79785,
+                      "name": "胡令能",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71603,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "node_id": 71629,
+                  "name": "宋代",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71694,
+                  "children": [
+                    {
+                      "node_id": 71630,
+                      "name": "苏轼",
+                      "type": "TestingPoint",
+                      "catalog_name": "望洞庭",
+                      "catalog_id": 209556,
+                      "parent_id": 71629,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71636,
+                      "name": "叶绍翁",
+                      "type": "TestingPoint",
+                      "catalog_name": "4 古诗三首",
+                      "catalog_id": 179824,
+                      "parent_id": 71629,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71637,
+                      "name": "杨万里",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71629,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71632,
+                      "name": "王安石",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71629,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71633,
+                      "name": "曾几",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71629,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71635,
+                      "name": "李清照",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71629,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71650,
+                      "name": "其他宋代作家",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71629,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71640,
+                      "name": "辛弃疾",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71629,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71641,
+                      "name": "范成大",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71629,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71631,
+                      "name": "陆游",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71629,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71638,
+                      "name": "林升",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71629,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71639,
+                      "name": "朱熹",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71629,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71643,
+                      "name": "张耒",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71629,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71644,
+                      "name": "范仲淹",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71629,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71634,
+                      "name": "卢钺",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71629,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71642,
+                      "name": "雷震",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71629,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71646,
+                      "name": "黄庭坚",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71629,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71647,
+                      "name": "欧阳修",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71629,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71648,
+                      "name": "司马光",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71629,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71649,
+                      "name": "文天祥",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71629,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71645,
+                      "name": "王观",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71629,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71720,
+                      "name": "周邦彦",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71629,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "node_id": 71662,
+                  "name": "清代",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71694,
+                  "children": [
+                    {
+                      "node_id": 71663,
+                      "name": "袁枚",
+                      "type": "TestingPoint",
+                      "catalog_name": "语文园地",
+                      "catalog_id": 179822,
+                      "parent_id": 71662,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71664,
+                      "name": "高鼎",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71662,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71665,
+                      "name": "龚自珍",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71662,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71668,
+                      "name": "其他清代作家",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71662,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71667,
+                      "name": "曹雪芹",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71662,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71666,
+                      "name": "郑燮（郑板桥）",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71662,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71730,
+                      "name": "纳兰性德",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71662,
+                      "children": []
+                    },
+                    {
+                      "node_id": 72017,
+                      "name": "查慎行",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71662,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "node_id": 71669,
+                  "name": "其他古代作家",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71694,
+                  "children": []
+                },
+                {
+                  "node_id": 71651,
+                  "name": "元代",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71694,
+                  "children": [
+                    {
+                      "node_id": 71652,
+                      "name": "王冕",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71651,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71653,
+                      "name": "马致远",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71651,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71654,
+                      "name": "施耐庵",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71651,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71655,
+                      "name": "其他元代作家",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71651,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71729,
+                      "name": "白朴",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71651,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "node_id": 71656,
+                  "name": "明代",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71694,
+                  "children": [
+                    {
+                      "node_id": 71657,
+                      "name": "李言恭",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71656,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71659,
+                      "name": "罗贯中",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71656,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71660,
+                      "name": "吴承恩",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71656,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71661,
+                      "name": "其他明代作家",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71656,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71658,
+                      "name": "于谦",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71656,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "node_id": 71591,
+                  "name": "春秋",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71694,
+                  "children": [
+                    {
+                      "node_id": 71592,
+                      "name": "孔子",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71591,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71593,
+                      "name": "老子",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71591,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71594,
+                      "name": "孙子",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71591,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "node_id": 71595,
+                  "name": "战国",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71694,
+                  "children": [
+                    {
+                      "node_id": 71596,
+                      "name": "孟子",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71595,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71597,
+                      "name": "屈原",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71595,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71716,
+                      "name": "韩非子",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71595,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "node_id": 71598,
+                  "name": "三国",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71694,
+                  "children": [
+                    {
+                      "node_id": 71599,
+                      "name": "曹操",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71598,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71600,
+                      "name": "曹植",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71598,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "node_id": 71601,
+                  "name": "东晋",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71694,
+                  "children": [
+                    {
+                      "node_id": 71602,
+                      "name": "陶渊明",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71601,
+                      "children": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "node_id": 71695,
+              "name": "中国现当代作家",
+              "type": "KnowledgeNode",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 71589,
+              "children": [
+                {
+                  "node_id": 71670,
+                  "name": "近现代作家",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71695,
+                  "children": [
+                    {
+                      "node_id": 71677,
+                      "name": "毛泽东",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71670,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71683,
+                      "name": "冰心",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71670,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71722,
+                      "name": "老舍",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71670,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71685,
+                      "name": "臧克家",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71670,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71672,
+                      "name": "康有为",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71670,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71673,
+                      "name": "梁启超",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71670,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71676,
+                      "name": "鲁迅",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71670,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71681,
+                      "name": "朱自清",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71670,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71686,
+                      "name": "其他近现代作家",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71670,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71721,
+                      "name": "许地山",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71670,
+                      "children": []
+                    },
+                    {
+                      "node_id": 72074,
+                      "name": "叶圣陶",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71670,
+                      "children": []
+                    },
+                    {
+                      "node_id": 74512,
+                      "name": "萧红",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71670,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "node_id": 71687,
+                  "name": "当代作家",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71695,
+                  "children": [
+                    {
+                      "node_id": 71688,
+                      "name": "金庸",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71687,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71691,
+                      "name": "路遥",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71687,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71692,
+                      "name": "毕淑敏",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71687,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71693,
+                      "name": "其他当代作家",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71687,
+                      "children": []
+                    },
+                    {
+                      "node_id": 71723,
+                      "name": "梁晓声",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71687,
+                      "children": []
+                    },
+                    {
+                      "node_id": 74576,
+                      "name": "冯骥才",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 71687,
+                      "children": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "node_id": 71696,
+              "name": "外国作家",
+              "type": "KnowledgeNode",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 71589,
+              "children": [
+                {
+                  "node_id": 71705,
+                  "name": "其他外国作家",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71696,
+                  "children": []
+                },
+                {
+                  "node_id": 71706,
+                  "name": "安徒生",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71696,
+                  "children": []
+                },
+                {
+                  "node_id": 71707,
+                  "name": "格林兄弟",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71696,
+                  "children": []
+                },
+                {
+                  "node_id": 71724,
+                  "name": "列夫托尔斯泰",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71696,
+                  "children": []
+                },
+                {
+                  "node_id": 72075,
+                  "name": "高尔基",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71696,
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "node_id": 65518,
+          "name": "文学文化常识",
+          "type": "KnowledgeNode",
+          "catalog_name": "",
+          "catalog_id": 0,
+          "parent_id": 65515,
+          "children": [
+            {
+              "node_id": 79561,
+              "name": "文学常识",
+              "type": "KnowledgeNode",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65518,
+              "children": [
+                {
+                  "node_id": 65520,
+                  "name": "谚语俗语",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "语文园地",
+                  "catalog_id": 179844,
+                  "parent_id": 79561,
+                  "children": []
+                },
+                {
+                  "node_id": 67432,
+                  "name": "对子歌",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79561,
+                  "children": []
+                },
+                {
+                  "node_id": 67423,
+                  "name": "经典名著",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79561,
+                  "children": []
+                },
+                {
+                  "node_id": 65517,
+                  "name": "背景资料",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79561,
+                  "children": []
+                },
+                {
+                  "node_id": 65519,
+                  "name": "诸子百家",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79561,
+                  "children": []
+                },
+                {
+                  "node_id": 65521,
+                  "name": "歇后语",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79561,
+                  "children": []
+                },
+                {
+                  "node_id": 67424,
+                  "name": "作家作品",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79561,
+                  "children": []
+                },
+                {
+                  "node_id": 67425,
+                  "name": "名家名画",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79561,
+                  "children": []
+                },
+                {
+                  "node_id": 67426,
+                  "name": "童话故事",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79561,
+                  "children": []
+                },
+                {
+                  "node_id": 67428,
+                  "name": "其它文学常识",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79561,
+                  "children": []
+                },
+                {
+                  "node_id": 67429,
+                  "name": "国学常识",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79561,
+                  "children": []
+                },
+                {
+                  "node_id": 67430,
+                  "name": "谜语",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79561,
+                  "children": []
+                },
+                {
+                  "node_id": 67431,
+                  "name": "对联",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79561,
+                  "children": []
+                },
+                {
+                  "node_id": 67434,
+                  "name": "名言警句",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79561,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "node_id": 79562,
+              "name": "文化常识",
+              "type": "KnowledgeNode",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65518,
+              "children": [
+                {
+                  "node_id": 67302,
+                  "name": "其他文化常识",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79562,
+                  "children": []
+                },
+                {
+                  "node_id": 78071,
+                  "name": "十二生肖",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79562,
+                  "children": []
+                },
+                {
+                  "node_id": 78072,
+                  "name": "重要节假日",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79562,
+                  "children": []
+                },
+                {
+                  "node_id": 80904,
+                  "name": "书法",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79562,
+                  "children": []
+                },
+                {
+                  "node_id": 67427,
+                  "name": "中国的组成",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79562,
+                  "children": []
+                },
+                {
+                  "node_id": 78070,
+                  "name": "节气",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79562,
+                  "children": []
+                },
+                {
+                  "node_id": 78073,
+                  "name": "中国古代四大发明",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79562,
+                  "children": []
+                },
+                {
+                  "node_id": 78074,
+                  "name": "中国戏曲",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79562,
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "node_id": 67435,
+          "name": "课内文章理解",
+          "type": "KnowledgePoint",
+          "catalog_name": "",
+          "catalog_id": 0,
+          "parent_id": 65515,
+          "children": []
+        },
+        {
+          "node_id": 67436,
+          "name": "名篇名句默写与理解",
+          "type": "KnowledgePoint",
+          "catalog_name": "",
+          "catalog_id": 0,
+          "parent_id": 65515,
+          "children": []
+        }
+      ]
+    },
+    {
+      "node_id": 65524,
+      "name": "阅读鉴赏",
+      "type": "KnowledgeNode",
+      "catalog_name": "",
+      "catalog_id": 0,
+      "parent_id": 0,
+      "children": [
+        {
+          "node_id": 65530,
+          "name": "文言文阅读",
+          "type": "KnowledgePoint",
+          "catalog_name": "24 司马光",
+          "catalog_id": 179867,
+          "parent_id": 65524,
+          "children": []
+        },
+        {
+          "node_id": 69169,
+          "name": "课外名著阅读",
+          "type": "KnowledgePoint",
+          "catalog_name": "快乐读书吧：在那奇妙的王国里",
+          "catalog_id": 179837,
+          "parent_id": 65524,
+          "children": [
+            {
+              "node_id": 71974,
+              "name": "外国名著",
+              "type": "KnowledgePoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 69169,
+              "children": [
+                {
+                  "node_id": 71993,
+                  "name": "安徒生童话",
+                  "type": "TestingPoint",
+                  "catalog_name": "8 卖火柴的小女孩",
+                  "catalog_id": 196510,
+                  "parent_id": 71974,
+                  "children": []
+                },
+                {
+                  "node_id": 71998,
+                  "name": "昆虫记",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71974,
+                  "children": []
+                },
+                {
+                  "node_id": 72000,
+                  "name": "童年",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71974,
+                  "children": []
+                },
+                {
+                  "node_id": 71975,
+                  "name": "鲁滨逊漂流记",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71974,
+                  "children": []
+                },
+                {
+                  "node_id": 71991,
+                  "name": "汤姆索亚历险记",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71974,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "node_id": 71969,
+              "name": "中国名著",
+              "type": "KnowledgePoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 69169,
+              "children": [
+                {
+                  "node_id": 71981,
+                  "name": "十万个为什么",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71969,
+                  "children": []
+                },
+                {
+                  "node_id": 71970,
+                  "name": "红楼梦",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71969,
+                  "children": []
+                },
+                {
+                  "node_id": 71971,
+                  "name": "西游记",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71969,
+                  "children": []
+                },
+                {
+                  "node_id": 71972,
+                  "name": "水浒传",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71969,
+                  "children": []
+                },
+                {
+                  "node_id": 71973,
+                  "name": "三国演义",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71969,
+                  "children": []
+                },
+                {
+                  "node_id": 71989,
+                  "name": "草房子",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 71969,
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "node_id": 65525,
+          "name": "现代文阅读",
+          "type": "KnowledgeNode",
+          "catalog_name": "",
+          "catalog_id": 0,
+          "parent_id": 65524,
+          "children": [
+            {
+              "node_id": 65526,
+              "name": "记叙文",
+              "type": "KnowledgePoint",
+              "catalog_name": "我家的小狗",
+              "catalog_id": 179849,
+              "parent_id": 65525,
+              "children": []
+            },
+            {
+              "node_id": 67306,
+              "name": "体裁（现代文）",
+              "type": "KnowledgeNode",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65525,
+              "children": [
+                {
+                  "node_id": 65528,
+                  "name": "散文",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "20 美丽的小兴安岭",
+                  "catalog_id": 179856,
+                  "parent_id": 67306,
+                  "children": []
+                },
+                {
+                  "node_id": 67439,
+                  "name": "童话故事（现代文）",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "14*小狗学叫",
+                  "catalog_id": 179841,
+                  "parent_id": 67306,
+                  "children": []
+                },
+                {
+                  "node_id": 67438,
+                  "name": "寓言故事",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67306,
+                  "children": []
+                },
+                {
+                  "node_id": 71585,
+                  "name": "儿歌",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67306,
+                  "children": []
+                },
+                {
+                  "node_id": 70446,
+                  "name": "成语故事",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67306,
+                  "children": []
+                },
+                {
+                  "node_id": 71586,
+                  "name": "历史故事",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67306,
+                  "children": []
+                },
+                {
+                  "node_id": 67440,
+                  "name": "科学小品",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67306,
+                  "children": []
+                },
+                {
+                  "node_id": 70444,
+                  "name": "小说",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67306,
+                  "children": []
+                },
+                {
+                  "node_id": 71587,
+                  "name": "民间故事",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67306,
+                  "children": []
+                },
+                {
+                  "node_id": 70445,
+                  "name": "神话故事",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67306,
+                  "children": []
+                },
+                {
+                  "node_id": 70448,
+                  "name": "剧本",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67306,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "node_id": 65527,
+              "name": "说明文",
+              "type": "KnowledgePoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65525,
+              "children": []
+            },
+            {
+              "node_id": 65529,
+              "name": "议论文",
+              "type": "KnowledgePoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65525,
+              "children": []
+            },
+            {
+              "node_id": 67455,
+              "name": "考点（现代文）",
+              "type": "KnowledgeNode",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65525,
+              "children": [
+                {
+                  "node_id": 67442,
+                  "name": "文章结构",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 67443,
+                  "name": "叙述人称",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 67444,
+                  "name": "叙述人物",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 67445,
+                  "name": "文章线索",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 67446,
+                  "name": "详略安排",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 67447,
+                  "name": "写作顺序",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 67450,
+                  "name": "描写手法",
+                  "type": "KnowledgeNode",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 67451,
+                  "name": "人物描写",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 67452,
+                  "name": "环境描写",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 67453,
+                  "name": "表达方式",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 67454,
+                  "name": "表现手法",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 67456,
+                  "name": "找关键词/句/段",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 67458,
+                  "name": "划分段落层次",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 67459,
+                  "name": "概括段落层意",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 67463,
+                  "name": "概括内容主旨",
+                  "type": "KnowledgeNode",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 67464,
+                  "name": "分析主旨/情感",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 78075,
+                  "name": "听力与听写",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 79768,
+                  "name": "阅读策略和方法",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 80886,
+                  "name": "标题的拟写/含义/作用",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 80887,
+                  "name": "分析人物形象",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 80888,
+                  "name": "分析字词句段的含义或作用",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 80889,
+                  "name": "修辞手法（现代文）",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 80890,
+                  "name": "开放性作答",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 80895,
+                  "name": "说明方法",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 80896,
+                  "name": "说明顺序",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 80897,
+                  "name": "说明对象",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 80898,
+                  "name": "说明语言",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 80899,
+                  "name": "论点、观点",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 80900,
+                  "name": "提取关键信息",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 81152,
+                  "name": "数自然段和句子",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                },
+                {
+                  "node_id": 81153,
+                  "name": "文章内容概括/理解",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67455,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "node_id": 75289,
+              "name": "非连续性文本阅读",
+              "type": "KnowledgePoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65525,
+              "children": []
+            }
+          ]
+        },
+        {
+          "node_id": 65531,
+          "name": "诗词曲鉴赏",
+          "type": "KnowledgePoint",
+          "catalog_name": "",
+          "catalog_id": 0,
+          "parent_id": 65524,
+          "children": [
+            {
+              "node_id": 67474,
+              "name": "体裁（诗词曲鉴赏）",
+              "type": "KnowledgeNode",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65531,
+              "children": [
+                {
+                  "node_id": 67475,
+                  "name": "古诗",
+                  "type": "TestingPoint",
+                  "catalog_name": "17 古诗三首",
+                  "catalog_id": 179853,
+                  "parent_id": 67474,
+                  "children": []
+                },
+                {
+                  "node_id": 71588,
+                  "name": "现代诗",
+                  "type": "TestingPoint",
+                  "catalog_name": "7*听听，秋的声音",
+                  "catalog_id": 179827,
+                  "parent_id": 67474,
+                  "children": []
+                },
+                {
+                  "node_id": 67476,
+                  "name": "词",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67474,
+                  "children": []
+                },
+                {
+                  "node_id": 67477,
+                  "name": "曲",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67474,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "node_id": 67478,
+              "name": "题材",
+              "type": "KnowledgeNode",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65531,
+              "children": [
+                {
+                  "node_id": 67479,
+                  "name": "亲情",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67478,
+                  "children": []
+                },
+                {
+                  "node_id": 67480,
+                  "name": "爱情",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67478,
+                  "children": []
+                },
+                {
+                  "node_id": 67481,
+                  "name": "友情",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67478,
+                  "children": []
+                },
+                {
+                  "node_id": 67482,
+                  "name": "爱国",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67478,
+                  "children": []
+                },
+                {
+                  "node_id": 67483,
+                  "name": "哲理",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67478,
+                  "children": []
+                },
+                {
+                  "node_id": 67484,
+                  "name": "讽喻",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67478,
+                  "children": []
+                },
+                {
+                  "node_id": 67485,
+                  "name": "田园",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67478,
+                  "children": []
+                },
+                {
+                  "node_id": 67486,
+                  "name": "战争",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67478,
+                  "children": []
+                },
+                {
+                  "node_id": 78076,
+                  "name": "送别",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67478,
+                  "children": []
+                },
+                {
+                  "node_id": 78077,
+                  "name": "咏志",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67478,
+                  "children": []
+                },
+                {
+                  "node_id": 78078,
+                  "name": "思乡怀人",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67478,
+                  "children": []
+                },
+                {
+                  "node_id": 78079,
+                  "name": "写景咏物",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67478,
+                  "children": []
+                },
+                {
+                  "node_id": 78080,
+                  "name": "借物喻人",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67478,
+                  "children": []
+                },
+                {
+                  "node_id": 78081,
+                  "name": "边塞风光",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67478,
+                  "children": []
+                },
+                {
+                  "node_id": 79794,
+                  "name": "儿童生活",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67478,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "node_id": 67494,
+              "name": "鉴赏常考题型",
+              "type": "KnowledgeNode",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65531,
+              "children": [
+                {
+                  "node_id": 67487,
+                  "name": "技巧手法",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67494,
+                  "children": []
+                },
+                {
+                  "node_id": 67495,
+                  "name": "人物形象",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67494,
+                  "children": []
+                },
+                {
+                  "node_id": 67497,
+                  "name": "意象意境",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67494,
+                  "children": []
+                },
+                {
+                  "node_id": 67498,
+                  "name": "主旨情感",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67494,
+                  "children": []
+                },
+                {
+                  "node_id": 67499,
+                  "name": "字词理解",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67494,
+                  "children": []
+                },
+                {
+                  "node_id": 67500,
+                  "name": "诗句翻译",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67494,
+                  "children": []
+                },
+                {
+                  "node_id": 80903,
+                  "name": "内容理解与分析",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67494,
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "node_id": 72004,
+          "name": "绘本阅读",
+          "type": "KnowledgePoint",
+          "catalog_name": "",
+          "catalog_id": 0,
+          "parent_id": 65524,
+          "children": []
+        }
+      ]
+    },
+    {
+      "node_id": 65536,
+      "name": "写作训练",
+      "type": "KnowledgeNode",
+      "catalog_name": "",
+      "catalog_id": 0,
+      "parent_id": 0,
+      "children": [
+        {
+          "node_id": 65541,
+          "name": "应用文",
+          "type": "KnowledgePoint",
+          "catalog_name": "",
+          "catalog_id": 0,
+          "parent_id": 65536,
+          "children": [
+            {
+              "node_id": 67529,
+              "name": "日记、周记、写信",
+              "type": "TestingPoint",
+              "catalog_name": "习作：写日记",
+              "catalog_id": 179828,
+              "parent_id": 65541,
+              "children": []
+            },
+            {
+              "node_id": 67531,
+              "name": "通知、启事、告示",
+              "type": "TestingPoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65541,
+              "children": []
+            },
+            {
+              "node_id": 67536,
+              "name": "建议书、倡议书",
+              "type": "TestingPoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65541,
+              "children": []
+            },
+            {
+              "node_id": 67530,
+              "name": "借条、收条、领条",
+              "type": "TestingPoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65541,
+              "children": []
+            },
+            {
+              "node_id": 67532,
+              "name": "请假条、留言条",
+              "type": "TestingPoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65541,
+              "children": []
+            },
+            {
+              "node_id": 67533,
+              "name": "读后感、观后感",
+              "type": "TestingPoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65541,
+              "children": []
+            },
+            {
+              "node_id": 67534,
+              "name": "表扬信、感谢信",
+              "type": "TestingPoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65541,
+              "children": []
+            },
+            {
+              "node_id": 67535,
+              "name": "发言稿、演讲稿",
+              "type": "TestingPoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65541,
+              "children": []
+            },
+            {
+              "node_id": 67537,
+              "name": "新闻、宣传语、调查报告",
+              "type": "TestingPoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65541,
+              "children": []
+            },
+            {
+              "node_id": 78082,
+              "name": "广播稿、板报稿",
+              "type": "TestingPoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65541,
+              "children": []
+            }
+          ]
+        },
+        {
+          "node_id": 67308,
+          "name": "习作",
+          "type": "KnowledgePoint",
+          "catalog_name": "",
+          "catalog_id": 0,
+          "parent_id": 65536,
+          "children": [
+            {
+              "node_id": 67517,
+              "name": "记叙文（记人）",
+              "type": "KnowledgeNode",
+              "catalog_name": "习作例文",
+              "catalog_id": 179848,
+              "parent_id": 67308,
+              "children": []
+            },
+            {
+              "node_id": 67518,
+              "name": "记叙文（叙事）",
+              "type": "KnowledgeNode",
+              "catalog_name": "习作：我们眼中的缤纷世界",
+              "catalog_id": 179851,
+              "parent_id": 67308,
+              "children": []
+            },
+            {
+              "node_id": 67520,
+              "name": "记叙文（写景）",
+              "type": "KnowledgeNode",
+              "catalog_name": "习作：这儿真美",
+              "catalog_id": 179857,
+              "parent_id": 67308,
+              "children": []
+            },
+            {
+              "node_id": 65537,
+              "name": "命题作文",
+              "type": "TestingPoint",
+              "catalog_name": "习作：我有一个想法",
+              "catalog_id": 179864,
+              "parent_id": 67308,
+              "children": []
+            },
+            {
+              "node_id": 67525,
+              "name": "续写作文",
+              "type": "TestingPoint",
+              "catalog_name": "习作：续写故事",
+              "catalog_id": 179843,
+              "parent_id": 67308,
+              "children": []
+            },
+            {
+              "node_id": 67528,
+              "name": "童话作文",
+              "type": "TestingPoint",
+              "catalog_name": "习作：我来编童话",
+              "catalog_id": 179835,
+              "parent_id": 67308,
+              "children": []
+            },
+            {
+              "node_id": 65538,
+              "name": "材料作文",
+              "type": "TestingPoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 67308,
+              "children": []
+            },
+            {
+              "node_id": 67522,
+              "name": "看图作文",
+              "type": "TestingPoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 67308,
+              "children": []
+            },
+            {
+              "node_id": 67527,
+              "name": "想象作文",
+              "type": "TestingPoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 67308,
+              "children": []
+            },
+            {
+              "node_id": 67519,
+              "name": "记叙文（状物）",
+              "type": "KnowledgeNode",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 67308,
+              "children": []
+            },
+            {
+              "node_id": 65539,
+              "name": "话题作文",
+              "type": "TestingPoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 67308,
+              "children": []
+            },
+            {
+              "node_id": 67521,
+              "name": "半命题作文",
+              "type": "TestingPoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 67308,
+              "children": []
+            },
+            {
+              "node_id": 72208,
+              "name": "诗歌创作",
+              "type": "TestingPoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 67308,
+              "children": []
+            },
+            {
+              "node_id": 67524,
+              "name": "缩写作文",
+              "type": "TestingPoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 67308,
+              "children": []
+            }
+          ]
+        },
+        {
+          "node_id": 65535,
+          "name": "写句子",
+          "type": "KnowledgePoint",
+          "catalog_name": "",
+          "catalog_id": 0,
+          "parent_id": 65536,
+          "children": []
+        },
+        {
+          "node_id": 65540,
+          "name": "写话",
+          "type": "KnowledgePoint",
+          "catalog_name": "",
+          "catalog_id": 0,
+          "parent_id": 65536,
+          "children": [
+            {
+              "node_id": 67513,
+              "name": "看图写话",
+              "type": "TestingPoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65540,
+              "children": []
+            },
+            {
+              "node_id": 67514,
+              "name": "情景写话",
+              "type": "TestingPoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65540,
+              "children": []
+            },
+            {
+              "node_id": 67515,
+              "name": "续写写话",
+              "type": "TestingPoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65540,
+              "children": []
+            },
+            {
+              "node_id": 67516,
+              "name": "想象写话",
+              "type": "TestingPoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65540,
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "node_id": 65443,
+      "name": "基础知识",
+      "type": "KnowledgeNode",
+      "catalog_name": "",
+      "catalog_id": 0,
+      "parent_id": 0,
+      "children": [
+        {
+          "node_id": 65465,
+          "name": "词语",
+          "type": "KnowledgeNode",
+          "catalog_name": "",
+          "catalog_id": 0,
+          "parent_id": 65443,
+          "children": [
+            {
+              "node_id": 65478,
+              "name": "成语",
+              "type": "KnowledgePoint",
+              "catalog_name": "语文园地",
+              "catalog_id": 179829,
+              "parent_id": 65465,
+              "children": []
+            },
+            {
+              "node_id": 65469,
+              "name": "四字词语及叠词",
+              "type": "KnowledgePoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65465,
+              "children": [
+                {
+                  "node_id": 65470,
+                  "name": "AABB",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65469,
+                  "children": []
+                },
+                {
+                  "node_id": 65471,
+                  "name": "ABAB",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65469,
+                  "children": []
+                },
+                {
+                  "node_id": 65472,
+                  "name": "AABC",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65469,
+                  "children": []
+                },
+                {
+                  "node_id": 65473,
+                  "name": "ABCC",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65469,
+                  "children": []
+                },
+                {
+                  "node_id": 65474,
+                  "name": "ABAC",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65469,
+                  "children": []
+                },
+                {
+                  "node_id": 65475,
+                  "name": "ABB的",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65469,
+                  "children": []
+                },
+                {
+                  "node_id": 65476,
+                  "name": "AAB的",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65469,
+                  "children": []
+                },
+                {
+                  "node_id": 67292,
+                  "name": "又A又B",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65469,
+                  "children": []
+                },
+                {
+                  "node_id": 67293,
+                  "name": "A来A去",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65469,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "node_id": 65480,
+              "name": "词性",
+              "type": "KnowledgePoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65465,
+              "children": [
+                {
+                  "node_id": 67363,
+                  "name": "量词",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65480,
+                  "children": []
+                },
+                {
+                  "node_id": 67364,
+                  "name": "语气词",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65480,
+                  "children": []
+                },
+                {
+                  "node_id": 67365,
+                  "name": "的、地、得",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65480,
+                  "children": []
+                },
+                {
+                  "node_id": 71584,
+                  "name": "拟声词",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65480,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "node_id": 67294,
+              "name": "考点（词语）",
+              "type": "KnowledgeNode",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65465,
+              "children": [
+                {
+                  "node_id": 65482,
+                  "name": "词语搭配",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67294,
+                  "children": []
+                },
+                {
+                  "node_id": 65483,
+                  "name": "词语解释",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67294,
+                  "children": []
+                },
+                {
+                  "node_id": 65485,
+                  "name": "词语排列归类",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67294,
+                  "children": []
+                },
+                {
+                  "node_id": 65486,
+                  "name": "组词",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67294,
+                  "children": [
+                    {
+                      "node_id": 67296,
+                      "name": "给字组词",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 65486,
+                      "children": []
+                    },
+                    {
+                      "node_id": 67297,
+                      "name": "看图组词",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 65486,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "node_id": 67298,
+                  "name": "词语仿写",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67294,
+                  "children": []
+                },
+                {
+                  "node_id": 67299,
+                  "name": "词语造句",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67294,
+                  "children": []
+                },
+                {
+                  "node_id": 67300,
+                  "name": "选字、选词填空",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67294,
+                  "children": []
+                },
+                {
+                  "node_id": 67301,
+                  "name": "补全词语",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67294,
+                  "children": []
+                },
+                {
+                  "node_id": 78069,
+                  "name": "看图写词语",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67294,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "node_id": 79559,
+              "name": "词义辨析",
+              "type": "KnowledgeNode",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65465,
+              "children": [
+                {
+                  "node_id": 65466,
+                  "name": "近义词",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79559,
+                  "children": []
+                },
+                {
+                  "node_id": 65467,
+                  "name": "反义词",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79559,
+                  "children": []
+                },
+                {
+                  "node_id": 65468,
+                  "name": "多义词",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79559,
+                  "children": []
+                },
+                {
+                  "node_id": 65481,
+                  "name": "感情色彩",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79559,
+                  "children": []
+                },
+                {
+                  "node_id": 65484,
+                  "name": "关联词",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79559,
+                  "children": []
+                },
+                {
+                  "node_id": 67290,
+                  "name": "易混词",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 79559,
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "node_id": 65451,
+          "name": "汉字",
+          "type": "KnowledgeNode",
+          "catalog_name": "",
+          "catalog_id": 0,
+          "parent_id": 65443,
+          "children": [
+            {
+              "node_id": 65458,
+              "name": "字形",
+              "type": "KnowledgePoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65451,
+              "children": [
+                {
+                  "node_id": 65453,
+                  "name": "独体字",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65458,
+                  "children": []
+                },
+                {
+                  "node_id": 67339,
+                  "name": "猜字谜",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65458,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "node_id": 65456,
+              "name": "汉字造字法及演变",
+              "type": "KnowledgePoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65451,
+              "children": []
+            },
+            {
+              "node_id": 65452,
+              "name": "汉字结构",
+              "type": "KnowledgePoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65451,
+              "children": [
+                {
+                  "node_id": 67353,
+                  "name": "偏旁部首",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65452,
+                  "children": []
+                },
+                {
+                  "node_id": 67355,
+                  "name": "间架结构",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65452,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "node_id": 65455,
+              "name": "书写笔画",
+              "type": "KnowledgePoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65451,
+              "children": [
+                {
+                  "node_id": 67352,
+                  "name": "基本笔画",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65455,
+                  "children": []
+                },
+                {
+                  "node_id": 67354,
+                  "name": "笔顺规则",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65455,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "node_id": 65457,
+              "name": "字义",
+              "type": "KnowledgePoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65451,
+              "children": [
+                {
+                  "node_id": 67340,
+                  "name": "多义字",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65457,
+                  "children": []
+                },
+                {
+                  "node_id": 67341,
+                  "name": "多音多义字",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65457,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "node_id": 65459,
+              "name": "字音",
+              "type": "KnowledgePoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65451,
+              "children": [
+                {
+                  "node_id": 65461,
+                  "name": "同音字",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65459,
+                  "children": []
+                },
+                {
+                  "node_id": 65462,
+                  "name": "多音字",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65459,
+                  "children": []
+                },
+                {
+                  "node_id": 67338,
+                  "name": "看拼音写汉字",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65459,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "node_id": 65464,
+              "name": "查字典",
+              "type": "KnowledgePoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65451,
+              "children": [
+                {
+                  "node_id": 67342,
+                  "name": "音序查字法",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65464,
+                  "children": []
+                },
+                {
+                  "node_id": 67343,
+                  "name": "部首查字法",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65464,
+                  "children": []
+                },
+                {
+                  "node_id": 67344,
+                  "name": "数笔画查字法",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65464,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "node_id": 67348,
+              "name": "汉字书写",
+              "type": "KnowledgePoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65451,
+              "children": []
+            }
+          ]
+        },
+        {
+          "node_id": 65444,
+          "name": "拼音",
+          "type": "KnowledgeNode",
+          "catalog_name": "",
+          "catalog_id": 0,
+          "parent_id": 65443,
+          "children": [
+            {
+              "node_id": 65446,
+              "name": "声母",
+              "type": "KnowledgePoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65444,
+              "children": []
+            },
+            {
+              "node_id": 65445,
+              "name": "字母（表）",
+              "type": "KnowledgePoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65444,
+              "children": [
+                {
+                  "node_id": 67324,
+                  "name": "字母表顺序",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65445,
+                  "children": []
+                },
+                {
+                  "node_id": 67325,
+                  "name": "大小写对应",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65445,
+                  "children": []
+                },
+                {
+                  "node_id": 67326,
+                  "name": "字母书写规则",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65445,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "node_id": 65447,
+              "name": "韵母",
+              "type": "KnowledgePoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65444,
+              "children": [
+                {
+                  "node_id": 67315,
+                  "name": "单韵母",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65447,
+                  "children": []
+                },
+                {
+                  "node_id": 67316,
+                  "name": "复韵母",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65447,
+                  "children": []
+                },
+                {
+                  "node_id": 67317,
+                  "name": "鼻韵母",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65447,
+                  "children": []
+                },
+                {
+                  "node_id": 67320,
+                  "name": "特殊韵母",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65447,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "node_id": 65448,
+              "name": "声调与标调",
+              "type": "KnowledgePoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65444,
+              "children": []
+            },
+            {
+              "node_id": 65449,
+              "name": "音节",
+              "type": "KnowledgePoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65444,
+              "children": [
+                {
+                  "node_id": 67321,
+                  "name": "儿化音节",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65449,
+                  "children": []
+                },
+                {
+                  "node_id": 67322,
+                  "name": "零声母音节",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65449,
+                  "children": []
+                },
+                {
+                  "node_id": 67323,
+                  "name": "整体认读音节",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65449,
+                  "children": []
+                },
+                {
+                  "node_id": 67330,
+                  "name": "音节拼写规则",
+                  "type": "KnowledgePoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 65449,
+                  "children": [
+                    {
+                      "node_id": 67331,
+                      "name": "轻声",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 67330,
+                      "children": []
+                    },
+                    {
+                      "node_id": 67332,
+                      "name": "ü的用法",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 67330,
+                      "children": []
+                    },
+                    {
+                      "node_id": 67333,
+                      "name": "隔音符号",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 67330,
+                      "children": []
+                    },
+                    {
+                      "node_id": 67334,
+                      "name": "变调规律",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 67330,
+                      "children": []
+                    },
+                    {
+                      "node_id": 67335,
+                      "name": "大写字母的使用",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 67330,
+                      "children": []
+                    },
+                    {
+                      "node_id": 67336,
+                      "name": "y、w的作用和使用",
+                      "type": "TestingPoint",
+                      "catalog_name": "",
+                      "catalog_id": 0,
+                      "parent_id": 67330,
+                      "children": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "node_id": 65450,
+              "name": "拼合规律",
+              "type": "KnowledgePoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65444,
+              "children": []
+            },
+            {
+              "node_id": 67327,
+              "name": "拼读方法",
+              "type": "KnowledgePoint",
+              "catalog_name": "",
+              "catalog_id": 0,
+              "parent_id": 65444,
+              "children": [
+                {
+                  "node_id": 67328,
+                  "name": "两拼法",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67327,
+                  "children": []
+                },
+                {
+                  "node_id": 67329,
+                  "name": "三拼法",
+                  "type": "TestingPoint",
+                  "catalog_name": "",
+                  "catalog_id": 0,
+                  "parent_id": 67327,
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

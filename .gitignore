@@ -1,0 +1,16 @@
+node_modules/
+dist/
+dist-ssr/
+.env
+.env.*
+!.env.example
+*.local
+*.log
+*.zip
+*.mp4
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.cursor/
+.tmp*/

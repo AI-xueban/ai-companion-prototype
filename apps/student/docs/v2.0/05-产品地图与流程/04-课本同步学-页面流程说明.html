@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>课本同步学 · 页面-流程-说明 · AI学伴 V2.0</title>
+  <style>
+    :root {
+      --bg: #f3f4f6;
+      --paper: #ffffff;
+      --ink: #1f2937;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --brand: #4f46e5;
+      --brand-soft: #eef2ff;
+      --peach: #fdba74;
+      --peach-bg: #fff7ed;
+      --danger: #dc2626;
+      --ok: #059669;
+      --device: #111827;
+      --screen: #f8fafc;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.55;
+    }
+    a { color: #2563eb; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .topbar {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+      padding: 12px 24px;
+      display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+    }
+    .topbar h1 { font-size: 16px; margin: 0; white-space: nowrap; }
+    .topbar .meta { color: var(--muted); font-size: 12px; }
+    .nav { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+    .nav a {
+      font-size: 12px; padding: 6px 10px; border-radius: 999px;
+      background: var(--brand-soft); color: var(--brand); text-decoration: none;
+    }
+
+    .wrap { max-width: 1280px; margin: 0 auto; padding: 24px; }
+
+    .hero {
+      background: linear-gradient(135deg, #eef2ff, #fff7ed);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+    .hero h2 { margin: 0 0 8px; font-size: 22px; }
+    .hero p { margin: 0; color: var(--muted); font-size: 14px; }
+    .legend {
+      display: flex; gap: 16px; flex-wrap: wrap; margin-top: 14px; font-size: 12px; color: var(--muted);
+    }
+    .legend span::before {
+      content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px;
+      margin-right: 6px; vertical-align: -1px;
+    }
+    .legend .l-page::before { background: #c7d2fe; }
+    .legend .l-flow::before { background: var(--peach); }
+    .legend .l-note::before { background: #fde68a; }
+    .legend .l-warn::before { background: #fecaca; }
+
+    .section {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 28px;
+      box-shadow: var(--shadow);
+    }
+    .section > header {
+      display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap;
+      margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px dashed var(--line);
+    }
+    .section > header h3 { margin: 0; font-size: 18px; }
+    .section > header .tag {
+      font-size: 11px; padding: 3px 8px; border-radius: 999px;
+      background: #ecfdf5; color: var(--ok); font-weight: 700;
+    }
+    .section > header .tag.l2 { background: #fff7ed; color: #c2410c; }
+    .section > header .tag.l3 { background: #fef2f2; color: #b91c1c; }
+    .section > header .tag.pop { background: #f5f3ff; color: #6d28d9; }
+
+    .board {
+      display: grid;
+      grid-template-columns: minmax(280px, 1.05fr) 36px minmax(320px, 1.15fr);
+      gap: 8px;
+      align-items: start;
+    }
+    @media (max-width: 960px) {
+      .board { grid-template-columns: 1fr; }
+      .flow-col { display: none; }
+    }
+
+    .flow-col {
+      display: flex; align-items: center; justify-content: center; min-height: 120px;
+      color: #ea580c; font-weight: 800; font-size: 22px;
+    }
+    .flow-col .arrow {
+      writing-mode: vertical-rl; text-orientation: mixed;
+      background: var(--peach-bg); border: 1px solid #fdba74; border-radius: 999px;
+      padding: 16px 6px; font-size: 12px; letter-spacing: 2px;
+    }
+
+    /* Device frame */
+    .device {
+      width: 100%; max-width: 420px;
+      margin: 0 auto;
+      background: var(--device);
+      border-radius: 28px;
+      padding: 10px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.18);
+    }
+    .device .screen {
+      background: var(--screen);
+      border-radius: 20px;
+      overflow: hidden;
+      min-height: 520px;
+      position: relative;
+      display: flex; flex-direction: column;
+    }
+    .status {
+      height: 22px; padding: 0 14px; display: flex; justify-content: space-between; align-items: center;
+      font-size: 10px; color: #64748b; background: #fff;
+    }
+    .top {
+      background: #fff; padding: 8px 12px 10px; border-bottom: 1px solid var(--line);
+    }
+    .top .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .pill {
+      font-size: 11px; background: #f1f5f9; border-radius: 999px; padding: 3px 8px; color: #334155;
+    }
+    .pill.readonly { border: 1px dashed #94a3b8; }
+    .subj {
+      display: flex; gap: 10px; overflow: auto; padding-top: 8px; font-size: 12px; color: #64748b;
+    }
+    .subj b { color: var(--brand); border-bottom: 2px solid var(--brand); padding-bottom: 2px; }
+
+    .body { flex: 1; padding: 10px; display: flex; gap: 8px; min-height: 0; }
+    .rail {
+      width: 42px; background: #fff; border-radius: 12px; border: 1px solid var(--line);
+      padding: 8px 4px; display: flex; flex-direction: column; gap: 8px; align-items: center;
+      font-size: 10px; text-align: center; color: #64748b;
+    }
+    .rail .on { color: var(--brand); font-weight: 800; background: var(--brand-soft); border-radius: 8px; padding: 6px 2px; width: 100%; }
+    .main { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+    .card {
+      background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px;
+    }
+    .card h4 { margin: 0 0 6px; font-size: 13px; }
+    .muted { color: var(--muted); font-size: 11px; }
+    .list-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 12px;
+    }
+    .list-row:last-child { border-bottom: 0; }
+    .badge {
+      font-size: 10px; padding: 2px 6px; border-radius: 6px; background: #ecfdf5; color: var(--ok);
+    }
+    .badge.gray { background: #f1f5f9; color: #64748b; }
+    .badge.orange { background: #fff7ed; color: #c2410c; }
+    .ad {
+      width: 56px; background: linear-gradient(180deg,#818cf8,#6366f1); color: #fff;
+      border-radius: 12px; writing-mode: vertical-rl; letter-spacing: 3px;
+      display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;
+    }
+    .bn {
+      height: 54px; background: #fff; border-top: 1px solid var(--line);
+      display: grid; grid-template-columns: repeat(5,1fr); align-items: center; text-align: center;
+      font-size: 10px; color: #94a3b8;
+    }
+    .bn .cur { color: var(--brand); font-weight: 800; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      background: var(--brand); color: #fff; border-radius: 10px; padding: 8px 12px;
+      font-size: 12px; font-weight: 700; border: 0;
+    }
+    .btn.ghost { background: #fff; color: var(--brand); border: 1px solid #c7d2fe; }
+    .btn.block { width: 100%; }
+    .btn.disabled { background: #cbd5e1; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .grid3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+    .skill {
+      background: #eef2ff; border-radius: 10px; padding: 10px 6px; text-align: center; font-size: 11px;
+    }
+    .big-card {
+      background: linear-gradient(180deg,#fff,#f8fafc); border: 1px solid var(--line);
+      border-radius: 12px; padding: 14px 8px; text-align: center; font-size: 11px; min-height: 72px;
+    }
+    .big-card.practice { border-color: #fdba74; background: #fff7ed; }
+
+    /* 说明 panel */
+    .note {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 14px;
+      padding: 14px 16px;
+      min-height: 200px;
+    }
+    .note h4 {
+      margin: 0 0 10px; font-size: 14px; display: flex; align-items: center; gap: 8px;
+    }
+    .note h4::before {
+      content: "说明"; font-size: 11px; background: #f59e0b; color: #fff;
+      border-radius: 6px; padding: 2px 6px; font-weight: 800;
+    }
+    .note ol { margin: 0; padding-left: 18px; font-size: 13px; }
+    .note li { margin: 0 0 8px; }
+    .note .sub { font-weight: 800; margin: 12px 0 6px; font-size: 12px; color: #92400e; }
+    .warn {
+      margin-top: 12px; padding: 10px 12px; border-radius: 10px;
+      background: #fef2f2; border: 1px solid #fecaca; color: var(--danger);
+      font-size: 12px; font-weight: 700;
+    }
+    .okbox {
+      margin-top: 12px; padding: 10px 12px; border-radius: 10px;
+      background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46;
+      font-size: 12px;
+    }
+    .snip {
+      margin-top: 12px; background: #fff; border: 1px dashed #d1d5db; border-radius: 12px; padding: 10px;
+    }
+    .snip .title { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+    .dialog {
+      border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: #f8fafc;
+    }
+    .dialog h5 { margin: 0 0 6px; font-size: 13px; }
+    .dialog p { margin: 0 0 10px; font-size: 12px; color: var(--muted); }
+    .dialog .acts { display: flex; flex-direction: column; gap: 6px; }
+
+    .flow-strip {
+      display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+      margin: 0 0 16px; padding: 10px 12px; background: var(--peach-bg);
+      border: 1px solid #fdba74; border-radius: 12px; font-size: 12px; font-weight: 700; color: #9a3412;
+    }
+    .flow-strip .dot { width: 8px; height: 8px; border-radius: 50%; background: #ea580c; }
+    .flow-strip .sep { color: #fb923c; font-weight: 900; }
+
+    .states {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px; margin-top: 16px;
+    }
+    .state-card {
+      border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff;
+    }
+    .state-card .hd {
+      padding: 8px 10px; font-size: 12px; font-weight: 800; background: #f8fafc; border-bottom: 1px solid var(--line);
+    }
+    .state-card .bd { padding: 10px; }
+
+    .mini-device {
+      border: 1px solid var(--line); border-radius: 14px; background: #fff; padding: 8px; font-size: 11px;
+    }
+
+    .toc {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 12px;
+    }
+    .toc a {
+      display: block; padding: 10px 12px; border-radius: 12px; background: #fff;
+      border: 1px solid var(--line); color: var(--ink); text-decoration: none; font-size: 13px;
+    }
+    .toc a:hover { border-color: #a5b4fc; background: var(--brand-soft); }
+    .toc a small { display: block; color: var(--muted); font-size: 11px; margin-top: 4px; }
+
+    footer.doc {
+      text-align: center; color: var(--muted); font-size: 12px; padding: 24px 0 40px;
+    }
+
+    .pair {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    }
+    @media (max-width: 800px) { .pair { grid-template-columns: 1fr; } }
+
+    .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .chip {
+      font-size: 10px; padding: 3px 8px; border-radius: 999px; background: #f1f5f9; color: #475569;
+    }
+    .chip.on { background: var(--brand); color: #fff; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>课本同步学 · 页面-流程-说明</h1>
+    <div class="meta">AI 学伴 V2.0 · 初中 · 依据阅读版 v2.3 · 2026-08-18</div>
+    <nav class="nav">
+      <a href="#s0">总览</a>
+      <a href="#s1">学科主场</a>
+      <a href="#s2">进课学习</a>
+      <a href="#s3">三种练习</a>
+      <a href="#s4">自主练习</a>
+      <a href="#s5">首页路径</a>
+      <a href="#s6">改书与返回</a>
+    </nav>
+  </div>
+
+  <div class="wrap">
+    <section class="hero" id="s0">
+      <h2>怎么读这份文档</h2>
+      <p>
+        排版对齐墨刀/原型说明习惯：<b>左侧页面</b>看结构，<b>中间流程</b>看跳转，
+        <b>右侧说明</b>看规则与验收。细则冲突时以
+        <code>docs/v2.0/02-学科/课本同步学/05-同步课本与自主练习-阅读版.md</code> 为准。
+      </p>
+      <div class="legend">
+        <span class="l-page">页面线框</span>
+        <span class="l-flow">流程跳转</span>
+        <span class="l-note">说明（编号规则）</span>
+        <span class="l-warn">红字 = 产品硬约束</span>
+      </div>
+      <div class="toc">
+        <a href="#s1">① 学科 · 课本同步学主场<small>教材全解 L1 · 只读年级册次</small></a>
+        <a href="#s1b">①b 章/单元筛选<small>预选确认制</small></a>
+        <a href="#s2">② 进一课<small>语文/数学学习页 · 英语直达</small></a>
+        <a href="#s3">③ 一课一练 / 单元测试<small>设置窗 · 库存异常</small></a>
+        <a href="#s4">④ 自主练习<small>选题 → 设置 → 答题</small></a>
+        <a href="#s5">⑤ 首页「同步课本」<small>选科 → 科目页（无自主练习卡）</small></a>
+        <a href="#s6">⑥ 我的课本 · 返回表<small>五元组唯一改入口</small></a>
+      </div>
+    </section>
+
+    <!-- ========== S1 学科主场 ========== -->
+    <section class="section" id="s1">
+      <header>
+        <h3>① 学科 · 课本同步学主场（教材全解 L1）</h3>
+        <span class="tag">L1 · 默认可见底栏</span>
+      </header>
+      <div class="flow-strip">
+        <span class="dot"></span>
+        底栏「学科」→ 默认「课本同步学」→ 教材全解
+        <span class="sep">→</span>
+        可进入：章筛选 / 学习页 / 单元测试 / 专项 / 自主练习
+      </div>
+      <div class="board">
+        <div>
+          <div class="device">
+            <div class="screen">
+              <div class="status"><span>9:41</span><span>AI学伴</span></div>
+              <div class="top">
+                <div class="row">
+                  <span class="pill readonly">七年级 · 上册</span>
+                  <span class="muted">只读 · 改去「我的课本」</span>
+                </div>
+                <div class="subj">
+                  <span>语文</span><b>数学</b><span>英语</span><span>道法</span><span>历史</span><span>…</span>
+                </div>
+              </div>
+              <div class="body">
+                <div class="rail">
+                  <div class="on">课本<br/>同步学</div>
+                  <div>个性<br/>化学习</div>
+                </div>
+                <div class="ad">名师广告</div>
+                <div class="main">
+                  <div class="card">
+                    <div class="row" style="justify-content:space-between;display:flex;align-items:center;">
+                      <h4 style="margin:0">教材全解 <span class="muted">人教版</span></h4>
+                      <span class="pill">第一章 ▾</span>
+                    </div>
+                    <div class="muted" style="margin:6px 0 0">版本只读 · 无下拉箭头</div>
+                    <div class="list-row"><span>1.1 立体图形与平面图形</span><span class="badge">上次学到这里</span></div>
+                    <div class="list-row"><span>1.2 展开图与三视图</span><span class="badge gray">未学</span></div>
+                    <div class="list-row"><span>1.3 从不同方向看</span><span class="badge gray">未学</span></div>
+                  </div>
+                  <div class="card">
+                    <div class="muted">专项（数学）</div>
+                    <div class="btn ghost block" style="margin-top:6px">同步提高</div>
+                  </div>
+                  <div class="btn block">单元测试</div>
+                </div>
+                <div style="width:52px">
+                  <div class="card" style="padding:8px;text-align:center;height:100%;display:flex;flex-direction:column;justify-content:center;gap:8px;background:#fff7ed;border-color:#fdba74">
+                    <div style="font-size:11px;font-weight:800;color:#c2410c;writing-mode:vertical-rl;margin:0 auto;letter-spacing:2px">自主练习</div>
+                    <div class="muted">进入</div>
+                  </div>
+                </div>
+              </div>
+              <div class="bn">
+                <div>首页</div><div class="cur">学科</div><div>错题</div><div>伙伴</div><div>我的</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="flow-col"><div class="arrow">主场</div></div>
+        <div class="note">
+          <h4>页面目标</h4>
+          <ol>
+            <li><b>定位</b>：按课本章节学的主场。默认停在「课本同步学」，左侧可进「个性化学习」（本文不展开）。</li>
+            <li><b>顶栏年级·册次</b>：只读胶囊，无箭头。改学制/年级/册次/版本只在「我的 · 我的课本」。</li>
+            <li><b>学科切换</b>：点学科名立刻切；左右滑切相邻科；当前科加粗带下划线。不展示滑动引导文案。</li>
+            <li><b>教材全解标题行</b>：教材全解 + 版本名（只读）+ 章/单元胶囊。</li>
+            <li><b>列表</b>：展示当前章全部子级。点课文/小节/课 → 进学习页（英语例外，见②）。</li>
+            <li><b>单元测试</b>：钉在底部，测当前章/Unit，文案只写「单元测试」。</li>
+            <li><b>自主练习</b>：右侧竖卡；打开后藏底栏与左侧模式栏。</li>
+            <li><b>专项</b>：英语七～九：词汇/口语/语法；数学：同步提高；其他学科无。</li>
+            <li><b>空态</b>：当前章/单元无小节 → 缺省图 +「该章节下暂无内容」（演示可切「空态演示章节」），不弹报错。</li>
+          </ol>
+          <div class="warn">硬约束：学科页不能改年级 / 册次 / 学制 / 版本。三入口文案故意不统一（首页「同步课本」/ 学科「课本同步学」/「自主练习」）。</div>
+          <div class="okbox">验收：初中进学科默认课本同步学；小学进学科显示即将开放；首页科目页不放自主练习竖卡。</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== S1b 章筛选 ========== -->
+    <section class="section" id="s1b">
+      <header>
+        <h3>①b 章 / 单元筛选弹层</h3>
+        <span class="tag pop">弹层</span>
+      </header>
+      <div class="flow-strip">
+        <span class="dot"></span>
+        点章胶囊 → 弹层内预选 → 确认后主列表才换
+        <span class="sep">/</span>
+        取消或点遮罩 = 不切换
+      </div>
+      <div class="board">
+        <div>
+          <div class="device">
+            <div class="screen" style="background:#94a3b8">
+              <div style="margin:40px 16px;background:#fff;border-radius:16px;padding:14px;min-height:360px">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <b>选择章 / 单元</b>
+                  <span class="muted">取消</span>
+                </div>
+                <div class="list-row" style="background:#eef2ff;border-radius:8px;padding:8px;margin-top:10px">
+                  <span><b>第一章 丰富的图形世界</b>（预选）</span>
+                </div>
+                <div class="list-row"><span>第二章 …</span></div>
+                <div class="list-row"><span>第三章 …</span></div>
+                <div class="muted" style="margin:10px 0">生物 catalog：下层章/课只展示，不可点</div>
+                <div class="btn block" style="margin-top:20px">确认</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="flow-col"><div class="arrow">筛选</div></div>
+        <div class="note">
+          <h4>交互规则</h4>
+          <ol>
+            <li>打开时定位到当前章/单元。</li>
+            <li>点章/单元：弹层内高亮预选，主列表先不动。</li>
+            <li>点「确认」：主列表换成该章全部子级并关弹层。</li>
+            <li>点「取消」或遮罩：不切换。</li>
+            <li>生物等 catalog：弹层只选单元；展开后的章/课只展示不可点、不高亮。要进某章，关弹层后去主列表点。</li>
+            <li>英语：点 Unit 即选中并关弹层（无课文层）。</li>
+          </ol>
+          <div class="snip">
+            <div class="title">关联跳转</div>
+            <div class="chip-row">
+              <span class="chip on">确认 → 刷新 L1 列表</span>
+              <span class="chip">点课文 → ② 学习页</span>
+              <span class="chip">英语技能格 → 直达视频</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== S2 进课 ========== -->
+    <section class="section" id="s2">
+      <header>
+        <h3>② 进一课：学习页 / 英语直达视频</h3>
+        <span class="tag l2">L2 / L3 · 藏底栏</span>
+      </header>
+      <div class="flow-strip">
+        <span class="dot"></span>
+        非英语：教材全解 → 学习页 → 视频 / 一课一练
+        <span class="sep">｜</span>
+        英语：技能格 → 直接播（无一课一练）
+      </div>
+
+      <div class="pair">
+        <!-- 数学学习页 -->
+        <div>
+          <div class="mini-device">
+            <div style="font-weight:800;margin-bottom:8px">数学 · 学习页（示例）</div>
+            <div class="card" style="padding:8px">
+              <b>1.1 生活中的立体图形</b>
+              <div class="muted" style="margin:6px 0 4px">名师带你学</div>
+              <div class="list-row"><span>几何体的认识 · 知识精讲</span><span>08:20</span></div>
+              <div class="muted" style="margin:6px 0 4px">同步巩固练</div>
+              <div class="list-row"><span>平面图形 · 经典题型</span><span>06:10</span></div>
+              <div class="muted" style="margin:6px 0 4px">拓展提升</div>
+              <div class="list-row"><span>新课标新考法</span><span>05:00</span></div>
+              <div class="list-row"><span><b>一课一练</b></span><span class="badge orange">5题·中等</span></div>
+            </div>
+          </div>
+        </div>
+        <!-- 语文大卡 -->
+        <div>
+          <div class="mini-device">
+            <div style="font-weight:800;margin-bottom:8px">语文 · 大卡学习页（示例）</div>
+            <div class="grid2">
+              <div class="big-card"><b>1</b><br/>课前导学</div>
+              <div class="big-card"><b>2</b><br/>课文解读</div>
+              <div class="big-card"><b>3</b><br/>…</div>
+              <div class="big-card practice"><b>一课一练</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="board" style="margin-top:16px">
+        <div>
+          <div class="device">
+            <div class="screen">
+              <div class="status"><span>9:41</span><span>视频</span></div>
+              <div class="top"><b>← 几何体的认识 · 知识精讲</b></div>
+              <div style="background:#0f172a;color:#fff;height:200px;display:flex;align-items:center;justify-content:center;font-size:13px">
+                播放器 · 看满 45s 达标
+              </div>
+              <div class="card" style="margin:12px">
+                <h4>播完之后</h4>
+                <div class="muted">后面还有微课</div>
+                <div class="grid2" style="margin-top:8px">
+                  <div class="btn ghost">重新播放</div>
+                  <div class="btn">播放下一个</div>
+                </div>
+                <div class="muted" style="margin-top:12px">已是最后一条 / 仅一条</div>
+                <div class="grid2" style="margin-top:8px">
+                  <div class="btn ghost">重新播放</div>
+                  <div class="btn">进入一课一练</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="flow-col"><div class="arrow">播完分支</div></div>
+        <div class="note">
+          <h4>学习与播放规则</h4>
+          <div class="sub">进入</div>
+          <ol>
+            <li>非英语点课文/小节 → 学习页（产品界面无「学习页」四字）。</li>
+            <li>英语点技能格或 Section 视频 → <b>直接播</b>，不进学习页。</li>
+            <li>英语<b>不加</b>一课一练（含沪教 Section 手风琴）。</li>
+            <li>小节无内容 →「该小节内容即将开放」。</li>
+          </ol>
+          <div class="sub">视频</div>
+          <ol start="5">
+            <li>按列表顺序；点第几条从第几条播；<b>播完不自动跳下一集</b>。</li>
+            <li>看满 45 秒算达标（发奖）；无播放地址也可点开播。</li>
+            <li>播放记录：未播过「未学习」；播过未到 80%「学习中」；进度 ≥80%（含倍速）「已学完」。</li>
+            <li>后面还有 →「重新播放 / 播放下一个」；末集或仅一条 →「重新播放 / 进入一课一练」。</li>
+          </ol>
+          <div class="sub">理科三段归类（看展示文案，命中即停）</div>
+          <ol start="9">
+            <li>含经典题型/题型/易错/练习/一课一练 → 同步巩固练。</li>
+            <li>含拓展/新课标 → 拓展提升。</li>
+            <li>其余（含知识精讲）→ 名师带你学。</li>
+          </ol>
+          <div class="warn">英语路径：播完不出现「进入一课一练」。巩固走专项或单元测试。</div>
+        </div>
+      </div>
+
+      <div class="states">
+        <div class="state-card">
+          <div class="hd">状态 A · 英语 Unit 技能格</div>
+          <div class="bd">
+            <div class="grid3">
+              <div class="skill">听力</div>
+              <div class="skill">口语</div>
+              <div class="skill">阅读</div>
+            </div>
+            <p class="muted" style="margin:8px 0 0">点格直达视频 · 无学习页 · 无一课一练</p>
+          </div>
+        </div>
+        <div class="state-card">
+          <div class="hd">状态 B · 专项入口（英语）</div>
+          <div class="bd">
+            <div class="chip-row">
+              <span class="chip on">同步词汇</span>
+              <span class="chip on">外教口语</span>
+              <span class="chip on">语法精讲</span>
+            </div>
+            <p class="muted" style="margin:8px 0 0">没内容进空态；学完/退出回当前专项页</p>
+          </div>
+        </div>
+        <div class="state-card">
+          <div class="hd">状态 C · 数学同步提高</div>
+          <div class="bd">
+            <div class="btn ghost block">同步提高</div>
+            <p class="muted" style="margin:8px 0 0">其他学科无此条</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== S3 三种练习 ========== -->
+    <section class="section" id="s3">
+      <header>
+        <h3>③ 三种练习：一课一练 · 单元测试 ·（自主练习见④）</h3>
+        <span class="tag l3">L3 答题 · 藏底栏</span>
+      </header>
+      <div class="flow-strip">
+        <span class="dot"></span>
+        随时可进，不解锁 · 菁优出题 · 做过默认不抽 · 不用邻近难度凑数
+      </div>
+
+      <div class="pair" style="margin-bottom:16px">
+        <div class="note" style="min-height:0">
+          <h4>一课一练</h4>
+          <ol>
+            <li>范围：当前这一课叶子；英语无此练习。</li>
+            <li>入口：仅学习页最后一条（及播完「进入一课一练」）。</li>
+            <li><b>无设置窗</b>。固定 5 题 · 中等 · 同步练习。</li>
+            <li>未做 N≥5 → 直接答题；0&lt;N&lt;5 / N=0 → 异常弹窗。</li>
+            <li>已练完再点：仍显示已练完，换新卷。未作答过任何一题为「未练习」；作答过但中途退出未提交为「练习中」（不保存作答）。</li>
+          </ol>
+        </div>
+        <div class="note" style="min-height:0">
+          <h4>单元测试</h4>
+          <ol>
+            <li>范围：当前章 / Unit 全部叶子。</li>
+            <li>入口：教材全解底部「单元测试」。</li>
+            <li>先出设置窗：题量 / 难度 / 场景（默认同步练习）。</li>
+            <li>推荐量：语文 10；英语 12；两科均可自行选择 5–20 题。其他=小节数×3（夹 8–20），所有单元测试最多 20 题。</li>
+            <li>点「开始测试」后再数 N；异常窗盖在设置窗上。</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="board">
+        <div>
+          <div class="device">
+            <div class="screen" style="background:#64748b">
+              <div style="margin:48px 18px;background:#fff;border-radius:16px;padding:14px">
+                <b>练习设置</b>
+                <div class="sub" style="color:#92400e;font-weight:800;margin:10px 0 4px;font-size:12px">题量</div>
+                <div class="chip-row">
+                  <span class="chip">5</span><span class="chip on">12</span><span class="chip">15</span>
+                  <span class="chip">20</span><span class="chip">30</span><span class="chip">40</span>
+                </div>
+                <div class="sub" style="color:#92400e;font-weight:800;margin:10px 0 4px;font-size:12px">难度</div>
+                <div class="chip-row">
+                  <span class="chip">较易</span><span class="chip">容易</span><span class="chip on">中等</span>
+                  <span class="chip">较难</span><span class="chip">困难</span>
+                </div>
+                <div class="sub" style="color:#92400e;font-weight:800;margin:10px 0 4px;font-size:12px">场景</div>
+                <div class="chip-row">
+                  <span class="chip on">同步练习</span><span class="chip">真题</span><span class="chip">好题</span>
+                  <span class="chip">常考</span><span class="chip">压轴</span><span class="chip">易错</span>
+                </div>
+                <div class="btn block" style="margin-top:14px">开始测试</div>
+                <div class="muted" style="margin-top:8px">打开时不预判库存，不提前把题量改成 N</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="flow-col"><div class="arrow">组卷异常</div></div>
+        <div class="note">
+          <h4>库存异常（盖在设置窗上）</h4>
+          <div class="snip">
+            <div class="title">弹窗示例 · 目前只能出 N 题</div>
+            <div class="dialog">
+              <h5>目前只能出 {N} 题</h5>
+              <p>本章「中等 · 同步练习」现在只能出 {N} 道没做过的题，不够这次要的 {K} 题。</p>
+              <div class="acts">
+                <div class="btn">确认按 {N} 题开始</div>
+                <div class="btn ghost">降低难度再看看</div>
+                <div class="btn ghost">提高难度再看看</div>
+                <div class="btn ghost">返回修改</div>
+              </div>
+            </div>
+          </div>
+          <ol style="margin-top:12px">
+            <li>N = 范围 ∩ 难度 ∩ 场景 ∩ 未做过。禁止邻近难度自动补齐。</li>
+            <li>0&lt;N&lt;K：确认按 N（N≥1）/ 升降难度 / 返回修改（只关异常，设置窗还在）。</li>
+            <li>N=0（库里有做过）：没有新题了 → 升降 / 再练做过 / 返回修改。</li>
+            <li>范围从无题：「暂时没有题目」，不提供升降，入口仍在。</li>
+            <li>一课一练异常按钮文案用「先不练了」（停学习页），无「返回修改」。</li>
+          </ol>
+          <div class="warn">设置窗打开时不要提前改题量、不要在题量下写库存说明。先点开始再组卷判断。</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== S4 自主练习 ========== -->
+    <section class="section" id="s4">
+      <header>
+        <h3>④ 自主练习：选题页 → 设置 → 答题 → 回流</h3>
+        <span class="tag l2">整册自选</span>
+      </header>
+      <div class="flow-strip">
+        <span class="dot"></span>
+        首页卡 / 学科竖卡 → 勾叶子 → 设置窗 → 组卷 → 答题 → 中途回选题 / 做完二选一
+      </div>
+      <div class="board">
+        <div>
+          <div class="device">
+            <div class="screen">
+              <div class="status"><span>9:41</span><span>自主练习</span></div>
+              <div class="top">
+                <div class="row"><b>← 自主练习</b> <span class="pill">数学</span></div>
+                <div class="muted">首页进来可切科 · 学科进来跟顶栏当前科</div>
+              </div>
+              <div class="body" style="flex-direction:column">
+                <div class="card">
+                  <div class="list-row"><span>☐ 第一章</span><span class="muted">全选叶子</span></div>
+                  <div class="list-row"><span>☑ 1.1 立体图形…</span><span class="badge">当前</span></div>
+                  <div class="chip-row">
+                    <span class="chip on">知识点A</span>
+                    <span class="chip on">知识点B</span>
+                    <span class="chip">知识点C</span>
+                  </div>
+                  <div class="list-row"><span>☐ 1.2 …</span></div>
+                </div>
+                <div class="btn block">开始练习</div>
+                <div class="muted">未勾不能开始 · 推荐题量暂定：叶子×2，跨章+2，夹5–20</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="flow-col"><div class="arrow">出卷</div></div>
+        <div class="note">
+          <h4>选题与回流</h4>
+          <ol>
+            <li>范围永远是整册，目录以菁优为准。</li>
+            <li>首页进入：左侧可切科；默认滚到该书上次学到的章并勾对应小节。</li>
+            <li>学科进入：不能切科；用教材全解正在看的章/小节。</li>
+            <li>勾父级 = 全选叶子；节下知识点胶囊可单独勾/取消。</li>
+            <li>切科或切版本后，已勾清空。</li>
+            <li>点「开始练习」→ 与单元测试同一套设置窗与异常窗（文案「本章」改「所选范围」）。</li>
+            <li>中途退出 → 选题页。</li>
+            <li>做完 → 学生选：该科同步页（首页路径）或学科教材全解，或回首页。</li>
+          </ol>
+          <div class="snip">
+            <div class="title">做完回流弹层（示意）</div>
+            <div class="dialog">
+              <h5>练习完成</h5>
+              <p>接下来去哪里？</p>
+              <div class="acts">
+                <div class="btn">回到同步课本 / 教材全解</div>
+                <div class="btn ghost">回到首页</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== S5 首页路径 ========== -->
+    <section class="section" id="s5">
+      <header>
+        <h3>⑤ 首页「同步课本」路径</h3>
+        <span class="tag">与学科共用教材全解 UI</span>
+      </header>
+      <div class="flow-strip">
+        <span class="dot"></span>
+        首页卡 → 选科页 → 科目教材全解 →（同②③）
+        <span class="sep">←</span>
+        返回：科目页→选科页→首页（两级）
+      </div>
+      <div class="board">
+        <div>
+          <div class="pair">
+            <div class="mini-device">
+              <div style="font-weight:800;margin-bottom:6px">选科页</div>
+              <div class="pill readonly">七年级 · 上册</div>
+              <div class="grid2" style="margin-top:8px">
+                <div class="card" style="text-align:center">语文</div>
+                <div class="card" style="text-align:center">数学</div>
+                <div class="card" style="text-align:center">英语</div>
+                <div class="card" style="text-align:center">…</div>
+              </div>
+            </div>
+            <div class="mini-device">
+              <div style="font-weight:800;margin-bottom:6px">科目教材全解</div>
+              <div class="muted">无模式栏 · 无自主练习竖卡</div>
+              <div class="list-row"><span>课文/小节列表</span></div>
+              <div class="list-row"><span>单元测试仍在</span></div>
+              <div class="list-row"><span>专项仍在</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="flow-col"><div class="arrow">首页线</div></div>
+        <div class="note">
+          <h4>与学科主场的差异</h4>
+          <ol>
+            <li>副标题只展示当前年级、册次，不能改。</li>
+            <li>科目页 = 该科教材全解，但没有左侧模式栏、没有自主练习竖卡。</li>
+            <li>单元测试与专项仍保留。</li>
+            <li>返回：科目页 → 选科页 → 再返回才回首页。</li>
+            <li>从该路径学完/中途退出视频或答题 → 回刚才那科的科目页。</li>
+          </ol>
+          <div class="warn">自主练习只留：首页右侧卡 + 学科主场右侧竖卡。不要在首页科目页再放一个。</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== S6 改书与返回 ========== -->
+    <section class="section" id="s6">
+      <header>
+        <h3>⑥ 我的课本（改书）· 返回总表 · 换书打断</h3>
+        <span class="tag">跨 Tab 硬约束</span>
+      </header>
+      <div class="flow-strip">
+        <span class="dot"></span>
+        我的 → 我的课本 编辑五元组 → 立刻刷新首页选科 / 学科顶栏 / 教材全解 / 自主练习
+      </div>
+      <div class="board">
+        <div>
+          <div class="device">
+            <div class="screen">
+              <div class="status"><span>9:41</span><span>我的课本</span></div>
+              <div class="top"><b>← 我的课本</b> <span class="btn ghost" style="padding:4px 8px;margin-left:8px">编辑</span></div>
+              <div class="body" style="flex-direction:column">
+                <div class="card">
+                  <h4>本学期课本</h4>
+                  <div class="list-row"><span>学制</span><span>六三制</span></div>
+                  <div class="list-row"><span>年级</span><span>七年级</span></div>
+                  <div class="list-row"><span>册次</span><span>上册</span></div>
+                </div>
+                <div class="card">
+                  <div class="list-row"><span>数学</span><span>北师大版 ▾</span></div>
+                  <div class="list-row"><span>英语</span><span>沪教版 ▾</span></div>
+                  <div class="list-row"><span>语文</span><span>人教版 ▾</span></div>
+                </div>
+                <div class="muted">浏览态摘要只读；点编辑后学制/年级/册次可改，点科目改版本</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="flow-col"><div class="arrow">换书</div></div>
+        <div class="note">
+          <h4>换书副作用 + 返回</h4>
+          <div class="sub">年级 / 学科 / 册次 / 版本 / 学制任一变化</div>
+          <ol>
+            <li>关掉学习页、专项页、自主练习选题页。</li>
+            <li>该书切过章 → 停上次章与课文/小节；否则第一章。</li>
+            <li>自主练习已勾选清空。</li>
+          </ol>
+          <div class="sub">从视频 / 答题出来回哪</div>
+          <ol start="4">
+            <li>首页同步课本 → 该科科目页。</li>
+            <li>首页自主：中途→选题页；做完→选科目页或首页。</li>
+            <li>学科课时/一课一练/单元测 → 学科教材全解。</li>
+            <li>学科专项 → 当前专项页。</li>
+            <li>学科自主：中途→选题页；做完→选教材全解或首页。</li>
+          </ol>
+          <div class="warn">改书唯一入口：我的课本。学科顶栏、教材全解、首页选科都不能改年级册次学制版本。</div>
+          <div class="okbox">
+            联调脚本见同目录流程图文档第 6 节（10 步）。
+            详细弹窗文案以阅读版第 8 节为准。
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 总对照表 -->
+    <section class="section">
+      <header>
+        <h3>附录 · 页面层级速查</h3>
+        <span class="tag">给研发对组件</span>
+      </header>
+      <div class="note" style="background:#f8fafc;border-color:var(--line)">
+        <h4 style="visibility:hidden;height:0;margin:0;padding:0;overflow:hidden">表</h4>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="text-align:left;border-bottom:1px solid var(--line)">
+              <th style="padding:8px">层级</th>
+              <th>界面</th>
+              <th>典型组件</th>
+              <th>底栏</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid #f1f5f9">
+              <td style="padding:8px">L1</td>
+              <td>教材全解（学科/首页科目页）</td>
+              <td>SubjectMap / SyncStudySubjectPage</td>
+              <td>学科主场显示；深层藏</td>
+            </tr>
+            <tr style="border-bottom:1px solid #f1f5f9">
+              <td style="padding:8px">L2</td>
+              <td>学习页 / 专项 / 自主选题</td>
+              <td>SyncSectionPage / SelfPracticePage / Sync*专项</td>
+              <td>隐藏</td>
+            </tr>
+            <tr style="border-bottom:1px solid #f1f5f9">
+              <td style="padding:8px">L3</td>
+              <td>视频 / 答题</td>
+              <td>LearningFlow / QuizPage</td>
+              <td>隐藏</td>
+            </tr>
+            <tr>
+              <td style="padding:8px">弹层</td>
+              <td>章筛选、练习设置、库存异常、回流选择</td>
+              <td>各类 Dialog</td>
+              <td>—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="doc">
+      页面-流程-说明 · 课本同步学整模块 · 与
+      <a href="./02-学科-课本同步学流程图.md">流程图 MD</a> /
+      <a href="./03-学科-课本同步学-需求复述.md">需求复述 MD</a> /
+      <a href="../02-学科/课本同步学/05-同步课本与自主练习-阅读版.md">阅读版</a>
+      配套使用
+    </footer>
+  </div>
+</body>
+</html>

@@ -1,0 +1,117 @@
+:root {
+  --ai-v2-accent: #6c5dd3;
+  --ai-v2-blue: #368fc7;
+  --ai-v2-green: #3f8f62;
+  --ai-v2-amber: #b7791f;
+  --ai-v2-red: #ff5b7a;
+  --ai-v2-neutral: #475569;
+}
+
+.ai-v2-clean * {
+  letter-spacing: 0 !important;
+  text-shadow: none !important;
+}
+
+.ai-v2-clean :where([class~="text-[8px]"], [class~="text-[9px]"]) {
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+}
+
+.ai-v2-clean :where([class~="text-[10px]"], [class~="text-[11px]"]) {
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+}
+
+.ai-v2-clean :where(.text-xs) {
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+}
+
+.ai-v2-clean :where(button, input, textarea, select) {
+  font-family: inherit;
+  letter-spacing: 0 !important;
+}
+
+/* Remove ornamental elevation and glass effects while retaining layout surfaces. */
+.ai-v2-clean :where([class*="shadow"], [class*="drop-shadow"]) {
+  box-shadow: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+}
+
+.ai-v2-clean :where([class*="backdrop-blur"]) {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Blur-only layers are glow decorations, not functional content. */
+.ai-v2-clean :where([class^="blur-"], [class*=" blur-"]) {
+  display: none !important;
+}
+
+.ai-v2-clean :where([class*="bg-gradient-to"]) {
+  background-image: none !important;
+}
+
+.ai-v2-clean :where([class*="radial-gradient"]) {
+  background-image: none !important;
+  background-color: var(--ai-v2-accent) !important;
+}
+
+.ai-v2-clean :where(.mix-blend-overlay, .mix-blend-screen, .mix-blend-color-dodge) {
+  display: none !important;
+}
+
+.ai-v2-clean :where([class*="bg-gradient-to"][class*="text-white"]) {
+  background-color: var(--ai-v2-neutral) !important;
+}
+
+.ai-v2-clean :where([class*="bg-gradient-to"][class*="from-brand"], [class*="bg-gradient-to"][class*="from-indigo"], [class*="bg-gradient-to"][class*="from-violet"], [class*="bg-gradient-to"][class*="from-purple"]) {
+  background-color: var(--ai-v2-accent) !important;
+}
+
+.ai-v2-clean :where([class*="bg-gradient-to"][class*="from-blue"], [class*="bg-gradient-to"][class*="from-cyan"], [class*="bg-gradient-to"][class*="from-sky"]) {
+  background-color: var(--ai-v2-blue) !important;
+}
+
+.ai-v2-clean :where([class*="bg-gradient-to"][class*="from-green"], [class*="bg-gradient-to"][class*="from-emerald"], [class*="bg-gradient-to"][class*="from-teal"]) {
+  background-color: var(--ai-v2-green) !important;
+}
+
+.ai-v2-clean :where([class*="bg-gradient-to"][class*="from-yellow"], [class*="bg-gradient-to"][class*="from-amber"], [class*="bg-gradient-to"][class*="from-orange"]) {
+  background-color: var(--ai-v2-amber) !important;
+}
+
+.ai-v2-clean :where([class*="bg-gradient-to"][class*="from-red"], [class*="bg-gradient-to"][class*="from-rose"], [class*="bg-gradient-to"][class*="from-pink"]) {
+  background-color: var(--ai-v2-red) !important;
+}
+
+.ai-v2-clean :where([class~="animate-pulse"], [class~="animate-ping"], [class~="animate-bounce"], [class~="animate-spin"], [class~="animate-spin-slow"], [class~="animate-shimmer"], [class~="animate-tilt"], [class~="animate-breath-light"]) {
+  animation: none !important;
+}
+
+/* Keep circles functional, but remove oversized decorative corner treatments. */
+.ai-v2-clean :where([class~="rounded-2xl"], [class~="rounded-3xl"], [class*="rounded-[2"], [class*="rounded-[3"], [class*="rounded-[4"]) {
+  border-radius: 10px !important;
+}
+
+/* Full-screen portals share the design coordinate layer and must cover bottom navigation. */
+#app-viewport > :where([class*="z-[10"], [class*="z-[11"], [class*="z-[12"]) {
+  z-index: 900 !important;
+}
+
+/* Modal contract: modal surfaces stay opaque and sit above the application chrome. */
+#app-viewport :where([data-modal-backdrop="true"]) {
+  background-color: rgba(15, 23, 42, 0.38);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-v2-clean *,
+  .ai-v2-clean *::before,
+  .ai-v2-clean *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
