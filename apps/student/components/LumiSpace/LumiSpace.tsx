@@ -3,7 +3,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Mic, Gamepad2, Sparkles, X, ArrowRight, Menu, Camera, Image, Plus, MessageSquare, History, Settings, Edit2, Trash2, Check, Volume2, Loader2, AlertCircle, RotateCcw, ChevronLeft, RefreshCw } from 'lucide-react';
-import bgVideo from '@/assets/AIfriend-talking-v0.1.mp4';
 import bgFallback from '@/assets/AIfriend-v0.1-frame1.png';
 import { ShredderGame } from './Games/ShredderGame';
 import { BreathingGame } from './Games/BreathingGame';
@@ -1903,18 +1902,20 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                     alt="小晤伴学角色"
                     className="absolute inset-0 w-full h-full object-cover"
                 />
-                <video
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    poster={bgFallback}
-                    onPlaying={() => setIsBackgroundVideoPlaying(true)}
-                    onPause={() => setIsBackgroundVideoPlaying(false)}
-                    className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${isBackgroundVideoPlaying ? 'opacity-100' : 'opacity-0'}`}
-                >
-                    <source src={bgVideo} type="video/mp4" />
-                </video>
+                {import.meta.env.VITE_LUMI_TALKING_VIDEO_URL && (
+                    <video
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        poster={bgFallback}
+                        onPlaying={() => setIsBackgroundVideoPlaying(true)}
+                        onPause={() => setIsBackgroundVideoPlaying(false)}
+                        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${isBackgroundVideoPlaying ? 'opacity-100' : 'opacity-0'}`}
+                    >
+                        <source src={import.meta.env.VITE_LUMI_TALKING_VIDEO_URL} type="video/mp4" />
+                    </video>
+                )}
                 <div className="absolute inset-0 bg-black/10" />
             </div>
 

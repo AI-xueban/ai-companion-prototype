@@ -7,7 +7,7 @@ import { DiscoveryFullPage } from './DiscoveryFullPage';
 import { StudentNotificationRail } from './StudentNotificationRail';
 import { ZhiyueHomeworkFlow } from './ZhiyueHomework/ZhiyueHomeworkFlow';
 import { ArticleReader } from '../Learning/ArticleReader';
-import bgVideo from '@/assets/AIfriend-v0.1.mp4';
+import bgFallback from '@/assets/AIfriend-v0.1-frame1.png';
 import { DayPlan, Task, MoodOption, UserPersona } from '../../types';
 import { LEAGUE_TIER_CONFIGS } from '../../services/geminiService';
 import userAvatar from '@/assets/girl_v0.1-head.png';
@@ -630,15 +630,19 @@ export const DashboardImmersive: React.FC<DashboardImmersiveProps> = ({
       
       {/* ================= Layer 0: Scene Background ================= */}
       <div className="absolute inset-0 z-0">
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover"
-        >
-          <source src={bgVideo} type="video/mp4" />
-        </video>
+        <img src={bgFallback} alt="小晤伴学角色" className="absolute inset-0 w-full h-full object-cover" />
+        {import.meta.env.VITE_LUMI_IDLE_VIDEO_URL && (
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            poster={bgFallback}
+            className="absolute inset-0 w-full h-full object-cover"
+          >
+            <source src={import.meta.env.VITE_LUMI_IDLE_VIDEO_URL} type="video/mp4" />
+          </video>
+        )}
       </div>
 
       {/* ================= Layer 2: HUD Interface ================= */}

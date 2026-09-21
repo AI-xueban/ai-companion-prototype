@@ -15,6 +15,7 @@ function loadBailianConfig(): { api_key?: string; base_url?: string; default_tex
 }
 
 export default defineConfig(({ mode }) => {
+    const singleFileBuild = mode === 'singlefile';
     const env = loadEnv(mode, '.', '');
     const bailian = loadBailianConfig();
     const dashscopeApiKey = env.DASHSCOPE_API_KEY || bailian.api_key || '';
@@ -43,17 +44,21 @@ export default defineConfig(({ mode }) => {
       assetsInclude: ['**/*.mov'],
       plugins: [
         react(),
-        viteSingleFile()
+        ...(singleFileBuild ? [viteSingleFile()] : [])
       ],
       build: {
-        assetsInlineLimit: 100000000, // 100MB，确保所有资源都内联
-        chunkSizeWarningLimit: 100000000,
-        cssCodeSplit: false,
-        rollupOptions: {
-          output: {
-            inlineDynamicImports: true,
-          },
-        },
+        // 云端静态托管使用正常的多文件产物，避免单个 HTML 超过平台限制。
+        // `npm run build:singlefile` 仍可生成便于离线传阅的单 HTML。
+        assetsInlineLimit: singleFileBuild ? 100000000 : 4096,
+        chunkSizeWarningLimit: 6000,
+        cssCodeSplit: !singleFileBuild,
+        rollupOptions: singleFileBuild
+          ? {
+              output: {
+                inlineDynamicImports: true,
+              },
+            }
+          : undefined,
       },
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),

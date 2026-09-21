@@ -17,6 +17,22 @@ npm run dev:admin
 npm run build:admin
 ```
 
+## Cloudflare Pages 部署
+
+同一仓库分别创建两个 Pages 项目，生产分支均使用 `main`：
+
+| 项目 | 根目录 | 构建命令 | 输出目录 | 环境变量 |
+|---|---|---|---|---|
+| 学生端（含教师端演示入口） | `apps/student` | `npm run build` | `dist` | `VITE_ENABLE_DEMO_CONTROLS=true` |
+| 管理后台 | `apps/admin` | `npm run build` | `dist` | 无 |
+
+学生端标准构建会输出拆分后的 HTML、JS、CSS 和图片资源，并通过
+`public/_redirects` 将 SPA 路径回退到 `index.html`。如需离线传阅的单 HTML，
+在 `apps/student` 内执行 `npm run build:singlefile`，不要将该产物用于 Pages。
+
+背景视频未提交到 Git。需要在公网部署中启用视频时，先上传到 R2/CDN，再为学生端
+设置 `VITE_LUMI_IDLE_VIDEO_URL` 和 `VITE_LUMI_TALKING_VIDEO_URL`；不设置时自动显示封面图。
+
 ## 维护原则
 
 - `main` 必须保持可启动、可演示。
@@ -24,4 +40,3 @@ npm run build:admin
 - 不把 `node_modules`、`dist`、ZIP、日志、密钥或临时产物提交到 Git。
 - 原始目录继续作为迁移参照，不在原目录上执行合并覆盖。
 - 产品取舍与迁移顺序以 `docs/原型合并与Git协作实施基线.md` 为准。
-
