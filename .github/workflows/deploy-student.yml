@@ -26,11 +26,11 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install student dependencies
+        run: npm --prefix apps/student install
 
       - name: Build student prototype
-        run: npm run build:student
+        run: npm --prefix apps/student run build
         env:
           VITE_ENABLE_DEMO_CONTROLS: "true"
 
