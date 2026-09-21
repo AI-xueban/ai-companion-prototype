@@ -1,18 +1,21 @@
 <view class="page">
   <view wx:if="{{stage === 'role'}}" class="role-stage">
-    <view class="eyebrow">AI LEARNING COMPANION</view>
+    <view class="decor decor-one"></view>
+    <view class="decor decor-two"></view>
+    <view class="brand-row"><view class="brand-mark">AI</view><view class="brand-name">AI 学伴</view></view>
+    <view class="eyebrow">FAMILY &amp; CLASSROOM</view>
     <view class="title">请选择使用身份</view>
     <view class="subtitle">家长陪伴孩子成长，教师管理班级教学。</view>
 
     <view class="role-list">
       <button class="role-card guardian" data-role="guardian" bindtap="selectRole">
-        <view class="role-icon warm">家</view>
-        <view class="role-copy"><view class="role-title">家长端</view><view class="role-desc">关联孩子 · 查看学习 · 设置管控</view></view>
+        <view class="role-icon warm"><view>家</view><view class="icon-dot"></view></view>
+        <view class="role-copy"><view class="role-label">FAMILY SPACE</view><view class="role-title">家长端</view><view class="role-desc">关联孩子 · 查看学习 · 设置管控</view></view>
         <view class="arrow">›</view>
       </button>
       <button class="role-card teacher" data-role="teacher" bindtap="selectRole">
-        <view class="role-icon cool">师</view>
-        <view class="role-copy"><view class="role-title">教师端</view><view class="role-desc">查看班级 · 教学分析 · 发布干预</view></view>
+        <view class="role-icon cool"><view>师</view><view class="icon-spark">✦</view></view>
+        <view class="role-copy"><view class="role-label">TEACHING SPACE</view><view class="role-title">教师端</view><view class="role-desc">查看班级 · 教学分析 · 发布干预</view></view>
         <view class="arrow">›</view>
       </button>
     </view>
