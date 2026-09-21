@@ -1,0 +1,21 @@
+{
+  "pages": [
+    "pages/auth/login/index",
+    "pages/student/home/index",
+    "pages/guardian/home/index"
+  ],
+  "subpackages": [
+    {
+      "root": "pages/teacher",
+      "name": "teacher",
+      "pages": ["home/index"]
+    }
+  ],
+  "window": {
+    "navigationBarTitleText": "AI学伴",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#F6F8FC"
+  },
+  "sitemapLocation": "sitemap.json"
+}

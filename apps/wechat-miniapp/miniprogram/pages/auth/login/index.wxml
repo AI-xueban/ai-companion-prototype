@@ -1,0 +1,9 @@
+<view class="page">
+  <view class="title">欢迎来到 AI 学伴</view>
+  <view class="subtitle">先完成平台账号登录，再绑定微信。</view>
+  <view class="card">
+    <view class="card-title">账号与授权</view>
+    <view class="card-text">学生、家长和教师使用各自已验证的平台身份登录。微信仅作为登录与通知身份，不自动推断亲子或师生关系。</view>
+    <button class="primary-button" bindtap="handlePlatformLogin">登录平台账号</button>
+  </view>
+</view>
