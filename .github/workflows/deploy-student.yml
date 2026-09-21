@@ -1,4 +1,4 @@
-name: Deploy student prototype to GitHub Pages
+name: Deploy AI Companion to GitHub Pages
 
 on:
   push:
@@ -30,10 +30,21 @@ jobs:
       - name: Install student dependencies
         run: npm --prefix apps/student install
 
+      - name: Install admin dependencies
+        run: npm --prefix apps/admin install
+
       - name: Build student prototype
         run: npm --prefix apps/student run build -- --base=/ai-companion-prototype/
         env:
           VITE_ENABLE_DEMO_CONTROLS: "true"
+
+      - name: Build admin prototype
+        run: npm --prefix apps/admin run build -- --base=/ai-companion-prototype/admin/
+
+      - name: Combine websites
+        run: |
+          mkdir -p apps/student/dist/admin
+          cp -R apps/admin/dist/. apps/student/dist/admin/
 
       - name: Upload website files
         uses: actions/upload-pages-artifact@v3
