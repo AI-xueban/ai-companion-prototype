@@ -1,4 +1,17 @@
-.title { font-size: 52rpx; font-weight: 700; }
-.subtitle { margin-top: 16rpx; color: #64748b; font-size: 28rpx; }
-.card-title { font-size: 34rpx; font-weight: 600; }
-.card-text { margin-top: 20rpx; color: #64748b; font-size: 28rpx; line-height: 1.7; }
+.page { min-height: 100vh; padding: 88rpx 48rpx 56rpx; box-sizing: border-box; background: linear-gradient(150deg, #f7f8ff 0%, #f5f8fc 48%, #fff9f5 100%); }
+.role-stage, .flow-stage { max-width: 680rpx; margin: 0 auto; }
+.eyebrow { color: #5267d8; letter-spacing: 4rpx; font-size: 20rpx; font-weight: 700; }
+.title { margin-top: 18rpx; color: #1f2a44; font-size: 54rpx; font-weight: 700; line-height: 1.25; }
+.subtitle { margin-top: 18rpx; color: #667085; font-size: 28rpx; line-height: 1.7; }
+.role-list { margin-top: 64rpx; display: flex; flex-direction: column; gap: 28rpx; }
+.role-card { width: 100%; min-height: 170rpx; padding: 30rpx 32rpx; box-sizing: border-box; display: flex; align-items: center; text-align: left; border-radius: 30rpx; background: #fff; border: 2rpx solid transparent; box-shadow: 0 16rpx 42rpx rgba(61, 73, 127, .08); }
+.role-card::after { border: 0; }
+.role-card.guardian { background: #fff9f5; border-color: #ffe4d3; }
+.role-card.teacher { background: #f4f8ff; border-color: #dbe7ff; }
+.role-icon { width: 84rpx; height: 84rpx; margin-right: 24rpx; border-radius: 26rpx; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 38rpx; font-weight: 700; }
+.role-icon.warm { background: #ef956d; }.role-icon.cool { background: #5267d8; }
+.role-copy { flex: 1; }.role-title { color: #273350; font-size: 36rpx; font-weight: 700; }.role-desc { margin-top: 10rpx; color: #71809b; font-size: 25rpx; }.arrow { color: #50617e; font-size: 52rpx; font-weight: 300; }
+.tip { margin-top: 48rpx; color: #98a2b3; font-size: 24rpx; text-align: center; }.back { margin-bottom: 42rpx; color: #5267d8; font-size: 27rpx; }
+.card { margin-top: 44rpx; padding: 32rpx; border-radius: 28rpx; background: #fff; box-shadow: 0 16rpx 42rpx rgba(61, 73, 127, .08); }.card-title { color: #273350; font-size: 34rpx; font-weight: 700; }.card-text { margin-top: 14rpx; color: #71809b; font-size: 26rpx; line-height: 1.75; }
+.child-list { margin-top: 26rpx; display: flex; flex-direction: column; gap: 18rpx; }.child-item { padding: 22rpx; display: flex; align-items: center; border: 2rpx solid #edf0f6; border-radius: 20rpx; }.child-item.selected { border-color: #5267d8; background: #f5f6ff; }.child-avatar { width: 62rpx; height: 62rpx; margin-right: 20rpx; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #ffd9c7; color: #9e4f2b; font-weight: 700; }.child-name { color: #273350; font-size: 29rpx; font-weight: 700; }.child-meta { margin-top: 4rpx; color: #71809b; font-size: 23rpx; }.check { margin-left: auto; color: #5267d8; font-size: 32rpx; font-weight: 700; }
+.agreement { margin-top: 32rpx; color: #667085; font-size: 24rpx; line-height: 1.6; }.primary-button { margin-top: 32rpx; border-radius: 20rpx; background: #5267d8; color: #fff; font-size: 30rpx; font-weight: 700; }.teacher-card { border: 2rpx solid #dbe7ff; }.teacher-button { background: #387a9b; }.scope { margin-top: 28rpx; padding: 18rpx 20rpx; display: flex; align-items: center; border-radius: 16rpx; background: #f3f8fb; color: #39718d; font-size: 25rpx; }.scope-dot { width: 12rpx; height: 12rpx; margin-right: 14rpx; border-radius: 50%; background: #49a27e; }

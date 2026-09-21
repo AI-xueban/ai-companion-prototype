@@ -1,9 +1,55 @@
 <view class="page">
-  <view class="title">欢迎来到 AI 学伴</view>
-  <view class="subtitle">先完成平台账号登录，再绑定微信。</view>
-  <view class="card">
-    <view class="card-title">账号与授权</view>
-    <view class="card-text">学生、家长和教师使用各自已验证的平台身份登录。微信仅作为登录与通知身份，不自动推断亲子或师生关系。</view>
-    <button class="primary-button" bindtap="handlePlatformLogin">登录平台账号</button>
+  <view wx:if="{{stage === 'role'}}" class="role-stage">
+    <view class="eyebrow">AI LEARNING COMPANION</view>
+    <view class="title">请选择使用身份</view>
+    <view class="subtitle">家长陪伴孩子成长，教师管理班级教学。</view>
+
+    <view class="role-list">
+      <button class="role-card guardian" data-role="guardian" bindtap="selectRole">
+        <view class="role-icon warm">家</view>
+        <view class="role-copy"><view class="role-title">家长端</view><view class="role-desc">关联孩子 · 查看学习 · 设置管控</view></view>
+        <view class="arrow">›</view>
+      </button>
+      <button class="role-card teacher" data-role="teacher" bindtap="selectRole">
+        <view class="role-icon cool">师</view>
+        <view class="role-copy"><view class="role-title">教师端</view><view class="role-desc">查看班级 · 教学分析 · 发布干预</view></view>
+        <view class="arrow">›</view>
+      </button>
+    </view>
+
+    <view class="tip">学生账号仅用于关联学习数据，不提供学生端入口。</view>
+  </view>
+
+  <view wx:elif="{{stage === 'guardian-bind'}}" class="flow-stage">
+    <view class="back" bindtap="backToRole">‹ 返回身份选择</view>
+    <view class="eyebrow">GUARDIAN ACCESS</view>
+    <view class="title">关联孩子账号</view>
+    <view class="subtitle">授权后，仅可查看已确认绑定孩子的学习数据。</view>
+    <view class="card">
+      <view class="card-title">选择要关联的孩子</view>
+      <view class="card-text">原型演示数据；正式环境应通过孩子码、学校审核或双向确认建立绑定。</view>
+      <view class="child-list">
+        <view wx:for="{{children}}" wx:key="id" class="child-item {{selectedChildId === item.id ? 'selected' : ''}}" data-id="{{item.id}}" bindtap="selectChild">
+          <view class="child-avatar">{{item.initial}}</view>
+          <view><view class="child-name">{{item.name}}</view><view class="child-meta">{{item.meta}}</view></view>
+          <view wx:if="{{selectedChildId === item.id}}" class="check">✓</view>
+        </view>
+      </view>
+    </view>
+    <checkbox-group bindchange="changeAgreement" class="agreement"><label><checkbox value="agreed" color="#5267D8" />我已阅读并同意《隐私政策》与《家长监护说明》</label></checkbox-group>
+    <button class="primary-button" loading="{{isSubmitting}}" bindtap="completeGuardianBinding">微信授权并进入家长端</button>
+  </view>
+
+  <view wx:else class="flow-stage">
+    <view class="back" bindtap="backToRole">‹ 返回身份选择</view>
+    <view class="eyebrow">TEACHER ACCESS</view>
+    <view class="title">验证教师身份</view>
+    <view class="subtitle">验证后，系统会按任教班级、学科与有效学期授予访问范围。</view>
+    <view class="card teacher-card">
+      <view class="card-title">学校教师账号</view>
+      <view class="card-text">当前为原型演示。正式接入后，请通过学校统一账号或手机号完成验证，前端不保存班级授权结果。</view>
+      <view class="scope"><view class="scope-dot"></view><view>演示权限：五年级 2 班 · 数学</view></view>
+    </view>
+    <button class="primary-button teacher-button" loading="{{isSubmitting}}" bindtap="completeTeacherVerification">验证并进入教师端</button>
   </view>
 </view>

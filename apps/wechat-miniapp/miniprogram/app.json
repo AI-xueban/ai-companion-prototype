@@ -1,7 +1,6 @@
 {
   "pages": [
     "pages/auth/login/index",
-    "pages/student/home/index",
     "pages/guardian/home/index"
   ],
   "subpackages": [
