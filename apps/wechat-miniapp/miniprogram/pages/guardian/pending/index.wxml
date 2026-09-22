@@ -1,0 +1,10 @@
+<view class="page">
+  <view class="result">
+    <view class="result-icon">✓</view>
+    <view class="result-title">绑定申请已提交</view>
+    <view class="result-desc">请等待学校审核。审核通过后，<br />你可查看该学生的学习情况。</view>
+  </view>
+  <view class="section-label">申请信息</view>
+  <view class="cell-list"><view class="cell"><view class="cell-main"><view class="cell-title">林小满</view><view class="cell-desc">罗湖实验学校 · 五年级 2 班</view></view></view></view>
+  <view class="page-actions"><button class="primary-button" bindtap="handleComplete">完成</button></view>
+</view>

@@ -1,5 +1,17 @@
+import { requestWechatLoginCode } from "../../../services/auth";
+
 Page({
-  handlePlatformLogin() {
-    wx.showToast({ title: "待接入账号登录接口", icon: "none" });
+  data: { loading: false },
+  async handleGuardianLogin() {
+    if (this.data.loading) return;
+    this.setData({ loading: true });
+    try {
+      await requestWechatLoginCode();
+      wx.navigateTo({ url: "/pages/guardian/bind/index" });
+    } catch (error) {
+      wx.showToast({ title: error instanceof Error ? error.message : "微信登录失败，请重试", icon: "none" });
+    } finally {
+      this.setData({ loading: false });
+    }
   }
 })

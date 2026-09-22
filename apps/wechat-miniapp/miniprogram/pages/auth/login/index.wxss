@@ -1,4 +1,1 @@
-.title { font-size: 52rpx; font-weight: 700; }
-.subtitle { margin-top: 16rpx; color: #64748b; font-size: 28rpx; }
-.card-title { font-size: 34rpx; font-weight: 600; }
-.card-text { margin-top: 20rpx; color: #64748b; font-size: 28rpx; line-height: 1.7; }
+.page-note { margin-top: 0; }

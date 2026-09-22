@@ -2,7 +2,10 @@
   "pages": [
     "pages/auth/login/index",
     "pages/student/home/index",
-    "pages/guardian/home/index"
+    "pages/guardian/home/index",
+    "pages/guardian/bind/index",
+    "pages/guardian/confirm/index",
+    "pages/guardian/pending/index"
   ],
   "subpackages": [
     {
