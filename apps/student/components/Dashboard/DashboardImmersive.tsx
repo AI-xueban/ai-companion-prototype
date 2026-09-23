@@ -5,6 +5,7 @@ import { Bell, Scroll, Sparkles, BarChart2, Trophy, Coins, SmilePlus, ChevronDow
 import { TaskStream } from './TaskStream';
 import { DiscoveryFullPage } from './DiscoveryFullPage';
 import { StudentNotificationRail } from './StudentNotificationRail';
+import { ThirdPartyAppRail } from './ThirdPartyAppRail';
 import { ZhiyueHomeworkFlow } from './ZhiyueHomework/ZhiyueHomeworkFlow';
 import { ArticleReader } from '../Learning/ArticleReader';
 import bgFallback from '@/assets/AIfriend-v0.1-frame1.png';
@@ -14,6 +15,7 @@ import userAvatar from '@/assets/girl_v0.1-head.png';
 import { applyStageDonation, getStageStudentLabel, isCharityCampaignRunning, useDonationStage, validateStageDonation } from '../../data/charityStage';
 import { isJuniorGrade, type UiSchoolSystem } from '../../data/juniorDemoCatalog';
 import { STUDENT_NOTIFICATION_DEMO } from '../../data/studentNotifications';
+import { THIRD_PARTY_APPS, type ThirdPartyApp } from '../../data/thirdPartyApps';
 
 import { AITutorLayer } from './AITutorLayer';
 import { VoiceTranscriptionBubble } from './VoiceTranscriptionBubble';
@@ -408,6 +410,7 @@ export const DashboardImmersive: React.FC<DashboardImmersiveProps> = ({
   const isJuniorStudent = isJuniorGrade(userGrade || '', schoolSystem as UiSchoolSystem);
   const homeRightEntries = isJuniorStudent ? JUNIOR_HOME_RAIL : ELEMENTARY_HOME_RAIL;
   const [activePanel, setActivePanel] = useState<'tasks' | 'league' | 'stats' | 'tutor' | 'discovery_full' | null>(null);
+  const [isThirdPartyOpen, setIsThirdPartyOpen] = useState(false);
   const [readingArticleId, setReadingArticleId] = useState<string | null>(null);
   const [readerHideNav, setReaderHideNav] = useState(false);
   const [fromVideoFeed, setFromVideoFeed] = useState(false);
@@ -1314,6 +1317,20 @@ export const DashboardImmersive: React.FC<DashboardImmersiveProps> = ({
               </motion.div>
           )}
       </AnimatePresence>
+
+      <ThirdPartyAppRail
+        isOpen={isThirdPartyOpen}
+        apps={THIRD_PARTY_APPS}
+        onToggle={() => setIsThirdPartyOpen((open) => !open)}
+        onClose={() => setIsThirdPartyOpen(false)}
+        onOpenApp={(app: ThirdPartyApp) => {
+          if (app.launchUrl) {
+            window.location.href = app.launchUrl;
+          } else {
+            window.alert('即将打开' + app.name + '。接入平板原生能力后将通过包名 ' + (app.packageName || '—') + ' 启动应用。');
+          }
+        }}
+      />
 
       {/* --- LEFT SIDEBAR: 独立层级（讲题页/联赛侧栏打开时隐藏，避免叠压） --- */}
       {activePanel !== 'tutor' && activePanel !== 'league' && (

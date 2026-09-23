@@ -777,7 +777,21 @@ function refreshReqPanelForRoute() {
   else renderReqPanelIdle();
 }
 
+function toggleReqPanel(force) {
+  const panel = document.getElementById('req-panel');
+  const button = document.getElementById('req-float-btn');
+  if (!panel) return;
+  const open = typeof force === 'boolean' ? force : panel.classList.contains('is-hidden');
+  panel.classList.toggle('is-hidden', !open);
+  button?.classList.toggle('is-active', open);
+  if (button) button.setAttribute('aria-label', open ? '关闭需求说明' : '打开需求说明');
+}
+
 function initReqNotes() {
+  const floatButton = document.getElementById('req-float-btn');
+  const panel = document.getElementById('req-panel');
+  panel?.classList.add('is-hidden');
+  floatButton?.addEventListener('click', () => toggleReqPanel());
   const toggle = document.getElementById('req-annotate-toggle');
   if (toggle) {
     toggle.checked = reqAnnotateOn;
@@ -791,6 +805,7 @@ function initReqNotes() {
   else renderReqPanelIdle();
 }
 
+window.toggleReqPanel = toggleReqPanel;
 window.isReqAnnotateOn = isReqAnnotateOn;
 window.setReqAnnotateOn = setReqAnnotateOn;
 window.refreshReqPanelForRoute = refreshReqPanelForRoute;

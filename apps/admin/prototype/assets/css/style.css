@@ -2776,3 +2776,97 @@ body.req-annotate-on .req-active-target {
   .mall-stat-row,
   .mall-stat-row--compact { grid-template-columns: 1fr; }
 }
+
+/* 第三方应用管理 */
+.third-party-app-page .page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
+.third-party-app-page .page-subtitle { color:var(--text-muted); margin:6px 0 0; }
+.third-party-app-name { display:flex; align-items:center; gap:10px; }
+.third-party-app-icon { width:34px; height:34px; border-radius:8px; background:#eef4ff; color:var(--primary); display:inline-flex; align-items:center; justify-content:center; font-size:18px; }
+.third-party-app-tip { margin-top:12px; padding:12px 16px; background:#f7f8fa; color:var(--text-muted); font-size:13px; border-radius:6px; }
+.third-party-app-page { max-width: 1280px; }
+.third-party-app-page h2 { margin: 0; font-size: 20px; color: var(--text, #1f2329); }
+.third-party-summary { display:flex; gap:12px; margin-bottom:16px; }
+.third-party-summary > div { min-width:150px; padding:16px 20px; background:#fff; border:1px solid #e8ebf0; border-radius:8px; }
+.third-party-summary strong { display:block; font-size:24px; color:#1f2329; line-height:1.2; }
+.third-party-summary span { display:block; margin-top:5px; color:#86909c; font-size:13px; }
+.third-party-table { width:100%; border-collapse:collapse; background:#fff; }
+.third-party-table th { background:#f7f8fa; color:#4e5969; font-weight:500; text-align:left; white-space:nowrap; }
+.third-party-table th, .third-party-table td { padding:14px 16px; border-bottom:1px solid #f0f1f3; vertical-align:middle; }
+.third-party-table tr:hover td { background:#fafcff; }
+.third-party-table .muted { color:#86909c; font-size:13px; }
+.status-tag { display:inline-flex; align-items:center; padding:3px 9px; border-radius:10px; font-size:12px; }
+.status-tag.enabled { color:#16803c; background:#e8f7ed; }
+.status-tag.disabled { color:#86909c; background:#f2f3f5; }
+.empty-state { padding:40px !important; text-align:center; color:#86909c; }
+.third-party-app-page .btn-link + .btn-link { margin-left:14px; }
+
+/* 需求说明改为右下角悬浮入口，默认不占用页面空间 */
+.layout-main { margin-right: 0; }
+.req-panel.is-hidden { display: none; }
+.req-float-btn { position: fixed; right: 20px; bottom: 20px; z-index: 3100; width: 42px; height: 42px; border: 0; border-radius: 50%; background: var(--primary); color: #fff; font-size: 20px; line-height: 42px; text-align: center; cursor: pointer; box-shadow: 0 5px 16px rgba(22,119,255,.28); transition: transform .2s, background .2s; }
+.req-float-btn:hover { transform: translateY(-2px); background: var(--primary-hover); }
+.req-float-btn.is-active { background: #475467; }
+.third-party-filters { display:grid; grid-template-columns: 1.4fr 1fr 1fr 1fr auto; gap:12px; align-items:end; margin-bottom:16px; padding:16px; background:#fff; border:1px solid #e8ebf0; border-radius:8px; }
+.third-party-filters label { display:flex; flex-direction:column; gap:6px; min-width:0; color:#4e5969; font-size:12px; }
+.third-party-filters .input, .third-party-filters .select { width:100%; min-width:0; }
+.third-party-filter-actions { display:flex; gap:8px; }
+.third-party-school-tags { display:flex; flex-wrap:wrap; gap:4px; min-width:160px; }
+.third-party-school-tag { display:inline-flex; padding:3px 7px; border-radius:4px; background:#eef4ff; color:#3b6fd8; font-size:12px; white-space:nowrap; }
+.third-party-school-picker { grid-column:1 / -1; }
+.third-party-school-picker > span { color:#4e5969; font-size:12px; margin-bottom:7px; }
+.third-party-school-picker em, .form-item em { color:#ff4d4f; font-style:normal; }
+.third-party-school-options { display:flex; flex-wrap:wrap; gap:8px; }
+.third-party-school-check { display:inline-flex; align-items:center; gap:6px; padding:7px 10px; border:1px solid #e8ebf0; border-radius:6px; background:#fafbfc; color:#4e5969; font-size:12px; cursor:pointer; }
+.third-party-school-check.all { width:max-content; background:#f0f5ff; border-color:#c9dcff; }
+.third-party-school-check input { accent-color:var(--primary); }
+.third-party-field-error { min-height:18px; color:#ff4d4f; font-size:12px; line-height:18px; }
+.third-party-app-page .form-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px; }
+.third-party-app-page .form-item { display:flex; flex-direction:column; gap:6px; }
+@media (max-width: 1100px) { .third-party-filters { grid-template-columns:repeat(2, minmax(0, 1fr)); } .third-party-filter-actions { grid-column:1 / -1; } }
+@media (max-width: 640px) { .third-party-filters, .third-party-app-page .form-grid { grid-template-columns:1fr; } .third-party-school-picker { grid-column:auto; } }
+.third-party-date-range > div { display:flex; align-items:center; gap:6px; }
+.third-party-date-range b { color:#86909c; font-size:12px; font-weight:400; }
+.third-party-date-range .input { min-width:0; }
+.third-party-school-dropdown { position:relative; }
+.third-party-school-dropdown summary { list-style:none; cursor:pointer; padding:8px 11px; border:1px solid #d9dfe8; border-radius:6px; background:#fff; color:#86909c; font-size:13px; }
+.third-party-school-dropdown summary::-webkit-details-marker { display:none; }
+.third-party-school-dropdown summary::after { content:'▾'; float:right; color:#86909c; }
+.third-party-school-dropdown[open] summary { border-color:var(--primary); }
+.third-party-school-menu { position:absolute; z-index:20; left:0; right:0; top:calc(100% + 4px); display:flex; flex-wrap:wrap; gap:6px; padding:10px; border:1px solid #d9dfe8; border-radius:8px; background:#fff; box-shadow:0 8px 24px rgba(31,35,41,.12); }
+.third-party-school-menu .third-party-school-check { flex:1 1 45%; }
+.third-party-icon-preview { display:flex; align-items:center; justify-content:center; width:52px; height:52px; margin-top:4px; border-radius:12px; background:linear-gradient(135deg,#d4b4ff,#7c5ce0); color:#fff; font-size:20px; font-weight:700; }
+.third-party-inline-status { margin-left:8px; vertical-align:middle; }
+.third-party-app-picker { position:static; display:flex; flex-wrap:wrap; gap:8px; padding:10px; border:1px solid #e8ebf0; border-radius:8px; background:#fafbfc; }
+.third-party-app-picker .third-party-school-check { flex:1 1 42%; }
+
+/* 学校应用按学校分组展示 */
+.school-app-groups { border-top: 1px solid #222; margin-top: 18px; }
+.school-app-group { padding: 18px 0 24px; border-bottom: 1px solid #ddd; }
+.school-app-group-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.school-app-group-head strong { font-size: 16px; color: #1d2129; }
+.school-app-group-head span { color: #86909c; font-size: 14px; }
+.school-app-add { font-size: 13px; }
+.school-app-chip-list { display: flex; flex-wrap: wrap; gap: 12px; }
+.school-app-chip { min-width: 132px; padding: 10px 12px; border: 1px solid #d8dce8; background: #fff; border-radius: 4px; }
+.school-app-chip-main { display: flex; align-items: center; gap: 8px; font-weight: 600; color: #1d2129; }
+.school-app-chip .third-party-app-icon { width: 28px; height: 28px; border-radius: 8px; font-size: 14px; }
+.school-app-chip-actions { display: flex; gap: 8px; margin-top: 8px; }
+.school-app-chip.is-disabled { opacity: .6; }
+.school-app-empty { color: #999; font-size: 13px; }
+
+.third-party-action-school-menu { position: static; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 8px; max-height: 180px; overflow-y: auto; }
+
+.third-party-action-school-menu { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; max-height: 240px; overflow-y: auto; }
+.third-party-school-relation-row { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid #e8ebf0; border-radius: 6px; background: #fafbfc; color: #4e5969; font-size: 13px; }
+.third-party-school-relation-row input { accent-color: var(--primary); }
+.third-party-school-relation-row em { margin-left: auto; color: #86909c; font-style: normal; font-size: 12px; }
+.third-party-school-relation-row em.is-linked { color: #1677ff; }
+.third-party-list-toolbar { display: flex; align-items: center; padding: 0 0 12px; }
+.third-party-relation-help { margin-bottom: 10px; color: #86909c; font-size: 13px; }
+.third-party-relation-header { display: grid; grid-template-columns: 1fr 110px; padding: 0 12px 6px; color: #86909c; font-size: 12px; }
+.third-party-relation-header span:last-child { text-align: center; }
+.third-party-school-relation-row { display: grid; grid-template-columns: 1fr 110px; gap: 8px; }
+.third-party-school-relation-row button { justify-self: center; }
+/* 关联学校在列表中横向并列展示 */
+.third-party-school-tags { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; min-width: 220px; white-space: nowrap; overflow-x: auto; }
+.third-party-table .third-party-school-tags { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }

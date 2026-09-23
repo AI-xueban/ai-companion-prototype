@@ -38,6 +38,7 @@ const MENU = [
     ]
   },
 
+  { key: 'third-party-apps', label: '第三方应用', icon: '▦', route: 'third-party-apps' },
   { key: 'system', label: '系统配置', icon: '⚙️', route: null },
   { key: 'audit', label: '操作审计日志', icon: '📝', route: null },
 ];
@@ -66,6 +67,9 @@ const ROUTE_META = {
   'device-usage': { title: '使用记录', breadcrumb: ['设备管理', '使用记录'] },
   'device-usage-detail': { title: '使用记录详情', breadcrumb: ['设备管理', '使用记录', '详情'] },
   'device-alert': { title: '状态告警', breadcrumb: ['设备管理', '状态告警'] },
+  'third-party-apps': { title: '第三方应用', breadcrumb: ['第三方应用'] },
+  'app-library': { title: '第三方应用', breadcrumb: ['第三方应用'] },
+  'school-apps': { title: '学校应用', breadcrumb: ['第三方应用', '学校应用'] },
 
 };
 
@@ -221,3 +225,6 @@ function renderContentTableRows(items, actions) {
     </tr>
   `).join('');
 }
+
+
+
