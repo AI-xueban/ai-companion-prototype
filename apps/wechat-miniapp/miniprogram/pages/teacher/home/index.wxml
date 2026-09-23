@@ -1,0 +1,10 @@
+<view class="page">
+  <view class="page-head"><view class="page-title">班级学情</view><view class="page-desc">仅展示当前教师已授权的班级与学科数据。</view></view>
+  <view class="section-label">教学待办</view>
+  <view class="cell-list">
+    <view class="cell"><view class="cell-main"><view class="cell-title">待处理作业</view><view class="cell-desc">查看未提交和待订正情况</view></view><view class="cell-extra">7 人</view><view class="cell-arrow">›</view></view>
+    <view class="cell"><view class="cell-main"><view class="cell-title">班级错题</view><view class="cell-desc">查看需要讲评的共性问题</view></view><view class="cell-arrow">›</view></view>
+  </view>
+  <view class="section-label">班级管理</view>
+  <view class="cell-list"><view class="cell"><view class="cell-main"><view class="cell-title">班级学习报告</view><view class="cell-desc">按任教学科查看学习情况</view></view><view class="cell-arrow">›</view></view></view>
+</view>
