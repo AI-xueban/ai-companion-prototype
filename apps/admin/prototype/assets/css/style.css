@@ -2820,8 +2820,8 @@ body.req-annotate-on .req-active-target {
 .third-party-school-check.all { width:max-content; background:#f0f5ff; border-color:#c9dcff; }
 .third-party-school-check input { accent-color:var(--primary); }
 .third-party-field-error { min-height:18px; color:#ff4d4f; font-size:12px; line-height:18px; }
-.third-party-app-page .form-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px; }
-.third-party-app-page .form-item { display:flex; flex-direction:column; gap:6px; }
+.third-party-app-page .form-grid { grid-template-columns:1fr; gap:14px; }
+.third-party-app-page .form-item { display:grid; grid-template-columns:150px minmax(0, 1fr); align-items:center; column-gap:12px; row-gap:5px; } .third-party-app-page .form-item > .form-help, .third-party-app-page .form-item > .third-party-field-error, .third-party-app-page .form-item > .third-party-icon-preview, .third-party-app-page .form-item > input[type="hidden"] { grid-column:2; } .third-party-app-page .form-item > input[type="file"], .third-party-app-page .form-item > .input { min-width:0; }
 @media (max-width: 1100px) { .third-party-filters { grid-template-columns:repeat(2, minmax(0, 1fr)); } .third-party-filter-actions { grid-column:1 / -1; } }
 @media (max-width: 640px) { .third-party-filters, .third-party-app-page .form-grid { grid-template-columns:1fr; } .third-party-school-picker { grid-column:auto; } }
 .third-party-date-range > div { display:flex; align-items:center; gap:6px; }
@@ -2870,3 +2870,12 @@ body.req-annotate-on .req-active-target {
 /* 关联学校在列表中横向并列展示 */
 .third-party-school-tags { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; min-width: 220px; white-space: nowrap; overflow-x: auto; }
 .third-party-table .third-party-school-tags { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+
+.third-party-app-form-grid { display:grid !important; grid-template-columns:1fr !important; gap:14px !important; width:100%; }
+.third-party-app-form-grid > .form-item { display:grid !important; grid-template-columns:150px minmax(0,1fr) !important; align-items:center; column-gap:12px; row-gap:5px; width:100%; }
+.third-party-app-form-grid .form-item > .form-help, .third-party-app-form-grid .form-item > .third-party-field-error, .third-party-app-form-grid .form-item > .third-party-icon-preview, .third-party-app-form-grid .form-item > input[type=hidden] { grid-column:2; }
+.third-party-type-options { display:flex; gap:24px; align-items:center; } .third-party-type-options label { display:flex; align-items:center; gap:6px; font-size:14px; color:#4e5969; } .third-party-type-options input { accent-color:var(--primary); }
+
+.third-party-app-form-grid:has(input[name=third-party-type][value=web]:checked) .third-party-apk-only { display:none !important; }
+.third-party-app-form-grid:has(input[name=third-party-type][value=web]:checked) .third-party-web-only { display:grid !important; }
+.third-party-icon-preview img { width:48px; height:48px; object-fit:contain; border-radius:12px; } .third-party-app-icon img { width:100%; height:100%; object-fit:contain; border-radius:inherit; }
