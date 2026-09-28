@@ -487,6 +487,15 @@ let reqAnnotateOn = localStorage.getItem(REQ_ANNOTATE_KEY) === '1';
 let reqHoverEl = null;
 let reqActiveEl = null;
 
+function setReqPanelOpen(open) {
+  const panel = document.getElementById('req-panel');
+  const fab = document.getElementById('req-panel-fab');
+  const main = document.querySelector('.layout-main');
+  panel?.classList.toggle('is-collapsed', !open);
+  fab?.classList.toggle('is-hidden', open);
+  main?.classList.toggle('req-panel-collapsed', !open);
+}
+
 function isReqAnnotateOn() {
   return !!reqAnnotateOn;
 }

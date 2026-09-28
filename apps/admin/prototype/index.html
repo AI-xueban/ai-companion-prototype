@@ -31,6 +31,7 @@
     <aside class="req-panel" id="req-panel" aria-label="需求说明">
       <div class="req-panel-header">
         <div class="req-panel-title">需求说明</div>
+        <button class="req-panel-close" id="req-panel-close" type="button" aria-label="收起需求说明">×</button>
         <label class="req-annotate-switch" title="开启后点击原型元素查看说明；关闭后恢复正常交互">
           <span>注释</span>
           <input type="checkbox" id="req-annotate-toggle">
@@ -39,6 +40,7 @@
       </div>
       <div class="req-panel-body" id="req-panel-body"></div>
     </aside>
+    <button class="req-panel-fab" id="req-panel-fab" type="button" aria-label="展开需求说明">需求说明</button>
   </div>
   <div class="toast-container" id="toast-container"></div>
   <div class="modal-overlay" id="modal-overlay" hidden>
@@ -71,6 +73,7 @@
 
   <script src="assets/js/mall-pages.js"></script>
   <script src="assets/js/device-pages.js?v=20260828a"></script>
+  <script src="assets/js/face-pages.js"></script>
   <script src="assets/js/restore-device-modal.js"></script>
   <script src="assets/js/carousel-config.js?v=20260805d"></script>
   <script src="assets/js/pages.js?v=20260828a"></script>
