@@ -110,6 +110,12 @@ body {
   overflow: hidden;
 }
 
+.req-panel-fab { position: fixed; right: 18px; bottom: 24px; z-index: 3001; border: 0; border-radius: 999px; padding: 10px 14px; background: var(--primary); color: #fff; box-shadow: 0 4px 14px rgba(0,0,0,.18); cursor: pointer; }
+.req-panel-fab.is-hidden { display: none; }
+.req-panel-close { border: 0; background: transparent; color: var(--text-muted); font-size: 20px; cursor: pointer; line-height: 1; }
+.req-panel.is-collapsed { display: none; }
+.layout-main.req-panel-collapsed { margin-right: 0; }
+
 .req-panel-header {
   height: var(--header-height);
   flex-shrink: 0;
@@ -594,6 +600,10 @@ body.req-annotate-on .req-active-target {
 .status-enabled { color: var(--primary); }
 .status-disabled { color: var(--text-muted); }
 .status-draft { color: var(--warning); }
+.status-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; line-height: 20px; }
+.status-tag.enabled { color: #16a34a; background: #f0fdf4; }
+.status-tag.disabled { color: #909399; background: #f4f4f5; }
+.status-tag.warning { color: #d97706; background: #fffbeb; }
 
 .pagination {
   display: flex;
