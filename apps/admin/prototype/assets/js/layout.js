@@ -10,7 +10,6 @@ const MENU = [
       { key: 'tablet', label: '平板设备', route: 'tablet' },
       { key: 'device-usage', label: '使用记录', route: 'device-usage' },
       { key: 'device-alert', label: '状态告警', route: 'device-alert' },
-      { key: 'face-library', label: '人脸库', route: 'face-library' },
     ]
   },
   {
@@ -67,8 +66,6 @@ const ROUTE_META = {
   'device-usage': { title: '使用记录', breadcrumb: ['设备管理', '使用记录'] },
   'device-usage-detail': { title: '使用记录详情', breadcrumb: ['设备管理', '使用记录', '详情'] },
   'device-alert': { title: '状态告警', breadcrumb: ['设备管理', '状态告警'] },
-  'face-library': { title: '人脸库', breadcrumb: ['设备管理', '人脸库'] },
-  'face-login-record': { title: '登录记录', breadcrumb: ['设备管理', '人脸识别管理', '登录记录'] },
 
 };
 

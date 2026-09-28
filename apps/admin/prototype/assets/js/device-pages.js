@@ -826,9 +826,9 @@ function resetAlertFilter() {
 
 function renderUsageTableRows(records) {
   if (!records.length) {
-    return '<tr><td colspan="13" style="text-align:center;color:var(--text-muted);padding:32px">暂无符合条件的使用记录</td></tr>';
+    return '<tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:32px">暂无符合条件的使用记录</td></tr>';
   }
-  return records.map((r, index) => `
+  return records.map(r => `
     <tr>
       <td>${esc(r.id)}</td>
       <td>${esc(r.sn || '—')}</td>
@@ -837,7 +837,6 @@ function renderUsageTableRows(records) {
       <td>${esc(r.studentId || '—')}</td>
       <td>${esc(r.studentName)}</td>
       <td>${esc(r.grade || '—')}</td>
-      <td>${esc(r.authMethod || (index % 4 === 1 ? '编号密码' : '人脸识别'))}</td>
       <td>${usageRecordStateTag(r)}</td>
       <td class="status-ref-note">${esc(usageRecordStateNote(r))}</td>
       <td>${r.borrowAt}</td>
@@ -1341,7 +1340,7 @@ function renderDeviceUsagePage(params) {
       <div class="table-wrap">
         <table class="data-table">
           <thead><tr>
-            <th>记录ID</th><th>设备SN</th><th>格口号</th><th>所属柜机ID</th><th>编号</th><th>学生</th><th>班级</th><th>登录方式</th><th>状态</th><th>说明</th><th>借出时间</th><th>归还时间</th><th>操作</th>
+            <th>记录ID</th><th>设备SN</th><th>格口号</th><th>所属柜机ID</th><th>编号</th><th>学生</th><th>班级</th><th>状态</th><th>说明</th><th>借出时间</th><th>归还时间</th><th>操作</th>
           </tr></thead>
           <tbody>${renderUsageTableRows(pageRows)}</tbody>
         </table>
