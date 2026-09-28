@@ -604,6 +604,17 @@ body.req-annotate-on .req-active-target {
 .status-tag.enabled { color: #16a34a; background: #f0fdf4; }
 .status-tag.disabled { color: #909399; background: #f4f4f5; }
 .status-tag.warning { color: #d97706; background: #fffbeb; }
+.face-photo-thumb, .face-photo-preview { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: #e8f1ff; color: var(--primary); font-weight: 600; }
+.face-photo-thumb { width: 32px; height: 32px; border: 0; cursor: pointer; }
+.face-photo-preview { width: 180px; height: 180px; margin: 10px auto; font-size: 64px; }
+.face-edit-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+.face-edit-form label { display: flex; flex-direction: column; gap: 7px; color: var(--text-secondary); font-size: 13px; }
+.face-edit-form .input { width: 100%; box-sizing: border-box; }
+.face-photo-edit h4 { margin: 0 0 10px; color: var(--text); font-size: 16px; }
+.face-photo-file-row { display: flex; align-items: center; gap: 24px; }
+.face-photo-file-row a { color: var(--text); text-decoration: underline; }
+.face-photo-select { display: inline-block; padding: 7px 24px; border: 1px solid var(--border-strong); background: var(--white); color: var(--text); cursor: pointer; font-weight: 600; }
+.face-photo-select input { display: none; }
 
 .pagination {
   display: flex;
