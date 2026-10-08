@@ -1,18 +1,22 @@
 /* 人脸识别管理 · MVP 原型 */
+const FACE_SCHOOLS = [
+  { id: 'school-001', name: '深圳市南山实验学校' },
+  { id: 'school-002', name: '深圳市科技实验学校' },
+];
 const FACE_STUDENTS = [
-  { id: '2026001', name: '张三', className: '一年级1班', status: 'enabled', updatedAt: '2026-09-20 10:12:00' },
-  { id: '2026002', name: '李四', className: '一年级1班', status: 'enabled', updatedAt: '2026-09-20 10:12:00' },
-  { id: '2026003', name: '王五', className: '一年级2班', status: 'disabled', updatedAt: '2026-09-18 16:40:00' },
-  { id: '2026004', name: '赵六', className: '一年级2班', status: 'enabled', updatedAt: '2026-09-18 15:22:00' },
-  { id: '2026005', name: '孙七', className: '一年级3班', status: 'enabled', updatedAt: '2026-09-18 14:08:00' },
-  { id: '2026006', name: '周八', className: '一年级3班', status: 'disabled', updatedAt: '2026-09-17 17:35:00' },
-  { id: '2026007', name: '吴九', className: '二年级1班', status: 'enabled', updatedAt: '2026-09-17 16:18:00' },
-  { id: '2026008', name: '郑十', className: '二年级1班', status: 'enabled', updatedAt: '2026-09-17 15:42:00' },
-  { id: '2026009', name: '钱一', className: '二年级2班', status: 'enabled', updatedAt: '2026-09-16 11:26:00' },
-  { id: '2026010', name: '冯二', className: '二年级2班', status: 'disabled', updatedAt: '2026-09-16 10:05:00' },
-  { id: '2026011', name: '陈三', className: '二年级3班', status: 'enabled', updatedAt: '2026-09-15 16:44:00' },
-  { id: '2026012', name: '褚四', className: '二年级3班', status: 'enabled', updatedAt: '2026-09-15 15:30:00' },
-  { id: '2026013', name: '卫五', className: '三年级1班', status: 'enabled', updatedAt: '2026-09-15 14:12:00' },
+  { id: '2026001', schoolId: 'school-001', name: '张三', className: '一年级1班', status: 'enabled', updatedAt: '2026-09-20 10:12:00' },
+  { id: '2026002', schoolId: 'school-001', name: '李四', className: '一年级1班', status: 'enabled', updatedAt: '2026-09-20 10:12:00' },
+  { id: '2026003', schoolId: 'school-001', name: '王五', className: '一年级2班', status: 'disabled', updatedAt: '2026-09-18 16:40:00' },
+  { id: '2026004', schoolId: 'school-001', name: '赵六', className: '一年级2班', status: 'enabled', updatedAt: '2026-09-18 15:22:00' },
+  { id: '2026005', schoolId: 'school-001', name: '孙七', className: '一年级3班', status: 'enabled', updatedAt: '2026-09-18 14:08:00' },
+  { id: '2026006', schoolId: 'school-001', name: '周八', className: '一年级3班', status: 'disabled', updatedAt: '2026-09-17 17:35:00' },
+  { id: '2026007', schoolId: 'school-001', name: '吴九', className: '二年级1班', status: 'enabled', updatedAt: '2026-09-17 16:18:00' },
+  { id: '2026008', schoolId: 'school-002', name: '郑十', className: '二年级1班', status: 'enabled', updatedAt: '2026-09-17 15:42:00' },
+  { id: '2026009', schoolId: 'school-002', name: '钱一', className: '二年级2班', status: 'enabled', updatedAt: '2026-09-16 11:26:00' },
+  { id: '2026010', schoolId: 'school-002', name: '冯二', className: '二年级2班', status: 'disabled', updatedAt: '2026-09-16 10:05:00' },
+  { id: '2026011', schoolId: 'school-002', name: '陈三', className: '二年级3班', status: 'enabled', updatedAt: '2026-09-15 16:44:00' },
+  { id: '2026012', schoolId: 'school-002', name: '褚四', className: '二年级3班', status: 'enabled', updatedAt: '2026-09-15 15:30:00' },
+  { id: '2026013', schoolId: 'school-002', name: '卫五', className: '三年级1班', status: 'enabled', updatedAt: '2026-09-15 14:12:00' },
 ];
 
 const FACE_LOGIN_RECORDS = [
@@ -22,6 +26,8 @@ const FACE_LOGIN_RECORDS = [
 ];
 let faceCurrentPage = 1;
 let facePageSize = 10;
+let faceActiveStatus = 'enabled';
+let faceSelectedSchool = '';
 
 function faceStatusLabel(status) { return status === 'enabled' ? '<span class="status-tag enabled">已启用</span>' : '<span class="status-tag disabled">已停用</span>'; }
 
@@ -67,7 +73,7 @@ function batchToggleFaceStudents(status) {
   showConfirmModal({
     title: `批量${action}`,
     message: `确认${action}选中的 ${ids.length} 名学生吗？`,
-    hint: status === 'disabled' ? '停用只影响人脸登录，不会删除百度人脸数据，也不影响编号密码登录。' : '仅已完成人脸同步的学生可以正常使用人脸登录。',
+    hint: status === 'disabled' ? '停用只影响人脸登录，不影响编号密码登录。' : '启用后，学生可以在柜机使用人脸登录。',
     confirmText: '确认',
     cancelText: '取消',
     onConfirm: () => {
@@ -90,6 +96,19 @@ function switchFacePage(page) {
   navigate('face-library');
 }
 
+function switchFaceStatus(status) {
+  faceActiveStatus = status;
+  faceCurrentPage = 1;
+  navigate('face-library');
+}
+
+function switchFaceSchool(schoolId) {
+  faceSelectedSchool = schoolId;
+  faceCurrentPage = 1;
+  document.querySelectorAll('.face-student-check').forEach(el => { el.checked = false; });
+  navigate('face-library');
+}
+
 function toggleFaceStudent(id) {
   const student = FACE_STUDENTS.find(s => s.id === id);
   if (!student) return;
@@ -98,41 +117,23 @@ function toggleFaceStudent(id) {
   navigate('face-library');
 }
 
-function openFaceStudentEdit(id) {
-  const student = FACE_STUDENTS.find(s => s.id === id);
-  if (!student) return;
-  const modal = document.getElementById('modal');
-  document.getElementById('modal-title').textContent = '编辑学生人脸信息';
-  document.getElementById('modal-subtitle').textContent = '修改后将重新同步到百度人脸库';
-  document.getElementById('modal-subtitle').style.display = '';
-  const currentPhotoName = `${student.id}${student.name} ${student.className}.jpg`;
-  document.getElementById('modal-body').innerHTML = `<div class="face-edit-form"><label>学生编号<input class="input" value="${student.id}" disabled></label><label>姓名<input class="input" id="face-edit-name" value="${student.name}"></label><label>班级<input class="input" id="face-edit-class" value="${student.className}"></label><div class="face-photo-edit"><h4>学生照片</h4><div class="face-photo-file-row"><a href="#" onclick="return false">${currentPhotoName}</a><label class="face-photo-select">选择文件<input id="face-edit-photo" type="file" accept="image/*"></label></div><p class="form-hint">上传后将替换原有人脸照片并同步到百度人脸库。</p></div></div>`;
-  document.getElementById('modal-footer').style.display = '';
-  document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="saveFaceStudentEdit(\'' + student.id + '\')">保存</button>';
-  modal.classList.remove('modal-sm'); modal.classList.add('modal-xl');
-  document.getElementById('modal-overlay').hidden = false;
-}
-
-function saveFaceStudentEdit(id) {
-  const student = FACE_STUDENTS.find(s => s.id === id);
-  if (!student) return;
-  student.name = document.getElementById('face-edit-name')?.value || student.name;
-  student.className = document.getElementById('face-edit-class')?.value || student.className;
-  if (document.getElementById('face-edit-photo')?.files?.length) student.updatedAt = new Date().toISOString().slice(0, 16).replace('T', ' ');
-  closeModal();
-  toast('学生人脸信息已更新', 'success');
-  navigate('face-library');
-}
-
 function renderFaceLibraryPage() {
-  const totalPages = Math.max(1, Math.ceil(FACE_STUDENTS.length / facePageSize));
+  const schoolSelector = `<div class="filter-row"><label>学校 <select class="select" onchange="switchFaceSchool(this.value)"><option value="">请选择学校</option>${FACE_SCHOOLS.map(school => `<option value="${school.id}" ${faceSelectedSchool === school.id ? 'selected' : ''}>${school.name}</option>`).join('')}</select></label></div>`;
+  if (!faceSelectedSchool) {
+    return `<div class="page-card"><div class="page-card-header"><div><div class="page-card-title">学生人脸信息</div><p class="form-hint">请先选择学校，再查看该校学生人脸信息。</p></div></div>${schoolSelector}<div class="empty-state"><div class="empty-icon">🏫</div><div class="empty-title">请先选择学校</div><div class="empty-desc">人脸信息、启停操作和同步范围均按学校管理</div></div></div>`;
+  }
+  const schoolStudents = FACE_STUDENTS.filter(student => student.schoolId === faceSelectedSchool);
+  const statusStudents = schoolStudents.filter(student => student.status === faceActiveStatus);
+  const totalPages = Math.max(1, Math.ceil(statusStudents.length / facePageSize));
   faceCurrentPage = Math.min(faceCurrentPage, totalPages);
-  const pageStudents = FACE_STUDENTS.slice((faceCurrentPage - 1) * facePageSize, faceCurrentPage * facePageSize);
+  const pageStudents = statusStudents.slice((faceCurrentPage - 1) * facePageSize, faceCurrentPage * facePageSize);
   return `<div class="page-card">
-    <div class="page-card-header"><div><div class="page-card-title">学生人脸库</div><p class="form-hint">维护学生与百度人脸库的绑定关系，停用只影响人脸登录，不影响学号密码登录。</p></div></div>
-    <div class="filter-row"><label>学生编号 <input class="input" placeholder="请输入学生编号"></label><label>姓名 <input class="input" placeholder="请输入姓名"></label><label>班级 <input class="input" placeholder="请输入班级"></label><label>状态 <select class="select"><option>全部</option><option>已启用</option><option>已停用</option></select></label><button class="btn btn-secondary">重置</button><button class="btn btn-primary">搜索</button></div>
+    <div class="page-card-header"><div><div class="page-card-title">学生人脸信息</div><p class="form-hint">管理当前学校柜机录入并同步的学生人脸信息，停用只影响人脸登录，不影响编号密码登录。</p></div></div>
+    ${schoolSelector}
+    <div class="face-status-tabs" role="tablist" aria-label="人脸状态"><button type="button" role="tab" aria-selected="${faceActiveStatus === 'enabled'}" class="face-status-tab ${faceActiveStatus === 'enabled' ? 'active' : ''}" onclick="switchFaceStatus('enabled')">已启用（${schoolStudents.filter(s => s.status === 'enabled').length}）</button><button type="button" role="tab" aria-selected="${faceActiveStatus === 'disabled'}" class="face-status-tab ${faceActiveStatus === 'disabled' ? 'active' : ''}" onclick="switchFaceStatus('disabled')">已停用（${schoolStudents.filter(s => s.status === 'disabled').length}）</button></div>
+    <div class="filter-row"><label>学生编号 <input class="input" placeholder="请输入学生编号"></label><label>姓名 <input class="input" placeholder="请输入姓名"></label><label>班级 <input class="input" placeholder="请输入班级"></label><button class="btn btn-secondary">重置</button><button class="btn btn-primary">搜索</button></div>
     <div class="page-card-actions" style="margin:16px 0"><button class="btn btn-primary" onclick="openFaceImportModal()">＋ 批量导入</button><button class="btn btn-secondary" onclick="batchToggleFaceStudents('enabled')">批量启用</button><button class="btn btn-secondary" onclick="batchToggleFaceStudents('disabled')">批量停用</button></div>
-    <table class="data-table"><thead><tr><th><input type="checkbox" aria-label="全选学生" onchange="toggleAllFaceStudents(this.checked)"></th><th>学生编号</th><th>姓名</th><th>班级</th><th>人脸状态</th><th>最近同步时间</th><th>操作</th></tr></thead><tbody>${pageStudents.map(s => `<tr><td><input class="face-student-check" type="checkbox" value="${s.id}" aria-label="选择${s.name}"></td><td>${s.id}</td><td>${s.name}</td><td>${s.className}</td><td>${faceStatusLabel(s.status)}</td><td>${s.updatedAt}</td><td><button class="btn-link" onclick="openFaceStudentEdit('${s.id}')">编辑</button><button class="btn-link" onclick="toggleFaceStudent('${s.id}')">${s.status === 'enabled' ? '停用' : '启用'}</button></td></tr>`).join('')}</tbody></table>
+    <table class="data-table"><thead><tr><th><input type="checkbox" aria-label="全选学生" onchange="toggleAllFaceStudents(this.checked)"></th><th>学生编号</th><th>姓名</th><th>班级</th><th>人脸状态</th><th>最近更新时间</th><th>操作</th></tr></thead><tbody>${pageStudents.map(s => `<tr><td><input class="face-student-check" type="checkbox" value="${s.id}" aria-label="选择${s.name}"></td><td>${s.id}</td><td>${s.name}</td><td>${s.className}</td><td>${faceStatusLabel(s.status)}</td><td>${s.updatedAt}</td><td><button class="btn-link" onclick="toggleFaceStudent('${s.id}')">${s.status === 'enabled' ? '停用' : '启用'}</button></td></tr>`).join('')}</tbody></table>
     <div class="pagination pagination--with-size"><span class="page-btn ${faceCurrentPage === 1 ? 'disabled' : ''}" onclick="${faceCurrentPage === 1 ? '' : 'switchFacePage(' + (faceCurrentPage - 1) + ')'}">‹</span>${Array.from({length: totalPages}, (_, i) => `<span class="page-btn ${faceCurrentPage === i + 1 ? 'active' : ''}" onclick="switchFacePage(${i + 1})">${i + 1}</span>`).join('')}<span class="page-btn ${faceCurrentPage === totalPages ? 'disabled' : ''}" onclick="${faceCurrentPage === totalPages ? '' : 'switchFacePage(' + (faceCurrentPage + 1) + ')'}">›</span><span class="page-size-picker">每页 <select class="select page-size-select" aria-label="每页条数"><option selected>10 条</option><option>20 条</option><option>50 条</option></select></span><span class="page-jump">跳至 <input class="input sm" value="${faceCurrentPage}"> 页</span></div>
   </div>`;
 }

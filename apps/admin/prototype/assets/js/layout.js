@@ -10,7 +10,7 @@ const MENU = [
       { key: 'tablet', label: '平板设备', route: 'tablet' },
       { key: 'device-usage', label: '使用记录', route: 'device-usage' },
       { key: 'device-alert', label: '状态告警', route: 'device-alert' },
-      { key: 'face-library', label: '人脸库', route: 'face-library' },
+      { key: 'face-library', label: '人脸信息管理', route: 'face-library' },
     ]
   },
   {
@@ -72,7 +72,7 @@ const ROUTE_META = {
   'third-party-apps': { title: '第三方应用', breadcrumb: ['第三方应用'] },
   'app-library': { title: '第三方应用', breadcrumb: ['第三方应用'] },
   'school-apps': { title: '学校应用', breadcrumb: ['第三方应用', '学校应用'] },
-  'face-library': { title: '人脸库', breadcrumb: ['设备管理', '人脸库'] },
+  'face-library': { title: '人脸信息管理', breadcrumb: ['设备管理', '人脸信息管理'] },
 };
 
 function renderSiderMenu(activeRoute) {

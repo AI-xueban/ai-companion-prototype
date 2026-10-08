@@ -615,6 +615,9 @@ body.req-annotate-on .req-active-target {
 .face-photo-file-row a { color: var(--text); text-decoration: underline; }
 .face-photo-select { display: inline-block; padding: 7px 24px; border: 1px solid var(--border-strong); background: var(--white); color: var(--text); cursor: pointer; font-weight: 600; }
 .face-photo-select input { display: none; }
+.face-status-tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--border); margin: 12px 0 20px; }
+.face-status-tab { border: 0; border-bottom: 2px solid transparent; padding: 10px 4px; background: transparent; color: var(--text-secondary); cursor: pointer; font-size: 14px; }
+.face-status-tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
 
 .pagination {
   display: flex;
@@ -2900,3 +2903,6 @@ body.req-annotate-on .req-active-target {
 .third-party-app-form-grid:has(input[name=third-party-type][value=web]:checked) .third-party-apk-only { display:none !important; }
 .third-party-app-form-grid:has(input[name=third-party-type][value=web]:checked) .third-party-web-only { display:grid !important; }
 .third-party-icon-preview img { width:48px; height:48px; object-fit:contain; border-radius:12px; } .third-party-app-icon img { width:100%; height:100%; object-fit:contain; border-radius:inherit; }
+
+.third-party-app-form-grid:has(input[name=third-party-type][value=apk]:checked) .third-party-apk-only { display:grid !important; }
+.third-party-app-form-grid:has(input[name=third-party-type][value=apk]:checked) .third-party-web-only { display:none !important; }

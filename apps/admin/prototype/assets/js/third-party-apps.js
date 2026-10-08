@@ -179,7 +179,7 @@ function openLibraryAppForm(id) {
   openSimpleModal({ title: app ? '编辑应用' : '上传应用', body, footer: `<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="saveLibraryApp('${app?.id || ''}')">保存并上架</button>` });
 }
 
-function toggleThirdPartyTypeFields() { const type = document.querySelector("input[name=third-party-type]:checked")?.value || "apk"; document.querySelectorAll(".third-party-web-only").forEach((el) => { el.style.display = type === "web" ? "grid" : "none"; }); document.querySelectorAll(".third-party-apk-only").forEach((el) => { el.style.display = type === "apk" ? "grid" : "none"; }); ["third-party-package","third-party-version","third-party-icon-file"].forEach((id) => { const el = document.getElementById(id); const row = el?.closest(".form-item"); if (row) row.style.display = type === "apk" ? "grid" : "none"; }); }
+function toggleThirdPartyTypeFields() { const type = document.querySelector('input[name="third-party-type"]:checked')?.value || 'apk'; document.querySelectorAll('.third-party-web-only').forEach((el) => { el.style.display = type === 'web' ? 'grid' : 'none'; }); document.querySelectorAll('.third-party-apk-only').forEach((el) => { el.style.display = type === 'apk' ? 'grid' : 'none'; }); }
 function saveLibraryApp(id) {
   const type = document.querySelector("input[name=third-party-type]:checked")?.value || "apk";
   const name = document.getElementById('third-party-name')?.value.trim();
