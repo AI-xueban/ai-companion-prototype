@@ -39,7 +39,13 @@ const MENU = [
     ]
   },
 
-  { key: 'third-party-apps', label: '第三方应用', icon: '▦', route: 'third-party-apps' },
+  {
+    key: 'app-operations', label: '应用运营', icon: '▦', expanded: true,
+    children: [
+      { key: 'app-library', label: '应用库', route: 'app-library' },
+      { key: 'school-apps', label: '关联管理', route: 'school-apps' },
+    ]
+  },
   { key: 'system', label: '系统配置', icon: '⚙️', route: null },
   { key: 'audit', label: '操作审计日志', icon: '📝', route: null },
 ];

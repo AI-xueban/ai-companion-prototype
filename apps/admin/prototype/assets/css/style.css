@@ -2906,3 +2906,11 @@ body.req-annotate-on .req-active-target {
 
 .third-party-app-form-grid:has(input[name=third-party-type][value=apk]:checked) .third-party-apk-only { display:grid !important; }
 .third-party-app-form-grid:has(input[name=third-party-type][value=apk]:checked) .third-party-web-only { display:none !important; }
+
+.third-party-app-form-grid > .form-item { max-width: 100%; min-width: 0; }
+.relation-app-list { width: 100%; min-width: 0; max-height: 360px; overflow-y: auto; border: 1px solid #e8ebf0; border-radius: 8px; }
+.relation-app-list .third-party-table { margin: 0; }
+.relation-app-list thead th { position: sticky; top: 0; z-index: 1; background: #f7f8fa; }
+.relation-app-check { width: 88px; text-align: center; }
+.relation-app-check label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.relation-app-check input { accent-color: var(--primary); }
