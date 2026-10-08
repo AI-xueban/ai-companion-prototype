@@ -10,6 +10,7 @@ const MENU = [
       { key: 'tablet', label: '平板设备', route: 'tablet' },
       { key: 'device-usage', label: '使用记录', route: 'device-usage' },
       { key: 'device-alert', label: '状态告警', route: 'device-alert' },
+      { key: 'face-library', label: '人脸信息管理', route: 'face-library' },
     ]
   },
   {
@@ -38,6 +39,7 @@ const MENU = [
     ]
   },
 
+  { key: 'third-party-apps', label: '第三方应用', icon: '▦', route: 'third-party-apps' },
   { key: 'system', label: '系统配置', icon: '⚙️', route: null },
   { key: 'audit', label: '操作审计日志', icon: '📝', route: null },
 ];
@@ -66,7 +68,11 @@ const ROUTE_META = {
   'device-usage': { title: '使用记录', breadcrumb: ['设备管理', '使用记录'] },
   'device-usage-detail': { title: '使用记录详情', breadcrumb: ['设备管理', '使用记录', '详情'] },
   'device-alert': { title: '状态告警', breadcrumb: ['设备管理', '状态告警'] },
-
+  'device-alert': { title: '状态告警', breadcrumb: ['设备管理', '状态告警'] },
+  'third-party-apps': { title: '第三方应用', breadcrumb: ['第三方应用'] },
+  'app-library': { title: '第三方应用', breadcrumb: ['第三方应用'] },
+  'school-apps': { title: '学校应用', breadcrumb: ['第三方应用', '学校应用'] },
+  'face-library': { title: '人脸信息管理', breadcrumb: ['设备管理', '人脸信息管理'] },
 };
 
 function renderSiderMenu(activeRoute) {
@@ -221,3 +227,6 @@ function renderContentTableRows(items, actions) {
     </tr>
   `).join('');
 }
+
+
+
