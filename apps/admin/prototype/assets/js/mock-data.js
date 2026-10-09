@@ -110,9 +110,9 @@ const DEFAULT_DATA = {
 
   /* 设备管理 · 学习平板借租柜 */
   cabinets: [
-    { id: 'CAB-001', name: '图书馆一楼借租柜', location: '图书馆 1F 大厅东侧', totalSlots: 24, usedSlots: 6, online: true, lastHeartbeat: '2026-06-08 14:32:05', boundPhone: '13800001001', manager: '李老师', managerContact: '13800138001' },
-    { id: 'CAB-002', name: '教学楼A座借租柜', location: '教学楼 A 座 3F 走廊', totalSlots: 16, usedSlots: 4, online: true, lastHeartbeat: '2026-06-08 14:31:58', boundPhone: '13800001002', manager: '王老师', managerContact: '13900139002' },
-    { id: 'CAB-003', name: '实验楼借租柜', location: '实验楼 2F 入口', totalSlots: 12, usedSlots: 3, online: false, lastHeartbeat: '2026-06-08 09:15:00', boundPhone: '13800001003', manager: '张老师', managerContact: '13700137003' },
+    { id: 'CAB-001', name: '图书馆一楼借租柜', schoolId: 'school-001', schoolName: '深圳市南山实验学校', location: '图书馆 1F 大厅东侧', totalSlots: 24, usedSlots: 6, online: true, lastHeartbeat: '2026-06-08 14:32:05', boundPhone: '13800001001', manager: '李老师', managerContact: '13800138001' },
+    { id: 'CAB-002', name: '教学楼A座借租柜', schoolId: 'school-001', schoolName: '深圳市南山实验学校', location: '教学楼 A 座 3F 走廊', totalSlots: 16, usedSlots: 4, online: true, lastHeartbeat: '2026-06-08 14:31:58', boundPhone: '13800001002', manager: '王老师', managerContact: '13900139002' },
+    { id: 'CAB-003', name: '实验楼借租柜', schoolId: 'school-002', schoolName: '深圳市科技实验学校', location: '实验楼 2F 入口', totalSlots: 12, usedSlots: 3, online: false, lastHeartbeat: '2026-06-08 09:15:00', boundPhone: '13800001003', manager: '张老师', managerContact: '13700137003' },
   ],
   tablets: [
     /* CAB-001 · 格口状态样例柜：已绑定平板=已激活，损坏设备=异常（体现在设备状态），未绑定平板=未激活 */

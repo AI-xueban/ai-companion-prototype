@@ -4,19 +4,30 @@ const FACE_SCHOOLS = [
   { id: 'school-002', name: '深圳市科技实验学校' },
 ];
 const FACE_STUDENTS = [
-  { id: '2026001', schoolId: 'school-001', name: '张三', className: '一年级1班', status: 'enabled', updatedAt: '2026-09-20 10:12:00' },
-  { id: '2026002', schoolId: 'school-001', name: '李四', className: '一年级1班', status: 'enabled', updatedAt: '2026-09-20 10:12:00' },
-  { id: '2026003', schoolId: 'school-001', name: '王五', className: '一年级2班', status: 'disabled', updatedAt: '2026-09-18 16:40:00' },
-  { id: '2026004', schoolId: 'school-001', name: '赵六', className: '一年级2班', status: 'enabled', updatedAt: '2026-09-18 15:22:00' },
-  { id: '2026005', schoolId: 'school-001', name: '孙七', className: '一年级3班', status: 'enabled', updatedAt: '2026-09-18 14:08:00' },
-  { id: '2026006', schoolId: 'school-001', name: '周八', className: '一年级3班', status: 'disabled', updatedAt: '2026-09-17 17:35:00' },
-  { id: '2026007', schoolId: 'school-001', name: '吴九', className: '二年级1班', status: 'enabled', updatedAt: '2026-09-17 16:18:00' },
-  { id: '2026008', schoolId: 'school-002', name: '郑十', className: '二年级1班', status: 'enabled', updatedAt: '2026-09-17 15:42:00' },
-  { id: '2026009', schoolId: 'school-002', name: '钱一', className: '二年级2班', status: 'enabled', updatedAt: '2026-09-16 11:26:00' },
-  { id: '2026010', schoolId: 'school-002', name: '冯二', className: '二年级2班', status: 'disabled', updatedAt: '2026-09-16 10:05:00' },
-  { id: '2026011', schoolId: 'school-002', name: '陈三', className: '二年级3班', status: 'enabled', updatedAt: '2026-09-15 16:44:00' },
-  { id: '2026012', schoolId: 'school-002', name: '褚四', className: '二年级3班', status: 'enabled', updatedAt: '2026-09-15 15:30:00' },
-  { id: '2026013', schoolId: 'school-002', name: '卫五', className: '三年级1班', status: 'enabled', updatedAt: '2026-09-15 14:12:00' },
+  { id: '2026001', schoolId: 'school-001', name: '张三', className: '一年级1班', photoFile: '2026001 张三.jpg', updatedAt: '2026-09-20 10:12:00', updateMethod: '照片' },
+  { id: '2026002', schoolId: 'school-001', name: '李四', className: '一年级1班', photoFile: '2026002 李四.jpg', updatedAt: '2026-10-02 09:18:00', updateMethod: '视频' },
+  { id: '2026003', schoolId: 'school-001', name: '王五', className: '一年级2班', photoFile: null, updatedAt: '2026-10-03 16:40:00', updateMethod: '视频' },
+  { id: '2026004', schoolId: 'school-001', name: '赵六', className: '一年级2班', photoFile: '2026004 赵六.jpg', updatedAt: '2026-09-18 15:22:00', updateMethod: '照片' },
+  { id: '2026005', schoolId: 'school-001', name: '孙七', className: '一年级3班', photoFile: '2026005 孙七.jpg', updatedAt: '2026-10-04 14:08:00', updateMethod: '视频' },
+  { id: '2026006', schoolId: 'school-001', name: '周八', className: '一年级3班', photoFile: null, updatedAt: null, updateMethod: null },
+  { id: '2026007', schoolId: 'school-001', name: '吴九', className: '二年级1班', photoFile: '2026007 吴九.jpg', updatedAt: '2026-09-17 16:18:00', updateMethod: '照片' },
+  { id: '2026014', schoolId: 'school-001', name: '蒋一', className: '二年级1班', photoFile: null, updatedAt: null, updateMethod: null },
+  { id: '2026015', schoolId: 'school-001', name: '沈二', className: '二年级2班', photoFile: '2026015 沈二.jpg', updatedAt: '2026-09-14 11:05:00', updateMethod: '照片' },
+  { id: '2026016', schoolId: 'school-001', name: '韩三', className: '二年级2班', photoFile: null, updatedAt: '2026-10-06 08:46:00', updateMethod: '视频' },
+  { id: '2026017', schoolId: 'school-001', name: '杨四', className: '二年级3班', photoFile: '2026017 杨四.jpg', updatedAt: '2026-09-12 13:26:00', updateMethod: '照片' },
+  { id: '2026018', schoolId: 'school-001', name: '朱五', className: '二年级3班', photoFile: null, updatedAt: null, updateMethod: null },
+  { id: '2026008', schoolId: 'school-002', name: '郑十', className: '二年级1班', photoFile: '2026008 郑十.jpg', updatedAt: '2026-10-01 15:42:00', updateMethod: '视频' },
+  { id: '2026009', schoolId: 'school-002', name: '钱一', className: '二年级2班', photoFile: '2026009 钱一.jpg', updatedAt: '2026-09-16 11:26:00', updateMethod: '照片' },
+  { id: '2026010', schoolId: 'school-002', name: '冯二', className: '二年级2班', photoFile: null, updatedAt: null, updateMethod: null },
+  { id: '2026011', schoolId: 'school-002', name: '陈三', className: '二年级3班', photoFile: '2026011 陈三.jpg', updatedAt: '2026-09-15 16:44:00', updateMethod: '照片' },
+  { id: '2026012', schoolId: 'school-002', name: '褚四', className: '二年级3班', photoFile: '2026012 褚四.jpg', updatedAt: '2026-10-05 15:30:00', updateMethod: '视频' },
+  { id: '2026013', schoolId: 'school-002', name: '卫五', className: '三年级1班', photoFile: '2026013 卫五.jpg', updatedAt: '2026-09-15 14:12:00', updateMethod: '照片' },
+  { id: '2026019', schoolId: 'school-002', name: '秦六', className: '三年级1班', photoFile: null, updatedAt: null, updateMethod: null },
+  { id: '2026020', schoolId: 'school-002', name: '尤七', className: '三年级2班', photoFile: null, updatedAt: '2026-10-07 09:37:00', updateMethod: '视频' },
+  { id: '2026021', schoolId: 'school-002', name: '许八', className: '三年级2班', photoFile: '2026021 许八.jpg', updatedAt: '2026-09-11 10:20:00', updateMethod: '照片' },
+  { id: '2026022', schoolId: 'school-002', name: '何九', className: '三年级3班', photoFile: null, updatedAt: null, updateMethod: null },
+  { id: '2026023', schoolId: 'school-002', name: '吕十', className: '三年级3班', photoFile: '2026023 吕十.jpg', updatedAt: '2026-10-08 14:55:00', updateMethod: '视频' },
+  { id: '2026024', schoolId: 'school-002', name: '施一', className: '四年级1班', photoFile: '2026024 施一.jpg', updatedAt: '2026-09-10 09:48:00', updateMethod: '照片' },
 ];
 
 const FACE_LOGIN_RECORDS = [
@@ -26,18 +37,17 @@ const FACE_LOGIN_RECORDS = [
 ];
 let faceCurrentPage = 1;
 let facePageSize = 10;
-let faceActiveStatus = 'enabled';
 let faceSelectedSchool = '';
 
-function faceStatusLabel(status) { return status === 'enabled' ? '<span class="status-tag enabled">已启用</span>' : '<span class="status-tag disabled">已停用</span>'; }
 
-function facePhotoHtml(student, large = false) {
-  return `<button class="face-photo-thumb${large ? ' face-photo-large' : ''}" type="button" onclick="openFacePhotoPreview('${student.id}')" title="查看学生照片">${student.name.slice(0, 1)}</button>`;
+function facePhotoHtml(student) {
+  if (!student.photoFile) return '<span class="text-muted">未导入</span>';
+  return `<button class="btn-link" type="button" onclick="openFacePhotoPreview('${student.id}')" title="查看学生照片">${student.photoFile}</button>`;
 }
 
 function openFacePhotoPreview(id) {
   const student = FACE_STUDENTS.find(s => s.id === id);
-  if (!student) return;
+  if (!student || !student.photoFile) return;
   const modal = document.getElementById('modal');
   document.getElementById('modal-title').textContent = '查看学生照片';
   document.getElementById('modal-subtitle').style.display = 'none';
@@ -48,92 +58,166 @@ function openFacePhotoPreview(id) {
   document.getElementById('modal-overlay').hidden = false;
 }
 
+let faceImportFiles = [];
+
+function analyzeFaceImportFile(index) {
+  if (index === 3) return { uploadStatus: 'fail', outcome: 'upload-fail', note: '文件格式不正确' };
+  if (index === 2) return { uploadStatus: 'success', outcome: 'validation-fail', note: '存在同名学生，请单独上传照片' };
+  if (index === 1) return { uploadStatus: 'success', outcome: 'partial', note: '成功 8 条，失败 2 条' };
+  return { uploadStatus: 'success', outcome: 'success', note: '' };
+}
+function handleFaceImportFiles(fileList) {
+  if (!fileList?.length) return;
+  Array.from(fileList).forEach(file => {
+    const analysis = analyzeFaceImportFile(faceImportFiles.length);
+    faceImportFiles.push({
+      id: `face-import-${Date.now()}-${faceImportFiles.length}`,
+      fileName: file.name,
+      uploadStatus: analysis.uploadStatus,
+      importStatus: null,
+      note: analysis.note || '',
+      outcome: analysis.outcome,
+    });
+  });
+  refreshFaceImportList();
+}
+
+function triggerFaceImportUpload() {
+  document.getElementById('face-import-file-input')?.click();
+}
+
+function runFaceImport(recordId) {
+  const record = faceImportFiles.find(item => item.id === recordId);
+  if (!record || record.uploadStatus !== 'success' || record.importStatus) return;
+  if (record.outcome === 'validation-fail') {
+    record.importStatus = 'validation-fail';
+    toast('校验失败', 'error');
+  } else if (record.outcome === 'partial') {
+    record.importStatus = 'partial';
+    toast('部分数据导入成功', 'warning');
+  } else {
+    record.importStatus = 'success';
+    record.note = '学生照片已匹配并更新';
+    toast('导入成功', 'success');
+  }
+  refreshFaceImportList();
+}
+function renderFaceImportRow(record) {
+  if (record.uploadStatus === 'fail') {
+    return `<tr><td>${esc(record.fileName)}</td><td><span class="import-result-fail">上传失败</span></td><td>${esc(record.note)}</td><td>--</td></tr>`;
+  }
+  let noteCell = record.note ? esc(record.note) : '<span class="status-tag warning">等待导入</span>';
+  let actionCell = `<button class="btn-link" onclick="runFaceImport('${record.id}')">导入</button>`;
+  if (record.importStatus === 'success') {
+    noteCell = esc(record.note);
+    actionCell = '<span class="import-action-success">导入成功</span>';
+  } else if (record.importStatus === 'partial') {
+    noteCell = `${esc(record.note)}　<button class="btn-link" onclick="toast('失败明细下载（原型演示）')">下载失败明细</button>`;
+    actionCell = '<span class="status-tag warning">部分成功</span>';
+  } else if (record.importStatus === 'validation-fail') {
+    noteCell = `<span class="import-result-fail">${esc(record.note)}</span>`;
+    actionCell = '<span class="import-result-fail">校验失败</span>';
+  }
+  return `<tr><td>${esc(record.fileName)}</td><td>上传完成</td><td>${noteCell}</td><td>${actionCell}</td></tr>`;
+}
+function renderFaceImportList() {
+  if (!faceImportFiles.length) return '<div class="batch-import-empty">暂无上传记录</div>';
+  return `<div class="table-wrap"><table class="data-table"><thead><tr><th>文件名</th><th>上传结果</th><th>说明</th><th>操作</th></tr></thead><tbody>${faceImportFiles.map(renderFaceImportRow).join('')}</tbody></table></div>`;
+}
+
+function refreshFaceImportList() {
+  const list = document.getElementById('face-import-list');
+  if (list) list.innerHTML = renderFaceImportList();
+}
+
 function openFaceImportModal() {
+  faceImportFiles = [];
   const modal = document.getElementById('modal');
-  document.getElementById('modal-title').textContent = '批量导入学生人脸';
+  document.getElementById('modal-title').textContent = '导入学生照片';
   document.getElementById('modal-subtitle').style.display = 'none';
-  document.getElementById('modal-body').innerHTML = `<div class="batch-import-modal"><div class="batch-import-list"><div class="batch-import-empty">暂无上传记录</div></div><div class="batch-import-upload"><p class="form-hint">请先下载模板，填写学生编号、姓名、班级和照片文件名，再上传 Excel 与照片压缩包。</p><div class="batch-import-dropzone" id="face-import-dropzone"><div class="batch-import-dropzone-icon">📄</div><p class="batch-import-dropzone-text">拖动或点击上传 Excel / 照片压缩包</p></div><input type="file" id="face-import-file-input" hidden multiple accept=".xlsx,.xls,.csv,.zip"><button type="button" class="btn btn-primary batch-import-template-btn" onclick="toast('模板下载（原型演示）')">模板下载</button></div></div>`;
+  const school = FACE_SCHOOLS.find(item => item.id === faceSelectedSchool);
+  document.getElementById('modal-body').innerHTML = `<div class="batch-import-modal"><div class="batch-import-list" id="face-import-list">${renderFaceImportList()}</div><div class="batch-import-upload"><div class="batch-import-cabinet-row"><div class="batch-import-cabinet-field"><label class="form-label">当前学校</label><div class="input" style="width:100%;background:#f5f7fa">${esc(school?.name || '未选择学校')}</div></div></div><p class="form-hint">上传照片压缩包，照片按“姓名.扩展名”命名。系统按当前学校内的唯一姓名自动匹配学生，导入照片会替换当前识别数据。</p><div class="batch-import-dropzone" id="face-import-dropzone"><div class="batch-import-dropzone-icon">📄</div><p class="batch-import-dropzone-text">拖动或点击上传照片 ZIP 压缩包</p></div><input type="file" id="face-import-file-input" hidden accept=".zip"><div class="form-hint" style="margin-top:12px;line-height:1.8"><strong>照片命名规则</strong><br>格式：姓名.扩展名<br>示例：张三.jpg<br>支持：JPG、JPEG、PNG</div></div></div>`;
   document.getElementById('modal-footer').style.display = '';
-  document.getElementById('modal-footer').innerHTML = '<button type="button" class="btn" onclick="closeModal()">取消</button><button type="button" class="btn btn-primary" onclick="toast(\'文件校验完成后导入\');closeModal()">确定</button>';
+  document.getElementById('modal-footer').innerHTML = '<button type="button" class="btn" onclick="closeModal()">取消</button><button type="button" class="btn btn-primary" onclick="closeModal()">确定</button>';
   modal.classList.remove('modal-sm'); modal.classList.add('modal-xl');
   document.getElementById('modal-overlay').hidden = false;
-  const zone = document.getElementById('face-import-dropzone'); const input = document.getElementById('face-import-file-input');
-  zone?.addEventListener('click', () => input?.click());
-  input?.addEventListener('change', e => { if (e.target.files?.length) { zone.querySelector('.batch-import-dropzone-text').textContent = `已选择 ${e.target.files.length} 个文件`; } });
-}
-
-function toggleAllFaceStudents(checked) {
-  document.querySelectorAll('.face-student-check').forEach(el => { el.checked = checked; });
-}
-
-function batchToggleFaceStudents(status) {
-  const ids = [...document.querySelectorAll('.face-student-check:checked')].map(el => el.value);
-  if (!ids.length) { toast('请先选择学生', 'warning'); return; }
-  const action = status === 'enabled' ? '启用' : '停用';
-  showConfirmModal({
-    title: `批量${action}`,
-    message: `确认${action}选中的 ${ids.length} 名学生吗？`,
-    hint: status === 'disabled' ? '停用只影响人脸登录，不影响编号密码登录。' : '启用后，学生可以在柜机使用人脸登录。',
-    confirmText: '确认',
-    cancelText: '取消',
-    onConfirm: () => {
-      let success = 0;
-      let failed = 0;
-      FACE_STUDENTS.forEach(student => {
-        if (!ids.includes(student.id)) return;
-        if (status === 'enabled' && student.status === 'unregistered') { failed += 1; return; }
-        student.status = status;
-        success += 1;
-      });
-      toast(`${action}完成：成功 ${success} 条${failed ? `，失败 ${failed} 条` : ''}`, failed ? 'warning' : 'success');
-      navigate('face-library');
-    },
+  const zone = document.getElementById('face-import-dropzone');
+  const input = document.getElementById('face-import-file-input');
+  zone?.addEventListener('click', triggerFaceImportUpload);
+  input?.addEventListener('change', event => {
+    handleFaceImportFiles(event.target.files);
+    event.target.value = '';
+  });
+  zone?.addEventListener('dragover', event => {
+    event.preventDefault();
+    zone.classList.add('batch-import-dropzone--active');
+  });
+  zone?.addEventListener('dragleave', () => zone.classList.remove('batch-import-dropzone--active'));
+  zone?.addEventListener('drop', event => {
+    event.preventDefault();
+    zone.classList.remove('batch-import-dropzone--active');
+    handleFaceImportFiles(event.dataTransfer.files);
   });
 }
-
 function switchFacePage(page) {
   faceCurrentPage = page;
   navigate('face-library');
 }
 
-function switchFaceStatus(status) {
-  faceActiveStatus = status;
-  faceCurrentPage = 1;
-  navigate('face-library');
-}
 
 function switchFaceSchool(schoolId) {
   faceSelectedSchool = schoolId;
   faceCurrentPage = 1;
-  document.querySelectorAll('.face-student-check').forEach(el => { el.checked = false; });
   navigate('face-library');
 }
 
-function toggleFaceStudent(id) {
-  const student = FACE_STUDENTS.find(s => s.id === id);
+
+let facePhotoEditStudentId = null;
+
+function openSingleFacePhotoModal(studentId) {
+  const student = FACE_STUDENTS.find(item => item.id === studentId);
   if (!student) return;
-  student.status = student.status === 'enabled' ? 'disabled' : 'enabled';
-  toast(student.status === 'enabled' ? '已启用人脸登录' : '已停用人脸登录', 'success');
+  facePhotoEditStudentId = studentId;
+  const modal = document.getElementById('modal');
+  document.getElementById('modal-title').textContent = student.photoFile ? '更换学生照片' : '上传学生照片';
+  document.getElementById('modal-subtitle').style.display = 'none';
+  document.getElementById('modal-body').innerHTML = `<div class="device-form-modal"><div class="device-form-readonly"><div class="device-form-readonly-item"><label>学生编号</label><span>${esc(student.id)}</span></div><div class="device-form-readonly-item"><label>姓名</label><span>${esc(student.name)}</span></div><div class="device-form-readonly-item"><label>班级</label><span>${esc(student.className)}</span></div></div><div class="add-tag-field"><label class="add-tag-label"><span class="required">*</span>学生照片</label><input class="input add-tag-input" id="single-face-photo-input" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png"><p class="form-hint">单独上传时直接绑定当前学生，不依赖照片文件名。上传成功后将替换当前识别数据。</p></div></div>`;
+  document.getElementById('modal-footer').style.display = '';
+  document.getElementById('modal-footer').innerHTML = '<button type="button" class="btn" onclick="closeModal()">取消</button><button type="button" class="btn btn-primary" onclick="saveSingleFacePhoto()">确定</button>';
+  modal.classList.remove('modal-sm'); modal.classList.add('modal-md');
+  document.getElementById('modal-overlay').hidden = false;
+}
+
+function saveSingleFacePhoto() {
+  const student = FACE_STUDENTS.find(item => item.id === facePhotoEditStudentId);
+  const file = document.getElementById('single-face-photo-input')?.files?.[0];
+  if (!student || !file) {
+    toast('请选择学生照片', 'warning');
+    return;
+  }
+  student.photoFile = file.name;
+  student.updateMethod = '照片';
+  student.updatedAt = new Date().toLocaleString('zh-CN', { hour12: false }).replaceAll('/', '-');
+  closeModal();
+  toast('学生照片已更新', 'success');
   navigate('face-library');
 }
 
 function renderFaceLibraryPage() {
   const schoolSelector = `<div class="filter-row"><label>学校 <select class="select" onchange="switchFaceSchool(this.value)"><option value="">请选择学校</option>${FACE_SCHOOLS.map(school => `<option value="${school.id}" ${faceSelectedSchool === school.id ? 'selected' : ''}>${school.name}</option>`).join('')}</select></label></div>`;
   if (!faceSelectedSchool) {
-    return `<div class="page-card"><div class="page-card-header"><div><div class="page-card-title">学生人脸信息</div><p class="form-hint">请先选择学校，再查看该校学生人脸信息。</p></div></div>${schoolSelector}<div class="empty-state"><div class="empty-icon">🏫</div><div class="empty-title">请先选择学校</div><div class="empty-desc">人脸信息、启停操作和同步范围均按学校管理</div></div></div>`;
+    return `<div class="page-card"><div class="page-card-header"><div><div class="page-card-title">学生人脸信息</div><p class="form-hint">请先选择学校，再查看该校学生人脸信息。</p></div></div>${schoolSelector}<div class="empty-state"><div class="empty-icon">🏫</div><div class="empty-title">请先选择学校</div><div class="empty-desc">人脸信息和同步范围均按学校管理</div></div></div>`;
   }
   const schoolStudents = FACE_STUDENTS.filter(student => student.schoolId === faceSelectedSchool);
-  const statusStudents = schoolStudents.filter(student => student.status === faceActiveStatus);
-  const totalPages = Math.max(1, Math.ceil(statusStudents.length / facePageSize));
+  const totalPages = Math.max(1, Math.ceil(schoolStudents.length / facePageSize));
   faceCurrentPage = Math.min(faceCurrentPage, totalPages);
-  const pageStudents = statusStudents.slice((faceCurrentPage - 1) * facePageSize, faceCurrentPage * facePageSize);
+  const pageStudents = schoolStudents.slice((faceCurrentPage - 1) * facePageSize, faceCurrentPage * facePageSize);
   return `<div class="page-card">
-    <div class="page-card-header"><div><div class="page-card-title">学生人脸信息</div><p class="form-hint">管理当前学校柜机录入并同步的学生人脸信息，停用只影响人脸登录，不影响编号密码登录。</p></div></div>
+    <div class="page-card-header"><div><div class="page-card-title">学生人脸信息</div><p class="form-hint">查看当前学校柜机录入并同步的学生人脸信息。导入照片仅展示后台最近一次上传的照片，当前识别数据以更新方式为准。</p></div></div>
     ${schoolSelector}
-    <div class="face-status-tabs" role="tablist" aria-label="人脸状态"><button type="button" role="tab" aria-selected="${faceActiveStatus === 'enabled'}" class="face-status-tab ${faceActiveStatus === 'enabled' ? 'active' : ''}" onclick="switchFaceStatus('enabled')">已启用（${schoolStudents.filter(s => s.status === 'enabled').length}）</button><button type="button" role="tab" aria-selected="${faceActiveStatus === 'disabled'}" class="face-status-tab ${faceActiveStatus === 'disabled' ? 'active' : ''}" onclick="switchFaceStatus('disabled')">已停用（${schoolStudents.filter(s => s.status === 'disabled').length}）</button></div>
     <div class="filter-row"><label>学生编号 <input class="input" placeholder="请输入学生编号"></label><label>姓名 <input class="input" placeholder="请输入姓名"></label><label>班级 <input class="input" placeholder="请输入班级"></label><button class="btn btn-secondary">重置</button><button class="btn btn-primary">搜索</button></div>
-    <div class="page-card-actions" style="margin:16px 0"><button class="btn btn-primary" onclick="openFaceImportModal()">＋ 批量导入</button><button class="btn btn-secondary" onclick="batchToggleFaceStudents('enabled')">批量启用</button><button class="btn btn-secondary" onclick="batchToggleFaceStudents('disabled')">批量停用</button></div>
-    <table class="data-table"><thead><tr><th><input type="checkbox" aria-label="全选学生" onchange="toggleAllFaceStudents(this.checked)"></th><th>学生编号</th><th>姓名</th><th>班级</th><th>人脸状态</th><th>最近更新时间</th><th>操作</th></tr></thead><tbody>${pageStudents.map(s => `<tr><td><input class="face-student-check" type="checkbox" value="${s.id}" aria-label="选择${s.name}"></td><td>${s.id}</td><td>${s.name}</td><td>${s.className}</td><td>${faceStatusLabel(s.status)}</td><td>${s.updatedAt}</td><td><button class="btn-link" onclick="toggleFaceStudent('${s.id}')">${s.status === 'enabled' ? '停用' : '启用'}</button></td></tr>`).join('')}</tbody></table>
+    <div class="page-card-actions" style="margin:16px 0"><button class="btn btn-primary" onclick="openFaceImportModal()">＋ 导入照片</button></div>
+    <table class="data-table"><thead><tr><th>学生编号</th><th>姓名</th><th>班级</th><th title="后台最近一次导入的照片；当前识别数据以更新方式为准">导入照片</th><th>更新方式</th><th>最近更新时间</th><th>操作</th></tr></thead><tbody>${pageStudents.map(s => `<tr><td>${s.id}</td><td>${s.name}</td><td>${s.className}</td><td>${facePhotoHtml(s)}</td><td>${s.updateMethod || '—'}</td><td>${s.updatedAt || '—'}</td><td><button class="btn-link" onclick="openSingleFacePhotoModal('${s.id}')">${s.photoFile ? '更换照片' : '上传照片'}</button></td></tr>`).join('')}</tbody></table>
     <div class="pagination pagination--with-size"><span class="page-btn ${faceCurrentPage === 1 ? 'disabled' : ''}" onclick="${faceCurrentPage === 1 ? '' : 'switchFacePage(' + (faceCurrentPage - 1) + ')'}">‹</span>${Array.from({length: totalPages}, (_, i) => `<span class="page-btn ${faceCurrentPage === i + 1 ? 'active' : ''}" onclick="switchFacePage(${i + 1})">${i + 1}</span>`).join('')}<span class="page-btn ${faceCurrentPage === totalPages ? 'disabled' : ''}" onclick="${faceCurrentPage === totalPages ? '' : 'switchFacePage(' + (faceCurrentPage + 1) + ')'}">›</span><span class="page-size-picker">每页 <select class="select page-size-select" aria-label="每页条数"><option selected>10 条</option><option>20 条</option><option>50 条</option></select></span><span class="page-jump">跳至 <input class="input sm" value="${faceCurrentPage}"> 页</span></div>
   </div>`;
 }
