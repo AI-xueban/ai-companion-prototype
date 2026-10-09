@@ -35,7 +35,7 @@ function closeModal() {
   }
   document.getElementById('modal-overlay').hidden = true;
   const modal = document.getElementById('modal');
-  modal?.classList.remove('modal-sm', 'modal-md');
+  modal?.classList.remove('modal-sm', 'modal-md', 'modal-lg');
   modal?.classList.add('modal-xl');
   const subtitle = document.getElementById('modal-subtitle');
   const footer = document.getElementById('modal-footer');
