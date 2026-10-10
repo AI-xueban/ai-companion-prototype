@@ -291,6 +291,20 @@
           </div>
         </div>
 
+        <!-- 人脸识别成功后确认身份 -->
+        <div class="confirm-mask" id="faceConfirmModal" hidden>
+          <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="faceConfirmTitle">
+            <h3 id="faceConfirmTitle">确认登录身份</h3>
+            <p>当前识别到的编号</p>
+            <p class="face-confirm-id" id="recognizedStudentId">2026001</p>
+            <p>请确认是否使用该编号登录</p>
+            <div class="confirm-actions">
+              <button type="button" class="confirm-cancel" id="faceConfirmRetry">重新识别</button>
+              <button type="button" class="confirm-ok" id="faceConfirmLogin">确认登录</button>
+            </div>
+          </div>
+        </div>
+
         <!-- 取用确认 -->
         <div class="confirm-mask" id="borrowConfirmModal" hidden>
           <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="borrowConfirmTitle">

@@ -1835,6 +1835,15 @@ button {
   color: #92400e;
 }
 
+.confirm-card .face-confirm-id {
+  margin: 18px 0;
+  color: #1769e0;
+  font-size: 48px;
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
 .confirm-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;

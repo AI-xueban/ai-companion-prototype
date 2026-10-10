@@ -41,6 +41,10 @@
   const faceStatus = document.getElementById("faceStatus");
   const faceDesc = document.getElementById("faceDesc");
   const faceRetry = document.getElementById("faceRetry");
+  const faceConfirmModal = document.getElementById("faceConfirmModal");
+  const recognizedStudentId = document.getElementById("recognizedStudentId");
+  const faceConfirmRetry = document.getElementById("faceConfirmRetry");
+  const faceConfirmLogin = document.getElementById("faceConfirmLogin");
   const loginChoice = document.getElementById("loginChoice");
   const faceBack = document.getElementById("faceBack");
   const deviceTableBody = document.getElementById("deviceTableBody");
@@ -171,6 +175,7 @@
   }
 
   function resetFaceLogin() {
+    faceConfirmModal.hidden = true;
     pickupPage.querySelector('[data-goto="home"]').hidden = false;
     faceBack.hidden = false;
     loginChoice.hidden = true;
@@ -194,11 +199,12 @@
     faceLogin.hidden = false;
     passwordLogin.hidden = true;
     faceEnroll.hidden = true;
-    faceStatus.textContent = "识别成功，正在登录";
+    faceStatus.textContent = "识别成功";
     faceStatus.className = "face-status is-success";
-    faceDesc.textContent = "已确认身份，即将进入可用设备列表";
+    faceDesc.textContent = "请确认识别到的编号";
     faceRetry.hidden = true;
-    enrollmentTimer = window.setTimeout(() => showPage("devices"), 650);
+    recognizedStudentId.textContent = "2026001";
+    faceConfirmModal.hidden = false;
   }
 
   function showFaceFail(mode = enrollmentMode) {
@@ -689,6 +695,12 @@
     resetFaceLogin();
   });
   faceRetry.addEventListener("click", resetFaceLogin);
+  faceConfirmRetry.addEventListener("click", resetFaceLogin);
+  faceConfirmLogin.addEventListener("click", () => {
+    authenticatedStudentId = recognizedStudentId.textContent;
+    faceConfirmModal.hidden = true;
+    showPage("devices");
+  });
   faceEnrollStart.addEventListener("click", () => {
     enrollFailureAction.hidden = true;
     faceEnrollStart.disabled = true;
