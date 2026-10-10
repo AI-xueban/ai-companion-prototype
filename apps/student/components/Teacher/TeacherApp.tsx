@@ -13,6 +13,7 @@ import { TeacherLogin } from './Login/TeacherLogin.tsx';
 import { messages } from './data/mockTeacherData';
 import { PORTAL_CLASSES, TeacherPortalRole, TeacherPortalUser } from './data/teacherAccess';
 import { SchoolAdminManagement } from './SchoolAdminManagement';
+import { DeviceManagement } from './DeviceManagement/DeviceManagement';
 
 interface TeacherAppProps {
     onSwitchBack: () => void;
@@ -41,7 +42,7 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRol
   const allowedPages: Record<TeacherPortalRole, string[]> = {
     teacher: ['dashboard', 'analytics', 'profiles', 'profile'],
     'class-teacher': ['dashboard', 'analytics', 'profiles', 'incentives', 'inbox', 'profile'],
-    'school-admin': ['dashboard', 'analytics', 'profiles', 'incentives', 'inbox', 'profile', 'school', 'classes', 'teachers', 'students'],
+    'school-admin': ['dashboard', 'analytics', 'profiles', 'incentives', 'inbox', 'profile', 'school', 'classes', 'teachers', 'students', 'device-overview', 'cabinet', 'tablet', 'device-usage', 'device-alert', 'face-library'],
   };
   const navigate = (page: string) => {
     if (teacherUser && allowedPages[teacherUser.role].includes(page)) setActivePage(page);
@@ -70,6 +71,12 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRol
           case 'classes': return <SchoolAdminManagement initialView="classes" currentUser={teacherUser} />;
           case 'teachers': return <SchoolAdminManagement initialView="teachers" currentUser={teacherUser} />;
           case 'students': return <SchoolAdminManagement initialView="students" currentUser={teacherUser} />;
+          case 'device-overview': return <DeviceManagement initialView="overview" currentUser={teacherUser} />;
+          case 'cabinet': return <DeviceManagement initialView="cabinets" currentUser={teacherUser} />;
+          case 'tablet': return <DeviceManagement initialView="tablets" currentUser={teacherUser} />;
+          case 'device-usage': return <DeviceManagement initialView="usage" currentUser={teacherUser} />;
+          case 'device-alert': return <DeviceManagement initialView="alerts" currentUser={teacherUser} />;
+          case 'face-library': return <DeviceManagement initialView="faces" currentUser={teacherUser} />;
           default:
               return (
                 <div className="flex flex-col items-center justify-center h-full text-gray-400">
