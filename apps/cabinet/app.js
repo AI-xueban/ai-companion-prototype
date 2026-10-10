@@ -276,7 +276,7 @@
       registrationLocked = false;
       authenticatedStudentId = "";
       mustEnrollAfterPassword = false;
-      showPage("home");
+      showLoginChoice();
     }, 700);
   }
 
@@ -466,7 +466,7 @@
   function closeSuccessToast() {
     clearToastTimers();
     successToast.hidden = true;
-    showPage("home");
+    showLoginChoice();
   }
 
   function confirmBorrow(deviceId, slot) {
@@ -698,7 +698,7 @@
   faceConfirmRetry.addEventListener("click", () => {
     faceConfirmModal.hidden = true;
     authenticatedStudentId = "";
-    showPage("home");
+    showLoginChoice();
   });
   faceConfirmLogin.addEventListener("click", () => {
     authenticatedStudentId = recognizedStudentId.textContent;
