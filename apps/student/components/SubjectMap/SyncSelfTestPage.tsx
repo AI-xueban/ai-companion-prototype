@@ -40,6 +40,7 @@ interface SyncSelfTestPageProps {
   currentSectionHint?: string;
   subjects?: string[];
   onSubjectChange?: (subject: string) => void;
+  onOpenPrintedFiles?: () => void;
   pageTitle?: string;
   startLabel?: string;
   layerClassName?: string;
@@ -291,6 +292,7 @@ export const SyncSelfTestPage: React.FC<SyncSelfTestPageProps> = ({
   currentSectionHint,
   subjects,
   onSubjectChange,
+  onOpenPrintedFiles,
   pageTitle = '自主测 · 整册',
   startLabel = '开始自测',
   layerClassName = 'z-[550]',
@@ -402,7 +404,7 @@ export const SyncSelfTestPage: React.FC<SyncSelfTestPageProps> = ({
     ignoreStock = false,
     mode: 'online' | 'print' = 'online',
   ) => {
-    // 打印异常交给 PaperPrintFlow 的单一状态机处理，不能继续依赖设置页的组卷计时器。
+    // 打印异常交给 PaperPrintFlow 的单一状态机处理，不能继续依赖设置页的生成试卷计时器。
     if (mode === 'print' && printExceptionDemo) {
       setIsAssembling(false);
       setIsSetupOpen(false);
@@ -493,7 +495,7 @@ export const SyncSelfTestPage: React.FC<SyncSelfTestPageProps> = ({
           questionTypeCounts: payload.questionTypeCounts,
           includeAnswerAnalysis: payload.includeAnswerAnalysis,
           }),
-          // 异常章节是本次所选知识点的属性，不能被外层组卷回调覆盖或遗漏。
+          // 异常章节是本次所选知识点的属性，不能被外层生成试卷回调覆盖或遗漏。
           printExceptionDemo: requestedJob?.printExceptionDemo ?? printExceptionDemo,
         });
         return;
@@ -583,7 +585,7 @@ export const SyncSelfTestPage: React.FC<SyncSelfTestPageProps> = ({
                 <h1 className="truncate text-[17px] font-semibold text-slate-900">{pageTitle}</h1>
                 <p className="truncate text-[11px] text-slate-400">
                   {version ? `${version} · ` : ''}{grade}{term} · {subject}
-                  {hasKnowledge ? ' · 按章节勾选知识点组卷' : ' · 按目录勾选课文/课时组卷'}
+                  {hasKnowledge ? ' · 按章节勾选知识点生成试卷' : ' · 按目录勾选课文/课时生成试卷'}
                 </p>
               </div>
               <button
@@ -592,7 +594,7 @@ export const SyncSelfTestPage: React.FC<SyncSelfTestPageProps> = ({
                 onClick={openSetup('print')}
                 className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-3 text-[13px] font-semibold text-violet-700 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400"
               >
-                <Printer size={15} />打印试卷
+                <Printer size={15} />组卷打印
               </button>
             </div>
           </header>
@@ -681,7 +683,7 @@ export const SyncSelfTestPage: React.FC<SyncSelfTestPageProps> = ({
             questionPresets={setupMode === 'print' ? [10, 15, 20] : undefined}
             mode={setupMode}
             startLabel={setupMode === 'print' ? '生成试卷' : startLabel}
-            cancelLabel={setupMode === 'print' ? '暂不组卷' : '暂不练习'}
+            cancelLabel={setupMode === 'print' ? '暂不生成试卷' : '暂不练习'}
             title={setupMode === 'print' ? '试卷设置' : '开始自主练习，先选好题量、难度和场景'}
             guideText={undefined}
             assembling={isAssembling}
@@ -777,6 +779,7 @@ export const SyncSelfTestPage: React.FC<SyncSelfTestPageProps> = ({
           <PaperPrintFlow
             job={printJob}
             onClose={() => setPrintJob(null)}
+            onOpenMyFiles={onOpenPrintedFiles}
             onModify={() => {
               setPrintJob(null);
               setIsSetupOpen(true);
