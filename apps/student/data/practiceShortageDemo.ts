@@ -12,9 +12,9 @@ export type PracticeShortageKind =
 
 export type PracticeDailyQuotaKind = 'daily_limit' | 'subject_daily_limit';
 export type PrintExceptionDemoKind = 'paper_shortage' | 'pdf_save_failed' | 'daily_limit';
-/** 打印助手每日最多可组卷次数；设置页在达到上限时即时提示。 */
+/** 打印助手每日最多可生成试卷次数；设置页在达到上限时即时提示。 */
 export const PRINT_DAILY_PAPER_LIMIT = 10;
-/** 原型默认展示的当日剩余组卷次数；接入服务后替换为实时额度。 */
+/** 原型默认展示的当日剩余生成试卷次数；接入服务后替换为实时额度。 */
 export const PRINT_DAILY_PAPER_REMAINING = 8;
 
 export const SHORTAGE_DEMO_CHAPTER_ID = 'shortage-demo-chapter';
@@ -43,9 +43,9 @@ export const PRINT_EXCEPTION_DEMOS: {
   title: string;
   idSuffix: string;
 }[] = [
-  { kind: 'paper_shortage', title: '组卷试题不足', idSuffix: 'print-paper-shortage' },
+  { kind: 'paper_shortage', title: '生成试卷试题不足', idSuffix: 'print-paper-shortage' },
   { kind: 'pdf_save_failed', title: 'PDF 保存失败', idSuffix: 'print-pdf-save-failed' },
-  { kind: 'daily_limit', title: '今日组卷次数已达上限', idSuffix: 'print-daily-limit' },
+  { kind: 'daily_limit', title: '今日生成试卷次数已达上限', idSuffix: 'print-daily-limit' },
 ];
 
 export const ALL_PRACTICE_DEMOS = [...PRACTICE_SHORTAGE_DEMOS, ...PRINT_EXCEPTION_DEMOS];
@@ -68,7 +68,7 @@ export function matchShortageDemo(idOrTitle?: string | null): PracticeShortageKi
   if (
     idOrTitle.includes('shortage-daily-limit')
     || idOrTitle.includes('当日总次数已达上限')
-    || idOrTitle.includes('当日组卷次数已达上限')
+    || idOrTitle.includes('当日生成试卷次数已达上限')
     || idOrTitle.includes('当日次数已满')
   ) return 'daily_limit';
   if (idOrTitle.includes('shortage-empty-bank') || idOrTitle.includes('暂时没有题目')) return 'empty_bank';
@@ -80,9 +80,9 @@ export function matchShortageDemo(idOrTitle?: string | null): PracticeShortageKi
 
 export function matchPrintExceptionDemo(idOrTitle?: string | null): PrintExceptionDemoKind | null {
   if (!idOrTitle) return null;
-  if (idOrTitle.includes('print-daily-limit') || idOrTitle.includes('今日组卷次数已达上限')) return 'daily_limit';
+  if (idOrTitle.includes('print-daily-limit') || idOrTitle.includes('今日生成试卷次数已达上限')) return 'daily_limit';
   if (idOrTitle.includes('print-pdf-save-failed') || idOrTitle.includes('PDF 保存失败')) return 'pdf_save_failed';
-  if (idOrTitle.includes('print-paper-shortage') || idOrTitle.includes('组卷试题不足')) return 'paper_shortage';
+  if (idOrTitle.includes('print-paper-shortage') || idOrTitle.includes('生成试卷试题不足')) return 'paper_shortage';
   return null;
 }
 

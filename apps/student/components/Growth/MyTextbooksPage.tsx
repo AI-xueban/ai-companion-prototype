@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowLeft,
   Atom,
@@ -19,7 +20,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { displaySubjectName, getGradeSubjects } from '../../data/subjectCatalog';
-import { type UiSchoolSystem } from '../../data/juniorDemoCatalog';
+import { isJuniorGrade, type UiSchoolSystem } from '../../data/juniorDemoCatalog';
 import { getAvailableTextbookVersions, resolveTextbookVersion, saveTextbookVersion } from '../../services/textbookVersionStore';
 
 const GRADES = ['一年级', '二年级', '三年级', '四年级', '五年级', '六年级', '七年级', '八年级', '九年级'];
@@ -58,6 +59,7 @@ interface MyTextbooksPageProps {
   onGradeChange: (grade: string) => void;
   onTermChange: (term: string) => void;
   onSchoolSystemChange: (system: UiSchoolSystem) => void;
+  onAcademicContextChange?: (context: { grade: string; term: string; schoolSystem: UiSchoolSystem }) => void;
   onVersionChange?: () => void;
   onBack: () => void;
 }
@@ -69,10 +71,14 @@ export const MyTextbooksPage: React.FC<MyTextbooksPageProps> = ({
   onGradeChange,
   onTermChange,
   onSchoolSystemChange,
+  onAcademicContextChange,
   onVersionChange,
   onBack,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [draftContext, setDraftContext] = useState({ grade, term, schoolSystem });
+  const [draftVersions, setDraftVersions] = useState<Record<string, string>>({});
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [openMenu, setOpenMenu] = useState<OpenMenu | null>(null);
   const [popoverAnchor, setPopoverAnchor] = useState<{ left: number; top: number; width: number } | null>(null);
   const [versionTick, setVersionTick] = useState(0);
@@ -81,7 +87,11 @@ export const MyTextbooksPage: React.FC<MyTextbooksPageProps> = ({
     grade: null,
     term: null,
   });
-  const subjects = useMemo(() => getGradeSubjects(grade, schoolSystem), [grade, schoolSystem]);
+  const activeContext = isEditing ? draftContext : { grade, term, schoolSystem };
+  const subjects = useMemo(
+    () => getGradeSubjects(activeContext.grade, activeContext.schoolSystem),
+    [activeContext.grade, activeContext.schoolSystem],
+  );
   const sortedGrades = GRADES;
   const selectedGradeRef = useRef<HTMLButtonElement | null>(null);
   const expandedSubject = openMenu?.type === 'version' ? openMenu.subject : null;
@@ -96,14 +106,23 @@ export const MyTextbooksPage: React.FC<MyTextbooksPageProps> = ({
 
   const textbooks = useMemo(
     () => subjects.map((subject) => {
-      const versions = getAvailableTextbookVersions(subject, grade, term, schoolSystem);
+      const versions = getAvailableTextbookVersions(
+        subject,
+        activeContext.grade,
+        activeContext.term,
+        activeContext.schoolSystem,
+      );
       return {
         subject,
         versions,
-        current: versions.length ? resolveTextbookVersion(subject, versions, schoolSystem) : '',
+        current: versions.length
+          ? draftVersions[subject] && versions.includes(draftVersions[subject])
+            ? draftVersions[subject]
+            : resolveTextbookVersion(subject, versions, activeContext.schoolSystem)
+          : '',
       };
     }),
-    [subjects, grade, term, schoolSystem, versionTick],
+    [subjects, activeContext, draftVersions, versionTick],
   );
 
   const selectedTextbook = textbooks.find((item) => item.subject === expandedSubject);
@@ -113,9 +132,66 @@ export const MyTextbooksPage: React.FC<MyTextbooksPageProps> = ({
     setPopoverAnchor(null);
   };
 
-  const exitEditing = () => {
+  const discardDraft = () => {
     closeMenu();
     setIsEditing(false);
+    setDraftVersions({});
+    setLeaveDialogOpen(false);
+  };
+
+  const hasUnsavedChanges =
+    draftContext.grade !== grade ||
+    draftContext.term !== term ||
+    draftContext.schoolSystem !== schoolSystem ||
+    Object.entries(draftVersions).some(([subject, version]) => {
+      const versions = getAvailableTextbookVersions(subject, grade, term, schoolSystem);
+      return version !== resolveTextbookVersion(subject, versions, schoolSystem);
+    });
+
+  const saveDraft = () => {
+    const contextChanged =
+      draftContext.grade !== grade ||
+      draftContext.term !== term ||
+      draftContext.schoolSystem !== schoolSystem;
+    if (contextChanged) {
+      if (onAcademicContextChange) {
+        onAcademicContextChange(draftContext);
+      } else {
+        if (draftContext.schoolSystem !== schoolSystem) onSchoolSystemChange(draftContext.schoolSystem);
+        if (draftContext.grade !== grade) onGradeChange(draftContext.grade);
+        if (draftContext.term !== term) onTermChange(draftContext.term);
+      }
+    }
+    const validDraftVersions = Object.entries(draftVersions).filter(([subject, version]) =>
+      getAvailableTextbookVersions(
+        subject,
+        draftContext.grade,
+        draftContext.term,
+        draftContext.schoolSystem,
+      ).includes(version),
+    );
+    if (validDraftVersions.length) {
+      validDraftVersions.forEach(([subject, version]) => saveTextbookVersion(subject, version));
+      setVersionTick((value) => value + 1);
+      onVersionChange?.();
+    }
+    discardDraft();
+  };
+
+  const beginEditing = () => {
+    setDraftContext({ grade, term, schoolSystem });
+    setDraftVersions({});
+    setIsEditing(true);
+  };
+
+  const requestBack = () => {
+    closeMenu();
+    if (isEditing && hasUnsavedChanges) {
+      setLeaveDialogOpen(true);
+      return;
+    }
+    discardDraft();
+    onBack();
   };
 
   const getCardAnchor = (element: HTMLElement, popoverWidth = 220, popoverHeight = 220) => {
@@ -160,24 +236,30 @@ export const MyTextbooksPage: React.FC<MyTextbooksPageProps> = ({
   };
 
   const selectVersion = (subject: string, version: string) => {
-    saveTextbookVersion(subject, version);
-    setVersionTick((value) => value + 1);
-    onVersionChange?.();
+    setDraftVersions((previous) => ({ ...previous, [subject]: version }));
     closeMenu();
   };
 
   const selectSystem = (system: UiSchoolSystem) => {
-    onSchoolSystemChange(system);
+    setDraftContext((previous) => ({
+      ...previous,
+      schoolSystem: system,
+      grade: isJuniorGrade(previous.grade, system)
+        ? previous.grade
+        : system === '五四制'
+          ? '六年级'
+          : '七年级',
+    }));
     closeMenu();
   };
 
   const selectGrade = (item: string) => {
-    onGradeChange(item);
+    setDraftContext((previous) => ({ ...previous, grade: item }));
     closeMenu();
   };
 
   const selectTerm = (item: string) => {
-    onTermChange(item);
+    setDraftContext((previous) => ({ ...previous, term: item }));
     closeMenu();
   };
 
@@ -203,7 +285,7 @@ export const MyTextbooksPage: React.FC<MyTextbooksPageProps> = ({
         <div className="flex items-center gap-2.5">
           <button
             type="button"
-            onClick={onBack}
+            onClick={requestBack}
             aria-label="返回"
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
           >
@@ -212,7 +294,7 @@ export const MyTextbooksPage: React.FC<MyTextbooksPageProps> = ({
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-[17px] font-semibold text-slate-900">我的课本</h1>
             <p className="truncate text-[11px] text-slate-400">
-              {`${grade} · ${displayTerm(term)} · ${schoolSystem}`}
+              {`${activeContext.grade} · ${displayTerm(activeContext.term)} · ${activeContext.schoolSystem}`}
             </p>
           </div>
         </div>
@@ -237,12 +319,12 @@ export const MyTextbooksPage: React.FC<MyTextbooksPageProps> = ({
                   type="button"
                   aria-expanded={openMenu?.type === 'system'}
                   aria-haspopup="dialog"
-                  aria-label={`学制，当前${schoolSystem}`}
+                  aria-label={`学制，当前${activeContext.schoolSystem}`}
                   onClick={() => openFieldMenu('system')}
                   className={fieldTriggerClass(openMenu?.type === 'system')}
                 >
                   <span className="text-[10px] font-medium text-slate-400">学制</span>
-                  {schoolSystem}
+                  {activeContext.schoolSystem}
                   <ChevronDown size={12} className={`shrink-0 opacity-70 transition-transform ${openMenu?.type === 'system' ? 'rotate-180' : ''}`} />
                 </button>
                 <button
@@ -252,12 +334,12 @@ export const MyTextbooksPage: React.FC<MyTextbooksPageProps> = ({
                   type="button"
                   aria-expanded={openMenu?.type === 'grade'}
                   aria-haspopup="dialog"
-                  aria-label={`年级，当前${grade}`}
+                  aria-label={`年级，当前${activeContext.grade}`}
                   onClick={() => openFieldMenu('grade')}
                   className={fieldTriggerClass(openMenu?.type === 'grade')}
                 >
                   <span className="text-[10px] font-medium text-slate-400">年级</span>
-                  {grade}
+                  {activeContext.grade}
                   <ChevronDown size={12} className={`shrink-0 opacity-70 transition-transform ${openMenu?.type === 'grade' ? 'rotate-180' : ''}`} />
                 </button>
                 <button
@@ -267,12 +349,12 @@ export const MyTextbooksPage: React.FC<MyTextbooksPageProps> = ({
                   type="button"
                   aria-expanded={openMenu?.type === 'term'}
                   aria-haspopup="dialog"
-                  aria-label={`学期，当前${displayTerm(term)}`}
+                  aria-label={`学期，当前${displayTerm(activeContext.term)}`}
                   onClick={() => openFieldMenu('term')}
                   className={fieldTriggerClass(openMenu?.type === 'term')}
                 >
                   <span className="text-[10px] font-medium text-slate-400">学期</span>
-                  {displayTerm(term)}
+                  {displayTerm(activeContext.term)}
                   <ChevronDown size={12} className={`shrink-0 opacity-70 transition-transform ${openMenu?.type === 'term' ? 'rotate-180' : ''}`} />
                 </button>
               </div>
@@ -283,7 +365,7 @@ export const MyTextbooksPage: React.FC<MyTextbooksPageProps> = ({
             )}
             <button
               type="button"
-              onClick={() => (isEditing ? exitEditing() : setIsEditing(true))}
+              onClick={() => (isEditing ? saveDraft() : beginEditing())}
               className={`flex h-8 shrink-0 items-center gap-1 rounded-full px-3 text-[12px] font-semibold transition ${
                 isEditing
                   ? 'bg-indigo-500 text-white shadow-[0_4px_10px_rgba(99,102,241,0.28)]'
@@ -451,10 +533,10 @@ export const MyTextbooksPage: React.FC<MyTextbooksPageProps> = ({
                       key={system}
                       type="button"
                       onClick={() => selectSystem(system)}
-                      className={optionClass(schoolSystem === system)}
+                      className={optionClass(activeContext.schoolSystem === system)}
                     >
                       <span>{system}</span>
-                      {schoolSystem === system && <Check size={14} strokeWidth={2.5} />}
+                      {activeContext.schoolSystem === system && <Check size={14} strokeWidth={2.5} />}
                     </button>
                   ))}
                 </div>
@@ -466,10 +548,10 @@ export const MyTextbooksPage: React.FC<MyTextbooksPageProps> = ({
                       key={item}
                       type="button"
                       onClick={() => selectTerm(item)}
-                      className={optionClass(term === item)}
+                      className={optionClass(activeContext.term === item)}
                     >
                       <span>{displayTerm(item)}</span>
-                      {term === item && <Check size={14} strokeWidth={2.5} />}
+                      {activeContext.term === item && <Check size={14} strokeWidth={2.5} />}
                     </button>
                   ))}
                 </div>
@@ -477,7 +559,7 @@ export const MyTextbooksPage: React.FC<MyTextbooksPageProps> = ({
               {openMenu.type === 'grade' && (
                 <div className="flex flex-col gap-1">
                   {sortedGrades.map((item) => {
-                    const active = item === grade;
+                    const active = item === activeContext.grade;
                     return (
                       <button
                         key={item}
@@ -498,6 +580,57 @@ export const MyTextbooksPage: React.FC<MyTextbooksPageProps> = ({
             </div>
           </div>
         </>,
+        document.getElementById('app-viewport') || document.body,
+      )}
+
+      {createPortal(
+        <AnimatePresence>
+          {leaveDialogOpen && (
+            <div className="absolute inset-0 z-[1000] flex items-center justify-center px-6">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-slate-950/40 backdrop-blur-[2px]"
+                aria-hidden="true"
+              />
+              <motion.div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="unsaved-textbook-changes-title"
+                initial={{ opacity: 0, y: 16, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 12, scale: 0.96 }}
+                className="relative z-10 w-full max-w-[360px] rounded-3xl border border-white/80 bg-white p-5 text-center shadow-[0_24px_64px_rgba(15,23,42,0.18)]"
+              >
+                <h2 id="unsaved-textbook-changes-title" className="text-[17px] font-semibold text-slate-900">课本修改未保存</h2>
+                <p className="mt-2 text-[13px] leading-5 text-slate-500">保存后再离开吗？</p>
+                <div className="mt-5 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      discardDraft();
+                      onBack();
+                    }}
+                    className="h-11 flex-1 rounded-2xl bg-slate-100 text-[13px] font-semibold text-slate-700 transition hover:bg-slate-200"
+                  >
+                    不保存
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      saveDraft();
+                      onBack();
+                    }}
+                    className="h-11 flex-1 rounded-2xl bg-indigo-500 text-[13px] font-semibold text-white shadow-[0_6px_14px_rgba(99,102,241,0.25)] transition hover:bg-indigo-600"
+                  >
+                    保存并离开
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
         document.getElementById('app-viewport') || document.body,
       )}
     </div>

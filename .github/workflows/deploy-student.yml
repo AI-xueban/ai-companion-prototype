@@ -41,10 +41,16 @@ jobs:
       - name: Build admin prototype
         run: npm --prefix apps/admin run build -- --base=/ai-companion-prototype/admin/
 
+      - name: Build cabinet prototype
+        run: npm --prefix apps/cabinet run build
+
       - name: Combine websites
         run: |
           mkdir -p apps/student/dist/admin
           cp -R apps/admin/dist/. apps/student/dist/admin/
+          mkdir -p apps/student/dist/cabinet
+          cp apps/cabinet/index.html apps/cabinet/styles.css apps/cabinet/app.js apps/student/dist/cabinet/
+          cp -R apps/cabinet/assets apps/student/dist/cabinet/assets
 
       - name: Upload website files
         uses: actions/upload-pages-artifact@v3

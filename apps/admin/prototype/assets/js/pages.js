@@ -1394,8 +1394,14 @@ function renderPage(route, params) {
     case 'device-usage': return renderDeviceUsagePage(params);
     case 'device-usage-detail': return renderDeviceUsageDetailPage(params);
     case 'device-alert': return renderDeviceAlertPage(params);
+    case 'face-library': return renderFaceLibraryPage();
+    case 'face-login-record': return renderFaceLoginRecordPage();
     case 'mall': return renderMallPage(params);
+    case 'third-party-apps':
+    case 'app-library': return renderAppLibraryPage(params);
+    case 'school-apps': return renderSchoolAppsPage(params);
 
     default: return renderHomeConfigPage(params);
   }
 }
+
