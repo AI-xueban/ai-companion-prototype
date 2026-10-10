@@ -37,6 +37,19 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
       d.cabinets=kept.map(c=>({...c,schoolId:window.__teacherSchool.id,schoolName:window.__teacherSchool.name}));
       d.tablets=(d.tablets||[]).filter(t=>ids.has(t.cabinetId));
       d.usageRecords=(d.usageRecords||[]).filter(r=>ids.has(r.cabinetBorrow)||ids.has(r.cabinetReturn));
+      const todayUsageRecords=Array.from({length:20},(_,offset)=>{
+        const n=offset+1,returned=n<=15,borrowed=n>=16&&n<=18;
+        const studentNo=n<=16?n:(n<=18?n-16:n);
+        const cabinetId='CAB-00'+Math.min(3,Math.floor((n-1)/8)+1);
+        const hour=8+Math.floor((n-1)/2),minute=(n%2)*15,pad=value=>String(value).padStart(2,'0');
+        const tabletNo=((n-1)%20)+1;
+        const base={id:'UR-20261010'+String(n).padStart(3,'0'),tabletId:'TAB-'+String(tabletNo).padStart(3,'0'),sn:'SN20260301'+String(tabletNo).padStart(3,'0'),studentId:'2024010'+String(studentNo).padStart(3,'0'),studentName:['王晨','李欣','张宇','陈曦','刘畅','赵宁','周悦','吴桐','徐嘉','孙浩','马琳','朱凯','胡雨','郭航','何静','高远','黄蕾','林峰','唐婧','许辰'][n-1],grade:['七年级1班','七年级2班','八年级1班','八年级2班'][n%4],loginMethod:n%3===0?'编号密码':'人脸识别',cabinetBorrow:cabinetId,slotBorrow:((n-1)%8)+1,borrowAt:'2026-10-10 '+pad(hour)+':'+pad(minute)+':00',beforeCondition:{aiResult:'normal'},overdue:false};
+        if(returned)return {...base,status:'returned',returnAt:'2026-10-10 '+pad(hour+1)+':'+pad((minute+12)%60)+':00',cabinetReturn:cabinetId,slotReturn:base.slotBorrow,returnInspection:{aiResult:'normal'}};
+        if(borrowed)return {...base,status:'borrowed',returnAt:null,cabinetReturn:null,slotReturn:null};
+        return {...base,status:'cancelled',cancelReason:'charger_connected',cancelledAt:'2026-10-10 '+pad(hour)+':'+pad(minute+3)+':00',cabinetReturn:cabinetId,slotReturn:base.slotBorrow};
+      });
+      const todayUsageIds=new Set(todayUsageRecords.map(item=>item.id));
+      d.usageRecords=[...todayUsageRecords,...d.usageRecords.filter(item=>!todayUsageIds.has(item.id))];
       d.deviceAlerts=(d.deviceAlerts||[]).filter(a=>ids.has(a.cabinetId));
       const octoberAlerts=[
         {id:'ALT-202610-001',tabletId:'TAB-001',sn:'SN20260301001',cabinetId:'CAB-001',slotNo:3,type:'damage',severity:'high',title:'外观损坏',message:'外观对比发现损坏',status:'pending',createdAt:'2026-10-10 16:42:18'},
@@ -289,6 +302,51 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
       return root.innerHTML;
     };
 
+    const __filterTeacherUsageRecords=filterUsageRecords;
+    filterUsageRecords=function(records,filter){
+      const filtered=__filterTeacherUsageRecords(records,filter);
+      if(filter?.teacherMode==='successfulBorrow')return filtered.filter(item=>resolveUsageRecordState(item)!=='cancelled');
+      if(filter?.teacherMode==='currentBorrow')return filtered.filter(item=>resolveUsageRecordState(item)==='borrowed');
+      return filtered;
+    };
+    const __filterTeacherDeviceAlerts=filterDeviceAlerts;
+    filterDeviceAlerts=function(alerts,filter){
+      const filtered=__filterTeacherDeviceAlerts(alerts,filter);
+      if(filter?.teacherMode==='returnAbnormalToday')return filtered.filter(item=>parseRecordYmd(item.createdAt)===filter.teacherDate&&['damage','return_door_open','return_not_charging'].includes(item.type));
+      return filtered;
+    };
+    function openTeacherUsageMetric(mode){
+      const today=formatYmd(new Date()),next=getDefaultUsageFilter();
+      if(mode==='borrow'||mode==='people'){next.borrowStart=today;next.borrowEnd=today;next.teacherMode='successfulBorrow';}
+      else if(mode==='return'){next.returnStart=today;next.returnEnd=today;next.status='已归还';}
+      else if(mode==='current')next.teacherMode='currentBorrow';
+      else if(mode==='overdue')next.status='已逾期';
+      usageFilterState=next;navigate('device-usage',{keepFilter:true});
+    }
+    function openTeacherReturnAbnormal(){
+      const today=formatYmd(new Date());
+      alertFilterState={...getDefaultAlertFilter(),status:'全部',teacherMode:'returnAbnormalToday',teacherDate:today};
+      teacherAlertListPage=1;navigate('device-alert',{keepFilter:true});
+    }
+    function renderTeacherTodayUsage(){
+      const today=formatYmd(new Date());
+      const borrowed=data.usageRecords.filter(item=>parseRecordYmd(item.borrowAt)===today&&resolveUsageRecordState(item)!=='cancelled');
+      const returned=data.usageRecords.filter(item=>parseRecordYmd(item.returnAt)===today&&resolveUsageRecordState(item)==='returned');
+      const people=new Set(borrowed.map(item=>item.studentId)).size;
+      const current=data.usageRecords.filter(item=>resolveUsageRecordState(item)==='borrowed').length;
+      const overdue=data.usageRecords.filter(item=>resolveUsageRecordState(item)==='overdue').length;
+      const abnormal=data.deviceAlerts.filter(item=>parseRecordYmd(item.createdAt)===today&&['damage','return_door_open','return_not_charging'].includes(item.type)).length;
+      return '<section class="teacher-usage-dashboard">'+
+        '<div class="teacher-usage-head"><div><h3>今日使用数据</h3><p>'+today+' · 本校设备借还运行概况</p></div><div class="teacher-usage-summary"><span class="summary-dot"></span>今日运行数据已汇总</div></div>'+
+        '<div class="teacher-usage-grid">'+
+          '<button class="teacher-metric tone-blue" onclick="openTeacherUsageMetric(\'borrow\')"><span class="metric-icon">借</span><span class="metric-copy"><span class="metric-label">今日借出设备</span><strong>'+borrowed.length+'<small>台</small></strong><span class="metric-note">成功完成借出</span></span><span class="metric-arrow">›</span></button>'+
+          '<button class="teacher-metric tone-green" onclick="openTeacherUsageMetric(\'return\')"><span class="metric-icon">还</span><span class="metric-copy"><span class="metric-label">今日归还设备</span><strong>'+returned.length+'<small>台</small></strong><span class="metric-note">成功完成归还</span></span><span class="metric-arrow">›</span></button>'+
+          '<button class="teacher-metric tone-violet" onclick="openTeacherUsageMetric(\'people\')"><span class="metric-icon">人</span><span class="metric-copy"><span class="metric-label">今日借用人数</span><strong>'+people+'<small>人</small></strong><span class="metric-note">按学生编号去重</span></span><span class="metric-arrow">›</span></button>'+
+          '<button class="teacher-metric tone-amber" onclick="openTeacherUsageMetric(\'current\')"><span class="metric-icon">用</span><span class="metric-copy"><span class="metric-label">当前借出设备</span><strong>'+current+'<small>台</small></strong><span class="metric-note">正常借出中</span></span><span class="metric-arrow">›</span></button>'+
+          '<button class="teacher-metric tone-slate" onclick="openTeacherUsageMetric(\'overdue\')"><span class="metric-icon">逾</span><span class="metric-copy"><span class="metric-label">今日逾期未归还</span><strong>'+overdue+'<small>台</small></strong><span class="metric-note">已逾期且尚未归还</span></span><span class="metric-arrow">›</span></button>'+
+          '<button class="teacher-metric tone-red" onclick="openTeacherReturnAbnormal()"><span class="metric-icon">警</span><span class="metric-copy"><span class="metric-label">今日归还异常</span><strong>'+abnormal+'<small>条</small></strong><span class="metric-note">归还相关异常告警</span></span><span class="metric-arrow">›</span></button>'+
+        '</div></section>';
+    }
     let teacherOverviewAlertFilter={month:formatYm(new Date()),status:'待处理'};
 
     function applyTeacherOverviewAlertFilter(){
@@ -315,6 +373,8 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
     renderDeviceOverviewPage=function(){
       const root=document.createElement('div');
       root.innerHTML=__renderTeacherOverview();
+      const statusRow=root.querySelector('.dev-stat-row');
+      if(statusRow)statusRow.insertAdjacentHTML('afterend',renderTeacherTodayUsage());
       const section=Array.from(root.querySelectorAll('.form-section-title')).find(el=>(el.textContent||'').trim()==='最近使用记录');
       const tableWrap=section?.nextElementSibling;
       if(section&&tableWrap){
@@ -353,7 +413,7 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
     location.hash=${JSON.stringify(route)};
   `;
   const scripts=[isolatedMock,scope,layoutTemplatesJs,layoutJs,contentModalJs,confirmModalJs,batchImportJs,addCabinetJs,editTabletJs,devicePagesJs,facePagesJs,restoreDeviceJs,carouselJs,pagesJs,enforceSchool,appJs];
-  return `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${baseCss}\n${templateCss}\n${deviceCss}\nhtml,body{height:100%;overflow:auto;background:#f5f7fa}.layout{min-height:100%}.sider,.header,.tabs-bar,.req-panel,.req-panel-fab,.req-float-btn{display:none!important}.layout-main{margin-left:0!important;margin-right:0!important;height:100vh!important;min-height:0!important;overflow:hidden!important}.content{padding:20px!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain}.page-card{min-height:auto!important;box-shadow:0 1px 2px rgba(15,23,42,.05)}.modal-overlay{z-index:1000}.toast-container{z-index:1100}</style></head><body><div class="layout"><aside class="sider" id="sider"><nav id="sider-menu"></nav></aside><div class="layout-main"><header class="header"><button id="menu-toggle"></button><div id="breadcrumb"></div></header><div id="tabs-bar"></div><main class="content" id="main-content"></main></div><aside id="req-panel"><button id="req-panel-close"></button><div id="req-panel-body"></div></aside><button id="req-panel-fab"></button></div><div id="toast-container" class="toast-container"></div><div class="modal-overlay" id="modal-overlay" hidden><div class="modal modal-xl" id="modal"><div class="modal-header"><div><h3 class="modal-title" id="modal-title"></h3><p class="modal-subtitle" id="modal-subtitle"></p></div><button type="button" class="modal-close" id="modal-close">&times;</button></div><div class="modal-body" id="modal-body"></div><div class="modal-footer" id="modal-footer"></div></div></div>${scripts.map(s=>`<script>${safeScript(s)}</script>`).join('')}</body></html>`;
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${baseCss}\n${templateCss}\n${deviceCss}\nhtml,body{height:100%;overflow:auto;background:#f5f7fa}.layout{min-height:100%}.sider,.header,.tabs-bar,.req-panel,.req-panel-fab,.req-float-btn{display:none!important}.layout-main{margin-left:0!important;margin-right:0!important;height:100vh!important;min-height:0!important;overflow:hidden!important}.content{padding:20px!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain}.page-card{min-height:auto!important;box-shadow:0 1px 2px rgba(15,23,42,.05)}.modal-overlay{z-index:1000}.toast-container{z-index:1100}.teacher-usage-dashboard{margin:4px 0 24px;padding:20px;border:1px solid #dbe7f5;border-radius:16px;background:linear-gradient(135deg,#f8fbff 0%,#f3f7ff 55%,#f8fafc 100%);box-shadow:0 10px 30px rgba(41,72,122,.08)}.teacher-usage-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}.teacher-usage-head h3{margin:0 0 4px;font-size:18px;line-height:1.35;color:#172033}.teacher-usage-head p{margin:0;color:#738198;font-size:13px}.teacher-usage-eyebrow{font-size:10px;font-weight:700;letter-spacing:1.3px;color:#3b82f6}.teacher-usage-summary{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #d9e6f7;border-radius:999px;background:rgba(255,255,255,.82);color:#52647d;font-size:12px;white-space:nowrap}.summary-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.13)}.teacher-usage-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.teacher-metric{--tone:#3b82f6;--tone-bg:#eff6ff;position:relative;display:flex;align-items:center;gap:14px;width:100%;min-height:116px;padding:16px;border:1px solid #e2e8f0;border-radius:14px;background:#fff;color:#172033;text-align:left;font:inherit;cursor:pointer;overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}.teacher-metric:before{content:'';position:absolute;inset:0 auto 0 0;width:4px;background:var(--tone)}.teacher-metric:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--tone) 35%,#e2e8f0);box-shadow:0 10px 24px rgba(15,23,42,.09)}.teacher-metric:focus-visible{outline:3px solid color-mix(in srgb,var(--tone) 24%,transparent);outline-offset:2px}.metric-icon{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border-radius:12px;background:var(--tone-bg);color:var(--tone);font-size:16px;font-weight:700}.metric-copy{display:flex;min-width:0;flex:1;flex-direction:column}.metric-label{margin-bottom:5px;color:#526079;font-size:13px;font-weight:600}.teacher-metric strong{color:#172033;font-size:30px;line-height:1.1;letter-spacing:-.7px}.teacher-metric strong small{margin-left:4px;color:#7c8ba1;font-size:12px;font-weight:500;letter-spacing:0}.metric-note{margin-top:7px;color:#8a97a9;font-size:12px}.metric-arrow{color:#a4afbe;font-size:25px;line-height:1}.tone-green{--tone:#16a34a;--tone-bg:#eefbf3}.tone-violet{--tone:#7c3aed;--tone-bg:#f5f1ff}.tone-amber{--tone:#d97706;--tone-bg:#fff8e8}.tone-slate{--tone:#64748b;--tone-bg:#f1f5f9}.tone-red{--tone:#dc2626;--tone-bg:#fff1f1}@media(max-width:980px){.teacher-usage-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:640px){.teacher-usage-dashboard{padding:18px}.teacher-usage-head{flex-direction:column}.teacher-usage-grid{grid-template-columns:1fr}.teacher-usage-summary{align-self:flex-start}}</style></head><body><div class="layout"><aside class="sider" id="sider"><nav id="sider-menu"></nav></aside><div class="layout-main"><header class="header"><button id="menu-toggle"></button><div id="breadcrumb"></div></header><div id="tabs-bar"></div><main class="content" id="main-content"></main></div><aside id="req-panel"><button id="req-panel-close"></button><div id="req-panel-body"></div></aside><button id="req-panel-fab"></button></div><div id="toast-container" class="toast-container"></div><div class="modal-overlay" id="modal-overlay" hidden><div class="modal modal-xl" id="modal"><div class="modal-header"><div><h3 class="modal-title" id="modal-title"></h3><p class="modal-subtitle" id="modal-subtitle"></p></div><button type="button" class="modal-close" id="modal-close">&times;</button></div><div class="modal-body" id="modal-body"></div><div class="modal-footer" id="modal-footer"></div></div></div>${scripts.map(s=>`<script>${safeScript(s)}</script>`).join('')}</body></html>`;
  },[route,currentUser.schoolId,currentUser.schoolName]);
  return <div className="flex h-full min-h-0 flex-col bg-[#f5f7fa]"><iframe key={`${route}-${currentUser.schoolId}`} title={`设备管理-${route}`} srcDoc={srcDoc} sandbox="allow-scripts allow-forms allow-modals allow-same-origin" className="min-h-0 flex-1 border-0 bg-[#f5f7fa]"/></div>;
 };

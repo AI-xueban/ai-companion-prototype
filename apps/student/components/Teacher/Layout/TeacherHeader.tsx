@@ -13,12 +13,14 @@ export const TeacherHeader: React.FC<{
   user: TeacherPortalUser;
   currentClassId: string;
   onClassChange: (classId: string) => void;
+  showClassSelector?: boolean;
 }> = ({
   unreadMessageCount = 0,
   onOpenInbox,
   user,
   currentClassId,
   onClassChange,
+  showClassSelector = true,
 }) => {
   const allowedClasses = PORTAL_CLASSES.filter((item) => user.classIds.includes(item.id));
   const currentClass = allowedClasses.find((item) => item.id === currentClassId) ?? allowedClasses[0];
@@ -38,8 +40,8 @@ export const TeacherHeader: React.FC<{
         
         {/* 左侧：增强型班级切换器 (Rich Popover) */}
         <div className="flex items-center gap-2 text-sm font-bold select-none">
-          <span className="text-slate-500">{user.schoolName}</span><span className="text-slate-300">/</span>
-          <div className="relative">
+          <span className="text-slate-500">{user.schoolName}</span><span className={showClassSelector ? "text-slate-300" : "hidden"}>/</span>
+          <div className={showClassSelector ? "relative" : "hidden"}>
             <button 
               disabled={allowedClasses.length < 2}
               onClick={(e) => {

@@ -126,6 +126,7 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRol
             user={teacherUser}
             currentClassId={currentClassId}
             onClassChange={setCurrentClassId}
+            showClassSelector={!['device-overview', 'cabinet', 'tablet', 'device-usage', 'device-alert', 'face-library'].includes(activePage)}
           />
         )}
 
