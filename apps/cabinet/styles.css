@@ -1835,7 +1835,7 @@ button {
   color: #92400e;
 }
 
-.confirm-card .face-confirm-id {
+.confirm-card .face-confirm-message strong {
   margin: 18px 0;
   color: #1769e0;
   font-size: 48px;
