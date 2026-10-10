@@ -21,6 +21,8 @@ function renderCabinetFormModal(cabinet) {
   const modal = document.getElementById('modal');
   const subtitle = document.getElementById('modal-subtitle');
   const footer = document.getElementById('modal-footer');
+  const schools = typeof FACE_SCHOOLS !== 'undefined' ? FACE_SCHOOLS : [];
+  const schoolOptions = schools.map(school => `<option value="${esc(school.id)}" ${cabinet?.schoolId === school.id ? 'selected' : ''}>${esc(school.name)}</option>`).join('');
 
   document.getElementById('modal-title').textContent = isEdit ? '编辑柜机' : '添加柜机';
   if (subtitle) {
@@ -57,6 +59,13 @@ function renderCabinetFormModal(cabinet) {
       <div class="add-tag-field">
         <label class="add-tag-label"><span class="required">*</span>安装位置</label>
         <input class="input add-tag-input" id="add-cabinet-location" placeholder="请输入" value="${isEdit ? esc(cabinet.location) : ''}">
+      </div>
+      <div class="add-tag-field">
+        <label class="add-tag-label">学校</label>
+        <select class="select add-tag-input" id="add-cabinet-school">
+          <option value="">请选择学校（选填）</option>
+          ${schoolOptions}
+        </select>
       </div>
       <div class="add-tag-field">
         <label class="add-tag-label"><span class="required">*</span>绑定手机号</label>
@@ -102,6 +111,9 @@ function saveCabinetFormModal() {
   const cabinetId = document.getElementById('add-cabinet-id')?.value?.trim();
   const name = document.getElementById('add-cabinet-name')?.value?.trim();
   const location = document.getElementById('add-cabinet-location')?.value?.trim();
+  const schoolSelect = document.getElementById('add-cabinet-school');
+  const schoolId = schoolSelect?.value || '';
+  const schoolName = schoolId ? schoolSelect?.selectedOptions?.[0]?.textContent?.trim() || '' : '';
   const boundPhone = document.getElementById('add-cabinet-bound-phone')?.value?.trim();
   const manager = document.getElementById('add-cabinet-manager')?.value?.trim();
   const managerContact = document.getElementById('add-cabinet-manager-contact')?.value?.trim();
@@ -133,6 +145,8 @@ function saveCabinetFormModal() {
     }
     cab.name = name;
     cab.location = location;
+    cab.schoolId = schoolId;
+    cab.schoolName = schoolName || '—';
     cab.boundPhone = boundPhone;
     cab.manager = manager || '—';
     cab.managerContact = managerContact || '—';
@@ -161,6 +175,8 @@ function saveCabinetFormModal() {
     id: cabinetId,
     name,
     location,
+    schoolId,
+    schoolName: schoolName || '—',
     totalSlots: 0,
     usedSlots: 0,
     online: false,

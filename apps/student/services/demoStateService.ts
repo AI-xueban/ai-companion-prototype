@@ -11,6 +11,8 @@ const LOCAL_STORAGE_KEYS = new Set([
   'kg-mastery-overrides',
   'lumi-space-auto-voice',
   'mockTeacherToken',
+  'ai-companion:print-question-type-preferences:v1',
+  'ai-companion:printed-files:v1',
 ]);
 
 const LOCAL_STORAGE_PREFIXES = [

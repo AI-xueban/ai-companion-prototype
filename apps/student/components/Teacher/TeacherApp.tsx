@@ -11,14 +11,19 @@ import { ClassIncentives } from './Incentives/ClassIncentives';
 import { TeacherProfile } from './Profile/TeacherProfile';
 import { TeacherLogin } from './Login/TeacherLogin.tsx';
 import { messages } from './data/mockTeacherData';
+import { PORTAL_CLASSES, TeacherPortalRole, TeacherPortalUser } from './data/teacherAccess';
+import { SchoolAdminManagement } from './SchoolAdminManagement';
 
 interface TeacherAppProps {
     onSwitchBack: () => void;
+    initialRole?: TeacherPortalRole;
 }
 
-export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack }) => {
+export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRole = 'teacher' }) => {
   const [activePage, setActivePage] = useState('dashboard');
-  const [loggedIn, setLoggedIn] = useState(true);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [teacherUser, setTeacherUser] = useState<TeacherPortalUser | null>(null);
+  const [currentClassId, setCurrentClassId] = useState('c1');
   const [isMessageDrawerOpen, setIsMessageDrawerOpen] = useState(false);
 
   const unreadMessageCount = useMemo(
@@ -28,6 +33,18 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack }) => {
 
   const handleLogout = () => {
       setLoggedIn(false);
+      setTeacherUser(null);
+      setActivePage('dashboard');
+      localStorage.removeItem('mockTeacherToken');
+  };
+
+  const allowedPages: Record<TeacherPortalRole, string[]> = {
+    teacher: ['dashboard', 'analytics', 'profiles', 'profile'],
+    'class-teacher': ['dashboard', 'analytics', 'profiles', 'incentives', 'inbox', 'profile'],
+    'school-admin': ['dashboard', 'analytics', 'profiles', 'incentives', 'inbox', 'profile', 'school', 'classes', 'teachers', 'students'],
+  };
+  const navigate = (page: string) => {
+    if (teacherUser && allowedPages[teacherUser.role].includes(page)) setActivePage(page);
   };
 
   const handleOpenInbox = () => {
@@ -35,19 +52,24 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack }) => {
   };
 
   const renderContent = () => {
+      if (!teacherUser) return null;
       switch (activePage) {
           case 'dashboard':
-              return <TeacherDashboard onNavigateAnalytics={() => setActivePage('analytics')} />;
+              return <TeacherDashboard onNavigateAnalytics={() => navigate('analytics')} scopeLabel={`${teacherUser.schoolName} · ${teacherUser.roleLabel}${teacherUser.role === 'school-admin' ? '（全校范围）' : `（${teacherUser.classIds.map((id) => PORTAL_CLASSES.find((item) => item.id === id)?.name).filter(Boolean).join('、')}）`}`} />;
           case 'analytics':
-              return <TeacherAnalytics />;
+              return <TeacherAnalytics scopeLabel={`${teacherUser.schoolName} · ${teacherUser.role === 'school-admin' ? '全校' : (PORTAL_CLASSES.find((item) => item.id === currentClassId)?.name ?? '授权班级')}`} />;
           case 'profiles':
-              return <StudentProfiles />;
+              return <StudentProfiles classNames={teacherUser.role === 'school-admin' ? undefined : [PORTAL_CLASSES.find((item) => item.id === currentClassId)?.name ?? '七年级(2)班']} />;
           case 'incentives':
               return <ClassIncentives />;
           case 'inbox':
               return <SmartInbox />;
           case 'profile':
               return <TeacherProfile />;
+          case 'school': return <SchoolAdminManagement initialView="school" currentUser={teacherUser} />;
+          case 'classes': return <SchoolAdminManagement initialView="classes" currentUser={teacherUser} />;
+          case 'teachers': return <SchoolAdminManagement initialView="teachers" currentUser={teacherUser} />;
+          case 'students': return <SchoolAdminManagement initialView="students" currentUser={teacherUser} />;
           default:
               return (
                 <div className="flex flex-col items-center justify-center h-full text-gray-400">
@@ -61,7 +83,10 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack }) => {
   if (!loggedIn) {
     return (
       <TeacherLogin 
-        onLogin={() => {
+        initialRole={initialRole}
+        onLogin={(user) => {
+          setTeacherUser(user);
+          setCurrentClassId(user.classIds[0] ?? 'c1');
           setLoggedIn(true);
           setActivePage('dashboard');
         }}
@@ -70,16 +95,17 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack }) => {
     );
   }
 
+  if (!teacherUser) return null;
+
   return (
     <div className="flex h-screen w-screen bg-[#F8F9FC] text-gray-900 overflow-hidden font-sans">
       
       {/* 1. Sidebar (Fixed Left) */}
       <TeacherSidebar 
         activePage={activePage} 
-        onNavigate={(page) => {
-            setActivePage(page);
-        }} 
+        onNavigate={navigate}
         onLogout={handleLogout}
+        user={teacherUser}
       />
 
       {/* 2. Main Content Area (Flex Right) */}
@@ -90,6 +116,9 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack }) => {
           <TeacherHeader
             unreadMessageCount={unreadMessageCount}
             onOpenInbox={handleOpenInbox}
+            user={teacherUser}
+            currentClassId={currentClassId}
+            onClassChange={setCurrentClassId}
           />
         )}
 

@@ -4,8 +4,10 @@ import { createPortal } from 'react-dom';
 import { motion as motionOriginal, AnimatePresence } from 'framer-motion';
 import { UserProfileData } from '../../types';
 import { getUserGrowthData } from '../../services/geminiService';
-import { ArrowLeft, ShoppingBag, Lock, Settings, Coins, Heart, BadgeCheck, Scroll, X, PiggyBank, Sparkles, BookOpen } from 'lucide-react';
+import { ArrowLeft, ShoppingBag, Lock, Settings, Coins, Heart, BadgeCheck, Scroll, X, PiggyBank, Sparkles, BookOpen, FileText } from 'lucide-react';
 import { MyTextbooksPage } from './MyTextbooksPage';
+import { MyPrintedFilesPage } from './MyPrintedFilesPage';
+import { listPrintedFiles, PRINTED_FILES_CHANGED_EVENT } from '../../services/printedFileService';
 import { isJuniorGrade, type UiSchoolSystem } from '../../data/juniorDemoCatalog';
 import { InteractiveLumi } from '../LumiSpace/InteractiveLumi';
 import { UserAvatarImage } from '../User/UserAvatarImage';
@@ -80,6 +82,7 @@ interface GrowthProfileProps {
   onOpenSettings?: () => void; // New Prop
   coins?: number;
   openCharitySignal?: number;
+  openPrintedFilesSignal?: number;
   onCharityOpenChange?: (isOpen: boolean) => void;
   userGrade?: string;
   textbookTerm?: string;
@@ -87,6 +90,7 @@ interface GrowthProfileProps {
   onGradeChange?: (grade: string) => void;
   onTextbookTermChange?: (term: string) => void;
   onSchoolSystemChange?: (system: UiSchoolSystem) => void;
+  onAcademicContextChange?: (context: { grade: string; term: string; schoolSystem: UiSchoolSystem }) => void;
   onTextbooksOpenChange?: (isOpen: boolean) => void;
   onTextbookVersionChange?: () => void;
   /** 勋章实际点亮状态由领取成功事件驱动；演示场景可覆写初始数据。 */
@@ -100,6 +104,7 @@ export const GrowthProfile: React.FC<GrowthProfileProps> = ({
   onOpenSettings,
   coins,
   openCharitySignal = 0,
+  openPrintedFilesSignal = 0,
   onCharityOpenChange,
   userGrade = '七年级',
   textbookTerm = '上册',
@@ -107,6 +112,7 @@ export const GrowthProfile: React.FC<GrowthProfileProps> = ({
   onGradeChange,
   onTextbookTermChange,
   onSchoolSystemChange,
+  onAcademicContextChange,
   onTextbooksOpenChange,
   onTextbookVersionChange,
   achievementUnlockOverrides = {},
@@ -115,12 +121,18 @@ export const GrowthProfile: React.FC<GrowthProfileProps> = ({
   const [isWardrobeOpen, setIsWardrobeOpen] = useState(false);
   const [isCharityOpen, setIsCharityOpen] = useState(false);
   const [isTextbooksOpen, setIsTextbooksOpen] = useState(false);
+  const [isPrintedFilesOpen, setIsPrintedFilesOpen] = useState(false);
+  const [printedFileCount, setPrintedFileCount] = useState(() => listPrintedFiles().length);
   const [charityViewState, setCharityViewState] = useState<'OVERVIEW' | 'RECORDS' | 'CERTIFICATE'>('OVERVIEW');
   const [charityInput, setCharityInput] = useState(100);
   const [charityJustDonated, setCharityJustDonated] = useState(false);
   const [charityStageHint, setCharityStageHint] = useState('');
   const { activeStage: charityStage, progress: charityStageProgress } = useDonationStage();
   const isCharityRunning = isCharityCampaignRunning(charityStage);
+
+  useEffect(() => {
+    if (openPrintedFilesSignal > 0) setIsPrintedFilesOpen(true);
+  }, [openPrintedFilesSignal]);
 
   useEffect(() => {
     if (openCharitySignal > 0) {
@@ -135,9 +147,15 @@ export const GrowthProfile: React.FC<GrowthProfileProps> = ({
   }, [isCharityOpen, onCharityOpenChange]);
 
   useEffect(() => {
-    onTextbooksOpenChange?.(isTextbooksOpen);
+    onTextbooksOpenChange?.(isTextbooksOpen || isPrintedFilesOpen);
     return () => onTextbooksOpenChange?.(false);
-  }, [isTextbooksOpen, onTextbooksOpenChange]);
+  }, [isTextbooksOpen, isPrintedFilesOpen, onTextbooksOpenChange]);
+
+  useEffect(() => {
+    const refresh = () => setPrintedFileCount(listPrintedFiles().length);
+    window.addEventListener(PRINTED_FILES_CHANGED_EVENT, refresh);
+    return () => window.removeEventListener(PRINTED_FILES_CHANGED_EVENT, refresh);
+  }, []);
 
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
@@ -216,11 +234,14 @@ export const GrowthProfile: React.FC<GrowthProfileProps> = ({
         onGradeChange={(grade) => onGradeChange?.(grade)}
         onTermChange={(term) => onTextbookTermChange?.(term)}
         onSchoolSystemChange={(system) => onSchoolSystemChange?.(system)}
+        onAcademicContextChange={onAcademicContextChange}
         onVersionChange={onTextbookVersionChange}
         onBack={() => setIsTextbooksOpen(false)}
       />
     );
   }
+
+  if (isPrintedFilesOpen) return <MyPrintedFilesPage onBack={() => setIsPrintedFilesOpen(false)} />;
 
   if (isCharityOpen) {
     return (
@@ -391,6 +412,15 @@ export const GrowthProfile: React.FC<GrowthProfileProps> = ({
                     <BookOpen size={14} strokeWidth={2.3} className="shrink-0" />
                     <span className="text-[11px] font-black">我的课本</span>
                     <span className="min-w-0 truncate text-[10px] font-bold text-white/70">{textbooksSummary}</span>
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setIsPrintedFilesOpen(true)}
+                    className="flex h-8 items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-2.5 text-white backdrop-blur-md shadow-sm transition-colors hover:bg-white/20"
+                >
+                    <FileText size={14} strokeWidth={2.3} />
+                    <span className="text-[11px] font-black">我的文件</span>
+                    <span className="text-[10px] font-bold text-white/70">{printedFileCount ? `${printedFileCount} 份` : '暂无文件'}</span>
                 </button>
                 <button 
                     type="button"

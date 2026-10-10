@@ -1,19 +1,17 @@
 import React, { useState } from 'react';
 import { Hexagon } from 'lucide-react';
+import { DEMO_TEACHER_ACCOUNTS, TeacherPortalUser, TeacherPortalRole } from '../data/teacherAccess';
 
 interface TeacherLoginProps {
-  onLogin: () => void;
+  onLogin: (user: TeacherPortalUser) => void;
+  initialRole?: TeacherPortalRole;
   onBack?: () => void;
 }
 
-const MOCK_ACCOUNTS = [
-  { account: '13800000000', password: '12345678' },
-  { account: 'demo@turing.com', password: '12345678' },
-];
-
-export const TeacherLogin: React.FC<TeacherLoginProps> = ({ onLogin, onBack }) => {
-  const [account, setAccount] = useState('13800000000');
+export const TeacherLogin: React.FC<TeacherLoginProps> = ({ onLogin, initialRole = 'teacher', onBack }) => {
+  const [account, setAccount] = useState(() => DEMO_TEACHER_ACCOUNTS.find((item) => item.role === initialRole)?.account ?? '13800000000');
   const [password, setPassword] = useState('12345678');
+  const [role, setRole] = useState<TeacherPortalRole>(initialRole);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isResetOpen, setIsResetOpen] = useState(false);
@@ -32,16 +30,16 @@ export const TeacherLogin: React.FC<TeacherLoginProps> = ({ onLogin, onBack }) =
     if (loading) return;
     setError('');
     setLoading(true);
-    const matched = MOCK_ACCOUNTS.some(
-      (item) => item.account === account.trim() && item.password === password
+    const matched = DEMO_TEACHER_ACCOUNTS.find(
+      (item) => item.account === account.trim() && item.password === password && item.role === role
     );
     setTimeout(() => {
       setLoading(false);
       if (matched) {
         localStorage.setItem('mockTeacherToken', 'true');
-        onLogin();
+        onLogin({ id: matched.id, name: matched.name, account: matched.account, role: matched.role, roleLabel: matched.roleLabel, schoolId: matched.schoolId, schoolName: matched.schoolName, classIds: matched.classIds, subject: matched.subject });
       } else {
-        setError('账号或密码错误（原型校验）');
+        setError('账号、密码或登录角色不匹配，请使用页面下方的演示账号');
       }
     }, 500);
   };
@@ -124,6 +122,12 @@ export const TeacherLogin: React.FC<TeacherLoginProps> = ({ onLogin, onBack }) =
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-500">登录角色</label>
+            <select value={role} onChange={(event) => { const nextRole = event.target.value as TeacherPortalRole; setRole(nextRole); setAccount(DEMO_TEACHER_ACCOUNTS.find((item) => item.role === nextRole)?.account ?? ''); }} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm">
+              <option value="teacher">教师</option><option value="class-teacher">班主任</option><option value="school-admin">学校管理员</option>
+            </select>
+          </div>
+          <div className="space-y-1">
             <label className="text-xs font-bold text-slate-500">账号</label>
             <input
               value={account}
@@ -177,6 +181,7 @@ export const TeacherLogin: React.FC<TeacherLoginProps> = ({ onLogin, onBack }) =
             </button>
           )}
         </form>
+        <div className="rounded-xl bg-slate-50 p-3 text-[11px] leading-5 text-slate-500">演示密码均为 12345678：教师 13800000000；班主任 13800000001；学校管理员 admin@luohu.edu。</div>
 
         {isResetOpen && (
           <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">

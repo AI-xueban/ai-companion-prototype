@@ -1,19 +1,17 @@
 import React, { useMemo } from 'react';
-import { Sparkles, TrendingUp, Activity, ArrowRight, AlertTriangle, BookOpen, Clock3 } from 'lucide-react';
+import { Sparkles, Activity, ArrowRight, BookOpen, Clock3 } from 'lucide-react';
 import { ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { Card } from '../../UI/Card';
-import { classOverview, highFreqMistakes, alerts, getTopRiskNodes } from '../data/mockTeacherData';
+import { classOverview, highFreqMistakes, getTopRiskNodes } from '../data/mockTeacherData';
 
-export const TeacherDashboard: React.FC<{ onNavigateAnalytics?: () => void }> = ({
+export const TeacherDashboard: React.FC<{ onNavigateAnalytics?: () => void; scopeLabel?: string }> = ({
   onNavigateAnalytics,
+  scopeLabel = '当前授权范围',
 }) => {
-  const pendingAlertCount = useMemo(() => alerts.filter((a) => a.status !== 'handled').length, []);
   const coreRiskNodes = useMemo(() => getTopRiskNodes(undefined, 3), []);
 
   const metrics = [
     { label: '今日活跃率', value: `${Math.round(classOverview.activeRate * 100)}%`, trend: '+3%', icon: Activity, tone: 'up' },
-    { label: '任务达标率', value: `${Math.round(classOverview.taskCompletionRate * 100)}%`, trend: '+5%', icon: TrendingUp, tone: 'up' },
-    { label: '待处理预警', value: pendingAlertCount.toString(), trend: '-1', icon: AlertTriangle, tone: pendingAlertCount ? 'down' : 'up' },
     { label: '班级平均积分', value: classOverview.avgPoints.toString(), trend: '+20', icon: Sparkles, tone: 'up' },
   ];
 
@@ -31,14 +29,14 @@ export const TeacherDashboard: React.FC<{ onNavigateAnalytics?: () => void }> = 
       <div className="flex items-center justify-between px-8 pt-8 pb-6 border-b border-slate-100">
         <div>
           <h1 className="text-2xl font-black text-slate-900 mt-1"> 工作台 </h1>
-          <p className="text-sm text-slate-500">聚焦学情、预警与激励 · {classOverview.periodLabel} · 更新 {classOverview.updateTime}</p>
+          <p className="text-sm text-slate-500">聚焦学情、预警与激励 · {scopeLabel} · {classOverview.periodLabel} · 更新 {classOverview.updateTime}</p>
         </div>
       </div>
 
       {/* 可滚动主体 */}
       <div className="flex-1 overflow-y-auto px-8 pb-10">
         {/* 指标卡片 */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           {metrics.map((m) => (
             <Card key={m.label} className="p-5 border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">

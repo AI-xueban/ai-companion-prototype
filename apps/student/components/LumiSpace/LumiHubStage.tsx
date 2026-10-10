@@ -1,34 +1,35 @@
 import React, { useRef, useState } from 'react';
-import { ArrowRight, MessageCircle, Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ArrowRight, Camera, Mic } from 'lucide-react';
 import {
-  HUB_SPARKS,
-  HUB_SPARKS_DIVIDER,
   KIND_TAG,
   type HubCuriosityCard,
   type HubCuriosityPack,
-  type HubSpark,
 } from './lumiHubData';
 
 interface LumiHubStageProps {
   pack: HubCuriosityPack;
   continueTitle?: string | null;
+  isExiting?: boolean;
   onOpenCuriosity: (card: HubCuriosityCard) => void;
-  onOpenSpark: (spark: HubSpark) => void;
   onOpenFreeChat: () => void;
+  onOpenTextChat: () => void;
+  onOpenCamera: () => void;
+  onOpenVoice: () => void;
   onContinue?: () => void;
   onRefreshInvites?: () => void;
 }
 
-/**
- * L1 三卡环绕中心人物（头顶主气泡 + 左右侧次卡，不挡脸/胸口）；
- * L2/L3 沉底弱化。舞台高度对齐底栏上方可见区，一屏不滚动。
- */
+/** 伙伴式会面页：人物负责在场感，话题负责降低开口门槛，输入入口承接所有真实意图。 */
 export const LumiHubStage: React.FC<LumiHubStageProps> = ({
   pack,
   continueTitle,
+  isExiting = false,
   onOpenCuriosity,
-  onOpenSpark,
   onOpenFreeChat,
+  onOpenTextChat,
+  onOpenCamera,
+  onOpenVoice,
   onContinue,
   onRefreshInvites,
 }) => {
@@ -37,6 +38,7 @@ export const LumiHubStage: React.FC<LumiHubStageProps> = ({
   const left = pack.secondary[0];
   const right = pack.secondary[1];
   const cardTag = (card: HubCuriosityCard) => card.tag || KIND_TAG[card.kind];
+  const exitTransition = { duration: 0.32, ease: [0.22, 1, 0.36, 1] as const };
 
   const onTouchStart = (e: React.TouchEvent) => {
     pullStartY.current = e.touches[0].clientY;
@@ -62,7 +64,11 @@ export const LumiHubStage: React.FC<LumiHubStageProps> = ({
     >
       {/* 继续条单独一行；换一换已收到顶栏与菜单同一行 */}
       {continueTitle ? (
-      <div className="absolute left-3 right-3 top-[4.25rem] z-30 flex items-center pointer-events-auto">
+      <motion.div
+          animate={isExiting ? { opacity: 0, y: 42 } : { opacity: 1, y: 0 }}
+          transition={exitTransition}
+          className="absolute left-3 right-3 top-[4.25rem] z-30 flex items-center pointer-events-auto"
+      >
           <button
             type="button"
             onClick={onContinue}
@@ -71,7 +77,7 @@ export const LumiHubStage: React.FC<LumiHubStageProps> = ({
             <span className="truncate">继续：{continueTitle}</span>
             <ArrowRight size={11} className="shrink-0" />
           </button>
-      </div>
+      </motion.div>
       ) : null}
 
       {pullHint ? (
@@ -80,7 +86,7 @@ export const LumiHubStage: React.FC<LumiHubStageProps> = ({
         </p>
       ) : null}
 
-      {/* Center clear zone for Chang'e */}
+      {/* 人物仍是首页视觉中心，点击人物等价于进入自由聊天。 */}
       <button
         type="button"
         onClick={onOpenFreeChat}
@@ -88,86 +94,93 @@ export const LumiHubStage: React.FC<LumiHubStageProps> = ({
         aria-label="点小晤，直接聊天"
       />
 
-      {/* 主推：角色头顶上方，尖角朝下 */}
-      <div className="absolute left-1/2 top-[12%] z-20 w-[min(70%,280px)] -translate-x-1/2 pointer-events-auto">
+      <motion.section
+        animate={isExiting ? { opacity: 0, x: -150, y: 64 } : { opacity: 1, x: 0, y: 0 }}
+        transition={exitTransition}
+        className="absolute left-[5%] top-[18%] z-20 w-[34%] max-w-[290px] pointer-events-auto"
+      >
+        <p className="text-[11px] font-semibold tracking-[0.18em] text-white/75">小晤同学</p>
+        <h2 className="mt-1 text-[24px] font-black leading-tight text-white drop-shadow-md">
+          嗨，我在。
+          <br />
+          今天想聊点什么？
+        </h2>
+        <p className="mt-2 max-w-[250px] text-[11px] font-medium leading-relaxed text-white/80 drop-shadow-sm">
+          不用想好怎么说。聊心情、问问题，或者一起解决一件事都可以。
+        </p>
+      </motion.section>
+
+      {/* 一条主邀约：它是聊天引子，不是能力入口。 */}
+      <motion.div
+        animate={isExiting ? { opacity: 0, x: 150, y: 54 } : { opacity: 1, x: 0, y: 0 }}
+        transition={exitTransition}
+        className="absolute right-[5%] top-[17%] z-20 w-[36%] max-w-[300px] pointer-events-auto"
+      >
         <button
           type="button"
           onClick={() => onOpenCuriosity(pack.hero)}
-          className="relative w-full rounded-[22px] bg-white px-3.5 py-2.5 text-left shadow-[0_10px_28px_rgba(15,23,42,0.18)] transition active:scale-[0.99]"
+          className="relative w-full rounded-[24px] border border-white/70 bg-white/95 px-4 py-3 text-left shadow-[0_12px_32px_rgba(15,23,42,0.18)] backdrop-blur-md transition hover:-translate-y-0.5 active:scale-[0.99]"
         >
           <p className="mb-0.5 text-[10px] font-semibold tracking-wide text-sky-600">{cardTag(pack.hero)}</p>
-          <p className="text-[13px] font-semibold leading-snug text-slate-800 line-clamp-2">
+          <p className="text-[14px] font-bold leading-snug text-slate-800 line-clamp-2">
             {pack.hero.text}
           </p>
-          <span
-            className="absolute bottom-0 left-1/2 h-0 w-0 translate-y-full -translate-x-1/2 border-x-[9px] border-t-[10px] border-x-transparent border-t-white drop-shadow-sm"
-            aria-hidden
-          />
         </button>
-      </div>
+      </motion.div>
 
-      {/* 次推：左右肩侧迷你对话气泡（弱于主推，尖角朝向人物） */}
-      {left ? (
-        <button
-          type="button"
-          onClick={() => onOpenCuriosity(left)}
-          className="absolute left-[3%] top-[39%] z-20 w-[min(32%,138px)] -translate-y-1/2 rounded-[18px] bg-white/95 px-3 py-2 text-left shadow-[0_6px_20px_rgba(15,23,42,0.12)] transition hover:bg-white hover:shadow-[0_8px_24px_rgba(15,23,42,0.16)] active:scale-[0.98] pointer-events-auto"
-        >
-          <p className="mb-1 text-[9px] font-medium text-sky-500/80">{cardTag(left)}</p>
-          <p className="text-[11px] font-medium leading-snug text-slate-700 line-clamp-3">{left.text}</p>
-          <span
-            className="absolute right-0 top-[42%] h-0 w-0 translate-x-[6px] -translate-y-1/2 border-y-[6px] border-l-[7px] border-y-transparent border-l-white"
-            aria-hidden
-          />
-        </button>
-      ) : null}
+      {/* 两条次邀约：与主邀约平行，不出现生成试卷、讲题等常驻工具。 */}
+      <motion.div
+        animate={isExiting ? { opacity: 0, x: 170, y: 72 } : { opacity: 1, x: 0, y: 0 }}
+        transition={{ ...exitTransition, delay: isExiting ? 0.025 : 0 }}
+        className="absolute right-[5%] top-[37%] z-20 flex w-[36%] max-w-[300px] flex-col gap-2 pointer-events-auto"
+      >
+        {[left, right].filter(Boolean).map((card) => card ? (
+          <button
+            key={card.id}
+            type="button"
+            onClick={() => onOpenCuriosity(card)}
+            className="rounded-[18px] border border-white/60 bg-white/80 px-3 py-2 text-left shadow-[0_6px_20px_rgba(15,23,42,0.10)] backdrop-blur-md transition hover:bg-white active:scale-[0.98]"
+          >
+            <span className="mr-2 text-[9px] font-semibold text-sky-600">{cardTag(card)}</span>
+            <span className="text-[11px] font-semibold leading-snug text-slate-700 line-clamp-2">{card.text}</span>
+          </button>
+        ) : null)}
+      </motion.div>
 
-      {right ? (
-        <button
-          type="button"
-          onClick={() => onOpenCuriosity(right)}
-          className="absolute right-[3%] top-[43%] z-20 w-[min(32%,138px)] -translate-y-1/2 rounded-[18px] bg-white/95 px-3 py-2 text-left shadow-[0_6px_20px_rgba(15,23,42,0.12)] transition hover:bg-white hover:shadow-[0_8px_24px_rgba(15,23,42,0.16)] active:scale-[0.98] pointer-events-auto"
-        >
-          <p className="mb-1 text-[9px] font-medium text-sky-500/80">{cardTag(right)}</p>
-          <p className="text-[11px] font-medium leading-snug text-slate-700 line-clamp-3">{right.text}</p>
-          <span
-            className="absolute left-0 top-[42%] h-0 w-0 -translate-x-[6px] -translate-y-1/2 border-y-[6px] border-r-[7px] border-y-transparent border-r-white"
-            aria-hidden
-          />
-        </button>
-      ) : null}
-
-      {/* 底栏：随便聊主入口 + 其他推荐（轻推荐条，不高占脸） */}
+      {/* 统一表达入口：三个操作保持真实语义，输入区进入会话并直接聚焦。 */}
       <div className="absolute bottom-3 left-3 right-3 z-20 pointer-events-auto">
-        <button
-          type="button"
-          onClick={onOpenFreeChat}
-          className="relative mx-auto flex min-h-[44px] min-w-[160px] items-center justify-center gap-2 rounded-full bg-white px-6 py-2.5 text-[14px] font-bold text-slate-800 shadow-[0_10px_28px_rgba(15,23,42,0.28)] ring-2 ring-brand/25 transition hover:ring-brand/40 hover:shadow-[0_12px_32px_rgba(15,23,42,0.32)] active:scale-[0.98]"
+        <motion.div
+          layoutId="lumi-composer"
+          transition={{ layout: { type: 'spring', stiffness: 190, damping: 28, mass: 0.9 } }}
+          className="mx-auto flex min-h-[52px] w-full max-w-[620px] items-center gap-3 rounded-[26px] border border-white/75 bg-white/95 px-4 text-left shadow-[0_12px_34px_rgba(15,23,42,0.26)] backdrop-blur-xl"
         >
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand text-white shadow-sm">
-            <MessageCircle size={14} strokeWidth={2.5} />
-          </span>
-          随便聊
-          <Sparkles size={13} className="text-brand" strokeWidth={2.4} />
-        </button>
+          <button
+            type="button"
+            onClick={onOpenCamera}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-50 text-brand transition hover:bg-sky-100 active:scale-95"
+            aria-label="拍照问小晤"
+          >
+            <Camera size={17} strokeWidth={2.2} />
+          </button>
+          <motion.button
+            type="button"
+            onClick={onOpenTextChat}
+            whileTap={{ scale: 0.985 }}
+            transition={{ duration: 0.12 }}
+            className="min-w-0 flex-1 self-stretch text-left text-[13px] font-semibold text-slate-400"
+          >
+            跟小晤说说，想到什么都可以……
+          </motion.button>
+          <button
+            type="button"
+            onClick={onOpenVoice}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-white shadow-sm transition hover:brightness-105 active:scale-95"
+            aria-label="语音输入"
+          >
+            <Mic size={17} strokeWidth={2.4} />
+          </button>
+        </motion.div>
 
-        <div className="mt-1.5 flex items-center gap-2">
-          <span className="shrink-0 text-[10px] font-medium tracking-wide text-white/70">
-            {HUB_SPARKS_DIVIDER}
-          </span>
-          <div className="grid min-w-0 flex-1 grid-cols-6 gap-1.5">
-            {HUB_SPARKS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onOpenSpark(item)}
-                className="min-w-0 rounded-xl bg-black/35 px-1 py-1.5 text-center text-[10px] font-semibold leading-tight text-white/90 shadow-[0_2px_8px_rgba(0,0,0,0.2)] backdrop-blur-[4px] transition hover:bg-black/45 hover:text-white active:scale-[0.98]"
-              >
-                <span className="line-clamp-2">{item.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );

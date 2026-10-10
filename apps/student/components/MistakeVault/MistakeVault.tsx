@@ -6,7 +6,7 @@ import { MistakeVaultData, MistakeItem } from '../../types';
 import { getMistakeVaultData } from '../../services/geminiService';
 import { allQuestions } from '../../data/questionBank';
 import { Card } from '../UI/Card';
-import { AlertCircle, CheckCircle2, ChevronRight, Filter, Zap, ArrowRight, Bookmark, Star, Flag, Trophy, X, Circle, Crown, Sparkles, Bot, RotateCcw, XCircle, ChevronDown, ChevronUp, Play, Pause, PackageOpen, Inbox, BookOpen, Calculator, Languages, Atom, FlaskConical, Scale, Landmark, Leaf, Globe, Microscope, type LucideIcon } from 'lucide-react';
+import { AlertCircle, Check, CheckCircle2, ChevronRight, Filter, Zap, ArrowRight, Bookmark, Star, Flag, Trophy, X, Circle, Crown, Sparkles, Bot, RotateCcw, XCircle, ChevronDown, ChevronUp, Play, Pause, PackageOpen, Inbox, BookOpen, Calculator, Languages, Atom, FlaskConical, Scale, Landmark, Leaf, Globe, Microscope, Printer, type LucideIcon } from 'lucide-react';
 import { getMistakeVaultSubjects } from '../../data/subjectCatalog';
 import { DailyConquerModal, DAILY_CONQUER_MAX } from './DailyConquerModal';
 import { QuestionPreviewModal } from '../Quiz/QuestionPreviewModal';
@@ -18,6 +18,8 @@ import { resolveQuestionCorrectness } from '../../utils/manualGrade';
 import { getPortalRoot } from '../../utils/portal';
 import { RewardGrantResult } from '../../types/reward';
 import { UserStats } from '../../types';
+import { MistakePrintSetup } from './MistakePrintSetup';
+import { PaperPrintFlow, type PaperPrintJob } from '../SubjectMap/PaperPrintFlow';
 
 const motion = motionOriginal as any;
 
@@ -134,6 +136,10 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
   const [starOnly, setStarOnly] = useState(false);
   const [showGlobalMistakeList, setShowGlobalMistakeList] = useState(false);
   const [showMemoryRule, setShowMemoryRule] = useState(false);
+  const [mistakePrintContext, setMistakePrintContext] = useState<{ initialSubject?: string; initialIds?: string[] } | null>(null);
+  const [mistakePrintJob, setMistakePrintJob] = useState<PaperPrintJob | null>(null);
+  const [isPrintSelectMode, setIsPrintSelectMode] = useState(false);
+  const [printSelectedIds, setPrintSelectedIds] = useState<Set<string>>(new Set());
   
   // State for Confirmation Modal
   const [confirmAction, setConfirmAction] = useState<{ item: MistakeItem; type: 'master' | 'unmaster' } | null>(null);
@@ -169,7 +175,7 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
     setPortalTarget(getPortalRoot());
   }, []);
 
-  const isDetailMode = activeSubjectFilter !== 'All' || showGlobalMistakeList;
+  const isDetailMode = activeSubjectFilter !== 'All' || showGlobalMistakeList || Boolean(mistakePrintContext) || Boolean(mistakePrintJob);
   useEffect(() => {
     onDetailModeChange?.(isDetailMode);
   }, [isDetailMode, onDetailModeChange]);
@@ -413,6 +419,8 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
     setIsEditMode(false);
     setShowAdvancedFilters(false);
     setIsStatusDropdownOpen(false);
+    setIsPrintSelectMode(false);
+    setPrintSelectedIds(new Set());
   };
 
   const getStatusFilterLabel = () => {
@@ -459,7 +467,26 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
     !isDailyChallengeOpen &&
     !isDrillOpen &&
     !isPreviewOpen &&
+    !isPrintSelectMode &&
     !confirmAction;
+
+  const togglePrintSelection = (itemId: string) => {
+    setPrintSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(itemId)) next.delete(itemId);
+      else if (next.size < 50) next.add(itemId);
+      return next;
+    });
+  };
+
+  const openMistakePrintFromOverview = () => {
+    setMistakePrintContext({});
+  };
+
+  const openMistakePrintFromSelection = () => {
+    if (!printSelectedIds.size || activeSubjectFilter === 'All') return;
+    setMistakePrintContext({ initialSubject: activeSubjectFilter, initialIds: Array.from(printSelectedIds) });
+  };
 
   const startMistakeQuiz = (items: MistakeItem[]) => {
     if (items.length === 0) return;
@@ -623,6 +650,10 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
         {/* 3.1 Stats Header - REIMPLEMENTED: DASHBOARD GAUGE + CAMERA ACTION */}
         {!isDetailMode && (
         <div className="flex flex-1 min-h-0 flex-col gap-2.5 overflow-hidden">
+            <div className="flex shrink-0 items-center justify-between px-0.5">
+                <div><h2 className="text-[18px] font-semibold text-gray-900">克漏空间</h2><p className="mt-0.5 text-[10px] text-gray-400">复习、整理并打印你的错题</p></div>
+                <button type="button" onClick={openMistakePrintFromOverview} disabled={stageItems.length === 0} className="flex h-9 items-center gap-1.5 rounded-xl border border-indigo-100 bg-white px-3 text-[11px] font-semibold text-indigo-600 shadow-sm hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-40"><Printer size={14} />打印错题</button>
+            </div>
             <Card 
                 className={`w-full shrink-0 border flex flex-col relative overflow-hidden
                     ${stageNewUser 
@@ -823,9 +854,18 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
                     <Filter size={13} />
                     筛选
                   </button>
+                  {activeSubjectFilter !== 'All' && (
+                    <button
+                      type="button"
+                      onClick={() => { setIsPrintSelectMode((value) => !value); setPrintSelectedIds(new Set()); setIsEditMode(false); }}
+                      className={`h-9 px-3 rounded-xl border text-[11px] font-semibold flex items-center gap-1 transition-all ${isPrintSelectMode ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-200 text-gray-700'}`}
+                    >
+                      <Printer size={13} />{isPrintSelectMode ? '取消选择' : '打印错题'}
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={() => setIsEditMode(v => !v)}
+                    onClick={() => { setIsEditMode(v => !v); setIsPrintSelectMode(false); setPrintSelectedIds(new Set()); }}
                     className={`h-9 px-3 rounded-xl border text-[11px] font-semibold transition-all ${isEditMode ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-700'}`}
                   >
                     编辑
@@ -914,20 +954,23 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
                     </div>
                 ) : (
                     <div className="flex flex-col gap-3 pb-2">
-                        {selectedSubjectItems.map((item) => (
+                        {selectedSubjectItems.map((item) => {
+                          const selectedForPrint = printSelectedIds.has(item.id);
+                          return <div key={item.id} className="relative">
+                            {isPrintSelectMode ? <span className={`pointer-events-none absolute left-3 top-3 z-10 flex h-6 w-6 items-center justify-center rounded-lg border-2 shadow-sm ${selectedForPrint ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300 bg-white'}`}>{selectedForPrint ? <Check size={14} /> : null}</span> : null}
                             <SwipeableMistakeCard 
-                                key={item.id} 
                                 item={item}
                                 variant="compact"
                                 isEditMode={isEditMode}
-                                onClick={() => startMistakeQuiz([item])} 
+                                onClick={() => isPrintSelectMode ? togglePrintSelection(item.id) : startMistakeQuiz([item])} 
                                 onStar={handleStarToggle}
                                 onFlag={handleFlagClick}
                                 onReasonChange={updateMistakeReason}
                                 editingReasonId={editingReasonId}
                                 setEditingReasonId={setEditingReasonId}
                             />
-                        ))}
+                          </div>;
+                        })}
                     </div>
                 )}
             </div>
@@ -935,6 +978,16 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
         </div>
         )}
       </div>
+
+      {isPrintSelectMode && isSubjectMistakeListView && (
+        <div className="shrink-0 w-full border-t border-slate-200 bg-white/95">
+          <div className="mx-auto flex w-full max-w-4xl items-center gap-3 px-4 pb-4 pt-3 md:px-6 lg:px-8">
+            <div className="mr-auto"><p className="text-[13px] font-semibold text-slate-800">已选 {printSelectedIds.size} 题</p><p className="text-[10px] text-slate-400">单次最多 50 题</p></div>
+            <button type="button" onClick={() => setPrintSelectedIds(printSelectedIds.size === selectedSubjectItems.length ? new Set() : new Set(selectedSubjectItems.slice(0, 50).map((item) => item.id)))} className="h-10 rounded-xl bg-slate-100 px-4 text-[11px] font-semibold text-slate-600">{printSelectedIds.size === selectedSubjectItems.length ? '取消全选' : '全选'}</button>
+            <button type="button" onClick={openMistakePrintFromSelection} disabled={!printSelectedIds.size} className="flex h-10 items-center gap-2 rounded-xl bg-indigo-600 px-5 text-[12px] font-semibold text-white disabled:opacity-40"><Printer size={14} />打印错题</button>
+          </div>
+        </div>
+      )}
 
       {showBatchCorrectionButton && (
         <div className="shrink-0 w-full">
@@ -949,6 +1002,9 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
           </div>
         </div>
       )}
+
+      {mistakePrintContext ? <MistakePrintSetup items={stageItems} initialSubject={mistakePrintContext.initialSubject} initialIds={mistakePrintContext.initialIds} onClose={() => setMistakePrintContext(null)} onCreate={setMistakePrintJob} /> : null}
+      <PaperPrintFlow job={mistakePrintJob} onClose={() => { setMistakePrintJob(null); setMistakePrintContext(null); setIsPrintSelectMode(false); setPrintSelectedIds(new Set()); }} onModify={() => setMistakePrintJob(null)} />
 
       {/* Daily Challenge Modal */}
       {isDailyChallengeOpen && data && (

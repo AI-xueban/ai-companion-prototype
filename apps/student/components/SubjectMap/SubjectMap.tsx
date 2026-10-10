@@ -180,6 +180,7 @@ interface SubjectMapProps {
     embedded?: boolean;
     resumeView?: 'practice' | 'vocab' | 'speaking' | 'grammar' | 'improve' | null;
     resumeViewSignal?: number;
+    onOpenPrintedFiles?: () => void;
 }
 
 
@@ -461,6 +462,7 @@ export const SubjectMap: React.FC<SubjectMapProps> = ({
     embedded = false,
     resumeView = null,
     resumeViewSignal = 0,
+    onOpenPrintedFiles,
 }) => {
   const [mapData, setMapData] = useState<SubjectData | null>(null);
   const [selectedNode, setSelectedNode] = useState<MapNode | null>(null);
@@ -2298,6 +2300,7 @@ export const SubjectMap: React.FC<SubjectMapProps> = ({
       <PaperPrintFlow
         job={printJob}
         onClose={() => setPrintJob(null)}
+        onOpenMyFiles={onOpenPrintedFiles}
         onModify={() => {
           setPrintJob(null);
           setIsUnitTestSetupOpen(true);
@@ -2453,6 +2456,7 @@ export const SubjectMap: React.FC<SubjectMapProps> = ({
         startLabel="开始练习"
         onBack={() => setIsSelfPracticeOpen(false)}
         onStart={startSelfPractice}
+        onOpenPrintedFiles={onOpenPrintedFiles}
       />
 
       <SyncSectionPage

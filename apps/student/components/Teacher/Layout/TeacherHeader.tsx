@@ -5,30 +5,23 @@ import {
   AlertCircle,
   Bell
 } from 'lucide-react';
-
-// --- Mock Data (模拟后端返回的数据) ---
-const MOCK_CLASSES = [
-  { id: 'c1', name: '七年级(2)班', grade: 7, alertCount: 3, isActive: true },
-  { id: 'c2', name: '七年级(4)班', grade: 7, alertCount: 0, isActive: false },
-  { id: 'c3', name: '八年级(1)班', grade: 8, alertCount: 12, isActive: false }, // 12个预警，高风险
-];
-
-const MOCK_USER = {
-  name: "张雨薇",
-  role: "数学教研组长",
-  school: "未来图灵实验中学",
-  avatar: "Z"
-};
+import { PORTAL_CLASSES, TeacherPortalUser } from '../data/teacherAccess';
 
 export const TeacherHeader: React.FC<{
   unreadMessageCount?: number;
   onOpenInbox?: () => void;
+  user: TeacherPortalUser;
+  currentClassId: string;
+  onClassChange: (classId: string) => void;
 }> = ({
   unreadMessageCount = 0,
-  onOpenInbox
+  onOpenInbox,
+  user,
+  currentClassId,
+  onClassChange,
 }) => {
-  // --- States (PM: 页面状态机) ---
-  const [currentClass, setCurrentClass] = useState(MOCK_CLASSES[0]);
+  const allowedClasses = PORTAL_CLASSES.filter((item) => user.classIds.includes(item.id));
+  const currentClass = allowedClasses.find((item) => item.id === currentClassId) ?? allowedClasses[0];
   const [isClassMenuOpen, setIsClassMenuOpen] = useState(false);
 
   // 点击外部关闭菜单的简单处理 (实际项目中通常封装为 hook)
@@ -45,8 +38,10 @@ export const TeacherHeader: React.FC<{
         
         {/* 左侧：增强型班级切换器 (Rich Popover) */}
         <div className="flex items-center gap-2 text-sm font-bold select-none">
+          <span className="text-slate-500">{user.schoolName}</span><span className="text-slate-300">/</span>
           <div className="relative">
             <button 
+              disabled={allowedClasses.length < 2}
               onClick={(e) => {
                 e.stopPropagation();
                 setIsClassMenuOpen(!isClassMenuOpen);
@@ -71,11 +66,11 @@ export const TeacherHeader: React.FC<{
                 onClick={(e) => e.stopPropagation()} // 防止点击内部关闭
               >
                 <div className="text-xs font-medium text-slate-400 px-2 py-1 mb-1">切换教学班级</div>
-                {MOCK_CLASSES.map((cls) => (
+                {allowedClasses.map((cls) => (
                   <div 
                     key={cls.id}
                     onClick={() => {
-                      setCurrentClass(cls);
+                      onClassChange(cls.id);
                       setIsClassMenuOpen(false);
                     }}
                     className={`

@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>柜机屏幕布局 · 1080×1920</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <aside class="studio-bar">
+    <div class="studio-brand">柜机 UI 原型</div>
+    <div class="studio-meta">
+      <span>设计稿尺寸</span>
+      <strong>1080 × 1920</strong>
+    </div>
+    <div class="studio-meta">
+      <span>当前缩放</span>
+      <strong id="scaleLabel">100%</strong>
+    </div>
+    <nav class="studio-nav" id="pageNav">
+      <button type="button" class="nav-btn is-active" data-page="home">首页</button>
+      <button type="button" class="nav-btn" data-page="store">存设备·扫码</button>
+      <button type="button" class="nav-btn" data-page="pickup">取设备·扫脸</button>
+      <button type="button" class="nav-btn" data-page="devices">设备列表</button>
+      <button type="button" class="nav-btn nav-demo" id="simulateScan">模拟扫码成功</button>
+      <button type="button" class="nav-btn nav-demo" id="simulateScanFail">模拟扫码失败</button>
+      <button type="button" class="nav-btn nav-demo" id="simulateFaceSuccess">模拟扫脸成功</button>
+      <button type="button" class="nav-btn nav-demo" id="simulateFirstEnroll">人脸注册</button>
+      <button type="button" class="nav-btn nav-demo" id="simulateFaceFail">模拟人脸未匹配</button>
+      <button type="button" class="nav-btn nav-demo" id="simulateEnrollFail">模拟录入失败</button>
+      <button type="button" class="nav-btn nav-demo" id="simulateNotCharging">模拟未充电</button>
+      <button type="button" class="nav-btn nav-demo" id="simulateDoorOpen">模拟门没关</button>
+      <button type="button" class="nav-btn nav-demo" id="simulateReturn">模拟归还成功</button>
+    </nav>
+    <p class="studio-hint">画布会按窗口自动等比缩小，完整显示在当前屏幕内；设计稿仍为 1080×1920。</p>
+  </aside>
+
+  <main class="stage">
+    <div class="screen-frame" id="screenFrame">
+      <div class="screen-shell" id="screenShell">
+      <div class="screen" id="screen" data-page="home">
+        <!-- 状态栏：左上角品牌 Logo -->
+        <header class="status-bar">
+          <div class="brand-logo" aria-label="通晤纪·AI学伴">
+            <img src="assets/logo.png" alt="通晤纪·AI学伴" draggable="false" />
+          </div>
+          <div class="status-right">
+            <time id="clock">12:00</time>
+            <span class="status-pill">柜机 · A03</span>
+            <span class="signal" aria-hidden="true"></span>
+          </div>
+        </header>
+
+        <!-- 首页 -->
+        <section class="page page-home is-visible" data-page="home">
+          <div class="home-banner" id="homeBanner" aria-label="广告轮播">
+            <div class="banner-track" id="bannerTrack">
+              <article class="banner-slide is-active" data-ad="1">
+                <div class="banner-visual banner-visual-a"></div>
+                <div class="banner-copy">
+                  <span class="banner-tag">合作广告</span>
+                  <h2>通晤纪智能会议</h2>
+                  <p>平板一键入会，协作更高效</p>
+                </div>
+              </article>
+              <article class="banner-slide" data-ad="2">
+                <div class="banner-visual banner-visual-b"></div>
+                <div class="banner-copy">
+                  <span class="banner-tag">品牌推广</span>
+                  <h2>AI 学伴学习空间</h2>
+                  <p>智慧平板随取随用，学习不断线</p>
+                </div>
+              </article>
+              <article class="banner-slide" data-ad="3">
+                <div class="banner-visual banner-visual-c"></div>
+                <div class="banner-copy">
+                  <span class="banner-tag">使用提示</span>
+                  <h2>AI学伴共享柜机</h2>
+                  <p>取用归还，请随手关好柜门</p>
+                </div>
+              </article>
+            </div>
+            <div class="banner-dots" id="bannerDots" aria-hidden="true">
+              <button type="button" class="banner-dot is-active" data-index="0"></button>
+              <button type="button" class="banner-dot" data-index="1"></button>
+              <button type="button" class="banner-dot" data-index="2"></button>
+            </div>
+          </div>
+
+          <div class="home-guide">
+            <header class="guide-header">
+              <p class="brand">通晤纪</p>
+              <h1>AI学伴共享柜机</h1>
+              <p class="guide-lead">借取和归还设备请按照以下流程操作</p>
+            </header>
+            <div class="guide-columns">
+              <button type="button" class="guide-col guide-pickup" data-goto="pickup">
+                <h3><span class="guide-char">借</span></h3>
+                <ol class="guide-steps">
+                  <li><span>1</span>扫脸识别，失败后使用编号密码</li>
+                  <li><span>2</span>在可用列表中选择设备并取用</li>
+                  <li><span>3</span>在确认弹窗中点击「确认」，柜门开启，取出平板使用</li>
+                </ol>
+              </button>
+              <button type="button" class="guide-col guide-store" data-goto="store">
+                <h3><span class="guide-char">还</span></h3>
+                <ol class="guide-steps">
+                  <li><span>1</span>在平板上打开设置中心，点【归还设备】</li>
+                  <li><span>2</span>在屏幕下方扫描口扫二维码</li>
+                  <li><span>3</span>对应格口自动打开并拍照存证</li>
+                  <li><span>4</span>放入平板、插好电并关好柜门</li>
+                  <li><span>5</span>在确认归还弹窗中点击「确认」</li>
+                </ol>
+              </button>
+            </div>
+          </div>
+          <footer class="home-footer">
+            <button type="button" class="feedback-btn" id="faceRegister">人脸注册</button>
+            <button type="button" class="feedback-btn" id="feedbackOpenBtn">问题反馈</button>
+          </footer>
+        </section>
+
+        <!-- 存设备：扫码提示（整屏垂直居中） -->
+        <section class="page page-store" data-page="store">
+          <div class="store-center">
+            <div class="scan-guide-card">
+              <div class="scan-port-icon" aria-hidden="true">
+                <span class="scan-port-lens"></span>
+              </div>
+              <h2 class="scan-title">请扫码归还</h2>
+              <p class="scan-tip">请将平板上的二维码<br />对准屏幕下方的扫描口</p>
+              <p class="scan-fail-tip" id="scanFailTip" hidden>扫码失败，请对准扫描口后重试</p>
+            </div>
+            <button type="button" class="back-btn" data-goto="home">返回</button>
+          </div>
+        </section>
+
+        <!-- 取设备：扫脸优先，失败后使用编号密码 -->
+        <section class="page page-pickup" data-page="pickup">
+          <div class="page-center">
+            <div id="loginChoice" class="login-choice">
+              <h2 class="page-title">选择登录方式</h2>
+              <button type="button" class="primary-btn" id="chooseFace">人脸识别登录</button>
+              <button type="button" class="text-btn face-back" id="choosePassword">编号密码登录</button>
+            </div>
+            <div class="face-login" id="faceLogin">
+              <div class="face-frame" aria-hidden="true"><span></span></div>
+              <p class="face-status" id="faceStatus">正在识别</p>
+              <p class="face-desc" id="faceDesc">请正对屏幕，保持面部处于识别框内</p>
+              <button type="button" class="primary-btn face-retry" id="faceRetry" hidden>重新扫脸</button>
+              <button type="button" class="text-btn face-top-back" id="backToLoginChoice" aria-label="返回登录方式选择页">〈 返回</button>
+            </div>
+
+            <div class="password-login" id="passwordLogin" hidden>
+              <h2 class="page-title">学员登录</h2>
+              <p class="page-desc" id="passwordLoginDesc">请输入编号和密码后查看可用设备</p>
+              <form class="login-form" id="loginForm">
+              <label class="field">
+                <span class="field-label">编号</span>
+                <input
+                  id="studentId"
+                  name="studentId"
+                  type="text"
+                  inputmode="none"
+                  readonly
+                  autocomplete="off"
+                  placeholder="请输入编号"
+                  maxlength="20"
+                />
+              </label>
+              <label class="field">
+                <span class="field-label">密码</span>
+                <input
+                  id="studentPwd"
+                  name="studentPwd"
+                  type="password"
+                  inputmode="none"
+                  readonly
+                  autocomplete="off"
+                  placeholder="请输入密码"
+                  maxlength="20"
+                />
+              </label>
+              <p class="login-tip" id="loginTip" hidden>请填写编号和密码</p>
+              <button type="submit" class="primary-btn login-submit">登录</button>
+              </form>
+              <button type="button" class="text-btn face-back" id="faceBack">返回</button>
+              <button type="button" class="back-btn" id="passwordToFace">人脸识别</button>
+            </div>
+
+            <div class="face-enroll" id="faceEnroll" hidden>
+              <div class="face-frame face-enroll-frame" aria-hidden="true"><span></span></div>
+              <p class="face-status" id="enrollStatus">录入人脸</p>
+              <p class="face-desc" id="enrollDesc"></p>
+              <p class="face-enroll-account">绑定编号：<strong id="enrollStudentId">—</strong></p>
+              <p class="face-enroll-notice" id="enrollNotice">请完成新人脸录入，完成前不可退出</p>
+              <button type="button" class="primary-btn face-enroll-start" id="faceEnrollStart">开始补录</button>
+              <button type="button" class="text-btn face-back" id="enrollFailureAction" hidden>使用已验证账号登录</button>
+            </div>
+            <button type="button" class="back-btn" data-goto="home">返回首页</button>
+          </div>
+
+          <div class="num-keypad" id="numKeypad" hidden>
+            <button type="button" class="keypad-collapse" data-key="done">收起</button>
+            <div class="num-keypad-grid">
+              <button type="button" data-key="1">1</button>
+              <button type="button" data-key="2">2</button>
+              <button type="button" data-key="3">3</button>
+              <button type="button" data-key="4">4</button>
+              <button type="button" data-key="5">5</button>
+              <button type="button" data-key="6">6</button>
+              <button type="button" data-key="7">7</button>
+              <button type="button" data-key="8">8</button>
+              <button type="button" data-key="9">9</button>
+              <button type="button" class="key-action" data-key="backspace">删除</button>
+              <button type="button" data-key="0">0</button>
+              <button type="button" class="key-done" data-key="done">完成</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 设备可用列表（整屏垂直居中） -->
+        <section class="page page-devices" data-page="devices">
+          <div class="page-center page-center-devices">
+            <h2 class="light-title">设备管理</h2>
+            <div class="device-search">
+              <div class="search-field">
+                <span class="search-icon" aria-hidden="true">⌕</span>
+                <input
+                  id="deviceSearchInput"
+                  type="search"
+                  placeholder="请输入设备编号"
+                  autocomplete="off"
+                />
+              </div>
+              <button type="button" class="search-btn" id="deviceSearchBtn">搜索</button>
+            </div>
+
+            <div class="device-table-wrap">
+              <table class="device-table">
+                <thead>
+                  <tr>
+                    <th class="col-index">序号</th>
+                    <th class="col-id">设备编号</th>
+                    <th class="col-slot">格口号</th>
+                    <th class="col-action">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="deviceTableBody"></tbody>
+              </table>
+              <p class="device-empty" id="deviceEmpty" hidden>暂无匹配设备</p>
+            </div>
+
+            <div class="device-pager" id="devicePager">
+              <button type="button" data-page-action="prev">上一页</button>
+              <span class="pager-info" id="pagerInfo">1/1页</span>
+              <button type="button" data-page-action="next">下一页</button>
+            </div>
+
+            <button type="button" class="back-btn" data-goto="pickup">返回</button>
+          </div>
+        </section>
+
+        <!-- 问题反馈弹窗 -->
+        <div class="feedback-mask" id="feedbackModal" hidden>
+          <div class="feedback-card" role="dialog" aria-modal="true" aria-labelledby="feedbackTitle">
+            <button type="button" class="feedback-close" id="feedbackClose" aria-label="关闭">×</button>
+            <h3 id="feedbackTitle">问题反馈</h3>
+            <p class="feedback-desc">请选择格口号和遇到的问题</p>
+
+            <div class="feedback-section">
+              <h4>格口号</h4>
+              <div class="slot-grid" id="feedbackSlotGrid"></div>
+            </div>
+
+            <div class="feedback-section">
+              <h4>问题类型</h4>
+              <div class="issue-list" id="feedbackIssueList">
+                <button type="button" class="issue-option" data-issue="门关不上">门关不上</button>
+                <button type="button" class="issue-option" data-issue="充电线损坏">充电线损坏</button>
+                <button type="button" class="issue-option" data-issue="格口内有异物">格口内有异物</button>
+                <button type="button" class="issue-option" data-issue="设备损坏">设备损坏</button>
+              </div>
+            </div>
+
+            <p class="feedback-tip" id="feedbackTip" hidden>请选择格口号和问题类型</p>
+            <button type="button" class="primary-btn feedback-submit" id="feedbackSubmit" disabled>提交反馈</button>
+          </div>
+        </div>
+
+        <!-- 取用确认 -->
+        <div class="confirm-mask" id="borrowConfirmModal" hidden>
+          <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="borrowConfirmTitle">
+            <h3 id="borrowConfirmTitle">是否取出设备</h3>
+            <p>确认后将打开对应格口，设备记为借出中。</p>
+            <div class="confirm-actions">
+              <button type="button" class="confirm-cancel" id="borrowCancel">取消</button>
+              <button type="button" class="confirm-ok" id="borrowConfirm">确认</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 确认归还 -->
+        <div class="confirm-mask" id="returnConfirmModal" hidden>
+          <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="returnConfirmTitle">
+            <h3 id="returnConfirmTitle">确认归还</h3>
+            <p>第 <strong id="returnSlotNum">7</strong> 格已打开。请将平板放入原格口、插好电并关好柜门后再点确认。</p>
+            <p class="confirm-check-tip" id="returnCheckTip" hidden></p>
+            <p class="confirm-reopen-tip" id="returnReopenTip" hidden>柜门已重新打开，请放好设备并插电后再确认</p>
+            <div class="confirm-actions">
+              <button type="button" class="confirm-cancel" id="returnCancel">取消</button>
+              <button type="button" class="confirm-ok" id="returnConfirm">确认</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 取出成功弹窗 -->
+        <div class="toast-mask" id="successToast" hidden>
+          <div class="toast-card" role="dialog" aria-modal="true" aria-labelledby="toastTitle">
+            <button type="button" class="toast-close" id="toastClose" aria-label="关闭">
+              <span class="toast-countdown" id="toastCountdown">5s</span>
+              <span class="toast-close-x">×</span>
+            </button>
+            <div class="toast-ring">
+              <div class="toast-mark" aria-hidden="true">✓</div>
+            </div>
+            <h3 id="toastTitle">取出来啦</h3>
+            <p class="toast-desc">柜门开了，把平板拿走吧</p>
+            <div class="toast-meta">
+              <div>
+                <span id="toastMetaLabel1">平板编号</span>
+                <strong id="toastDeviceId">—</strong>
+              </div>
+              <div>
+                <span id="toastMetaLabel2">第几格</span>
+                <strong id="toastSlot">—</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

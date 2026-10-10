@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Mic, Gamepad2, Sparkles, X, ArrowRight, Menu, Camera, Image, Plus, MessageSquare, History, Settings, Edit2, Trash2, Check, Volume2, Loader2, AlertCircle, RotateCcw, ChevronLeft, RefreshCw } from 'lucide-react';
+import { Send, Mic, Gamepad2, Sparkles, X, ArrowRight, Menu, Camera, Image, Plus, MessageSquare, History, Edit2, Trash2, Check, Volume2, Loader2, AlertCircle, RotateCcw, ChevronLeft, RefreshCw, FileDown } from 'lucide-react';
 import bgFallback from '@/assets/AIfriend-v0.1-frame1.png';
 import { ShredderGame } from './Games/ShredderGame';
 import { BreathingGame } from './Games/BreathingGame';
@@ -34,19 +34,31 @@ import { flattenQuestionsFromShots, needsQuestionPicker } from '../../data/aiSol
 import { AISolveProcessingOverlay } from '../Dashboard/AISolveProcessingOverlay';
 import { QuestionPickerOverlay } from '../Dashboard/QuestionPickerOverlay';
 import { LumiHubStage } from './LumiHubStage';
+import { PaperDraftWorkspace, type PaperDraftSeed } from './PaperDraftWorkspace';
+import { buildPaperQuestions, createCombinedPaperDocument, downloadPaperPdf, makePaperQuestion, type PaperPdfQuestion } from './lumiPaperPdf';
+import { PaperTaskCard, type PaperTaskSnapshot } from './PaperTaskCard';
+import { PaperAgentProgress } from './PaperAgentProgress';
+import { PaperQuestionReview, type PaperPdfProgressStage } from './PaperQuestionReview';
+import { PaperPdfViewer } from './PaperPdfViewer';
+import { loadAcademicContext } from '../../services/academicContextStore';
+import { getAvailableTextbookVersions, resolveTextbookVersion } from '../../services/textbookVersionStore';
 import {
     CURIOSITY_PACKS,
     FREE_CHAT_OPENER,
     type HubCuriosityCard,
-    type HubSpark,
 } from './lumiHubData';
+import {
+    getPaperDemoOutcome,
+    type PaperDemoScenarioId,
+    type PaperDemoStatusCard,
+} from '../../data/paperConversationDemos';
 
 // Chat Data Types
 interface Message {
     id: string;
     sender: 'lumi' | 'user';
     text: string;
-    type?: 'text' | 'system' | 'game-recommendation' | 'image' | 'quick-reply' | 'search-status' | 'search-answer';
+    type?: 'text' | 'system' | 'game-recommendation' | 'image' | 'quick-reply' | 'search-status' | 'search-answer' | 'paper-status' | 'paper-task';
     imageUrl?: string;
     imageUrls?: string[];
     /** 发送时各张图的分类 */
@@ -66,6 +78,8 @@ interface Message {
     searchSources?: SearchSource[];
     /** 搜索使用的查询词，渲染为回答气泡顶部小字「关于「xxx」」 */
     searchQuery?: string;
+    paperStatus?: PaperDemoStatusCard;
+    paperTask?: PaperTaskSnapshot;
 }
 
 const INITIAL_MESSAGES: Message[] = [
@@ -88,16 +102,21 @@ interface HistoryItem {
     imageQuotaLocked?: boolean;
     /** 侧栏展示「演示」标签 */
     isDemo?: boolean;
+    /** 演示：打开会话后复现 PDF 失败并可重试 */
+    paperPdfFailureDemo?: boolean;
+    demoBadge?: '演示';
+    paperDemoScenarioId?: PaperDemoScenarioId;
 }
 
 const isQuotaDemoHistory = (item: HistoryItem) =>
     Boolean(
-        item.isDemo
-        || typeof item.sessionTurnRemaining === 'number'
+        typeof item.sessionTurnRemaining === 'number'
         || item.imageQuotaLocked
         || item.id === 'h-token-session'
         || item.id === 'h-token-image',
     );
+
+const isDemoHistory = (item: HistoryItem) => item.isDemo || isQuotaDemoHistory(item);
 
 const previewFromMessages = (msgs: Message[]) => {
     const last = [...msgs].reverse().find((msg) => (msg.text || '').trim());
@@ -115,6 +134,116 @@ const IMAGE_QUOTA_DEMO_REMAINING = 3;
 
 const countUserTurns = (msgs: Message[]) =>
     msgs.filter((msg) => msg.sender === 'user').length;
+
+type PaperActivationLevel = 'direct' | 'offer' | 'hidden';
+type PaperType = '随堂小测' | '单元测试卷' | '专项练习卷' | '期中模拟卷' | '期末模拟卷' | '综合测试卷';
+
+const inferPaperType = (text: string): PaperType | null => {
+    if (/期中/.test(text)) return '期中模拟卷';
+    if (/期末/.test(text)) return '期末模拟卷';
+    if (/单元|章节/.test(text)) return '单元测试卷';
+    if (/专项|专题|知识点/.test(text)) return '专项练习卷';
+    if (/小测|随堂|测测|考考我/.test(text)) return '随堂小测';
+    if (/测试卷|模拟卷|整套|卷子/.test(text)) return '综合测试卷';
+    return null;
+};
+
+const inferPaperDuration = (paperType: PaperType, text: string) => {
+    const explicitDuration = text.match(/(\d{1,3})\s*分钟/);
+    if (explicitDuration) return `${explicitDuration[1]}分钟`;
+    const durationByType: Record<PaperType, string> = {
+        随堂小测: '15分钟',
+        单元测试卷: '45分钟',
+        专项练习卷: '30分钟',
+        期中模拟卷: '90分钟',
+        期末模拟卷: '90分钟',
+        综合测试卷: '60分钟',
+    };
+    return durationByType[paperType];
+};
+
+const buildPaperDraftSeed = (text: string, paperType: PaperType, subjectScope: string, version = 1): PaperDraftSeed => {
+    const grade = text.match(/([一二三四五六七八九十1-9]\s*年级)/)?.[1]?.replace(/\s+/g, '');
+    const explicitCount = Number(text.match(/(\d{1,3})\s*道/)?.[1] ?? 0);
+    const difficulty = /简单|基础/.test(text) ? '基础难度' : /困难|压轴|拔高/.test(text) ? '较高难度' : '中等难度';
+    return {
+        title: `${grade ? `${grade}` : ''}${subjectScope.replace(/\s*·\s*/g, '')}${paperType}`,
+        scope: `${grade ? `${grade} · ` : ''}${subjectScope}`,
+        questionCount: explicitCount || (paperType === '随堂小测' ? 10 : paperType === '专项练习卷' ? 15 : 20),
+        duration: inferPaperDuration(paperType, text),
+        difficulty,
+        withAnswers: !/不带答案|不要答案|只要题目/.test(text),
+        version,
+    };
+};
+
+const parsePaperNumber = (value: string | undefined): number => {
+    if (!value) return 0;
+    if (/^\d+$/.test(value)) return Number(value);
+    const digits: Record<string, number> = { 一: 1, 二: 2, 两: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
+    if (value === '十') return 10;
+    if (value.includes('十')) {
+        const [tens, units] = value.split('十');
+        return (tens ? digits[tens] ?? 0 : 1) * 10 + (units ? digits[units] ?? 0 : 0);
+    }
+    return digits[value] ?? 0;
+};
+
+const resolvePaperRequest = (text: string): { seed?: PaperDraftSeed; question?: string; choices?: string[]; unsupported?: boolean } => {
+    const subject = text.match(/(语文|数学|英语|物理|化学|生物|历史|地理|道德与法治|政治)/)?.[1];
+    const context = loadAcademicContext();
+    const requestedGrade = text.match(/([一二三四五六七八九十1-9]\s*年级)/)?.[1]?.replace(/\s+/g, '') ?? context.grade;
+    if (!subject) return { question: `这份卷子要出哪一科？我会按${requestedGrade}来准备；如果年级不同，也请一起告诉我。` };
+    if (!['语文', '数学', '英语'].includes(subject)) return { question: '当前原型样卷先支持语文、数学和英语。其他学科需要接入对应的出题与校验服务后才能生成可信试卷。', unsupported: true };
+
+    const sameGrade = requestedGrade === context.grade;
+    const termMentions = [...text.matchAll(/上册|上学期|下册|下学期/g)];
+    const lastTermMention = termMentions.at(-1)?.[0];
+    const explicitTerm = lastTermMention ? (/上册|上学期/.test(lastTermMention) ? '上册' : '下册') : null;
+    const term = explicitTerm ?? (sameGrade ? context.term : null);
+    const versionMentions = [...text.matchAll(/人教版|沪教版|北师大版|苏教版|外研版|译林版|教科版|鲁教版|部编版|沪科版|浙教版/g)];
+    const explicitVersion = versionMentions.at(-1)?.[0];
+    const available = getAvailableTextbookVersions(subject, requestedGrade, term ?? context.term, context.schoolSystem);
+    const textbook = explicitVersion ?? (sameGrade && term
+        ? resolveTextbookVersion(subject, available, context.schoolSystem)
+        : available[0] ?? '人教版');
+    const namedScope = text.match(/(第[一二三四五六七八九十\d]+单元|第[一二三四五六七八九十\d]+章|分数加减法|分数乘除法|分数|有理数|二次函数|一次函数|几何|阅读理解|古诗文)/)?.[1];
+    if (!namedScope && !term) {
+        return {
+            question: `这份${requestedGrade}${subject}卷按上册还是下册？教材版本${explicitVersion ? `已记为${textbook}` : `先暂按${textbook}`}，之后可以修改。`,
+            choices: ['上册', '下册'],
+        };
+    }
+    const requestedCount = Number(text.match(/(\d{1,3})\s*道/)?.[1] ?? 0);
+    const requestedDuration = Number(text.match(/(\d{1,3})\s*分钟/)?.[1] ?? 0);
+    if (requestedCount >= 30 && requestedDuration > 0 && requestedDuration <= 20
+        && /计算|过程|应用/.test(text) && !/保留\d+分钟|保留\d+道/.test(text)) {
+        return {
+            question: `${requestedDuration}分钟做${requestedCount}道需要完整过程的题可能来不及。你希望优先保留时长，还是题量？`,
+            choices: [`保留${requestedDuration}分钟，改为10道`, `保留${requestedCount}道，改为60分钟`],
+        };
+    }
+    const scope = namedScope ?? (/整册/.test(text) ? '整册' : /期中/.test(text) ? '期中范围' : /期末/.test(text) ? '期末范围' : '当前学习范围');
+    const paperType = inferPaperType(text) ?? '综合测试卷';
+    const seed = buildPaperDraftSeed(text.includes(requestedGrade) ? text : `${requestedGrade}${text}`, paperType, `${subject} · ${[textbook, term, scope].filter(Boolean).join(' · ')}`);
+    seed.title = `${requestedGrade}${subject}${namedScope ?? ''}${paperType}`;
+    if (!explicitVersion && !sameGrade) seed.assumedTextbook = textbook;
+    if (/保留\d+分钟，改为10道/.test(text)) seed.questionCount = 10;
+    if (/保留\d+道，改为60分钟/.test(text)) seed.duration = '60分钟';
+    return { seed };
+};
+
+const classifyPaperActivation = (text: string): PaperActivationLevel => {
+    const normalized = text.replace(/\s+/g, '');
+    // 用户侧统一使用“生成试卷”，同时兼容历史口语“组卷”。
+    const explicitPaperRequest = /(生成试卷|组卷|(生成|出|组|来|帮我|给我|我想|我要).{0,30}(试卷|卷子|测试|测验|小测|模拟卷|期中卷|期末卷|单元卷|练习卷|数学卷|语文卷|英语卷)|仿.{0,12}(卷|试卷)|再组一套)/;
+    const assessmentGoal = /(考考我|测测|自测|检测.{0,5}(掌握|会不会)|看看.{0,5}(掌握|会不会)|做.{0,4}(小测|测试))/;
+    const broadReviewGoal = /(复习|回顾|巩固|备考|准备考试)/;
+
+    if (explicitPaperRequest.test(normalized)) return 'direct';
+    if (assessmentGoal.test(normalized) || broadReviewGoal.test(normalized)) return 'offer';
+    return 'hidden';
+};
 
 const INITIAL_HISTORY: HistoryItem[] = [
     {
@@ -154,6 +283,14 @@ const INITIAL_HISTORY: HistoryItem[] = [
                 type: 'text',
             },
         ],
+    },
+    {
+        id: 'h-paper-pdf-failure',
+        title: 'PDF保存失败，点击重试',
+        date: '今天',
+        preview: '先查看并选择题目，演示保存失败后重试',
+        isDemo: true,
+        paperPdfFailureDemo: true,
     },
     {
         id: 'h1',
@@ -269,9 +406,18 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
     const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
     const sessionFeedbackShownRef = useRef(false);
     const [activeGame, setActiveGame] = useState<'shredder' | 'breathing' | 'highlight' | null>(null);
+    const [paperWorkspace, setPaperWorkspace] = useState<PaperDraftSeed | null>(null);
+    const [workspaceQuestions, setWorkspaceQuestions] = useState<PaperPdfQuestion[] | undefined>();
+    const [workspaceTaskId, setWorkspaceTaskId] = useState<string | null>(null);
+    const [paperReviewTaskId, setPaperReviewTaskId] = useState<string | null>(null);
+    const paperReviewTask = paperReviewTaskId ? messages.find((message) => message.id === paperReviewTaskId)?.paperTask : undefined;
+    const [paperPdfOutput, setPaperPdfOutput] = useState<{ pdf: Blob; previewPages: Blob[]; title: string; version: number } | null>(null);
+    const pendingPaperRequestRef = useRef<string | null>(null);
 
     // History State
     const [history, setHistory] = useState<HistoryItem[]>(INITIAL_HISTORY);
+    // 旧版热更新可能保留预置场景状态；学生历史只展示真实会话及其他既有演示。
+    const visibleHistory = history.filter((item) => !item.paperDemoScenarioId);
     const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
     /** 当前会话用户已发轮次（演示 token：满 100 锁定） */
     const [sessionTurnCount, setSessionTurnCount] = useState(0);
@@ -300,6 +446,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
     const [curiosityPack, setCuriosityPack] = useState(CURIOSITY_PACKS[0]);
     const [sessionTouched, setSessionTouched] = useState(false);
     const [continueTitle, setContinueTitle] = useState<string | null>(null);
+    const [isHubTransitioning, setIsHubTransitioning] = useState(false);
     const isHub = surface === 'hub' && !checkInMode && !activeGame;
     const messagesRef = useRef(messages);
     const sessionTitleRef = useRef(sessionTitle);
@@ -310,7 +457,9 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null); // [新增] 添加容器 ref
+    const chatInputRef = useRef<HTMLInputElement>(null);
     const checkInInitializedRef = useRef(false);
+    const hubTransitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         const cameraFlowOpen = isCameraOpen || processingShotIds !== null || isQuestionPickerOpen;
@@ -319,9 +468,13 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
     }, [isCameraOpen, isQuestionPickerOpen, onCameraFlowOpenChange, processingShotIds]);
 
     useEffect(() => {
-        onChromeHiddenChange?.(isDrawerOpen || !isHub);
+        onChromeHiddenChange?.(isDrawerOpen || !isHub || isHubTransitioning);
         return () => onChromeHiddenChange?.(false);
-    }, [isDrawerOpen, isHub, onChromeHiddenChange]);
+    }, [isDrawerOpen, isHub, isHubTransitioning, onChromeHiddenChange]);
+
+    useEffect(() => () => {
+        if (hubTransitionTimerRef.current) clearTimeout(hubTransitionTimerRef.current);
+    }, []);
 
     useEffect(() => {
         if (!activeHistoryId) return;
@@ -1232,6 +1385,234 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
         window.setTimeout(() => setLumiEmotion('idle'), 2000);
     };
 
+    const presentPaperDraft = (seed: PaperDraftSeed, draftQuestions?: PaperPdfQuestion[], existingId?: string): string => {
+        const id = existingId ?? `paper-task-${Date.now()}`;
+        const questions = draftQuestions ?? buildPaperQuestions(seed.scope, seed.questionCount, seed.difficulty);
+        const snapshot: PaperTaskSnapshot = {
+            seed: { ...seed, questionCount: questions.length }, questions, phase: 'ready',
+            runId: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        };
+        setPaperReviewTaskId(null);
+        setPaperPdfOutput(null);
+        setMessages((current) => existingId && current.some((message) => message.id === existingId)
+            ? [
+                ...current.filter((message) => message.id !== existingId),
+                { ...current.find((message) => message.id === existingId)!, type: 'paper-task' as const, paperStatus: undefined, paperTask: snapshot },
+            ]
+            : [...current, { id, sender: 'lumi', text: '', type: 'paper-task', paperTask: snapshot }]);
+        appendLumiMessage(existingId
+            ? `已按你的要求更新题目，共 ${questions.length} 道。你可以重新查看，或继续告诉我怎么修改。`
+            : `题目已经生成好了，共 ${questions.length} 道。点试卷卡片查看全部题目，满意后再选择保存或打印。`);
+        return id;
+    };
+
+    const startPaperGeneration = (seed: PaperDraftSeed, draftQuestions?: PaperPdfQuestion[], existingId?: string): string => {
+        const id = existingId ?? `paper-task-${Date.now()}`;
+        const runId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const previous = messagesRef.current.find((message) => message.id === id)?.paperTask;
+        const snapshot: PaperTaskSnapshot = {
+            seed,
+            questions: previous?.questions ?? [],
+            phase: 'understanding',
+            runId,
+        };
+        setPaperReviewTaskId(null);
+        setPaperPdfOutput(null);
+        setMessages((current) => existingId && current.some((message) => message.id === existingId)
+            ? [
+                ...current.filter((message) => message.id !== existingId),
+                { ...current.find((message) => message.id === existingId)!, type: 'paper-task' as const, paperTask: snapshot },
+            ]
+            : [...current, { id, sender: 'lumi', text: '', type: 'paper-task', paperTask: snapshot }]);
+
+        const stages: Array<{ phase: PaperTaskSnapshot['phase']; delay: number }> = [
+            { phase: 'composing', delay: 900 },
+            { phase: 'checking', delay: 2100 },
+            { phase: 'assembling', delay: 3100 },
+            { phase: 'validating', delay: 4000 },
+        ];
+        stages.forEach(({ phase, delay }) => window.setTimeout(() => {
+            setMessages((current) => current.map((message) => message.id === id && message.paperTask?.runId === runId
+                ? { ...message, paperTask: { ...message.paperTask, phase } }
+                : message));
+        }, delay));
+        window.setTimeout(() => {
+            const stillActive = messagesRef.current.some((message) => message.id === id && message.paperTask?.runId === runId);
+            if (stillActive) presentPaperDraft(seed, draftQuestions, id);
+        }, 5000);
+        return id;
+    };
+
+    const launchPaperTask = (seed: PaperDraftSeed, draftQuestions?: PaperPdfQuestion[], existingId?: string, simulateExportFailure = false) => {
+        const id = existingId ?? `paper-task-${Date.now()}`;
+        const questions = draftQuestions ?? buildPaperQuestions(seed.scope, seed.questionCount, seed.difficulty);
+        const snapshot: PaperTaskSnapshot = {
+            seed: { ...seed, questionCount: questions.length }, questions, phase: 'ready',
+            runId: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            simulateExportFailure,
+        };
+        setPaperReviewTaskId(null);
+        setPaperPdfOutput(null);
+        setPaperWorkspace(null);
+        setWorkspaceTaskId(null);
+        setWorkspaceQuestions(undefined);
+        setMessages((current) => existingId && current.some((message) => message.id === existingId)
+            ? [
+                ...current.filter((message) => message.id !== existingId),
+                { ...current.find((message) => message.id === existingId)!, type: 'paper-task' as const, paperStatus: undefined, paperTask: snapshot },
+            ]
+            : [...current, { id, sender: 'lumi', text: '', type: 'paper-task', paperTask: snapshot }]);
+        appendLumiMessage(`题目已经生成好了，共 ${questions.length} 道。点试卷卡片查看全部题目，满意后再选择保存或打印。`);
+    };
+
+    const startPdfGenerationDemo = (version = 1, draftSeed?: PaperDraftSeed, draftQuestions?: PaperPdfQuestion[], existingId?: string) => {
+        const seed = draftSeed ?? buildPaperDraftSeed('五年级数学分数加减法20道题带答案解析', '单元测试卷', '数学 · 分数加减法', version);
+        launchPaperTask({ ...seed, version }, draftQuestions, existingId);
+    };
+
+    const beginPaperFromText = (sourceText: string) => {
+        const result = resolvePaperRequest(sourceText);
+        if (!result.seed) {
+            pendingPaperRequestRef.current = result.unsupported ? null : sourceText;
+            appendLumiMessage(result.question ?? '请补充这份试卷的学科与范围。', result.choices ? {
+                type: 'quick-reply',
+                quickReplies: result.choices,
+                onQuickReply: (choice) => {
+                    setMessages((current) => [...current, { id: `${Date.now()}-paper-choice`, sender: 'user', text: choice, type: 'text' }]);
+                    beginPaperFromText(`${sourceText} ${choice}`);
+                },
+            } : undefined);
+            return;
+        }
+        pendingPaperRequestRef.current = null;
+        startPaperGeneration(result.seed);
+    };
+
+    const appendPaperPreparation = (_paperType: PaperType, subjectScope: string, sourceText = '') => {
+        const now = Date.now();
+        setMessages((current) => [...current, { id: `${now}-paper-choice`, sender: 'user', text: subjectScope, type: 'text' }]);
+        beginPaperFromText(`${sourceText} ${subjectScope}`);
+    };
+
+    const appendPaperSuggestion = (direct: boolean, sourceText: string) => {
+        if (direct) {
+            beginPaperFromText(sourceText);
+            return;
+        }
+
+        appendLumiMessage(
+            '可以。这个范围有几种复习方式，你想先怎么开始？',
+            {
+                type: 'quick-reply',
+                quickReplies: ['梳理重点', '做几道题巩固', '来个小测看看掌握'],
+                onQuickReply: (reply) => {
+                    const now = Date.now();
+                    const followup = reply === '梳理重点'
+                        ? '好，我们先把重点理清楚。把要复习的单元、章节或知识点告诉我就行。'
+                        : reply === '做几道题巩固'
+                            ? '好，我们先少量练习，不做成正式试卷。告诉我想练的范围，我来挑几道合适的题。'
+                        : '可以，我会按随堂小测来设计，并根据范围推断题量和时间。';
+                    const nextQuickReplies = reply === '来个小测看看掌握'
+                        ? ['数学·当前单元', '英语·当前单元', '按我的学习进度']
+                        : undefined;
+
+                    setSessionTouched(true);
+                    setMessages((prev) => [
+                        ...prev,
+                        { id: `${now}-review-choice`, sender: 'user', text: reply, type: 'text' },
+                        {
+                            id: `${now}-review-followup`,
+                            sender: 'lumi',
+                            text: followup,
+                            type: nextQuickReplies ? 'quick-reply' : 'text',
+                            quickReplies: nextQuickReplies,
+                            onQuickReply: nextQuickReplies
+                                ? (subjectScope) => appendPaperPreparation('随堂小测', subjectScope, sourceText)
+                                : undefined,
+                        },
+                    ]);
+                },
+            },
+        );
+    };
+
+    const handlePaperFollowup = (text: string): boolean => {
+        const entry = [...messagesRef.current].reverse().find((message) => message.type === 'paper-task' && message.paperTask);
+        if (!entry?.paperTask) return false;
+        const addQuestionRequested = /(?:加|增加|再来)\s*(?:[\d一二两三四五六七八九十]+\s*)?道/.test(text);
+        const isEdit = addQuestionRequested || /改|调整|简单|基础|难一点|提高难度|降低难度|删|删除|去掉|换第|替换第|第\s*[\d一二两三四五六七八九十]+\s*道?题|[\d一二两三四五六七八九十]+道|\d+分钟|上册|下册|人教版|沪教版|北师大版|苏教版|外研版|译林版|教科版|鲁教版|部编版|沪科版|浙教版/.test(text);
+        if (!isEdit) return false;
+
+        const current = entry.paperTask;
+        if (['understanding', 'composing', 'checking', 'assembling', 'validating'].includes(current.phase)) {
+            appendLumiMessage('这份试卷还在生成中。题目完成后，我就能按你的要求修改。');
+            return true;
+        }
+        const nextSeed = { ...current.seed, version: current.seed.version + 1 };
+        const requestedCount = parsePaperNumber(text.match(/([\d一二两三四五六七八九十]+)\s*道/)?.[1]);
+        const requestedDuration = text.match(/(\d{1,3})\s*分钟/)?.[1];
+        if (requestedDuration) nextSeed.duration = `${requestedDuration}分钟`;
+        const targetNumber = parsePaperNumber(text.match(/第\s*([\d一二两三四五六七八九十]+)\s*道?题/)?.[1]);
+        if (targetNumber > current.questions.length) {
+            appendLumiMessage(`这份试卷目前只有 ${current.questions.length} 道题，请确认要修改的题号。`);
+            return true;
+        }
+        const requestedDifficulty = /简单|基础|降低难度/.test(text) ? '基础难度'
+            : /难一点|提高难度|拔高|困难/.test(text) ? '较高难度' : undefined;
+        if (requestedDifficulty && !targetNumber) nextSeed.difficulty = requestedDifficulty;
+
+        const subjectChange = text.match(/(语文|数学|英语|物理|化学|生物|历史|地理)/)?.[1];
+        if (subjectChange && !current.seed.scope.includes(subjectChange)) {
+            const grade = text.match(/([一二三四五六七八九十1-9]年级)/)?.[1] ?? current.seed.scope.match(/([一二三四五六七八九十1-9]年级)/)?.[1] ?? '';
+            const result = resolvePaperRequest(`${grade} ${text}`);
+            if (!result.seed) {
+                pendingPaperRequestRef.current = result.unsupported ? null : `${grade} ${text}`;
+                appendLumiMessage(result.question ?? '请补充新试卷的教材范围。');
+                return true;
+            }
+            startPaperGeneration({ ...result.seed, version: nextSeed.version }, undefined, entry.id);
+            return true;
+        }
+
+        const versionMention = [...text.matchAll(/人教版|沪教版|北师大版|苏教版|外研版|译林版|教科版|鲁教版|部编版|沪科版|浙教版/g)].at(-1)?.[0];
+        if (versionMention) {
+            nextSeed.scope = nextSeed.scope.replace(/人教版|沪教版|北师大版|苏教版|外研版|译林版|教科版|鲁教版|部编版|沪科版|浙教版/, versionMention);
+            nextSeed.assumedTextbook = undefined;
+        }
+        const termMention = [...text.matchAll(/上册|上学期|下册|下学期/g)].at(-1)?.[0];
+        if (termMention) {
+            const nextTerm = /上册|上学期/.test(termMention) ? '上册' : '下册';
+            nextSeed.scope = nextSeed.scope.replace(/上册|下册/, nextTerm);
+        }
+        const scopeChanged = nextSeed.scope !== current.seed.scope;
+        let nextQuestions = scopeChanged || nextSeed.difficulty !== current.seed.difficulty
+            ? buildPaperQuestions(nextSeed.scope, current.questions.length, nextSeed.difficulty) : current.questions;
+        if (targetNumber && /删|删除|去掉/.test(text)) {
+            nextQuestions = nextQuestions.filter((_, index) => index !== targetNumber - 1);
+        } else if (targetNumber && /换|替换|简单|基础|难一点|提高难度|降低难度|拔高|困难/.test(text)) {
+            const replacementId = Math.max(0, ...nextQuestions.map((question) => question.id)) + 1;
+            nextQuestions = nextQuestions.map((question, index) => index === targetNumber - 1
+                ? makePaperQuestion(nextSeed.scope, replacementId, question.score, requestedDifficulty ?? nextSeed.difficulty, targetNumber + nextSeed.version * 3)
+                : question);
+        } else if (requestedCount && !addQuestionRequested) {
+            nextQuestions = buildPaperQuestions(nextSeed.scope, requestedCount, nextSeed.difficulty);
+        } else if (addQuestionRequested) {
+            const addCount = Math.min(20, requestedCount || 1);
+            const nextId = Math.max(0, ...nextQuestions.map((question) => question.id)) + 1;
+            nextQuestions = [...nextQuestions, ...Array.from({ length: addCount }, (_, index) => makePaperQuestion(nextSeed.scope, nextId + index, 5, nextSeed.difficulty))];
+        }
+        if (nextQuestions.length === 0) {
+            appendLumiMessage('这份试卷至少需要保留一道题。可以告诉我想换成什么题目。');
+            return true;
+        }
+        if (nextSeed.duration === current.seed.duration && nextSeed.difficulty === current.seed.difficulty && nextQuestions === current.questions && !scopeChanged && nextSeed.assumedTextbook === current.seed.assumedTextbook) {
+            appendLumiMessage('可以直接说具体改动，例如“简单一点”“换第3题”或“改成15道题”。');
+            return true;
+        }
+        startPaperGeneration({ ...nextSeed, questionCount: nextQuestions.length }, nextQuestions, entry.id);
+        return true;
+    };
+
     const handlePhotoMessageReply = (
         photosToSend: string[],
         classifications: PhotoClassification[],
@@ -1393,6 +1774,39 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                     }]);
                 }, 500);
             }, 1200);
+            return;
+        }
+
+        if (pendingPaperRequestRef.current) {
+            const request = `${pendingPaperRequestRef.current} ${userText}`;
+            window.setTimeout(() => {
+                setLumiEmotion('idle');
+                beginPaperFromText(request);
+            }, 250);
+            return;
+        }
+        const latestPaperTask = [...messagesRef.current].reverse().find((message) => message.type === 'paper-task' && message.paperTask);
+        const wantsPaperPdf = /(?:生成|导出|做成|制作).{0,6}PDF|PDF.{0,6}(?:生成|导出)|可以了.{0,8}PDF/i.test(userText)
+            && !/(?:别|不要|暂不).{0,6}(?:生成|导出)/.test(userText);
+        if (wantsPaperPdf && latestPaperTask?.paperTask) {
+            const task = latestPaperTask.paperTask;
+            if (task.phase === 'ready' || task.phase === 'draft') appendLumiMessage('题目已经生成好了，点试卷卡片查看并选择题目；确认后再保存为 PDF 或打印。');
+            else appendLumiMessage('题目仍在生成中。完成后先查看并选择题目，再保存为 PDF 或打印。');
+            setLumiEmotion('idle');
+            return;
+        }
+        if (handlePaperFollowup(userText)) {
+            setLumiEmotion('idle');
+            return;
+        }
+
+        // 生成试卷能力按意图渐进浮现：明确需求直接生成；宽泛复习只把小测作为平级选项。
+        const paperActivation = classifyPaperActivation(userText);
+        if (paperActivation !== 'hidden') {
+            window.setTimeout(() => {
+                setLumiEmotion('idle');
+                appendPaperSuggestion(paperActivation === 'direct', userText);
+            }, 700);
             return;
         }
 
@@ -1649,6 +2063,12 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
         setInputText('');
         setIsDrawerOpen(false);
         setIsFeedbackOpen(false);
+        setPaperWorkspace(null);
+        setPaperReviewTaskId(null);
+        setPaperPdfOutput(null);
+        setWorkspaceTaskId(null);
+        setWorkspaceQuestions(undefined);
+        pendingPaperRequestRef.current = null;
         sessionFeedbackShownRef.current = false;
     };
 
@@ -1701,8 +2121,121 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
         setContinueTitle(null);
     };
 
+    const handlePaperDemoAction = (scenarioId: PaperDemoScenarioId, action: string) => {
+        const now = Date.now();
+        const existingStatusId = [...messagesRef.current].reverse().find((message) => message.type === 'paper-status')?.id;
+        const demoSeed = buildPaperDraftSeed(
+            '五年级数学分数加减法20道题带答案解析',
+            '单元测试卷',
+            '数学 · 分数加减法',
+            scenarioId === 'paper-pdf-version-stale' || (scenarioId === 'paper-pdf-render-failed' && action !== '重新检查') ? 4 : 3,
+        );
+
+        if (scenarioId === 'paper-missing-info' && action.includes('·')) {
+            demoSeed.scope = action;
+            demoSeed.title = `${action.replace('·', '')}期末模拟卷`;
+        } else if (scenarioId === 'paper-conflicting-constraints') {
+            if (action.includes('保留15分钟')) {
+                demoSeed.duration = '15分钟';
+                demoSeed.questionCount = 10;
+                demoSeed.title = '15分钟数学专项练习';
+            } else if (action.includes('保留40道题')) {
+                demoSeed.duration = '60分钟';
+                demoSeed.questionCount = 40;
+                demoSeed.title = '数学40题练习卷';
+            }
+        } else if (scenarioId === 'paper-generation-incomplete' && action === '减少到12道') {
+            demoSeed.questionCount = 12;
+            demoSeed.title = '数学分数乘除法12题练习卷';
+        } else if (scenarioId === 'paper-active-task-conflict' && action.includes('英语试卷')) {
+            demoSeed.scope = '英语 · 期中范围';
+            demoSeed.title = '英语期中模拟卷';
+        } else if (scenarioId === 'paper-source-unverified' && action === '参考它生成类似试卷') {
+            demoSeed.scope = '五年级语文 · 期末范围（新生成，非真题）';
+            demoSeed.title = '五年级语文期末模拟卷（新生成）';
+        }
+
+        if (action === '查看当前草稿' || action === '返回草稿' || action === '查看修改内容') {
+            setMessages((current) => [
+                ...current.map((message) => message.type === 'quick-reply' ? { ...message, quickReplies: undefined, onQuickReply: undefined } : message),
+                { id: `${now}-paper-demo-user`, sender: 'user', text: action, type: 'text' },
+                { id: `${now}-paper-demo-open`, sender: 'lumi', text: `已打开可编辑草稿 V${demoSeed.version}；修改会创建新版本，定稿前必须重新校验。`, type: 'text' },
+            ]);
+            setWorkspaceTaskId(null);
+            setWorkspaceQuestions(undefined);
+            setPaperWorkspace(demoSeed);
+            return;
+        }
+
+        if (scenarioId === 'paper-pdf-version-stale' && action === '按最新版重新生成') {
+            startPdfGenerationDemo(4, demoSeed, buildPaperQuestions(demoSeed.scope, demoSeed.questionCount), existingStatusId);
+            return;
+        }
+
+        if (scenarioId === 'paper-pdf-version-stale' && action === '下载旧版本') {
+            const oldSeed = { ...demoSeed, version: 3 };
+            setMessages((current) => [
+                ...current.map((message) => message.type === 'quick-reply' ? { ...message, quickReplies: undefined, onQuickReply: undefined } : message),
+                { id: `${now}-paper-demo-user`, sender: 'user', text: action, type: 'text' },
+            ]);
+            window.setTimeout(() => startPdfGenerationDemo(3, oldSeed, buildPaperQuestions(oldSeed.scope, oldSeed.questionCount), existingStatusId), 250);
+            return;
+        }
+
+        if (scenarioId === 'paper-pdf-render-failed' && action === '替换第9题') {
+            setMessages((current) => [
+                ...current.map((message) => message.type === 'quick-reply' ? { ...message, quickReplies: undefined, onQuickReply: undefined } : message),
+                { id: `${now}-paper-demo-user`, sender: 'user', text: action, type: 'text' },
+                {
+                    id: `${now}-paper-demo-version`, sender: 'lumi', text: '', type: 'paper-status',
+                    paperStatus: {
+                        title: '已创建试卷 V4', tone: 'warning',
+                        summary: '替换题目改变了试卷事实源，必须重新校验整卷并再次确认定稿。',
+                        stages: [
+                            { label: '旧PDF任务 V3 已停止', state: 'done' },
+                            { label: '第9题已替换并保存为 V4', state: 'done' },
+                            { label: '等待整卷重新校验', state: 'active' },
+                            { label: '重新确认定稿后创建新PDF任务', state: 'pending' },
+                        ],
+                    },
+                },
+            ]);
+            setWorkspaceTaskId(null);
+            setWorkspaceQuestions(undefined);
+            setPaperWorkspace(demoSeed);
+            return;
+        }
+
+        if (scenarioId === 'paper-pdf-render-failed' && action === '重新检查') {
+            setMessages((current) => [
+                ...current.map((message) => message.type === 'quick-reply' ? { ...message, quickReplies: undefined, onQuickReply: undefined } : message),
+                { id: `${now}-paper-demo-user`, sender: 'user', text: action, type: 'text' },
+            ]);
+            window.setTimeout(() => startPdfGenerationDemo(3, demoSeed, buildPaperQuestions(demoSeed.scope, demoSeed.questionCount), existingStatusId), 250);
+            return;
+        }
+
+        const outcomes = getPaperDemoOutcome(scenarioId, action).map((message, index): Message => ({
+            ...message,
+            id: `${now}-paper-demo-${index}`,
+        }));
+        const shouldContinueToPdf = outcomes.some((message) => message.type === 'paper-status' && message.paperStatus?.tone === 'success')
+            || (scenarioId === 'paper-active-task-conflict' && action === '继续当前试卷');
+        setSessionTouched(true);
+        setMessages((current) => [
+            ...current.map((message) => message.type === 'quick-reply'
+                ? { ...message, quickReplies: undefined, onQuickReply: undefined }
+                : message),
+            { id: `${now}-paper-demo-user`, sender: 'user', text: action, type: 'text' },
+            ...(shouldContinueToPdf ? outcomes.filter((message) => message.type !== 'paper-status') : outcomes),
+        ]);
+        if (shouldContinueToPdf) {
+            window.setTimeout(() => launchPaperTask(demoSeed, undefined, existingStatusId), 350);
+        }
+    };
+
     const openHistoryItem = (item: HistoryItem) => {
-        if (item.id === activeHistoryIdRef.current && surface === 'session') {
+        if (item.id === activeHistoryIdRef.current && surface === 'session' && !item.paperPdfFailureDemo) {
             setIsDrawerOpen(false);
             return;
         }
@@ -1713,26 +2246,52 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
         if (currentId && currentId !== item.id) {
             setHistory((prev) => commitSessionToHistory(prev, currentId, currentTitle, currentMessages));
         }
-        const loaded: Message[] = item.messages?.length
-            ? item.messages
-            : [{ id: `${item.id}-l`, sender: 'lumi', text: item.preview || '我们接着聊。', type: 'text' }];
+        const failureDemoTaskId = item.paperPdfFailureDemo ? `${item.id}-${Date.now()}` : undefined;
+        const loaded: Message[] = item.paperPdfFailureDemo
+            ? [{ id: `${failureDemoTaskId}-request`, sender: 'user', text: '生成一份 PDF，我要去打印。', type: 'text' }]
+            : item.messages?.length
+                ? item.messages
+                : [{ id: `${item.id}-l`, sender: 'lumi', text: item.preview || '我们接着聊。', type: 'text' }];
+        const interactiveMessages = item.paperDemoScenarioId
+            ? loaded.map((message) => message.type === 'quick-reply'
+                ? {
+                    ...message,
+                    onQuickReply: (reply: string) => handlePaperDemoAction(item.paperDemoScenarioId!, reply),
+                }
+                : message)
+            : loaded;
+        const demoPrompt = item.paperDemoScenarioId
+            ? loaded.find((message) => message.sender === 'user' && message.text.trim())?.text ?? ''
+            : '';
         setActiveHistoryId(item.id);
         setSessionTitle(item.title);
-        setMessages(loaded);
+        setMessages(interactiveMessages);
+        setInputText(demoPrompt);
         setSessionTurnCount(
             typeof item.sessionTurnRemaining === 'number'
                 ? Math.max(0, SESSION_TURN_LIMIT - item.sessionTurnRemaining)
-                : countUserTurns(loaded),
+                : countUserTurns(interactiveMessages),
         );
         setImageUploadCount(
             item.imageQuotaLocked
                 ? Math.max(0, IMAGE_UPLOAD_LIMIT - IMAGE_QUOTA_DEMO_REMAINING)
                 : 0,
         );
-        setSessionTouched(loaded.some((msg) => msg.sender === 'user'));
+        setSessionTouched(interactiveMessages.some((msg) => msg.sender === 'user'));
         setSurface('session');
         setContinueTitle(null);
         setIsDrawerOpen(false);
+        if (item.paperPdfFailureDemo && failureDemoTaskId) {
+            const seed = buildPaperDraftSeed('七年级数学一元一次方程基础巩固练习5道题', '专项练习卷', '数学 · 一元一次方程');
+            const questions = buildPaperQuestions(seed.scope, seed.questionCount, seed.difficulty);
+            setSessionTouched(true);
+            // Wait until the conversation switch has committed so the task card
+            // is appended to the newly opened session rather than the previous one.
+            window.setTimeout(() => launchPaperTask(seed, questions, failureDemoTaskId, true), 0);
+        }
+        if (demoPrompt) {
+            window.setTimeout(() => chatInputRef.current?.focus(), 80);
+        }
     };
 
     const executeNewChat = () => {
@@ -1790,6 +2349,9 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
     };
 
     const openHub = () => {
+        if (hubTransitionTimerRef.current) clearTimeout(hubTransitionTimerRef.current);
+        hubTransitionTimerRef.current = null;
+        setIsHubTransitioning(false);
         const currentMessages = messagesRef.current;
         const currentTitle = sessionTitleRef.current;
         const currentId = activeHistoryIdRef.current;
@@ -1797,7 +2359,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
             setHistory((prev) => commitSessionToHistory(prev, currentId, currentTitle, currentMessages));
         }
         const activeItem = currentId ? history.find((item) => item.id === currentId) : undefined;
-        const isQuotaDemo = Boolean(activeItem && isQuotaDemoHistory(activeItem));
+        const isQuotaDemo = Boolean(activeItem && (activeItem.isDemo || isQuotaDemoHistory(activeItem)));
         // Token 限额演示会话不出现在首页「继续」
         if (!isQuotaDemo && (sessionTouched || currentMessages.some((msg) => msg.sender === 'user'))) {
             setContinueTitle(currentTitle || '刚才的对话');
@@ -1807,10 +2369,41 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
         setSurface('hub');
     };
 
+    const leaveHub = (openSession: () => void) => {
+        if (isHubTransitioning) return;
+        setIsHubTransitioning(true);
+        hubTransitionTimerRef.current = setTimeout(() => {
+            hubTransitionTimerRef.current = null;
+            openSession();
+            setIsHubTransitioning(false);
+        }, 320);
+    };
+
     const handleOpenFreeChat = () => {
-        startNewSession('随便聊聊', [
+        leaveHub(() => startNewSession('随便聊聊', [
             { id: `free-${Date.now()}`, sender: 'lumi', text: FREE_CHAT_OPENER, type: 'text' },
-        ]);
+        ]));
+    };
+
+    const handleOpenTextChat = () => {
+        leaveHub(() => {
+            startNewSession('随便聊聊', []);
+            window.setTimeout(() => chatInputRef.current?.focus(), 80);
+        });
+    };
+
+    const handleOpenHubCamera = () => {
+        leaveHub(() => {
+            startNewSession('拍照问小晤', []);
+            window.setTimeout(() => setIsCameraOpen(true), 80);
+        });
+    };
+
+    const handleOpenHubVoice = () => {
+        leaveHub(() => {
+            startNewSession('随便聊聊', []);
+            window.setTimeout(() => handleVoiceInput(), 120);
+        });
     };
 
     const handleShuffleCuriosity = () => {
@@ -1821,44 +2414,14 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
     };
 
     const handleOpenCuriosity = (card: HubCuriosityCard) => {
-        startNewSession(card.text, [
+        leaveHub(() => startNewSession(card.text, [
             {
                 id: `curious-${card.id}-${Date.now()}`,
                 sender: 'lumi',
                 text: `${card.text}\n你先猜，还是要我直接讲？`,
                 type: 'text',
             },
-        ]);
-    };
-
-    const handleOpenSpark = (spark: HubSpark) => {
-        startNewSession(spark.openerTitle, [
-            {
-                id: `spark-${spark.id}-${Date.now()}`,
-                sender: 'lumi',
-                text: spark.openerText,
-                type: spark.replies ? 'quick-reply' : 'text',
-                quickReplies: spark.replies,
-                onQuickReply: spark.replies
-                    ? (reply) => {
-                        setSessionTouched(true);
-                        if (reply === '聊聊别的') {
-                            setMessages((prev) => [
-                                ...prev,
-                                { id: `${Date.now()}`, sender: 'user', text: reply, type: 'text' },
-                                { id: `${Date.now()}-l`, sender: 'lumi', text: '好，想聊什么直接说。', type: 'text' },
-                            ]);
-                            return;
-                        }
-                        setMessages((prev) => [
-                            ...prev,
-                            { id: `${Date.now()}`, sender: 'user', text: reply, type: 'text' },
-                            { id: `${Date.now()}-l`, sender: 'lumi', text: '好，我们按这个来。中途想换成随便聊，直接说就行。', type: 'text' },
-                        ]);
-                    }
-                    : undefined,
-            },
-        ]);
+        ]));
     };
 
     // --- History Edit Actions ---
@@ -1886,6 +2449,39 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                 setContinueTitle(null);
                 setSurface('hub');
             }
+        }
+    };
+
+    const exportSelectedPaper = async (questions: PaperPdfQuestion[], mode: 'save' | 'print', onProgress: (stage: PaperPdfProgressStage) => void): Promise<string | undefined> => {
+        if (!paperReviewTaskId) return '没有找到当前试卷，请返回聊天重新打开题目。';
+        const task = messagesRef.current.find((message) => message.id === paperReviewTaskId)?.paperTask;
+        if (!task) return '没有找到当前试卷，请返回聊天重新打开题目。';
+
+        if (task.simulateExportFailure && !task.exportFailureConsumed) {
+            onProgress('rendering');
+            await new Promise((resolve) => window.setTimeout(resolve, 600));
+            setMessages((current) => current.map((message) =>
+                message.id === paperReviewTaskId && message.paperTask
+                    ? { ...message, paperTask: { ...message.paperTask, exportFailureConsumed: true } }
+                    : message,
+            ));
+            return '本次演示模拟文件生成失败，题目和选择已保留，可以重试。';
+        }
+
+        try {
+            onProgress('rendering');
+            await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+            const { pdf, previewPages } = await createCombinedPaperDocument({ ...task.seed, questions }, () => onProgress('checking'));
+            if (mode === 'save') {
+                const fileName = `${task.seed.title.replace(/[\\/:*?"<>|]/g, '_')}_V${task.seed.version}.pdf`;
+                downloadPaperPdf(pdf, fileName);
+                appendLumiMessage(`已保存所选 ${questions.length} 道题的 PDF。你还可以继续修改题目后再查看或导出。`);
+            } else {
+                setPaperPdfOutput({ pdf, previewPages, title: task.seed.title, version: task.seed.version });
+            }
+            return undefined;
+        } catch {
+            return '文件生成或检查失败，题目仍已保留，请重试。';
         }
     };
 
@@ -1947,50 +2543,61 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             {isHub ? (
-                            <button 
+                            <motion.button
                                 onClick={() => setIsDrawerOpen(true)}
+                                animate={isHubTransitioning ? { opacity: 0, x: -72, y: 42 } : { opacity: 1, x: 0, y: 0 }}
+                                transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
                                 className="p-2 bg-white/60 backdrop-blur-md rounded-full shadow-sm hover:bg-white transition-all text-gray-600 border border-white/50"
                                 aria-label="打开菜单"
                             >
                                 <Menu size={16} />
-                            </button>
+                            </motion.button>
                             ) : null}
                             {!isHub && !checkInMode ? (
-                                <button
+                                <motion.button
                                     type="button"
                                     onClick={openHub}
                                     aria-label="返回"
+                                    initial={{ opacity: 0, x: -8 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ duration: 0.22, delay: 0.16, ease: [0.22, 1, 0.36, 1] }}
                                     className="w-10 h-10 bg-white/60 backdrop-blur-md rounded-full shadow-sm hover:bg-white transition-all text-gray-600 border border-white/50 flex items-center justify-center"
                                 >
                                     <ChevronLeft size={16} />
-                                </button>
+                                </motion.button>
                             ) : null}
                         </div>
 
-                        {!isHub && sessionTitle ? (
-                        <p className="absolute left-1/2 -translate-x-1/2 text-sm font-black text-slate-700 drop-shadow-sm pointer-events-none">
-                            {sessionTitle}
-                        </p>
-                        ) : null}
-
                         {isHub ? (
-                            <button
+                            <motion.button
                                 type="button"
                                 onClick={handleShuffleCuriosity}
+                                animate={isHubTransitioning ? { opacity: 0, x: 72, y: 42 } : { opacity: 1, x: 0, y: 0 }}
+                                transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
                                 className="p-2 bg-white/60 backdrop-blur-md rounded-full shadow-sm hover:bg-white transition-all text-gray-600 border border-white/50"
                                 aria-label="换今日邀约"
                             >
                                 <RefreshCw size={16} />
-                            </button>
+                            </motion.button>
                         ) : (
                             <span className="w-9 shrink-0" aria-hidden />
                         )}
                     </div>
                 </div>
 
+                <AnimatePresence initial={false} mode="popLayout">
                 {isHub ? (
+                    <motion.div
+                        key="lumi-hub-surface"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0, scale: 0.992 }}
+                        transition={{ duration: 0.24, ease: 'easeOut' }}
+                        className="absolute inset-0 z-10"
+                    >
                     <LumiHubStage
                         pack={curiosityPack}
+                        isExiting={isHubTransitioning}
                         continueTitle={
                             continueTitle
                             && !history.some((item) => item.isDemo && item.title === continueTitle)
@@ -1998,19 +2605,26 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                                 : null
                         }
                         onOpenCuriosity={handleOpenCuriosity}
-                        onOpenSpark={handleOpenSpark}
                         onOpenFreeChat={handleOpenFreeChat}
+                        onOpenTextChat={handleOpenTextChat}
+                        onOpenCamera={handleOpenHubCamera}
+                        onOpenVoice={handleOpenHubVoice}
                         onRefreshInvites={handleShuffleCuriosity}
                         onContinue={() => {
-                            setSurface('session');
+                            leaveHub(() => setSurface('session'));
                         }}
                     />
+                    </motion.div>
                 ) : null}
+                </AnimatePresence>
 
                 {/* 3b. Fixed Lumi Avatar Area - REMOVED (Now integrated into background video) */}
 
                 {!isHub ? (
-                <div 
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.16, ease: [0.22, 1, 0.36, 1] }}
                   className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-4 md:px-8 pt-[4.75rem] pb-3"
                   ref={(el) => {
                       chatContainerRef.current = el; 
@@ -2109,6 +2723,44 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                                     </div>
                                 )}
 
+                                {msg.type === 'paper-status' && msg.paperStatus ? (
+                                    <div
+                                        role="status"
+                                        aria-label={`${msg.paperStatus.title}${msg.paperStatus.summary ? `：${msg.paperStatus.summary}` : ''}`}
+                                        className={`w-full max-w-[92%] rounded-xl border shadow-sm overflow-hidden px-3 py-2.5 ${
+                                            msg.paperStatus.tone === 'error'
+                                                ? 'bg-red-50/95 border-red-100'
+                                                : msg.paperStatus.tone === 'warning'
+                                                    ? 'bg-amber-50/95 border-amber-100'
+                                                    : msg.paperStatus.tone === 'success'
+                                                        ? 'bg-emerald-50/95 border-emerald-100'
+                                                        : 'bg-sky-50/95 border-sky-100'
+                                        }`}>
+                                        <div className="flex min-w-0 items-center gap-2.5">
+                                            {msg.paperStatus.tone === 'success' ? (
+                                                <Check size={15} className="shrink-0 text-emerald-600" strokeWidth={3} />
+                                            ) : msg.paperStatus.tone === 'progress' ? (
+                                                <Loader2 size={15} className="shrink-0 text-sky-600 animate-spin" />
+                                            ) : (
+                                                <AlertCircle size={15} className={`shrink-0 ${msg.paperStatus.tone === 'error' ? 'text-red-500' : 'text-amber-500'}`} />
+                                            )}
+                                            <p className="min-w-0 flex-1 truncate text-[11px] font-bold text-slate-700" title={`${msg.paperStatus.title}：${msg.paperStatus.summary ?? ''}`}>
+                                                {msg.paperStatus.title}{msg.paperStatus.summary ? ` · ${msg.paperStatus.summary}` : ''}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ) : null}
+
+                                {msg.type === 'paper-task' && msg.paperTask ? (
+                                    ['understanding', 'composing', 'checking', 'assembling', 'validating'].includes(msg.paperTask.phase)
+                                        ? <PaperAgentProgress task={msg.paperTask} />
+                                        : <PaperTaskCard
+                                            task={msg.paperTask}
+                                            onRetryGeneration={() => startPaperGeneration(msg.paperTask!.seed, msg.paperTask!.questions, msg.id)}
+                                            onOpenQuestions={() => setPaperReviewTaskId(msg.id)}
+                                        />
+                                ) : null}
+
                                 {/* 联网搜索过程指示：思考中（三点）→ 联网搜索中（单一指示器，直接替换） */}
                                 {msg.type === 'search-status' ? (
                                     <div className="max-w-[85%]">
@@ -2195,9 +2847,16 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                                         {msg.quickReplies.map((reply, idx) => (
                                             <button
                                                 key={idx}
-                                                onClick={() => msg.onQuickReply?.(reply)}
-                                                className="px-4 py-2 bg-white border-2 border-brand/30 text-brand rounded-full font-bold text-sm hover:bg-brand hover:text-white hover:border-brand transition-all shadow-sm hover:shadow-md active:scale-95"
+                                                onClick={() => {
+                                                    const onQuickReply = msg.onQuickReply;
+                                                    setMessages((current) => current.map((message) => message.id === msg.id
+                                                        ? { ...message, quickReplies: undefined, onQuickReply: undefined }
+                                                        : message));
+                                                    onQuickReply?.(reply);
+                                                }}
+                                                className={`inline-flex items-center gap-2 px-4 py-2 ${reply.startsWith('下载') ? 'bg-brand/10 border-2 border-brand/35 text-brand rounded-xl' : 'bg-white border-2 border-brand/30 text-brand rounded-full'} font-bold text-sm hover:bg-brand hover:text-white hover:border-brand transition-all shadow-sm hover:shadow-md active:scale-95`}
                                             >
+                                                {reply.startsWith('下载') ? <FileDown size={15} /> : null}
                                                 {reply}
                                             </button>
                                         ))}
@@ -2236,7 +2895,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                         ))}
                         <div ref={messagesEndRef} />
                     </div>
-                </div>
+                </motion.div>
                 ) : null}
 
                 {/* Toast：固定在聊天区与输入区之间 */}
@@ -2260,7 +2919,8 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
             {/* 3c. Input Area — 二级会话无底栏，用常规底边距 */}
             {!activeGame && !isHub && (
                 <div 
-                    className="shrink-0 z-30 px-4 md:px-8 pb-4 flex justify-center pointer-events-auto"
+                    className="shrink-0 z-30 px-4 md:px-8 flex justify-center pointer-events-auto"
+                    style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
                     data-lumi-input-area
                     ref={(el) => {
                         // #region agent log
@@ -2275,7 +2935,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                     }}
                 >
                     {/* bottom-24 对应导航栏高度，让输入框紧贴导航栏顶部 */}
-                    <div className="w-full max-w-2xl flex flex-col gap-2">
+                    <div className="w-full max-w-[620px] flex flex-col gap-2">
                     <div className={`w-full flex items-end gap-3 ${isSessionTurnLimited ? 'justify-center' : ''}`}>
                         {isSessionTurnLimited ? (
                             <div className="w-[min(100%,28rem)] rounded-2xl border border-amber-200 bg-amber-50/95 shadow-sm px-4 py-2 flex items-center gap-3">
@@ -2292,30 +2952,11 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                             </div>
                         ) : (
                         <>
-                        {/* Camera Button */}
-                        <button 
-                            onClick={() => {
-                                if (guardIfLumiReplying()) return;
-                                if (isImageUploadLimited) {
-                                    showBusyToast('今天不能拍照啦，可以语音或打字聊哦~');
-                                    return;
-                                }
-                                setIsCameraOpen(true);
-                            }}
-                            className={`relative p-3 rounded-full shadow-lg border transition-all shrink-0 mt-1.5 mb-1.5 ${
-                                isImageUploadLimited
-                                    ? 'bg-slate-700 border-slate-600 text-slate-400 cursor-not-allowed'
-                                    : 'bg-white border-gray-100 text-gray-500 hover:text-brand hover:bg-gray-50 active:scale-95'
-                            }`}
-                            aria-label={isImageUploadLimited ? '今日不能拍照' : '拍照问小晤'}
-                            aria-disabled={isImageUploadLimited}
-                        >
-                            <Camera size={22} />
-                        </button>
-
                         {/* Input Field */}
-                        <div
-                            className={`flex-1 bg-white rounded-[28px] p-2 pl-5 shadow-xl shadow-gray-200/50 border flex flex-col gap-2 transition-all ${
+                        <motion.div
+                            layoutId="lumi-composer"
+                            transition={{ layout: { type: 'spring', stiffness: 190, damping: 28, mass: 0.9 } }}
+                            className={`flex-1 bg-white rounded-[28px] p-2 pl-5 shadow-xl shadow-gray-200/50 border flex flex-col gap-2 transition-colors duration-200 ${
                             isListening
                                 ? 'border-brand/30 ring-2 ring-brand/20'
                                 : 'border-gray-100 focus-within:ring-2 focus-within:ring-brand/20'
@@ -2393,6 +3034,26 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                             ) : null}
 
                             <div className="flex items-center gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (guardIfLumiReplying()) return;
+                                        if (isImageUploadLimited) {
+                                            showBusyToast('今天不能拍照啦，可以语音或打字聊哦~');
+                                            return;
+                                        }
+                                        setIsCameraOpen(true);
+                                    }}
+                                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all ${
+                                        isImageUploadLimited
+                                            ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
+                                            : 'bg-sky-50 text-brand hover:bg-sky-100 active:scale-95'
+                                    }`}
+                                    aria-label={isImageUploadLimited ? '今日不能拍照' : '拍照问小晤'}
+                                    aria-disabled={isImageUploadLimited}
+                                >
+                                    <Camera size={17} strokeWidth={2.2} />
+                                </button>
                                 <AnimatePresence mode="wait">
                                     {isListening ? (
                                         <motion.div
@@ -2410,6 +3071,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                                         </motion.div>
                                     ) : (
                                         <motion.input
+                                            ref={chatInputRef}
                                             key="text-input"
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 1 }}
@@ -2439,14 +3101,14 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                                     <button
                                         type="button"
                                         onClick={handleVoiceInput}
-                                        className={`p-2.5 rounded-full transition-colors ${
+                                        className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${
                                             isListening
-                                                ? 'bg-brand/10 text-brand'
-                                                : 'text-gray-400 hover:bg-gray-100'
+                                                ? 'bg-brand/15 text-brand ring-2 ring-brand/20'
+                                                : 'bg-brand text-white shadow-sm hover:brightness-105 active:scale-95'
                                         }`}
                                         aria-label={isListening ? '停止语音输入' : '语音输入'}
                                     >
-                                        <Mic size={20} />
+                                        <Mic size={17} strokeWidth={2.4} />
                                     </button>
                                     {canSendMessage && !isListening ? (
                                         <button onClick={handleSendMessage} className="p-2.5 bg-brand text-white rounded-full shadow-md hover:bg-brand-dark transition-all active:scale-90">
@@ -2455,12 +3117,12 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                                     ) : null}
                                 </div>
                             </div>
-                        </div>
+                        </motion.div>
                         </>
                         )}
                     </div>
                     </div>
-                </div>
+                    </div>
             )}
             </div>
 
@@ -2515,7 +3177,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                             <div className="flex-1 overflow-y-auto px-3 py-1 scroll-smooth">
                                 <h3 className="text-[10px] font-medium text-gray-400 tracking-wide mb-1.5 px-1.5">最近对话</h3>
                                 
-                                {history.length === 0 ? (
+                                {visibleHistory.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center py-8 text-center opacity-60">
                                         <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mb-2">
                                             <History size={16} className="text-gray-400" />
@@ -2524,9 +3186,9 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                                     </div>
                                 ) : (
                                     <div className="space-y-0.5 pb-16">
-                                        {history.map((item) => {
+                                        {visibleHistory.map((item) => {
                                             const isEditing = editingItemId === item.id;
-                                            const showDemoTag = isQuotaDemoHistory(item);
+                                            const showDemoTag = isDemoHistory(item);
                                             
                                             return (
                                                 <div 
@@ -2552,18 +3214,18 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                                                     ) : (
                                                         <div className="flex justify-between items-start">
                                                             <div className="flex-1 min-w-0 pr-5">
-                                                                <div className="flex justify-between items-center gap-2 mb-0.5">
-                                                                    <div className="flex items-center gap-1.5 min-w-0">
-                                                                        <span className="font-medium text-gray-700 text-[12px] truncate">{item.title}</span>
+                                                                <div className="flex items-start gap-1.5 mb-1">
+                                                                    <div className="flex flex-1 items-start gap-1.5 min-w-0">
+                                                                        <span className="flex-1 font-medium text-gray-700 text-[12px] leading-4 whitespace-normal break-words">{item.title}</span>
                                                                         {showDemoTag ? (
                                                                             <span className="shrink-0 px-1.5 py-px rounded text-[9px] font-bold leading-none bg-amber-100 text-amber-700 border border-amber-200/80">
-                                                                                演示
+                                                                                {item.demoBadge ?? '演示'}
                                                                             </span>
                                                                         ) : null}
                                                                     </div>
                                                                     <span className="text-[10px] text-gray-400 shrink-0">{item.date}</span>
                                                                 </div>
-                                                                <p className="text-[10px] text-gray-400 truncate">{item.preview}</p>
+                                                                <p className="text-[10px] leading-4 text-gray-400 whitespace-normal break-words">{item.preview}</p>
                                                             </div>
                                                             
                                                             <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 p-0.5 rounded-md shadow-sm">
@@ -2591,11 +3253,6 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                                 )}
                             </div>
 
-                            <div className="px-3 py-2 border-t border-gray-100 bg-white z-10">
-                                <button className="w-full flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 text-gray-500 transition-colors font-medium text-[12px]">
-                                    <Settings size={14} /> 设置
-                                </button>
-                            </div>
                         </motion.div>
                     </div>
                 )}
@@ -2664,6 +3321,60 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                 onSubmit={handleFeedbackSubmit}
                 onSkip={handleFeedbackSkip}
             />
+
+            {paperWorkspace ? (
+                <PaperDraftWorkspace
+                    seed={paperWorkspace}
+                    initialQuestions={workspaceQuestions}
+                    onClose={() => {
+                        setPaperWorkspace(null);
+                        setWorkspaceTaskId(null);
+                        setWorkspaceQuestions(undefined);
+                    }}
+                    onDraftChange={(version, questions) => {
+                        if (!workspaceTaskId) return;
+                        setMessages((current) => current.map((message) => message.id === workspaceTaskId && message.paperTask
+                            ? { ...message, paperTask: {
+                                ...message.paperTask,
+                                seed: { ...message.paperTask.seed, version, questionCount: questions.length },
+                                questions, phase: 'draft',
+                            } }
+                            : message));
+                    }}
+                    onFinishReview={(version, questions) => {
+                        const taskId = presentPaperDraft({ ...paperWorkspace, version }, questions, workspaceTaskId ?? undefined);
+                        setPaperWorkspace(null);
+                        setPaperReviewTaskId(taskId);
+                    }}
+                />
+            ) : null}
+
+            {paperReviewTask ? (
+                <PaperQuestionReview
+                    task={paperReviewTask}
+                    onClose={() => setPaperReviewTaskId(null)}
+                    onContinueChat={() => {
+                        setPaperReviewTaskId(null);
+                        window.setTimeout(() => chatInputRef.current?.focus(), 80);
+                    }}
+                    onSelectionChange={(questionIds) => {
+                        setMessages((current) => current.map((message) => message.id === paperReviewTaskId && message.paperTask
+                            ? { ...message, paperTask: { ...message.paperTask, selectedQuestionIds: questionIds } }
+                            : message));
+                    }}
+                    onExport={exportSelectedPaper}
+                />
+            ) : null}
+
+            {paperPdfOutput ? (
+                <PaperPdfViewer
+                    pdf={paperPdfOutput.pdf}
+                    pages={paperPdfOutput.previewPages}
+                    title={paperPdfOutput.title}
+                    version={paperPdfOutput.version}
+                    onClose={() => setPaperPdfOutput(null)}
+                />
+            ) : null}
 
         </div>
     );

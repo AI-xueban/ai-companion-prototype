@@ -14,7 +14,7 @@ export interface Task {
   /** 自主练习 / 自主测：学生选定的难度（1 较易 → 5 困难） */
   practiceDifficulty?: 1 | 2 | 3 | 4 | 5;
   practiceDifficultyLabel?: string;
-  /** 组卷场景：sync 同步练习 / sc 真题 / gc 好题 / rc 常考题 / yc 压轴题 / ec 易错题 */
+  /** 生成试卷场景：sync 同步练习 / sc 真题 / gc 好题 / rc 常考题 / yc 压轴题 / ec 易错题 */
   practiceScenario?: 'sync' | 'sc' | 'gc' | 'rc' | 'yc' | 'ec';
   practiceScenarioLabel?: string;
   /** 一课一练：回写未练习 / 练习中 / 已练完 */

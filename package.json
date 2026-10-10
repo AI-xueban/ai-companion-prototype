@@ -7,7 +7,8 @@
     "check:student": "npm --prefix apps/student run check",
     "build:student": "npm --prefix apps/student run build",
     "dev:admin": "npm --prefix apps/admin run dev",
-    "build:admin": "npm --prefix apps/admin run build"
+    "build:admin": "npm --prefix apps/admin run build",
+    "dev:cabinet": "npm --prefix apps/cabinet run dev",
+    "build:cabinet": "npm --prefix apps/cabinet run build"
   }
 }
-
