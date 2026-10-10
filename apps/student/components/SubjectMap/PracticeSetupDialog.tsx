@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BookOpen, ChevronLeft, Minus, Plus, X } from 'lucide-react';
 import {
@@ -11,7 +11,7 @@ import {
   type PracticeDifficulty,
   type PracticeScenarioCode,
 } from '../../data/juniorSyncAssessment';
-import { getPrintQuestionTypeAvailability } from '../../data/jyeooPrintQuestionTypeMock';
+import { DEFAULT_PRINT_REGION, getPrintCities, getPrintQuestionTypeAvailability, PRINT_PROVINCES } from '../../data/jyeooPrintQuestionTypeMock';
 import { PRINT_DAILY_PAPER_REMAINING } from '../../data/practiceShortageDemo';
 
 export interface PracticeSetupResult {
@@ -28,8 +28,7 @@ export interface PracticeSetupResult {
 
 export interface QuestionTypeCount { name: string; count: number; availableCount?: number; }
 const EMPTY_SCOPE_LABELS: string[] = [];
-const PAPER_TITLE_MAX_LENGTH = 30;
-const PAPER_TITLE_PREFERRED_LENGTH = 24;
+const PAPER_TITLE_MAX_LENGTH = 40;
 
 export interface PaperTitleContext {
   version?: string;
@@ -41,13 +40,9 @@ const cleanTitlePart = (value?: string) => value?.trim().replace(/\s+/g, ' ') ??
 const limitTitle = (value: string, max = PAPER_TITLE_MAX_LENGTH) =>
   value.length <= max ? value : `${value.slice(0, Math.max(0, max - 1)).trimEnd()}…`;
 
-/**
- * 默认命名优先保留教材、年级、学科和卷型；范围过长时收敛为已选知识点数量。
- * 用户手动修改后不再以此方法覆盖其输入。
- */
+/** 默认命名：学科 · 年级上下册 · 出版社 · 试卷类型 · 年月日。 */
 export const generatePaperTitle = ({
   subject,
-  scopeLabels = EMPTY_SCOPE_LABELS,
   paperKind = '单元测试卷',
   context,
 }: {
@@ -56,28 +51,21 @@ export const generatePaperTitle = ({
   paperKind?: string;
   context?: PaperTitleContext;
 }) => {
-  const scope = scopeLabels.map(cleanTitlePart).filter(Boolean);
   const kind = paperKind === '不限类型' ? '自定义练习卷' : cleanTitlePart(paperKind) || '自定义练习卷';
-  const prefix = [
-    cleanTitlePart(context?.version),
-    `${cleanTitlePart(context?.grade)}${cleanTitlePart(context?.term)}`,
+  const now = new Date();
+  const date = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`;
+  const title = [
     cleanTitlePart(subject),
-  ].filter(Boolean);
-  const detailedScope = scope.length === 0 ? '自定义范围' : scope.length === 1 ? scope[0] : `${scope[0]}等${scope.length}个知识点`;
-  const detailedTitle = [...prefix, detailedScope, kind].join('·');
-  if (detailedTitle.length <= PAPER_TITLE_PREFERRED_LENGTH) return detailedTitle;
-
-  const compactScope = `已选${scope.length || 1}个知识点`;
-  const compactTitle = [...prefix, compactScope, kind].join('·');
-  if (compactTitle.length <= PAPER_TITLE_MAX_LENGTH) return compactTitle;
-
-  // 超过硬上限时保留卷型，范围简写，其他信息从右侧截断。
-  const body = [...prefix, compactScope].join('·');
-  return `${limitTitle(body, Math.max(1, PAPER_TITLE_MAX_LENGTH - kind.length - 1))}·${kind}`;
+    `${cleanTitlePart(context?.grade)}${cleanTitlePart(context?.term)}`,
+    cleanTitlePart(context?.version),
+    kind,
+    date,
+  ].filter(Boolean).join('·');
+  return limitTitle(title, PAPER_TITLE_MAX_LENGTH);
 };
 
-export const getDefaultPrintQuestionTypes = (subject?: string, selectedScopeLabels: string[] = []): QuestionTypeCount[] =>
-  getPrintQuestionTypeAvailability(subject, selectedScopeLabels).map((item) => ({
+export const getDefaultPrintQuestionTypes = (subject?: string, selectedScopeLabels: string[] = [], region = DEFAULT_PRINT_REGION): QuestionTypeCount[] =>
+  getPrintQuestionTypeAvailability(subject, selectedScopeLabels, region).map((item) => ({
     ...item,
     count: Math.min(3, item.availableCount),
   }));
@@ -152,6 +140,8 @@ export const PracticeSetupDialog: React.FC<PracticeSetupDialogProps> = ({
   const [difficulty, setDifficulty] = useState<PracticeDifficulty>('中等');
   const [scenario, setScenario] = useState<PracticeScenarioCode>(DEFAULT_PRACTICE_SCENARIO);
   const [questionTypeCounts, setQuestionTypeCounts] = useState<QuestionTypeCount[]>(() => getDefaultPrintQuestionTypes(subject, selectedScopeLabels));
+  const [printProvince, setPrintProvince] = useState(DEFAULT_PRINT_REGION.province);
+  const [printCity, setPrintCity] = useState(DEFAULT_PRINT_REGION.city);
   const [paperTitle, setPaperTitle] = useState(() => generatePaperTitle({ subject, scopeLabels: selectedScopeLabels, context: paperTitleContext }));
   const [isPaperTitleEdited, setIsPaperTitleEdited] = useState(false);
   const [paperKind, setPaperKind] = useState('单元测试卷');
@@ -160,25 +150,45 @@ export const PracticeSetupDialog: React.FC<PracticeSetupDialogProps> = ({
   const dailyQuotaRemaining = dailyQuotaReached ? 0 : PRINT_DAILY_PAPER_REMAINING;
   const printQuestionLimit = Math.min(questionMax, 20);
   const selectedScopeKey = selectedScopeLabels.slice().sort().join('|');
+  const resetKey = `${mode}|${subject ?? ''}|${selectedScopeKey}`;
+  const lastResetKeyRef = useRef('');
+  const onDraftChangeRef = useRef(onDraftChange);
+  const lastDraftSignatureRef = useRef('');
 
   useEffect(() => {
-    if (!open) return;
+    onDraftChangeRef.current = onDraftChange;
+  }, [onDraftChange]);
+
+  useEffect(() => {
+    if (!open) {
+      lastResetKeyRef.current = '';
+      lastDraftSignatureRef.current = '';
+      return;
+    }
+    if (lastResetKeyRef.current === resetKey) return;
+    lastResetKeyRef.current = resetKey;
     setDifficulty(initialDifficulty);
     setScenario(initialScenario);
     setQuestionCount(clampCount(initialQuestionCount ?? recommendedCount));
     setQuestionTypeCounts(getDefaultPrintQuestionTypes(subject, selectedScopeLabels));
+    setPrintProvince(DEFAULT_PRINT_REGION.province);
+    setPrintCity(DEFAULT_PRINT_REGION.city);
     setPaperTitle(generatePaperTitle({ subject, scopeLabels: selectedScopeLabels, context: paperTitleContext }));
     setIsPaperTitleEdited(false);
     setPaperKind('单元测试卷');
     setIncludeAnswerAnalysis(false);
-  }, [open, initialQuestionCount, recommendedCount, initialDifficulty, initialScenario, questionMax, mode, subject, selectedScopeKey, paperTitleContext?.version, paperTitleContext?.grade, paperTitleContext?.term]);
+  }, [open, resetKey, initialQuestionCount, recommendedCount, initialDifficulty, initialScenario, questionMax, subject, selectedScopeLabels, paperTitleContext]);
+
+  const printQuestionCount = questionTypeCounts.reduce((total, item) => total + item.count, 0);
 
   useEffect(() => {
     if (!open) return;
-    onDraftChange?.({ questionCount: isPrintMode ? printQuestionCount : questionCount, difficulty, scenario, questionTypeCounts: isPrintMode ? questionTypeCounts : undefined });
-  }, [open, questionCount, difficulty, scenario, questionTypeCounts, isPrintMode, onDraftChange]);
-
-  const printQuestionCount = questionTypeCounts.reduce((total, item) => total + item.count, 0);
+    const draft = { questionCount: isPrintMode ? printQuestionCount : questionCount, difficulty, scenario, questionTypeCounts: isPrintMode ? questionTypeCounts : undefined };
+    const signature = JSON.stringify(draft);
+    if (lastDraftSignatureRef.current === signature) return;
+    lastDraftSignatureRef.current = signature;
+    onDraftChangeRef.current?.(draft);
+  }, [open, questionCount, difficulty, scenario, isPrintMode, printQuestionCount, questionTypeCounts]);
 
   const questionPresetsAsc = useMemo(() => {
     const set = new Set<number>([...questionPresets, recommendedCount]);
@@ -241,10 +251,10 @@ export const PracticeSetupDialog: React.FC<PracticeSetupDialogProps> = ({
                 <button
                   type="button"
                   onClick={confirm}
-                  disabled={assembling || dailyQuotaReached}
+                  disabled={assembling || dailyQuotaReached || printQuestionCount === 0}
                   className="ml-auto h-9 rounded-xl bg-violet-600 px-5 text-[13px] font-semibold text-white transition hover:bg-violet-700 disabled:cursor-wait disabled:opacity-80"
                 >
-                  {assembling ? '正在组卷…' : dailyQuotaReached ? '今日已达上限' : '生成组卷'}
+                  {assembling ? '正在组卷' : dailyQuotaReached ? '今日已达上限' : '生成组卷'}
                 </button>
               ) : null}
               {!isPrintMode ? (
@@ -379,6 +389,11 @@ export const PracticeSetupDialog: React.FC<PracticeSetupDialogProps> = ({
                     <div className="flex items-center gap-2">
                       <h3 className="text-[14px] font-semibold text-slate-800">题型与题量</h3>
                       <p className="text-[12px] font-medium text-slate-500">共 <span className="text-violet-600">{printQuestionCount}</span> / {printQuestionLimit} 题</p>
+                      <div className="ml-auto flex items-center gap-1.5">
+                        <span className="text-[10px] font-medium text-slate-400">地区</span>
+                        <select value={printProvince} disabled={assembling} onChange={(event) => { const province = event.target.value; const city = getPrintCities(province)[0]?.Name ?? ''; setPrintProvince(province); setPrintCity(city); setQuestionTypeCounts(getDefaultPrintQuestionTypes(subject, selectedScopeLabels, { province, city })); }} className="h-8 max-w-[104px] rounded-lg border border-slate-200 bg-white px-2 text-[11px] font-medium text-slate-700 outline-none focus:border-violet-300">{PRINT_PROVINCES.map((item) => <option key={item.ID} value={item.Name}>{item.Name}</option>)}</select>
+                        <select value={printCity} disabled={assembling} onChange={(event) => { const city = event.target.value; setPrintCity(city); setQuestionTypeCounts(getDefaultPrintQuestionTypes(subject, selectedScopeLabels, { province: printProvince, city })); }} className="h-8 max-w-[104px] rounded-lg border border-slate-200 bg-white px-2 text-[11px] font-medium text-slate-700 outline-none focus:border-violet-300">{getPrintCities(printProvince).map((city) => <option key={city.ID} value={city.Name}>{city.Name}</option>)}</select>
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       {questionTypeCounts.map((item, index) => (
@@ -403,6 +418,7 @@ export const PracticeSetupDialog: React.FC<PracticeSetupDialogProps> = ({
                   </div>
                 </>
               ) : null}
+
               {!isPrintMode ? (
               <section>
                 <p className="mb-1.5 text-[12px] font-semibold text-slate-700">场景</p>

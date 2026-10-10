@@ -1,5 +1,5 @@
 /**
- * 组卷题型 Mock。
+ * 生成试卷题型 Mock。
  *
  * 题型字典来自「菁优网题型相关数据/初中*.txt」；该原始文件只定义学科题型，
  * 不含知识点维度的可用数量。本服务以已选章节/知识点生成稳定的 Mock 库存，
@@ -9,6 +9,29 @@ export interface PrintQuestionTypeAvailability {
   name: string;
   availableCount: number;
 }
+
+interface AdministrativeDivision { ID: string; Name: string; SName: string; Type: number; PID: string; }
+const ADMINISTRATIVE_DIVISIONS = administrativeDivisionsJson as AdministrativeDivision[];
+const ROOT_REGION_ID = '1000000';
+
+export const PRINT_PROVINCES = ADMINISTRATIVE_DIVISIONS.filter((item) => item.PID === ROOT_REGION_ID && item.ID !== ROOT_REGION_ID);
+
+export const getPrintCities = (provinceName: string) => {
+  const province = PRINT_PROVINCES.find((item) => item.Name === provinceName);
+  if (!province) return [];
+  const children = ADMINISTRATIVE_DIVISIONS.filter((item) => item.PID === province.ID && item.Type === 1);
+  return children.length > 0 ? children : [{ ...province, ID: province.ID, Name: province.Name, SName: province.SName, Type: 1 }];
+};
+
+export const getPrintDistricts = (provinceName: string, cityName: string) => {
+  const province = PRINT_PROVINCES.find((item) => item.Name === provinceName);
+  const city = getPrintCities(provinceName).find((item) => item.Name === cityName);
+  if (!province || !city) return [];
+  const parentId = city.ID === province.ID ? province.ID : city.ID;
+  return ADMINISTRATIVE_DIVISIONS.filter((item) => item.PID === parentId && (item.Type === 2 || item.Type === 3));
+};
+
+export const DEFAULT_PRINT_REGION = { province: '广东省', city: '深圳市' };
 
 const JYEOO_JUNIOR_QUESTION_TYPES: Record<string, string[]> = {
   道德与法治: ['选择题', '填空题', '多选题', '判断题', '简答题', '辨析题', '评析题', '阐述见解题', '材料分析题', '判断说理题', '情境探究题', '分析说明题', '综合探究题'],
@@ -23,6 +46,18 @@ const JYEOO_JUNIOR_QUESTION_TYPES: Record<string, string[]> = {
   语文: ['选择题', '填空题', '多选题', '汉字书写', '解答题', '翻译', '基础知识', '默写', '语言运用', '综合读写', '名著阅读', '现代文阅读', '古诗词赏析', '文言文阅读', '作文', '综合性学习'],
 };
 
+const PAPER_EXCLUDED_LANGUAGE_TYPE_KEYWORDS = ['听力', '听说', '语音', '口语'];
+
+const isPaperQuestionType = (subject: string | undefined, type: string) =>
+  !(['语文', '英语'].includes(subject ?? '')
+    && PAPER_EXCLUDED_LANGUAGE_TYPE_KEYWORDS.some((keyword) => type.includes(keyword)));
+
+/** 返回学科完整题型字典；用于保存长期题型偏好，而不是按当前知识点裁剪。 */
+export function getAllPrintQuestionTypes(subject?: string): string[] {
+  return [...(JYEOO_JUNIOR_QUESTION_TYPES[subject ?? ''] ?? ['选择题', '填空题', '解答题'])]
+    .filter((type) => isPaperQuestionType(subject, type));
+}
+
 function stableHash(value: string) {
   let hash = 2166136261;
   for (let index = 0; index < value.length; index += 1) {
@@ -32,15 +67,18 @@ function stableHash(value: string) {
   return hash >>> 0;
 }
 
-/** 返回本次已选范围内可组卷的题型及可用数量。 */
+/** 返回本次已选范围内可生成试卷的题型及可用数量。 */
 export function getPrintQuestionTypeAvailability(
   subject: string | undefined,
   selectedScopeLabels: string[] = [],
+  region: { province: string; city: string } = DEFAULT_PRINT_REGION,
 ): PrintQuestionTypeAvailability[] {
-  const catalog = JYEOO_JUNIOR_QUESTION_TYPES[subject ?? ''] ?? ['选择题', '填空题', '解答题'];
+  const allTypes = getAllPrintQuestionTypes(subject);
+  const regionalTypes = allTypes.filter((type) => stableHash(`${region.province}|${region.city}|${subject}|${type}`) % 100 < 72);
+  const catalog = regionalTypes.length >= Math.min(3, allTypes.length) ? regionalTypes : allTypes.slice(0, Math.min(3, allTypes.length));
   const scopeKey = [...selectedScopeLabels].sort().join('|') || '默认范围';
-  const hash = stableHash(`${subject ?? ''}|${scopeKey}`);
-  const typeCount = Math.min(catalog.length, Math.max(2, 2 + (hash % 3)));
+  const hash = stableHash(`${subject ?? ''}|${scopeKey}|${region.province}|${region.city}`);
+  const typeCount = Math.min(catalog.length, Math.max(3, 3 + (hash % 3)));
   const start = hash % catalog.length;
 
   return Array.from({ length: typeCount }, (_, index) => {
@@ -48,3 +86,5 @@ export function getPrintQuestionTypeAvailability(
     return { name, availableCount: 3 + ((hash >>> (index * 3)) % 10) };
   });
 }
+import administrativeDivisionsJson from './chinaAdministrativeDivisions.json';
+

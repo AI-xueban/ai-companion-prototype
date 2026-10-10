@@ -160,7 +160,7 @@ const RiskCard = ({ item }: { item: any }) => (
   </Card>
 );
 
-export const TeacherAnalytics: React.FC = () => {
+export const TeacherAnalytics: React.FC<{ scopeLabel?: string }> = ({ scopeLabel = '当前授权范围' }) => {
   const [tab, setTab] = useState<'knowledge' | 'mistake'>('knowledge');
   const [viewLevel, setViewLevel] = useState<number | 'all'>(UI_LIMITS.defaultLevel);
   const [page, setPage] = useState(1);
@@ -335,6 +335,7 @@ export const TeacherAnalytics: React.FC = () => {
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">洞察看板</p>
           </div>
           <h2 className="text-4xl font-black text-slate-900 tracking-tight">班级薄弱点 & 错题洞察</h2>
+          <p className="mt-2 text-sm text-slate-500">数据范围：{scopeLabel}</p>
         </div>
         
         <div className="flex flex-wrap items-center gap-3">

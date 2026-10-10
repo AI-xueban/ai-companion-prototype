@@ -36,6 +36,7 @@ import { OnboardingOverlay } from './components/Onboarding/OnboardingOverlay';
 import { WelcomeGift } from './components/Dashboard/WelcomeGift';
 import { AssessmentResult } from './components/Assessment/AssessmentResult';
 import { TeacherApp } from './components/Teacher/TeacherApp';
+import type { TeacherPortalRole } from './components/Teacher/data/teacherAccess';
 import { recordNodePracticeComplete, KG_PRACTICE_PENDING_KEY, kgReturnNodeKey } from './services/knowledgeTreeService';
 import { DashboardImmersive, type HomeRailTool } from './components/Dashboard/DashboardImmersive';
 import { PracticeReturnChoice } from './components/Dashboard/PracticeReturnChoice';
@@ -55,7 +56,6 @@ import { QuizPage } from './components/Quiz/QuizPage';
 import { SteppingQuizPage } from './components/Quiz/SteppingQuizPage';
 import { UniversalQuizQuestion } from './components/Quiz/UniversalQuizView';
 import { UniversalQuizResult, MOCK_PRACTICE_STATE_SESSION } from './components/Quiz/UniversalQuizResult';
-import { InternalAdminApp } from './components/InternalAdmin/InternalAdminApp';
 import { RewardGainOverlay } from './components/Rewards/RewardGainOverlay';
 import { RewardGrantResult } from './types/reward';
 import {
@@ -128,7 +128,8 @@ const DEMO_TOOL_RAIL_WIDTH = 96;
 
 const App: React.FC = () => {
   // --- Global Mode State ---
-  const [appMode, setAppMode] = useState<'student' | 'teacher' | 'internal'>('student');
+  const [appMode, setAppMode] = useState<'student' | 'teacher'>('student');
+  const [teacherEntryRole, setTeacherEntryRole] = useState<TeacherPortalRole>('teacher');
 
   // --- Global Journey State ---
   const [journeyPhase, setJourneyPhase] = useState<UserJourneyPhase>('dashboard');
@@ -169,6 +170,7 @@ const App: React.FC = () => {
   const [showQuestionBankModal, setShowQuestionBankModal] = useState(false);
   const [questionBankSubject, setQuestionBankSubject] = useState<'math' | 'chinese' | 'english'>('math');
   const [openCharitySignal, setOpenCharitySignal] = useState(0);
+  const [openPrintedFilesSignal, setOpenPrintedFilesSignal] = useState(0);
   const [showQuizResultDemo, setShowQuizResultDemo] = useState(false);
   const [remedialQuestions, setRemedialQuestions] = useState<UniversalQuizQuestion[] | null>(null);
   const [showRemedialQuiz, setShowRemedialQuiz] = useState(false);
@@ -286,28 +288,27 @@ const App: React.FC = () => {
       setJourneyPhase('calibration'); // Step 1: Force Calibration
   };
 
-  const applyAcademicGrade = (grade: string) => {
+  const applyAcademicContext = ({ grade, term, schoolSystem }: { grade: string; term: string; schoolSystem: UiSchoolSystem }) => {
       setUserGrade(grade);
-      saveAcademicContext({ grade, term: textbookTerm, schoolSystem });
+      setTextbookTerm(term);
+      setSchoolSystem(schoolSystem);
+      saveAcademicContext({ grade, term, schoolSystem });
       const subjects = getGradeSubjects(grade, schoolSystem);
       if (!subjects.includes(activeSubject)) setActiveSubject('语文');
       setTextbooksRevision((value) => value + 1);
   };
 
+  const applyAcademicGrade = (grade: string) => {
+      applyAcademicContext({ grade, term: textbookTerm, schoolSystem });
+  };
+
   const applyAcademicTerm = (term: string) => {
-      setTextbookTerm(term);
-      saveAcademicContext({ grade: userGrade, term, schoolSystem });
-      setTextbooksRevision((value) => value + 1);
+      applyAcademicContext({ grade: userGrade, term, schoolSystem });
   };
 
   const applyAcademicSystem = (system: UiSchoolSystem) => {
       const nextGrade = isJuniorGrade(userGrade, system) ? userGrade : (system === '五四制' ? '六年级' : '七年级');
-      setSchoolSystem(system);
-      if (nextGrade !== userGrade) setUserGrade(nextGrade);
-      saveAcademicContext({ grade: nextGrade, term: textbookTerm, schoolSystem: system });
-      const subjects = getGradeSubjects(nextGrade, system);
-      if (!subjects.includes(activeSubject)) setActiveSubject('语文');
-      setTextbooksRevision((value) => value + 1);
+      applyAcademicContext({ grade: nextGrade, term: textbookTerm, schoolSystem: system });
   };
 
   const handleCalibrationComplete = (profile: AcademicProfile) => {
@@ -784,6 +785,10 @@ const App: React.FC = () => {
     <DemoControls
       onSwitchPersona={handlePersonaSwitch}
       onSwitchMode={setAppMode}
+      onSwitchTeacherRole={(role) => {
+        setTeacherEntryRole(role);
+        setAppMode('teacher');
+      }}
       onJumpToMap={handleJumpToMap}
       currentMode={appMode}
       onJumpToSubject={handleJumpToSubject}
@@ -801,7 +806,7 @@ const App: React.FC = () => {
   if (appMode === 'teacher') {
       return (
           <>
-            <TeacherApp onSwitchBack={() => setAppMode('student')} />
+            <TeacherApp key={teacherEntryRole} initialRole={teacherEntryRole} onSwitchBack={() => setAppMode('student')} />
             {demoControls}
             <QuestionBankModal
                 isOpen={showQuestionBankModal}
@@ -810,15 +815,6 @@ const App: React.FC = () => {
                 subject={questionBankSubject}
                 title="题库"
             />
-          </>
-      );
-  }
-
-  if (appMode === 'internal') {
-      return (
-          <>
-            <InternalAdminApp onSwitchBack={() => setAppMode('student')} />
-            {demoControls}
           </>
       );
   }
@@ -1036,6 +1032,10 @@ const App: React.FC = () => {
                             openFocusSignal={openFocusSignal}
                             resumeView={resumeView}
                             resumeViewSignal={resumeViewSignal}
+                            onOpenPrintedFiles={() => {
+                                setActiveTab('me');
+                                setOpenPrintedFilesSignal((value) => value + 1);
+                            }}
                         />
                         )
                     ) : activeTab === 'partner' ? (
@@ -1067,6 +1067,7 @@ const App: React.FC = () => {
                             onOpenSettings={() => setIsSettingsOpen(true)}
                             coins={userStats.coins}
                             openCharitySignal={openCharitySignal}
+                            openPrintedFilesSignal={openPrintedFilesSignal}
                             onCharityOpenChange={setIsCharityPageOpen}
                             userGrade={userGrade}
                             textbookTerm={textbookTerm}
@@ -1074,6 +1075,7 @@ const App: React.FC = () => {
                             onGradeChange={applyAcademicGrade}
                             onTextbookTermChange={applyAcademicTerm}
                             onSchoolSystemChange={applyAcademicSystem}
+                            onAcademicContextChange={applyAcademicContext}
                             onTextbooksOpenChange={setIsTextbooksPageOpen}
                             onTextbookVersionChange={() => setTextbooksRevision((value) => value + 1)}
                             achievementUnlockOverrides={achievementUnlockOverrides}
@@ -1081,9 +1083,11 @@ const App: React.FC = () => {
                     ) : null}
                     </div>
                     )}
-                    {!isDailyConquerActive && !isMistakeVaultDetailOpen && !isSyncSectionPageOpen && !(activeTab === 'subject' && mapMode === 'sync' && personalizedScreen !== 'main') && !isCharityPageOpen && !isTextbooksPageOpen && !isCameraFlowOpen && !isTutorLayerOpen && !isNotificationLayerOpen && !isDiscoveryFullPageOpen && !isSettingsOpen && !isStoreOpen && !isReportOpen && !isMoodModalOpen && !isEssayLabOpen && !showQuestionBankModal && !isSelfPracticeOpen && !isLessonPracticeOpen && !isSyncStudyPickerOpen && !isSyncStudySubjectOpen && !isLumiChromeHidden && (
-                        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
-                    )}
+                    <AnimatePresence initial={false}>
+                        {!isDailyConquerActive && !isMistakeVaultDetailOpen && !isSyncSectionPageOpen && !(activeTab === 'subject' && mapMode === 'sync' && personalizedScreen !== 'main') && !isCharityPageOpen && !isTextbooksPageOpen && !isCameraFlowOpen && !isTutorLayerOpen && !isNotificationLayerOpen && !isDiscoveryFullPageOpen && !isSettingsOpen && !isStoreOpen && !isReportOpen && !isMoodModalOpen && !isEssayLabOpen && !showQuestionBankModal && !isSelfPracticeOpen && !isLessonPracticeOpen && !isSyncStudyPickerOpen && !isSyncStudySubjectOpen && !isLumiChromeHidden && (
+                            <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+                        )}
+                    </AnimatePresence>
                 </motion.div>
             )}
         </AnimatePresence>
