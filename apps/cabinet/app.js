@@ -695,7 +695,11 @@
     resetFaceLogin();
   });
   faceRetry.addEventListener("click", resetFaceLogin);
-  faceConfirmRetry.addEventListener("click", resetFaceLogin);
+  faceConfirmRetry.addEventListener("click", () => {
+    faceConfirmModal.hidden = true;
+    authenticatedStudentId = "";
+    showPage("home");
+  });
   faceConfirmLogin.addEventListener("click", () => {
     authenticatedStudentId = recognizedStudentId.textContent;
     faceConfirmModal.hidden = true;
