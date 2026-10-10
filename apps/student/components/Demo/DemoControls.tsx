@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, User, Baby, X, ChevronRight, LayoutDashboard, Building2, RotateCcw, CheckCircle2, Trophy, Users, Sparkles } from 'lucide-react';
+import { Settings, User, Baby, X, ChevronRight, LayoutDashboard, RotateCcw, CheckCircle2, Trophy, Users, Sparkles } from 'lucide-react';
 import { UserPersona } from '../../types';
 import type { DonationStageStatus } from '../../data/charityStage';
+import type { TeacherPortalRole } from '../Teacher/data/teacherAccess';
 
 interface DemoControlsProps {
     onSwitchPersona: (type: UserPersona, calibrated?: boolean, grade?: string) => void;
-    onSwitchMode: (mode: 'student' | 'teacher' | 'internal') => void;
+    onSwitchMode: (mode: 'student' | 'teacher') => void;
+    onSwitchTeacherRole: (role: TeacherPortalRole) => void;
     onJumpToMap: () => void;
-    currentMode: 'student' | 'teacher' | 'internal';
+    currentMode: 'student' | 'teacher';
     onJumpToSubject?: (subject: 'math' | 'chinese' | 'english') => void;
     onJumpToQuizResult?: () => void;
     onJumpToSteppingQuiz?: (subject?: 'math' | 'chinese' | 'english') => void;
@@ -24,6 +26,7 @@ interface DemoControlsProps {
 export const DemoControls: React.FC<DemoControlsProps> = ({ 
     onSwitchPersona, 
     onSwitchMode,
+    onSwitchTeacherRole,
     onJumpToMap,
     currentMode,
     onJumpToSubject,
@@ -38,15 +41,21 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [resetComplete, setResetComplete] = useState(false);
+    const [selectedMode, setSelectedMode] = useState(currentMode);
+
+    useEffect(() => setSelectedMode(currentMode), [currentMode]);
 
     const handlePersonaClick = (p: UserPersona, calibrated = false, grade?: string) => {
         onSwitchPersona(p, calibrated, grade);
         setIsOpen(false);
     };
 
-    const handleModeSwitch = (mode: 'student' | 'teacher' | 'internal') => {
-        onSwitchMode(mode);
-        setIsOpen(false);
+    const handleModeSwitch = (mode: 'student' | 'teacher') => {
+        setSelectedMode(mode);
+        if (mode === 'student') {
+            onSwitchMode('student');
+            setIsOpen(false);
+        }
     };
 
     const handleResetDemoData = () => {
@@ -75,13 +84,13 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
                             <button type="button" onClick={() => setIsOpen(false)} aria-label="关闭演示控制台" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white transition-colors"><X size={16} /></button>
                         </div>
 
-                        <div className="p-1 bg-white/10 rounded-xl grid grid-cols-3 gap-1">
+                        <div className="p-1 bg-white/10 rounded-xl grid grid-cols-2 gap-1">
                             <button 
                                 type="button"
                                 onClick={() => handleModeSwitch('student')}
-                                disabled={currentMode === 'student'}
+                                disabled={selectedMode === 'student'}
                                 className={`py-2 text-[11px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1 ${
-                                    currentMode === 'student' 
+                                    selectedMode === 'student'
                                         ? 'bg-brand text-white shadow-sm cursor-default' 
                                         : 'text-gray-400 hover:bg-white/10 hover:text-white'
                                 }`}
@@ -91,29 +100,32 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
                             <button 
                                 type="button"
                                 onClick={() => handleModeSwitch('teacher')}
-                                disabled={currentMode === 'teacher'}
+                                disabled={selectedMode === 'teacher'}
                                 className={`py-2 text-[11px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1 ${
-                                    currentMode === 'teacher'
+                                    selectedMode === 'teacher'
                                         ? 'bg-brand text-white shadow-sm cursor-default' 
                                         : 'text-gray-400 hover:bg-white/10 hover:text-white'
                                 }`}
                             >
                                 <LayoutDashboard size={12} /> 教师端
                             </button>
-                            <button 
-                                type="button"
-                                onClick={() => handleModeSwitch('internal')}
-                                disabled={currentMode === 'internal'}
-                                className={`py-2 text-[11px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1 ${
-                                    currentMode === 'internal'
-                                        ? 'bg-brand text-white shadow-sm cursor-default' 
-                                        : 'text-gray-400 hover:bg-white/10 hover:text-white'
-                                }`}
-                            >
-                                <Building2 size={12} /> 内部管理
-                            </button>
                         </div>
 
+                        {selectedMode === 'teacher' ? (
+                          <div className="space-y-3 pt-2 border-t border-white/10">
+                            <div>
+                              <p className="text-gray-300 text-xs font-bold">教师端角色登录</p>
+                              <p className="mt-1 text-[10px] leading-relaxed text-gray-500">进入教师端后选择角色；菜单与数据范围会随角色变化。</p>
+                            </div>
+                            {[
+                              { key: 'teacher' as const, role: '教师', account: '13800000000', scope: '查看授权教学班' },
+                              { key: 'class-teacher' as const, role: '班主任', account: '13800000001', scope: '管理所带班级与班级激励' },
+                              { key: 'school-admin' as const, role: '学校管理员', account: 'admin@luohu.edu', scope: '管理罗湖实验学校全校' },
+                            ].map((item) => <button key={item.role} type="button" onClick={() => { onSwitchTeacherRole(item.key); setIsOpen(false); }} className="w-full rounded-xl border border-white/10 bg-white/5 p-3 text-left transition-colors hover:bg-white/10"><div className="flex items-center justify-between"><span className="text-xs font-bold text-white">{item.role}</span><ChevronRight size={14} className="text-gray-500"/></div><div className="mt-1 text-[10px] text-gray-400">{item.account} · {item.scope}</div></button>)}
+                            <p className="text-[10px] text-gray-600">演示密码：12345678</p>
+                          </div>
+                        ) : (
+                          <>
                         {/* Scenario Switcher */}
                         <div className="space-y-3 pt-2 border-t border-white/10">
                             {onResetDemoData ? (
@@ -133,6 +145,7 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
                                 </div>
                               </button>
                             ) : null}
+
 
                             <button 
                                 onClick={() => handlePersonaClick('newbie')}
@@ -217,6 +230,9 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
                                 状态 A（未解锁）与 B（已上榜）见上方「我是萌新 / 初中七年级学生」入口。
                             </p>
                         </div>
+
+                          </>
+                        )}
 
                     </motion.div>
                 )}

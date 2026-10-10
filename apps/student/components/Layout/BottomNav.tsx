@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { motion } from 'framer-motion';
 import { Home, Map, BookX, User, Sparkles } from 'lucide-react';
 
 interface BottomNavProps {
@@ -17,7 +18,13 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) 
   ];
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-1.5 pb-3 z-[600] rounded-t-[28px] shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 92 }}
+      transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+      className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-1.5 pb-3 z-[600] rounded-t-[28px] shadow-[0_-10px_40px_rgba(0,0,0,0.05)]"
+    >
       <div className="flex justify-around items-center max-w-2xl mx-auto">
         {navItems.map((item) => {
           const isActive = activeTab === item.id;
@@ -42,6 +49,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) 
           )
         })}
       </div>
-    </div>
+    </motion.div>
   );
 };

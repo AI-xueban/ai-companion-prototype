@@ -1,29 +1,29 @@
 import React, { useMemo, useState } from 'react';
-import { Users, Search, AlertCircle, CheckCircle2, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Users, Search, RefreshCw, ShieldCheck } from 'lucide-react';
 import { Card } from '../../UI/Card';
 import { StudentSummary } from '../../../types';
-import { classStats, students } from '../data/mockTeacherData';
+import { students } from '../data/mockTeacherData';
 import { StudentDetailDrawer } from './StudentDetailDrawer';
 
-export const StudentProfiles: React.FC = () => {
+export const StudentProfiles: React.FC<{ classNames?: string[] }> = ({ classNames }) => {
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<'all' | 'attention' | 'excellent' | 'online'>('all');
+  const [filter, setFilter] = useState<'all' | 'online'>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  const scopedStudents = useMemo(() => classNames ? students.filter((student) => classNames.includes(`${student.grade}(${student.classNumber.replace('班', '')})班`)) : students, [classNames]);
+  const stats = {
+    totalStudents: scopedStudents.length,
+    onlineCount: scopedStudents.filter((student) => student.status === 'online').length,
+  };
   const filtered = useMemo(() => {
     const keyword = search.trim().toLowerCase();
-    return students.filter((s) => {
+    return scopedStudents.filter((s) => {
       const match = s.name.toLowerCase().includes(keyword) || s.id.toLowerCase().includes(keyword);
       if (!match) return false;
-      if (filter === 'attention') return s.alertLevel !== 'none';
-      if (filter === 'excellent') {
-        const avg = Object.values(s.abilitySnapshot).reduce((a, b) => a + b, 0) / 5;
-        return avg >= 85;
-      }
       if (filter === 'online') return s.status === 'online';
       return true;
     });
-  }, [search, filter]);
+  }, [search, filter, scopedStudents]);
 
   const handleResetPwd = (student: StudentSummary) => {
     const confirmMsg = `确认重置 ${student.name} 的密码为学号后六位？登录后需强制改密（前端提示即可）。`;
@@ -31,7 +31,7 @@ export const StudentProfiles: React.FC = () => {
     alert(`已重置 ${student.name} 的密码为学号后六位，请提醒登录后修改密码（演示逻辑）。`);
   };
 
-  const selected = students.find((s) => s.id === selectedId) || null;
+  const selected = scopedStudents.find((s) => s.id === selectedId) || null;
 
   return (
     <div className="h-full flex flex-col p-6 md:p-8 bg-white">
@@ -39,6 +39,7 @@ export const StudentProfiles: React.FC = () => {
         <div>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">学生管理</p>
           <h2 className="text-2xl font-black text-slate-900">学生列表</h2>
+          <p className="mt-1 text-xs text-slate-400">{classNames?.length ? `当前班级范围：${classNames.join('、')}` : '当前范围：罗湖实验学校全校'}</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -54,14 +55,14 @@ export const StudentProfiles: React.FC = () => {
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <Card className="p-5 border border-slate-100 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
               <Users size={18} className="text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-black text-slate-900">{classStats.totalStudents}</p>
+              <p className="text-2xl font-black text-slate-900">{stats.totalStudents}</p>
               <p className="text-xs text-slate-500">班级总人数</p>
             </div>
           </div>
@@ -72,30 +73,8 @@ export const StudentProfiles: React.FC = () => {
               <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse" />
             </div>
             <div>
-              <p className="text-2xl font-black text-slate-900">{classStats.onlineCount}</p>
+              <p className="text-2xl font-black text-slate-900">{stats.onlineCount}</p>
               <p className="text-xs text-slate-500">当前在线</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-5 border border-slate-100 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
-              <AlertCircle size={18} className="text-amber-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-black text-slate-900">{classStats.attentionNeeded}</p>
-              <p className="text-xs text-slate-500">需要关注</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-5 border border-slate-100 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-              <CheckCircle2 size={18} className="text-purple-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-black text-slate-900">{classStats.excellentPerformance}</p>
-              <p className="text-xs text-slate-500">表现优秀</p>
             </div>
           </div>
         </Card>
@@ -104,10 +83,8 @@ export const StudentProfiles: React.FC = () => {
       {/* 筛选 */}
       <div className="flex items-center gap-2 mb-4">
         {[
-          { key: 'all', label: `全部 (${students.length})` },
-          { key: 'attention', label: `需要关注 (${students.filter((s) => s.alertLevel !== 'none').length})` },
-          { key: 'excellent', label: `表现优秀 (${students.filter((s) => Object.values(s.abilitySnapshot).reduce((a, b) => a + b, 0) / 5 >= 85).length})` },
-          { key: 'online', label: `在线 (${students.filter((s) => s.status === 'online').length})` },
+          { key: 'all', label: `全部 (${scopedStudents.length})` },
+          { key: 'online', label: `在线 (${stats.onlineCount})` },
         ].map((btn) => (
           <button
             key={btn.key}
