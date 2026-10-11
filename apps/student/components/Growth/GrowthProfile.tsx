@@ -4,10 +4,9 @@ import { createPortal } from 'react-dom';
 import { motion as motionOriginal, AnimatePresence } from 'framer-motion';
 import { UserProfileData } from '../../types';
 import { getUserGrowthData } from '../../services/geminiService';
-import { ArrowLeft, ShoppingBag, Lock, Settings, Coins, Heart, BadgeCheck, Scroll, X, PiggyBank, Sparkles, BookOpen, FileText } from 'lucide-react';
+import { ArrowLeft, ChevronRight, ShoppingBag, Lock, Settings, Coins, Heart, BadgeCheck, Scroll, X, PiggyBank, Sparkles, BookOpen, FileText } from 'lucide-react';
 import { MyTextbooksPage } from './MyTextbooksPage';
 import { MyPrintedFilesPage } from './MyPrintedFilesPage';
-import { listPrintedFiles, PRINTED_FILES_CHANGED_EVENT } from '../../services/printedFileService';
 import { isJuniorGrade, type UiSchoolSystem } from '../../data/juniorDemoCatalog';
 import { InteractiveLumi } from '../LumiSpace/InteractiveLumi';
 import { UserAvatarImage } from '../User/UserAvatarImage';
@@ -81,8 +80,12 @@ interface GrowthProfileProps {
   onViewReport?: () => void; // New Prop
   onOpenSettings?: () => void; // New Prop
   coins?: number;
+  totalXp?: number;
+  onOpenRewardAccount?: (asset: 'coins' | 'xp') => void;
+  onCoinSpend?: (amount: number, title: string) => void;
   openCharitySignal?: number;
   openPrintedFilesSignal?: number;
+  openPrintedFileId?: string;
   onCharityOpenChange?: (isOpen: boolean) => void;
   userGrade?: string;
   textbookTerm?: string;
@@ -103,8 +106,12 @@ export const GrowthProfile: React.FC<GrowthProfileProps> = ({
   onViewReport,
   onOpenSettings,
   coins,
+  totalXp,
+  onOpenRewardAccount,
+  onCoinSpend,
   openCharitySignal = 0,
   openPrintedFilesSignal = 0,
+  openPrintedFileId,
   onCharityOpenChange,
   userGrade = '七年级',
   textbookTerm = '上册',
@@ -122,7 +129,7 @@ export const GrowthProfile: React.FC<GrowthProfileProps> = ({
   const [isCharityOpen, setIsCharityOpen] = useState(false);
   const [isTextbooksOpen, setIsTextbooksOpen] = useState(false);
   const [isPrintedFilesOpen, setIsPrintedFilesOpen] = useState(false);
-  const [printedFileCount, setPrintedFileCount] = useState(() => listPrintedFiles().length);
+  const [requestedPrintedFileId, setRequestedPrintedFileId] = useState<string | undefined>();
   const [charityViewState, setCharityViewState] = useState<'OVERVIEW' | 'RECORDS' | 'CERTIFICATE'>('OVERVIEW');
   const [charityInput, setCharityInput] = useState(100);
   const [charityJustDonated, setCharityJustDonated] = useState(false);
@@ -131,8 +138,8 @@ export const GrowthProfile: React.FC<GrowthProfileProps> = ({
   const isCharityRunning = isCharityCampaignRunning(charityStage);
 
   useEffect(() => {
-    if (openPrintedFilesSignal > 0) setIsPrintedFilesOpen(true);
-  }, [openPrintedFilesSignal]);
+    if (openPrintedFilesSignal > 0) { setRequestedPrintedFileId(openPrintedFileId); setIsPrintedFilesOpen(true); }
+  }, [openPrintedFilesSignal, openPrintedFileId]);
 
   useEffect(() => {
     if (openCharitySignal > 0) {
@@ -150,12 +157,6 @@ export const GrowthProfile: React.FC<GrowthProfileProps> = ({
     onTextbooksOpenChange?.(isTextbooksOpen || isPrintedFilesOpen);
     return () => onTextbooksOpenChange?.(false);
   }, [isTextbooksOpen, isPrintedFilesOpen, onTextbooksOpenChange]);
-
-  useEffect(() => {
-    const refresh = () => setPrintedFileCount(listPrintedFiles().length);
-    window.addEventListener(PRINTED_FILES_CHANGED_EVENT, refresh);
-    return () => window.removeEventListener(PRINTED_FILES_CHANGED_EVENT, refresh);
-  }, []);
 
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
@@ -189,6 +190,7 @@ export const GrowthProfile: React.FC<GrowthProfileProps> = ({
       setCharityStageHint('捐赠未成功，请稍后重试');
       return;
     }
+    onCoinSpend?.(charityInput, '爱心大使捐赠');
     setCharityStageHint('');
     setCharityJustDonated(true);
     setCharityViewState('CERTIFICATE');
@@ -241,7 +243,7 @@ export const GrowthProfile: React.FC<GrowthProfileProps> = ({
     );
   }
 
-  if (isPrintedFilesOpen) return <MyPrintedFilesPage onBack={() => setIsPrintedFilesOpen(false)} />;
+  if (isPrintedFilesOpen) return <MyPrintedFilesPage initialFileId={requestedPrintedFileId} onBack={() => setIsPrintedFilesOpen(false)} />;
 
   if (isCharityOpen) {
     return (
@@ -415,12 +417,11 @@ export const GrowthProfile: React.FC<GrowthProfileProps> = ({
                 </button>
                 <button
                     type="button"
-                    onClick={() => setIsPrintedFilesOpen(true)}
+                    onClick={() => { setRequestedPrintedFileId(undefined); setIsPrintedFilesOpen(true); }}
                     className="flex h-8 items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-2.5 text-white backdrop-blur-md shadow-sm transition-colors hover:bg-white/20"
                 >
                     <FileText size={14} strokeWidth={2.3} />
                     <span className="text-[11px] font-black">我的文件</span>
-                    <span className="text-[10px] font-bold text-white/70">{printedFileCount ? `${printedFileCount} 份` : '暂无文件'}</span>
                 </button>
                 <button 
                     type="button"
@@ -460,12 +461,12 @@ export const GrowthProfile: React.FC<GrowthProfileProps> = ({
                         </div>
                         <div className="flex items-center gap-2 text-[11px] font-bold text-indigo-100">
                             <span>{isPreL1 ? '成长等级' : '累计成长'}</span>
-                            <span className="text-white/90 font-mono">{data.currentXp}/{data.nextLevelXp} XP</span>
+                            <span className="text-white/90 font-mono">{totalXp ?? data.currentXp}/{data.nextLevelXp} XP</span>
                         </div>
                         <div className="h-2 bg-black/20 rounded-full overflow-hidden ring-1 ring-white/10 backdrop-blur-sm shadow-inner">
                             <div 
                                 className={`h-full relative ${isPreL1 ? 'bg-white/25' : 'bg-gradient-to-r from-accent to-yellow-300 shadow-[0_0_15px_rgba(255,206,81,0.5)]'}`}
-                                style={{ width: `${isPreL1 ? 0 : (data.currentXp / data.nextLevelXp) * 100}%` }}
+                                style={{ width: `${isPreL1 ? 0 : Math.min(100, ((totalXp ?? data.currentXp) / data.nextLevelXp) * 100)}%` }}
                             >
                                 <div className="absolute inset-0 bg-white/30 w-full h-full" style={{backgroundImage: 'linear-gradient(45deg,rgba(255,255,255,0.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,0.15) 50%,rgba(255,255,255,0.15) 75%,transparent 75%,transparent)', backgroundSize: '10px 10px'}}></div>
                             </div>
@@ -511,24 +512,28 @@ export const GrowthProfile: React.FC<GrowthProfileProps> = ({
                     </div>
                 </motion.button>
 
-                <button 
-                    onClick={onOpenStore}
-                    className="relative overflow-hidden rounded-[26px] p-4 min-h-[120px] bg-white border border-white shadow-[0_14px_32px_-18px_rgba(0,0,0,0.25)] text-left active:scale-98 transition-all hover:border-brand/20"
+                <div
+                    className="relative overflow-hidden rounded-[26px] p-4 min-h-[120px] bg-white border border-white shadow-[0_14px_32px_-18px_rgba(0,0,0,0.25)] text-left transition-all hover:border-brand/20"
                 >
                     <Coins size={64} className="absolute -right-3 bottom-0 text-yellow-200/60" fill="currentColor" />
-                    <div className="relative z-10 flex flex-col h-full justify-between gap-3 min-h-[88px]">
+                    <div className="relative z-10 flex flex-col h-full justify-between min-h-[88px]">
+                        <button type="button" onClick={onOpenStore} aria-label="金币商店，去兑换" className="flex flex-1 flex-col justify-between gap-3 text-left rounded-xl transition active:scale-[0.98]">
                         <div className="flex items-center justify-between">
                             <div className="w-11 h-11 rounded-2xl bg-yellow-50 border border-yellow-100 flex items-center justify-center text-yellow-500 shadow-inner">
                                 <ShoppingBag size={22} strokeWidth={2.4} />
                             </div>
-                            <span className="px-2 py-1 rounded-full bg-brand/5 border border-brand/10 text-brand text-[10px] font-black">去兑换</span>
+                            <span className="flex items-center gap-0.5 px-2 py-1 rounded-full bg-brand/5 border border-brand/10 text-brand text-[10px] font-black">去兑换<ChevronRight size={11} /></span>
                         </div>
                         <div>
                             <h3 className="font-black text-base text-gray-800 leading-tight">金币商店</h3>
-                            <p className="text-[10px] text-gray-400 font-bold mt-1 leading-relaxed">余额 <span className="text-accent-dark font-black">{currentCoins}</span> 金币</p>
+                        </div>
+                        </button>
+                        <div className="mt-1 flex items-center justify-between gap-2">
+                            <p className="text-[10px] text-gray-400 font-bold leading-relaxed">余额 <span className="text-accent-dark font-black">{currentCoins}</span> 金币</p>
+                            {onOpenRewardAccount && <button type="button" onClick={() => onOpenRewardAccount('coins')} aria-label="查看金币明细与规则" className="flex shrink-0 items-center gap-0.5 rounded-lg px-1.5 py-1.5 text-[11px] font-semibold text-gray-500 transition hover:bg-brand/5 hover:text-brand">明细<ChevronRight size={12} /></button>}
                         </div>
                     </div>
-                </button>
+                </div>
             </div>
        </div>
 

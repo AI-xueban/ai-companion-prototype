@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Task } from '../../types';
 import { isKgScopeMicroLessonTask, isSectionPracticeTask, SECTION_PRACTICE_DIFFICULTY, SECTION_PRACTICE_QUESTION_COUNT } from '../../utils/kgMicroLesson';
 import { UniversalQuizView, UniversalQuizQuestion, normalizeQuizSubmitPayload } from './UniversalQuizView';
@@ -9,7 +9,9 @@ import { markSyncPracticeDone, markSyncPracticeStarted } from '../../services/sy
 import { grantQuizSessionReward, grantTaskCompleteReward, mergeRewardResults } from '../../services/rewardService';
 import { RewardGrantResult } from '../../types/reward';
 import { UserStats } from '../../types';
+import { isExpeditionNodeId } from '../PersonalizedLearning/expeditionMapNodes';
 import type { LearningExitReason } from '../../types/learningReturn';
+import { resolveQuestionCorrectness } from '../../utils/manualGrade';
 
 interface QuizPageProps {
   onExit: (reason?: LearningExitReason) => void;
@@ -40,6 +42,7 @@ export const QuizPage: React.FC<QuizPageProps> = ({
   const isChapterMiniQuiz = isKgScopeMicroLessonTask(task);
   const isSectionPractice = isSectionPracticeTask(task);
   const [questions, setQuestions] = useState<UniversalQuizQuestion[]>([]);
+  const submittedRef = useRef(false);
   const [showResult, setShowResult] = useState(false);
   const [resultData, setResultData] = useState<QuizSessionResult | null>(null);
 
@@ -133,19 +136,23 @@ export const QuizPage: React.FC<QuizPageProps> = ({
   };
 
   const handleQuizSubmit = (payload: any) => {
-      const { answers: userAnswers } = normalizeQuizSubmitPayload(payload);
+      if (submittedRef.current) return;
+      submittedRef.current = true;
+      const { answers: userAnswers, questionTimesSec, totalTimeSec, paperSelfGrades, paperDraftSnapshots } = normalizeQuizSubmitPayload(payload);
       // 1. Process answers to detailed result format
       const processedQuestions = questions.map((q, index) => {
           const userAnsRaw = userAnswers[q.id];
           const correctValRaw = q.result?.correctAnswer;
 
-          const isCorrect = normalizeAnswer(userAnsRaw) === normalizeAnswer(correctValRaw);
+          const isCorrect = q.content.manualGradeBlankIndex !== undefined
+            ? resolveQuestionCorrectness(q.content.manualGradeBlankIndex, correctValRaw, userAnsRaw, paperSelfGrades?.[q.id])
+            : userAnsRaw !== undefined && userAnsRaw !== null && correctValRaw !== undefined && correctValRaw !== null && normalizeAnswer(userAnsRaw) !== '' && normalizeAnswer(userAnsRaw) === normalizeAnswer(correctValRaw);
 
           return {
               questionId: q.id,
               index: index + 1,
               isCorrect,
-              timeSpentSec: 45, // Mock time per question
+              timeSpentSec: Math.round(questionTimesSec?.[q.id] ?? 0),
               difficulty: q.difficulty || 3,
               stemSummary: q.content.stem,
               correctAnswer: formatDisplayAnswer(correctValRaw),
@@ -159,12 +166,12 @@ export const QuizPage: React.FC<QuizPageProps> = ({
               knowledgePoints: q.knowledgePoints,
               rawCorrectAnswer: correctValRaw,
               rawUserAnswer: userAnsRaw,
+              paperSelfGrade: paperSelfGrades?.[q.id],
+              paperDraftImageUrl: paperDraftSnapshots?.[q.id],
           };
       });
-      markQuestionsPracticed(processedQuestions.map((q) => q.questionId));
-      if (isSectionPractice && task?.syncPracticeMark) {
-        markSyncPracticeDone(task.syncPracticeMark.bookKey, task.syncPracticeMark.practiceKey);
-      }
+      // Commit practice progress after checking validity.
+
 
       // 2. Calculate stats
       const correctCount = processedQuestions.filter(q => q.isCorrect).length;
@@ -173,19 +180,26 @@ export const QuizPage: React.FC<QuizPageProps> = ({
       let grantResult = grantQuizSessionReward({
         sessionId: `sess_${Date.now()}`,
         quizSetId,
+        taskId: task?.id,
+        isDailyTask: todayTaskIds?.includes(task?.id || ""),
+        title: task?.title || "答题练习",
+        questionTimesSec: questionTimesSec ? questions.map(q => questionTimesSec[q.id] ?? 0) : undefined,
+        dailyTaskOrdinal: todayTaskIds?.includes(task?.id || "") ? todayTaskIds.indexOf(task!.id) + 1 : undefined,
         correctCount,
         totalCount: questions.length,
         questions: processedQuestions.map((q) => ({
+          questionId: q.questionId,
           difficulty: q.difficulty,
           isCorrect: q.isCorrect,
         })),
-        totalTimeSec: processedQuestions.length * 45,
+        totalTimeSec: totalTimeSec ?? processedQuestions.reduce((sum,q) => sum + q.timeSpentSec, 0),
         isDailyConquer,
       });
 
-      if (task && todayTaskIds?.includes(task.id)) {
+      if (!grantResult.invalidLearning && task && todayTaskIds?.includes(task.id)) {
         const taskResult = grantTaskCompleteReward({
           taskId: task.id,
+          isPerfect: score === 100,
           durationMinutes: task.durationMinutes,
           dayPlanTaskIds: todayTaskIds,
         });
@@ -193,7 +207,11 @@ export const QuizPage: React.FC<QuizPageProps> = ({
         onTaskComplete?.(task);
       }
 
-      if (grantResult.xp > 0 || grantResult.coins > 0) {
+      if (!grantResult.invalidLearning) {
+        markQuestionsPracticed(processedQuestions.map(q => q.questionId));
+        if (isSectionPractice && task?.syncPracticeMark) markSyncPracticeDone(task.syncPracticeMark.bookKey, task.syncPracticeMark.practiceKey);
+      }
+      if (grantResult.xp > 0 || grantResult.coins > 0 || grantResult.skippedReasons.length > 0) {
         onRewardGranted?.(grantResult);
       }
 
@@ -201,7 +219,7 @@ export const QuizPage: React.FC<QuizPageProps> = ({
       const sessionResult: QuizSessionResult = {
           sessionId: `sess_${Date.now()}`,
           timestamp: Date.now(),
-          totalTimeSec: processedQuestions.length * 45,
+          totalTimeSec: totalTimeSec ?? processedQuestions.reduce((sum,q) => sum + q.timeSpentSec, 0),
           score,
           correctCount,
           totalCount: questions.length,
@@ -242,14 +260,16 @@ export const QuizPage: React.FC<QuizPageProps> = ({
         ) : null}
         {showResult && resultData ? (
             <UniversalQuizResult 
+                hideRewardDetails={Boolean(task?.id && isExpeditionNodeId(task.id))}
                 initialData={resultData}
                 userStats={userStats}
-                onClose={() => onExit('complete')}
+                onClose={() => onExit(resultData.grantResult?.invalidLearning ? 'abort' : 'complete')}
                 onNext={() => {
                     if (onReview) onReview();
                     else onExit('complete');
                 }}
                 onRestart={() => {
+                    submittedRef.current = false;
                     setShowResult(false);
                     setResultData(null);
                     // Reset UniversalQuizView state would be needed here, 

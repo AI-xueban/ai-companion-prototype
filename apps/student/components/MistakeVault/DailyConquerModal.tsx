@@ -4,9 +4,8 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MistakeItem } from '../../types';
 import { X, Zap, Bot } from 'lucide-react';
-import { UniversalQuizView, UniversalQuizQuestion, normalizeQuizSubmitPayload } from '../Quiz/UniversalQuizView';
+import { UniversalQuizView, UniversalQuizQuestion, normalizeQuizSubmitPayload, normalizeQuestionAnswer } from '../Quiz/UniversalQuizView';
 import { UniversalQuizResult, QuizSessionResult, QuizResultItem, enrichQuizResultWithPracticeStates } from '../Quiz/UniversalQuizResult';
-import { SingleQuestionResultCard } from '../Quiz/SingleQuestionResultCard';
 import { allQuestions } from '../../data/questionBank';
 import { getPortalRoot } from '../../utils/portal';
 import { grantQuizSessionReward } from '../../services/rewardService';
@@ -33,12 +32,12 @@ const mapMistakeItemToQuestion = (item: MistakeItem): UniversalQuizQuestion => {
 
     return {
         id: item.id,
-        type: (item.questionType as any) || 'fill_in_blank',
+        type: (item.questionType as any) || originalQuestion?.type || 'fill_in_blank',
         content: {
             stem: originalQuestion?.content?.originalImageUrl
               ? (originalQuestion.content.stem || '')
               : (item.fullQuestion || item.questionSnippet),
-            options: originalQuestion?.content?.options,
+            options: originalQuestion?.content?.options ?? item.options,
             audioUrl: originalQuestion?.content?.audioUrl,
             transcript: originalQuestion?.content?.transcript,
             examRules: originalQuestion?.content?.examRules,
@@ -85,9 +84,6 @@ export const DailyConquerModal: React.FC<DailyConquerModalProps> = ({
     
     // Quiz data/state
     const [queue, setQueue] = useState<UniversalQuizQuestion[]>([]);
-    const [answers, setAnswers] = useState<Record<string, any> | null>(null);
-    const [paperDraftSnapshots, setPaperDraftSnapshots] = useState<Record<string, string | null>>({});
-    const [paperSelfGrades, setPaperSelfGrades] = useState<Record<string, PaperSelfGrade>>({});
     const [resultPayload, setResultPayload] = useState<QuizSessionResult | null>(null);
     const rewardGrantedRef = useRef(false);
 
@@ -111,7 +107,6 @@ export const DailyConquerModal: React.FC<DailyConquerModalProps> = ({
     useEffect(() => {
         if (phase !== 'result' || !resultPayload?.grantResult || rewardGrantedRef.current) return;
         const gr = resultPayload.grantResult;
-        if (gr.xp <= 0 && gr.coins <= 0) return;
         const t = setTimeout(() => {
             rewardGrantedRef.current = true;
             onRewardGranted?.(gr);
@@ -122,10 +117,11 @@ export const DailyConquerModal: React.FC<DailyConquerModalProps> = ({
     // --- HANDLERS ---
     const handleStart = () => setPhase('quiz');
 
-    const buildResult = (userAnswers: Record<string, any>, paperSelfGrades: Record<string, PaperSelfGrade> = {}) => {
+    const buildResult = (userAnswers: Record<string, any>, paperSelfGrades: Record<string, PaperSelfGrade> = {}, times?: Record<string, number>, totalTimeSec?: number, drafts: Record<string, string | null> = {}) => {
         const totalCount = queue.length;
         let correctCount = 0;
         const questions: QuizResultItem[] = queue.map((q, idx) => {
+            userAnswers[q.id] = normalizeQuestionAnswer(q, userAnswers[q.id]);
             const correct = resolveQuestionCorrectness(
                 q.content?.manualGradeBlankIndex,
                 q.result?.correctAnswer,
@@ -135,9 +131,12 @@ export const DailyConquerModal: React.FC<DailyConquerModalProps> = ({
             if (correct) correctCount += 1;
             return {
                 questionId: q.id,
+                question: q,
+                paperSelfGrade: paperSelfGrades[q.id],
+                paperDraftImageUrl: drafts[q.id],
                 index: idx + 1,
                 isCorrect: !!correct,
-                timeSpentSec: 0,
+                timeSpentSec: Math.round(times?.[q.id] ?? 0),
                 difficulty: q.difficulty || 1,
                 stemSummary: (q.content.stem || '').slice(0, 50),
                 correctAnswer: Array.isArray(q.result?.correctAnswer) ? (q.result?.correctAnswer as any[]).join('、') : (q.result?.correctAnswer as any) ?? '',
@@ -155,19 +154,24 @@ export const DailyConquerModal: React.FC<DailyConquerModalProps> = ({
         const score = Math.round((correctCount / totalCount) * 100);
         const grantResult = grantQuizSessionReward({
             sessionId: `daily-${Date.now()}`,
-            quizSetId: 'daily_conquer_set',
+            quizSetId: 'daily_conquer_' + queue.map(q => q.id).join('_'),
+            title: mode === 'daily' ? '每日攻克' : '错题批量练习',
+            questionTimesSec: times ? queue.map(q => times[q.id] ?? 0) : undefined,
+            totalTimeSec,
             correctCount,
             totalCount,
             questions: questions.map((q) => ({
+                questionId: q.questionId,
                 difficulty: q.difficulty,
                 isCorrect: q.isCorrect,
             })),
-            isDailyConquer: true,
+            isDailyConquer: mode === 'daily',
+            isWrongPractice: true,
         });
         const result: QuizSessionResult = {
             sessionId: `daily-${Date.now()}`,
             timestamp: Date.now(),
-            totalTimeSec: 0,
+            totalTimeSec: totalTimeSec ?? 0,
             score,
             correctCount,
             totalCount,
@@ -185,13 +189,11 @@ export const DailyConquerModal: React.FC<DailyConquerModalProps> = ({
     };
 
     const handleQuizSubmit = (payload: any) => {
-        const { answers: ans, paperDraftSnapshots: drafts, paperSelfGrades: grades } = normalizeQuizSubmitPayload(payload);
-        setAnswers(ans);
-        setPaperDraftSnapshots(drafts ?? {});
-        setPaperSelfGrades(grades ?? {});
-        const res = buildResult(ans, grades ?? {});
+        const { answers: ans, paperDraftSnapshots: drafts, paperSelfGrades: grades, questionTimesSec: times, totalTimeSec } = normalizeQuizSubmitPayload(payload);
+        const res = buildResult(ans, grades ?? {}, times, totalTimeSec, drafts ?? {});
         setResultPayload(res);
         setPhase('result');
+        if (res.grantResult?.invalidLearning) return;
         const masteredIds = res.questions.filter(q => q.isCorrect).map(q => q.questionId);
         onComplete({
             masteredIds,
@@ -259,50 +261,14 @@ export const DailyConquerModal: React.FC<DailyConquerModalProps> = ({
 
     const renderResult = () => {
         if (!resultPayload || queue.length === 0) return null;
-        if (queue.length === 1) {
-            const q = queue[0];
-            const isCorrect = resolveQuestionCorrectness(
-                q.content?.manualGradeBlankIndex,
-                q.result?.correctAnswer,
-                answers?.[q.id],
-                paperSelfGrades[q.id],
-            );
-            return (
-                <motion.div key="result" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-gray-900/95 backdrop-blur-xl flex items-center justify-center p-4 z-[100] pointer-events-auto">
-                    <SingleQuestionResultCard
-                        questionId={q.id}
-                        questionType={q.type}
-                        subject={(q as any).subject ?? 'math'}
-                        difficulty={q.difficulty}
-                        stem={q.content.stem}
-                        options={q.content.options?.map(opt => ({
-                            label: opt,
-                            text: opt,
-                            isCorrect: q.result?.correctAnswer === opt,
-                            userSelected: answers?.[q.id] === opt,
-                        }))}
-                        userAnswerPreview={answers ? (Array.isArray(answers[q.id]) ? (answers[q.id] as any[]).join('、') : (answers[q.id] ?? '')) : ''}
-                        correctAnswerPreview={Array.isArray(q.result?.correctAnswer) ? (q.result?.correctAnswer as any[]).join('、') : (q.result?.correctAnswer as any)}
-                        explanationText={q.result?.explanation}
-                        knowledgePoints={q.knowledgePoints?.map(k => ({ id: k, label: k, color: '#6C5DD3' }))}
-                        status={isCorrect ? 'correct' : 'wrong'}
-                        timeUsedSec={0}
-                        attemptStats={{ totalAttempts: 1, correctCount: isCorrect ? 1 : 0, wrongCount: isCorrect ? 0 : 1 }}
-                        paperDraftImageUrl={paperDraftSnapshots[q.id] ?? null}
-                        paperSelfGrade={paperSelfGrades[q.id] ?? null}
-                        onPaperSelfGrade={(grade) => setPaperSelfGrades((prev) => ({ ...prev, [q.id]: grade }))}
-                        onOpenAITutor={onOpenAITutor ? handleStartTutor : undefined}
-                        onClose={onClose}
-                    />
-                </motion.div>
-            );
-        }
         return (
             <motion.div key="result" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[100] bg-white">
                 <UniversalQuizResult
                     initialData={resultPayload}
                     userStats={userStats}
+                    onOpenAITutor={onOpenAITutor ? handleStartTutor : undefined}
                     onClose={onClose}
+                    onRestart={() => { rewardGrantedRef.current = false; setResultPayload(null); setPhase('quiz'); }}
                 />
             </motion.div>
         );

@@ -18,11 +18,14 @@ import { StatusRing } from './StatusRing';
 import { SingleQuestionResultCard } from './SingleQuestionResultCard';
 import { UniversalQuizView, UniversalQuizQuestion, QuizSessionReviewItem, normalizeQuizSubmitPayload } from './UniversalQuizView';
 import { RewardGrantResult } from '../../types/reward';
+import { RewardDetailsDialog } from '../Rewards/RewardDetailsDialog';
 import { UserStats } from '../../types';
 import { recordSimilarAttempt } from '../../utils/similarQuestionAttempts';
 import { MistakeReasonKey } from '../../data/mistakeReasons';
 import { recordMistakeReasons } from '../../services/mistakeReasonService';
 import { getMasteryView } from '../../data/mockStudentMastery';
+import type { PaperSelfGrade } from './components/PaperSourceAnalysisPanel';
+import { resolveQuestionCorrectness } from '../../utils/manualGrade';
 
 // --- Types ---
 
@@ -33,6 +36,7 @@ export type QuestionAttemptMeta = {
 };
 
 export type QuizResultItem = {
+  question?: UniversalQuizQuestion;
   questionId: string;
   index: number;
   isCorrect: boolean;
@@ -49,6 +53,8 @@ export type QuizResultItem = {
   knowledgePoints?: string[];
   rawCorrectAnswer?: any;
   rawUserAnswer?: any;
+  paperSelfGrade?: PaperSelfGrade;
+  paperDraftImageUrl?: string | null;
   userMistakeTags?: MistakeReasonKey[]; // Optional: reasons for mistake
   /** 本题练习状态（GAP / FADED / MASTERED），用于结果页「本题练习情况」 */
   questionPracticeState?: CognitiveState;
@@ -333,20 +339,27 @@ export const UniversalQuizResult: React.FC<{
   onStartRemedial?: (qs: any[]) => void;
   onOpenAITutor?: (question?: QuizResultItem) => void;
   reviewMode?: boolean;
-}> = ({ onClose, initialData = MOCK_SESSION_RESULT, userStats, onStartRemedial, onOpenAITutor }) => {
+  hideRewardDetails?: boolean;
+  allowSimilarPractice?: boolean;
+  onContinue?: () => void;
+}> = ({ onClose, onRestart, hideRewardDetails = false, allowSimilarPractice = true, onContinue, initialData = MOCK_SESSION_RESULT, userStats, onStartRemedial, onOpenAITutor }) => {
   const [resultData, setResultData] = useState<QuizSessionResult>(initialData);
-  const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
+  const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(() => initialData.questions.length === 1 ? initialData.questions[0].questionId : null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewIndex, setReviewIndex] = useState(0);
   const [similarPractice, setSimilarPractice] = useState<UniversalQuizQuestion | null>(null);
   const [retryQuestionId, setRetryQuestionId] = useState<string | null>(null);
   const [activeKpId, setActiveKpId] = useState<string | null>(null);
-  const [showSummary, setShowSummary] = useState(true);
+  const [showSummary, setShowSummary] = useState(() => initialData.questions.length !== 1);
+  const [rewardDetailsOpen, setRewardDetailsOpen] = useState(false);
+  const isSingleQuestion = resultData.questions.length === 1;
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setResultData(initialData);
+    setRewardDetailsOpen(false);
     const shouldAutoOpenDetail =
+      initialData.totalCount === 1 ||
       initialData.sessionId === 'demo_practice_states' ||
       initialData.questions.some((q) => q.questionPracticeState);
     if (!shouldAutoOpenDetail || !initialData.questions[0]) {
@@ -362,7 +375,9 @@ export const UniversalQuizResult: React.FC<{
   // Stats
   const score = Math.round((resultData.correctCount / resultData.totalCount) * 100);
   const isPerfect = score === 100;
-  const wrongQuestions = resultData.questions.filter(q => !q.isCorrect);
+  const wrongQuestions = resultData.questions.filter(q => !q.isCorrect &&
+    (Array.isArray(q.rawUserAnswer ?? q.userAnswer) ? (q.rawUserAnswer ?? q.userAnswer) : [q.rawUserAnswer ?? q.userAnswer])
+      .some((answer: unknown) => String(answer ?? '').trim() !== '' && String(answer).trim() !== '—'));
   const unreviewedCount = wrongQuestions.filter(q => !q.userMistakeTags?.length).length;
   const showRemedialFloat = !isPerfect && unreviewedCount > 0;
   const totalXp = resultData.rewards.baseXp + resultData.rewards.bonusXp;
@@ -460,6 +475,7 @@ export const UniversalQuizResult: React.FC<{
 
     if (normalizedUser.length === 0) return 'unanswered';
     if (q.isCorrect) return 'correct';
+    if (q.paperSelfGrade === 'partial') return 'partial';
     if (normalizedCorrect.length > 1) {
       const hitCount = normalizedUser.filter(v => normalizedCorrect.includes(v)).length;
       if (hitCount > 0 && hitCount < normalizedCorrect.length) return 'partial';
@@ -484,6 +500,24 @@ export const UniversalQuizResult: React.FC<{
         q.questionId === questionId ? { ...q, userMistakeTags: tagKeys } : q
       )
     }));
+  };
+
+  const handleManualGrade = (questionId: string, grade: PaperSelfGrade) => {
+    setResultData(prev => {
+      const questions = prev.questions.map(q => {
+        if (q.questionId !== questionId) return q;
+        const bankQuestion = q.question ?? allQuestions.find(item => item.id === questionId.replace(/^mist-/, ''));
+        const isCorrect = resolveQuestionCorrectness(
+          bankQuestion?.content.manualGradeBlankIndex,
+          q.rawCorrectAnswer ?? q.correctAnswer,
+          q.rawUserAnswer ?? q.userAnswer,
+          grade,
+        );
+        return { ...q, paperSelfGrade: grade, isCorrect };
+      });
+      const correctCount = questions.filter(q => q.isCorrect).length;
+      return { ...prev, questions, correctCount, score: Math.round(correctCount / Math.max(prev.totalCount, 1) * 100) };
+    });
   };
 
   const buildOptionViews = (q: QuizResultItem) => {
@@ -526,7 +560,8 @@ export const UniversalQuizResult: React.FC<{
         id: q.questionId,
         type: q.questionType || 'single_choice',
         content: {
-          stem: q.stemSummary,
+          ...(q.question?.content ?? allQuestions.find(item => item.id === q.questionId.replace(/^mist-/, ''))?.content),
+          stem: q.question?.content.stem ?? allQuestions.find(item => item.id === q.questionId.replace(/^mist-/, ''))?.content.stem ?? q.stemSummary,
           options: q.options,
         },
         result: {
@@ -553,12 +588,12 @@ export const UniversalQuizResult: React.FC<{
     return map;
   }, [resultData.questions]);
 
-  const currentSelectedQuestion = selectedQuestionId
+  const currentSelectedQuestion = isSingleQuestion ? resultData.questions[0] : selectedQuestionId
     ? resultData.questions.find((q) => q.questionId === selectedQuestionId)
     : null;
 
   const handleRetrySubmit = (payload: any) => {
-    const { answers } = normalizeQuizSubmitPayload(payload);
+    const { answers, paperSelfGrades, paperDraftSnapshots } = normalizeQuizSubmitPayload(payload);
     if (!similarPractice || !retryQuestionId) {
       setSimilarPractice(null);
       setRetryQuestionId(null);
@@ -567,7 +602,10 @@ export const UniversalQuizResult: React.FC<{
 
     const userAnswer = answers[similarPractice.id];
     const correctRaw = similarPractice.result?.correctAnswer;
-    const isCorrect = isAnswerMatch(userAnswer, correctRaw);
+    const manualGradeBlankIndex = similarPractice.content.manualGradeBlankIndex;
+    const isCorrect = manualGradeBlankIndex !== undefined
+      ? resolveQuestionCorrectness(manualGradeBlankIndex, correctRaw, userAnswer, paperSelfGrades?.[similarPractice.id])
+      : isAnswerMatch(userAnswer, correctRaw);
     const questionId = retryQuestionId;
 
     setResultData((prev) => {
@@ -588,6 +626,8 @@ export const UniversalQuizResult: React.FC<{
           isCorrect,
           userAnswer: formatAnswerPreview(userAnswer),
           rawUserAnswer: userAnswer as string | string[],
+          paperSelfGrade: paperSelfGrades?.[similarPractice.id],
+          paperDraftImageUrl: paperDraftSnapshots?.[similarPractice.id],
           userMistakeTags: isCorrect ? undefined : q.userMistakeTags,
           attemptMeta,
         };
@@ -645,7 +685,7 @@ export const UniversalQuizResult: React.FC<{
         >
           <ChevronRight size={18} className="rotate-180" />
         </button>
-        <button
+        {!isSingleQuestion && <button
           type="button"
           onClick={() => {
             setSelectedQuestionId(null);
@@ -658,7 +698,7 @@ export const UniversalQuizResult: React.FC<{
           }`}
         >
           总结
-        </button>
+        </button>}
         <div className="flex-1 min-w-0 overflow-x-auto no-scrollbar">
           <div className="flex items-center gap-2 px-1">
             {resultData.questions.map((q, idx) => {
@@ -684,6 +724,8 @@ export const UniversalQuizResult: React.FC<{
             })}
           </div>
         </div>
+
+        {isSingleQuestion && !hideRewardDetails && resultData.grantResult && <button type="button" onClick={() => setRewardDetailsOpen(true)} className="shrink-0 text-xs font-bold text-indigo-600 hover:text-indigo-800">查看明细</button>}
 
         {showRemedialFloat && (
           <div className="shrink-0 flex flex-col items-end gap-0.5 pl-1">
@@ -736,6 +778,11 @@ export const UniversalQuizResult: React.FC<{
           {currentSelectedQuestion && (
             <div className="mt-4">
               <SingleQuestionResultCard
+                question={currentSelectedQuestion.question && {
+                  ...currentSelectedQuestion.question,
+                  userAnswer: currentSelectedQuestion.rawUserAnswer ?? currentSelectedQuestion.userAnswer,
+                }}
+                allowSimilarPractice={allowSimilarPractice}
                 key={`${currentSelectedQuestion.questionId}-${currentSelectedQuestion.userAnswer}-${currentSelectedQuestion.isCorrect}`}
                 layout="inline"
                 subject={currentSelectedQuestion.subject as any}
@@ -747,9 +794,9 @@ export const UniversalQuizResult: React.FC<{
                 userAnswerPreview={
                   getQuestionOutcome(currentSelectedQuestion) === 'unanswered'
                     ? ''
-                    : currentSelectedQuestion.userAnswer
+                    : currentSelectedQuestion.rawUserAnswer ?? currentSelectedQuestion.userAnswer
                 }
-                correctAnswerPreview={currentSelectedQuestion.correctAnswer}
+                correctAnswerPreview={currentSelectedQuestion.rawCorrectAnswer ?? currentSelectedQuestion.correctAnswer}
                 explanationText={currentSelectedQuestion.explanation}
                 knowledgePoints={
                   (currentSelectedQuestion.knowledgePoints || [currentSelectedQuestion.knowledgePoint])
@@ -807,12 +854,15 @@ export const UniversalQuizResult: React.FC<{
                   });
                 }}
                 onOpenAITutor={() => onOpenAITutor?.(currentSelectedQuestion)}
+                paperSelfGrade={currentSelectedQuestion.paperSelfGrade ?? null}
+                paperDraftImageUrl={currentSelectedQuestion.paperDraftImageUrl}
+                onPaperSelfGrade={(grade) => handleManualGrade(currentSelectedQuestion.questionId, grade)}
               />
             </div>
           )}
 
           {/* Summary */}
-          {showSummary && !currentSelectedQuestion && (
+          {!isSingleQuestion && showSummary && !currentSelectedQuestion && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -863,10 +913,13 @@ export const UniversalQuizResult: React.FC<{
                             <span className="text-sm font-black text-slate-700">+{resultData.rewards.coins}</span>
                           </div>
                         </div>
+                        {!hideRewardDetails && resultData.grantResult && <div className="text-right"><button type="button" onClick={() => setRewardDetailsOpen(true)} className="text-xs font-bold text-indigo-600 hover:text-indigo-800">查看明细</button></div>}
+
                       </div>
                     </div>
                   </div>
 
+                  {resultData.grantResult?.invalidLearning && <div className="rounded-2xl border border-orange-100 bg-orange-50 p-4 text-sm text-orange-800"><p>本次作答未计入奖励，请查看明细并重新作答。</p>{onRestart && <button type="button" onClick={onRestart} className="mt-3 rounded-full bg-indigo-600 px-5 py-2 font-bold text-white">重新作答</button>}</div>}
                   <div className="rounded-[30px] bg-white/55 border border-white/70 shadow-sm p-5 md:p-6">
                     <div className="flex items-center gap-3 mb-5">
                       <div className="h-12 w-12 rounded-full bg-white border border-indigo-100 shadow-sm flex items-center justify-center text-xl">🐰</div>
@@ -980,14 +1033,19 @@ export const UniversalQuizResult: React.FC<{
         </div>
       </div>
 
+      {onContinue && <div className="shrink-0 bg-white border-t p-4 flex justify-center gap-3"><button type="button" onClick={onContinue} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold">继续选题</button><button type="button" onClick={onClose} className="px-6 py-3 border border-slate-200 rounded-xl font-bold text-slate-600">返回原页面</button></div>}
+
+      {rewardDetailsOpen && resultData.grantResult && <RewardDetailsDialog result={resultData.grantResult} onClose={() => setRewardDetailsOpen(false)} />}
+
       {reviewOpen && (
         <div className="absolute inset-0 z-50 bg-white">
           <UniversalQuizView
             mode="analysis"
+            allowSimilarPractice={allowSimilarPractice}
             questions={reviewQuestions}
             initialQuestionIndex={reviewIndex}
             sessionReview={sessionReview}
-            showSummaryTab
+            showSummaryTab={!isSingleQuestion}
             onGoToSummary={() => setReviewOpen(false)}
             onClose={() => setReviewOpen(false)}
             onStartSimilarPractice={(q) => openSimilarPractice(q)}

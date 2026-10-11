@@ -1,4 +1,6 @@
 export type TeacherPortalRole = 'teacher' | 'class-teacher' | 'school-admin';
+export const TEACHER_ROLE_OPTIONS = ['教师', '班主任', '学校管理员'];
+export const TEACHER_SUBJECT_OPTIONS = ['语文', '数学', '英语', '物理', '化学', '生物', '道德与法治', '历史', '地理', '科学', '体育', '音乐', '美术', '信息科技', '劳动'];
 export interface TeacherPortalUser { id: string; name: string; account?: string; role: TeacherPortalRole; roleLabel: string; schoolId: string; schoolName: string; classIds: string[]; subject?: string }
 
 export const DEMO_TEACHER_ACCOUNTS: Array<TeacherPortalUser & { account: string; password: string }> = [

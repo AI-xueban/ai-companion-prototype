@@ -80,6 +80,8 @@ export interface MoodOption {
 }
 
 export interface UserStats {
+  /** 终身累计经验，金币支出不会扣减。 */
+  totalXp?: number;
   xpToday: number;
   xpTarget: number;
   studyMinutesToday: number;
@@ -217,6 +219,7 @@ export interface MistakeItem {
   tags?: string[];
   knowledgePoints?: string[];
   questionType?: string;
+  options?: string[];
   difficulty?: number | string;
   category?: string;
   correctAttempts?: number;

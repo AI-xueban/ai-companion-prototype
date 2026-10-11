@@ -1,22 +1,19 @@
 /** 常规行为日上限（答题、任务、攻克等合计） */
 export const COINS_DAILY_CAP = 150;
-export const REWARD_RULE_VERSION = 'v1.1';
+export const REWARD_RULE_VERSION = 'final-2026-10';
 
-/** 基础答题：每答对一题 +5，与难度无关 */
-export const COIN_PER_CORRECT = 5;
-/** 连对加成：连对 ≥3 题后，每题额外 +2 */
-export const COIN_COMBO_BONUS = 2;
-export const COMBO_STREAK_THRESHOLD = 3;
-
-/** 单条今日任务完成 */
-export const COIN_TASK_MIN = 10;
-export const COIN_TASK_MAX = 20;
-/** 今日任务全部完成 (3/3) 大满贯 */
-export const COIN_ALL_TASKS_BONUS = 50;
+/** 基础答题：每答对一题 +2，与难度无关 */
+export const COIN_PER_CORRECT = 2;
 /** 错题本 · 每日攻克 */
 export const COIN_DAILY_CONQUER = 20;
 
 export type RewardSceneId =
+  | 'wrong_first_right'
+  | 'variant_correction'
+  | 'path_clear'
+  | 'path_hidden_drop'
+  | 'daily_first_perfect'
+  | 'micro_course_first_pass'
   | 'quiz_correct'
   | 'quiz_combo'
   | 'quiz_session'
@@ -37,6 +34,9 @@ export interface CoinBreakdownItem extends RewardBreakdownItem {
 }
 
 export interface RewardGrantResult {
+  invalidLearning?: boolean;
+  receiptId?: string;
+  title?: string;
   xp: number;
   xpBreakdown: RewardBreakdownItem[];
   coins: number;
@@ -48,13 +48,20 @@ export interface RewardGrantResult {
 }
 
 export interface QuizRewardInput {
+  taskId?: string;
+  isDailyTask?: boolean;
+  title?: string;
+  isInvalidLearning?: boolean;
+  dailyTaskOrdinal?: number;
+  questionTimesSec?: number[];
   sessionId: string;
   quizSetId: string;
   correctCount: number;
   totalCount: number;
-  questions: { difficulty?: number; isCorrect: boolean }[];
+  questions: { difficulty?: number; isCorrect: boolean; questionId?: string }[];
   totalTimeSec?: number;
   isDailyConquer?: boolean;
+  isWrongPractice?: boolean;
 }
 
 export interface VideoRewardInput {
@@ -71,4 +78,6 @@ export interface TaskCompleteRewardInput {
   durationMinutes?: number;
   /** 今日计划中的全部 task id，用于判定 3/3 大满贯 */
   dayPlanTaskIds?: string[];
+  isPerfect?: boolean;
+  isInvalidLearning?: boolean;
 }
