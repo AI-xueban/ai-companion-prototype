@@ -181,7 +181,7 @@ export const TeacherLogin: React.FC<TeacherLoginProps> = ({ onLogin, initialRole
             </button>
           )}
         </form>
-        <div className="rounded-xl bg-slate-50 p-3 text-[11px] leading-5 text-slate-500">演示密码均为 12345678：教师 13800000000；班主任 13800000001；学校管理员 admin@luohu.edu。</div>
+        <div className="rounded-xl bg-slate-50 p-3 text-[11px] leading-5 text-slate-500">学校管理员账号由后台创建并绑定所属学校，登录后只能管理该校数据。演示密码均为 12345678：教师 13800000000；班主任 13800000001；学校管理员 admin@luohu.edu。</div>
 
         {isResetOpen && (
           <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
