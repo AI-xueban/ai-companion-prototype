@@ -81,7 +81,7 @@ try {
     if (!$names.ContainsKey($name)) { $row.结果='失败'; $row.说明='学生名单中无此姓名'; continue }
     if ($names[$name].Count -ne 1) { $row.结果='失败'; $row.说明='名单中完整姓名重复，请添加不同后缀并同步照片文件名'; continue }
     $sid = $names[$name][0]
-    if ($entry.Length -gt 2MB) { $row.结果='失败'; $row.说明='照片超过2MB'; continue }
+    if ($entry.Length -gt 5MB) { $row.结果='失败'; $row.说明='照片超过5MB'; continue }
     $row.学生编号=$sid
     $candidates.Add([pscustomobject]@{Entry=$entry; Extension=$ext; Row=$row})
   }

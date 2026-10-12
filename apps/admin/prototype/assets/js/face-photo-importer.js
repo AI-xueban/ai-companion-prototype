@@ -83,8 +83,8 @@
       const matched = byName.get(name) || [];
       if (!['.jpg', '.jpeg', '.png'].includes(extension)) {
         results.push({ fileName, success: false, reason: '不支持的照片格式' });
-      } else if (entry.size > 2 * 1024 * 1024) {
-        results.push({ fileName, success: false, reason: '照片超过 2MB' });
+      } else if (entry.size > 5 * 1024 * 1024) {
+        results.push({ fileName, success: false, reason: '照片超过 5MB' });
       } else if (matched.length !== 1) {
         results.push({ fileName, success: false, reason: matched.length ? '当前班级完整姓名重复' : '当前班级没有匹配学生' });
       } else if (seenIds.has(matched[0].id)) {
