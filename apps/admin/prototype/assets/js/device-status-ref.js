@@ -205,7 +205,7 @@ function renderStatusRefStateTree() {
                     <ul>
                       <li><div class="status-ref-tree-node status-ref-tree-node--dim">柜门</div><ul class="status-ref-tree-leaves"><li>${doorStatusTag(null)} 无展示</li></ul></li>
                       <li><div class="status-ref-tree-node status-ref-tree-node--dim">格口状态</div><ul class="status-ref-tree-leaves"><li>${slotStateTag(null)} 无展示</li></ul></li>
-                      <li><div class="status-ref-tree-node status-ref-tree-node--dim">子态</div><ul class="status-ref-tree-leaves"><li>${deviceStatusTag('borrowed', false)} 正常借出</li><li>${deviceStatusTag('borrowed', true)} 满 24h 未还</li></ul></li>
+                      <li><div class="status-ref-tree-node status-ref-tree-node--dim">子态</div><ul class="status-ref-tree-leaves"><li>${deviceStatusTag('borrowed', false)} 正常借出</li><li>${deviceStatusTag('borrowed', true)} 借出逾期</li></ul></li>
                     </ul>
                   </li>
                   <li>

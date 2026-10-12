@@ -12,6 +12,7 @@ import batchImportJs from '../../../../admin/prototype/assets/js/batch-import-mo
 import addCabinetJs from '../../../../admin/prototype/assets/js/add-cabinet-modal.js?raw';
 import editTabletJs from '../../../../admin/prototype/assets/js/edit-tablet-modal.js?raw';
 import devicePagesJs from '../../../../admin/prototype/assets/js/device-pages.js?raw';
+import facePhotoImporterJs from '../../../../admin/prototype/assets/js/face-photo-importer.js?raw';
 import facePagesJs from '../../../../admin/prototype/assets/js/face-pages.js?raw';
 import restoreDeviceJs from '../../../../admin/prototype/assets/js/restore-device-modal.js?raw';
 import carouselJs from '../../../../admin/prototype/assets/js/carousel-config.js?raw';
@@ -53,7 +54,7 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
       d.deviceAlerts=(d.deviceAlerts||[]).filter(a=>ids.has(a.cabinetId));
       const octoberAlerts=[
         {id:'ALT-202610-001',tabletId:'TAB-001',sn:'SN20260301001',cabinetId:'CAB-001',slotNo:3,type:'damage',severity:'high',title:'外观损坏',message:'外观对比发现损坏',status:'pending',createdAt:'2026-10-10 16:42:18'},
-        {id:'ALT-202610-002',tabletId:'TAB-002',sn:'SN20260301002',cabinetId:'CAB-001',slotNo:4,type:'overdue',severity:'medium',title:'逾期提醒',message:'借出满24小时未归还',status:'pending',createdAt:'2026-10-10 15:26:05'},
+        {id:'ALT-202610-002',tabletId:'TAB-002',sn:'SN20260301002',cabinetId:'CAB-001',slotNo:4,type:'overdue',severity:'medium',title:'逾期提醒',message:'借出逾期',status:'pending',createdAt:'2026-10-10 15:26:05'},
         {id:'ALT-202610-003',tabletId:'TAB-003',sn:'SN20260301003',cabinetId:'CAB-001',slotNo:8,type:'return_door_open',severity:'medium',title:'归还异常',message:'未关门',status:'pending',createdAt:'2026-10-10 14:18:42'},
         {id:'ALT-202610-004',tabletId:'TAB-004',sn:'SN20260301004',cabinetId:'CAB-001',slotNo:2,type:'return_not_charging',severity:'medium',title:'归还异常',message:'未充电',status:'pending',createdAt:'2026-10-10 13:05:31'},
         {id:'ALT-202610-005',tabletId:'—',sn:'—',cabinetId:'CAB-003',slotNo:null,type:'cabinet_offline',severity:'high',title:'柜机离线',message:'柜机心跳超时',status:'pending',createdAt:'2026-10-10 11:48:09'},
@@ -62,13 +63,13 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
         {id:'ALT-202610-008',tabletId:'TAB-007',sn:'SN20260301007',cabinetId:'CAB-001',slotNo:1,type:'manual_feedback',severity:'medium',title:'人工问题反馈',message:'格口内有异物',status:'pending',createdAt:'2026-10-09 10:12:50'},
         {id:'ALT-202610-009',tabletId:'TAB-008',sn:'SN20260301008',cabinetId:'CAB-001',slotNo:7,type:'manual_feedback',severity:'high',title:'人工问题反馈',message:'设备损坏',status:'pending',createdAt:'2026-10-08 16:08:33'},
         {id:'ALT-202610-010',tabletId:'TAB-009',sn:'SN20260301009',cabinetId:'CAB-002',slotNo:1,type:'damage',severity:'high',title:'外观损坏',message:'外观对比发现损坏',status:'resolved',createdAt:'2026-10-08 14:45:19'},
-        {id:'ALT-202610-011',tabletId:'TAB-010',sn:'SN20260301010',cabinetId:'CAB-002',slotNo:4,type:'overdue',severity:'medium',title:'逾期提醒',message:'借出满24小时未归还',status:'resolved',createdAt:'2026-10-08 09:30:02'},
+        {id:'ALT-202610-011',tabletId:'TAB-010',sn:'SN20260301010',cabinetId:'CAB-002',slotNo:4,type:'overdue',severity:'medium',title:'逾期提醒',message:'借出逾期',status:'resolved',createdAt:'2026-10-08 09:30:02'},
         {id:'ALT-202610-012',tabletId:'TAB-011',sn:'SN20260301011',cabinetId:'CAB-002',slotNo:5,type:'return_door_open',severity:'low',title:'归还异常',message:'未关门',status:'resolved',createdAt:'2026-10-07 16:22:47'},
         {id:'ALT-202610-013',tabletId:'TAB-012',sn:'SN20260301012',cabinetId:'CAB-002',slotNo:6,type:'return_not_charging',severity:'low',title:'归还异常',message:'未充电',status:'resolved',createdAt:'2026-10-07 13:11:36'},
         {id:'ALT-202610-014',tabletId:'—',sn:'—',cabinetId:'CAB-002',slotNo:null,type:'cabinet_offline',severity:'high',title:'柜机离线',message:'柜机心跳超时',status:'resolved',createdAt:'2026-10-06 18:05:12'},
         {id:'ALT-202610-015',tabletId:'TAB-013',sn:'SN20260301013',cabinetId:'CAB-002',slotNo:2,type:'manual_feedback',severity:'medium',title:'人工问题反馈',message:'门关不上',status:'pending',createdAt:'2026-10-06 15:49:28'},
         {id:'ALT-202610-016',tabletId:'TAB-014',sn:'SN20260301014',cabinetId:'CAB-002',slotNo:3,type:'damage',severity:'high',title:'外观损坏',message:'外观对比发现损坏',status:'pending',createdAt:'2026-10-05 14:36:54'},
-        {id:'ALT-202610-017',tabletId:'TAB-015',sn:'SN20260301015',cabinetId:'CAB-002',slotNo:7,type:'overdue',severity:'medium',title:'逾期提醒',message:'借出满24小时未归还',status:'pending',createdAt:'2026-10-04 12:24:17'},
+        {id:'ALT-202610-017',tabletId:'TAB-015',sn:'SN20260301015',cabinetId:'CAB-002',slotNo:7,type:'overdue',severity:'medium',title:'逾期提醒',message:'借出逾期',status:'pending',createdAt:'2026-10-04 12:24:17'},
         {id:'ALT-202610-018',tabletId:'TAB-016',sn:'SN20260301016',cabinetId:'CAB-002',slotNo:8,type:'return_door_open',severity:'medium',title:'归还异常',message:'未关门',status:'pending',createdAt:'2026-10-03 17:16:43'},
         {id:'ALT-202610-019',tabletId:'TAB-017',sn:'SN20260301017',cabinetId:'CAB-003',slotNo:7,type:'return_not_charging',severity:'medium',title:'归还异常',message:'未充电',status:'pending',createdAt:'2026-10-02 11:08:25'},
         {id:'ALT-202610-020',tabletId:'TAB-019',sn:'SN20260301019',cabinetId:'CAB-003',slotNo:3,type:'manual_feedback',severity:'high',title:'人工问题反馈',message:'设备损坏',status:'pending',createdAt:'2026-10-01 09:42:10'}
@@ -152,7 +153,13 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
       const firstTable=root.querySelector('.page-card > .table-wrap table');
       if(firstTable&&pageTitle==='设备概览') removeColumns(firstTable,['记录ID','所属柜机ID']);
       if(firstTable&&pageTitle==='柜机管理') removeColumns(firstTable,['柜机 ID','最近心跳','绑定手机号','负责人联系方式']);
-      if(firstTable&&pageTitle==='平板设备') removeColumns(firstTable,['设备ID','柜机ID','柜门','格口状态']);
+      if(firstTable&&pageTitle==='平板设备'){
+        removeColumns(firstTable,['设备ID','柜门','格口状态']);
+        root.querySelectorAll('.filter-item').forEach(field=>{
+          const label=(field.querySelector('label')?.textContent||'').trim();
+          if(label==='设备ID') field.remove();
+        });
+      }
       if(firstTable&&pageTitle==='使用记录') removeColumns(firstTable,['登录方式']);
 
       if(pageTitle.startsWith('柜机详情')){
@@ -434,7 +441,7 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
     if(__content)new MutationObserver(()=>stripTeacherCarouselUi(__content)).observe(__content,{childList:true,subtree:true});
     location.hash=${JSON.stringify(route)};
   `;
-  const scripts=[isolatedMock,scope,layoutTemplatesJs,layoutJs,contentModalJs,confirmModalJs,batchImportJs,addCabinetJs,editTabletJs,devicePagesJs,facePagesJs,restoreDeviceJs,carouselJs,pagesJs,enforceSchool,appJs];
+  const scripts=[isolatedMock,scope,layoutTemplatesJs,layoutJs,contentModalJs,confirmModalJs,batchImportJs,addCabinetJs,editTabletJs,devicePagesJs,facePhotoImporterJs,facePagesJs,restoreDeviceJs,carouselJs,pagesJs,enforceSchool,appJs];
   return `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${baseCss}\n${templateCss}\n${deviceCss}\nhtml,body{height:100%;overflow:auto;background:#f5f7fa}.layout{min-height:100%}.sider,.header,.tabs-bar,.req-panel,.req-panel-fab,.req-float-btn{display:none!important}.layout-main{margin-left:0!important;margin-right:0!important;height:100vh!important;min-height:0!important;overflow:hidden!important}.content{padding:20px!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain}.page-card{min-height:auto!important;box-shadow:0 1px 2px rgba(15,23,42,.05)}.modal-overlay{z-index:1000}.toast-container{z-index:1100}.teacher-usage-title{display:flex;align-items:center;justify-content:space-between}.teacher-usage-title span{color:var(--text-muted);font-size:12px;font-weight:400}.teacher-usage-row{margin-bottom:28px}.teacher-usage-row .value small{font-size:12px;font-weight:400;color:var(--text-muted)}</style></head><body><div class="layout"><aside class="sider" id="sider"><nav id="sider-menu"></nav></aside><div class="layout-main"><header class="header"><button id="menu-toggle"></button><div id="breadcrumb"></div></header><div id="tabs-bar"></div><main class="content" id="main-content"></main></div><aside id="req-panel"><button id="req-panel-close"></button><div id="req-panel-body"></div></aside><button id="req-panel-fab"></button></div><div id="toast-container" class="toast-container"></div><div class="modal-overlay" id="modal-overlay" hidden><div class="modal modal-xl" id="modal"><div class="modal-header"><div><h3 class="modal-title" id="modal-title"></h3><p class="modal-subtitle" id="modal-subtitle"></p></div><button type="button" class="modal-close" id="modal-close">&times;</button></div><div class="modal-body" id="modal-body"></div><div class="modal-footer" id="modal-footer"></div></div></div>${scripts.map(s=>`<script>${safeScript(s)}</script>`).join('')}</body></html>`;
  },[route,currentUser.schoolId,currentUser.schoolName]);
  return <div className="flex h-full min-h-0 flex-col bg-[#f5f7fa]"><iframe key={`${route}-${currentUser.schoolId}`} title={`设备管理-${route}`} srcDoc={srcDoc} sandbox="allow-scripts allow-forms allow-modals allow-same-origin" className="min-h-0 flex-1 border-0 bg-[#f5f7fa]"/></div>;
