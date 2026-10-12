@@ -6,7 +6,8 @@ const FACE_SCHOOLS = [
 const FACE_STUDENTS = [
   { id: '2026001', schoolId: 'school-001', name: '张三', className: '一年级1班', photoFile: '2026001.jpg', updatedAt: '2026-09-20 10:12:00', recognitionSource: '上传照片' },
   { id: '2026002', schoolId: 'school-001', name: '李四', className: '一年级1班', photoFile: '2026002.jpg', updatedAt: '2026-10-02 09:18:00', recognitionSource: '柜机视频' },
-  { id: '2026003', schoolId: 'school-001', name: '王五', className: '一年级2班', photoFile: null, updatedAt: '2026-10-03 16:40:00', recognitionSource: '柜机视频' },
+  { id: '2026003', schoolId: 'school-001', name: '王五（01）', className: '一年级1班', photoFile: null, updatedAt: '2026-10-03 16:40:00', recognitionSource: '柜机视频' },
+  { id: '2026025', schoolId: 'school-001', name: '王五（02）', className: '一年级1班', photoFile: null, updatedAt: null, recognitionSource: null },
   { id: '2026004', schoolId: 'school-001', name: '赵六', className: '一年级2班', photoFile: '2026004.jpg', updatedAt: '2026-09-18 15:22:00', recognitionSource: '上传照片' },
   { id: '2026005', schoolId: 'school-001', name: '孙七', className: '一年级3班', photoFile: '2026005.jpg', updatedAt: '2026-10-04 14:08:00', recognitionSource: '柜机视频' },
   { id: '2026006', schoolId: 'school-001', name: '周八', className: '一年级3班', photoFile: null, updatedAt: null, recognitionSource: null },
@@ -33,7 +34,7 @@ const FACE_STUDENTS = [
 const FACE_LOGIN_RECORDS = [
   { time: '2026-09-28 08:31:22', id: '2026001', name: '张三', className: '一年级1班', result: 'success', method: '人脸识别', cabinet: '柜机-001', reason: '—' },
   { time: '2026-09-28 08:29:07', id: '2026008', name: '赵六', className: '一年级2班', result: 'failed', method: '人脸识别', cabinet: '柜机-001', reason: '未匹配到人脸' },
-  { time: '2026-09-27 16:12:45', id: '2026003', name: '王五', className: '一年级2班', result: 'fallback', method: '学号密码', cabinet: '柜机-002', reason: '人脸已停用' },
+  { time: '2026-09-27 16:12:45', id: '2026003', name: '王五（01）', className: '一年级1班', result: 'fallback', method: '学号密码', cabinet: '柜机-002', reason: '人脸已停用' },
 ];
 let faceCurrentPage = 1;
 let facePageSize = 10;
@@ -51,7 +52,8 @@ function openFacePhotoPreview(id) {
   const modal = document.getElementById('modal');
   document.getElementById('modal-title').textContent = '查看学生照片';
   document.getElementById('modal-subtitle').style.display = 'none';
-  document.getElementById('modal-body').innerHTML = `<div style="text-align:center"><div class="face-photo-preview">${student.name.slice(0, 1)}</div><p class="form-hint">${student.name}（${student.id}）· 当前人脸照片</p></div>`;
+  const preview = student.photoUrl ? `<img src="${esc(student.photoUrl)}" alt="${esc(student.name)}" style="max-width:100%;max-height:420px;border-radius:8px">` : `<div class="face-photo-preview">${student.name.slice(0, 1)}</div>`;
+  document.getElementById('modal-body').innerHTML = `<div style="text-align:center">${preview}<p class="form-hint">${student.name}（${student.id}）· ${esc(student.photoFile)}</p></div>`;
   document.getElementById('modal-footer').innerHTML = '<button type="button" class="btn" onclick="closeModal()">关闭</button>';
   document.getElementById('modal-footer').style.display = '';
   modal.classList.remove('modal-sm'); modal.classList.add('modal-xl');
@@ -60,69 +62,106 @@ function openFacePhotoPreview(id) {
 
 let faceImportFiles = [];
 
-function analyzeFaceImportFile(index) {
-  if (index === 3) return { uploadStatus: 'fail', outcome: 'upload-fail', note: '文件格式不正确' };
-  if (index === 2) return { uploadStatus: 'success', outcome: 'validation-fail', note: '照片编号不存在，请检查文件名' };
-  if (index === 1) return { uploadStatus: 'success', outcome: 'partial', note: '成功 8 条，失败 2 条' };
-  return { uploadStatus: 'success', outcome: 'success', note: '' };
+function faceImportSelectedClass() {
+  return document.getElementById('face-import-class-select')?.value || '';
 }
-function handleFaceImportFiles(fileList) {
+
+function readZipEntries(file) {
+  return window.FacePhotoImporter.readZip(file);
+}
+
+async function handleFaceImportFiles(fileList) {
   if (!fileList?.length) return;
-  Array.from(fileList).forEach(file => {
-    const analysis = analyzeFaceImportFile(faceImportFiles.length);
-    faceImportFiles.push({
-      id: `face-import-${Date.now()}-${faceImportFiles.length}`,
-      fileName: file.name,
-      uploadStatus: analysis.uploadStatus,
-      importStatus: null,
-      note: analysis.note || '',
-      outcome: analysis.outcome,
-    });
-  });
-  refreshFaceImportList();
+  const className = faceImportSelectedClass();
+  if (!className) {
+    toast('请先选择班级', 'warning');
+    return;
+  }
+  for (const file of Array.from(fileList)) {
+    const record = { id: `face-import-${Date.now()}-${faceImportFiles.length}`, fileName: file.name, uploadStatus: 'checking', importStatus: null, note: '正在校验…', matches: [], failures: [] };
+    faceImportFiles.push(record);
+    refreshFaceImportList();
+    try {
+      if (!file.name.toLowerCase().endsWith('.zip')) throw new Error('仅支持 ZIP 压缩包');
+      if (file.size > 50 * 1024 * 1024) throw new Error('压缩包不能超过 50MB');
+      const students = FACE_STUDENTS.filter(item => item.schoolId === faceSelectedSchool && item.className === className);
+      const names = new Map();
+      students.forEach(student => {
+        const list = names.get(student.name) || [];
+        list.push(student);
+        names.set(student.name, list);
+      });
+      const entries = await readZipEntries(file);
+      const seenIds = new Set();
+      entries.filter(entry => entry.name && !entry.name.endsWith('/') && !entry.name.includes('__MACOSX/')).forEach(entry => {
+        const fileName = entry.name.split('/').pop();
+        const dot = fileName.lastIndexOf('.');
+        const name = (dot > 0 ? fileName.slice(0, dot) : fileName).trim().normalize('NFC');
+        const extension = dot > 0 ? fileName.slice(dot).toLowerCase() : '';
+        if (!['.jpg', '.jpeg', '.png'].includes(extension)) return;
+        const matched = names.get(name) || [];
+        if (entry.size > 2 * 1024 * 1024) record.failures.push(`${fileName}：照片超过 2MB`);
+        else if (!matched.length) record.failures.push(`${fileName}：该班级中没有此姓名`);
+        else if (matched.length > 1) record.failures.push(`${fileName}：该班级中姓名重复，请添加后缀`);
+        else if (seenIds.has(matched[0].id)) record.failures.push(`${fileName}：同一学生存在多张照片`);
+        else {
+          seenIds.add(matched[0].id);
+          record.matches.push({ studentId: matched[0].id, extension, originalName: fileName, blob: entry.blob });
+        }
+      });
+      if (!record.matches.length && !record.failures.length) throw new Error('压缩包中没有 JPG、JPEG 或 PNG 照片');
+      record.uploadStatus = 'success';
+      record.note = `已匹配 ${record.matches.length} 张${record.failures.length ? `，失败 ${record.failures.length} 张` : ''}`;
+    } catch (error) {
+      record.uploadStatus = 'fail';
+      record.note = error.message || '文件校验失败';
+    }
+    refreshFaceImportList();
+  }
 }
 
 function triggerFaceImportUpload() {
+  if (!faceImportSelectedClass()) {
+    toast('请先选择班级', 'warning');
+    document.getElementById('face-import-class-select')?.focus();
+    return;
+  }
   document.getElementById('face-import-file-input')?.click();
 }
 
 function runFaceImport(recordId) {
   const record = faceImportFiles.find(item => item.id === recordId);
   if (!record || record.uploadStatus !== 'success' || record.importStatus) return;
-  if (record.outcome === 'validation-fail') {
-    record.importStatus = 'validation-fail';
-    toast('校验失败', 'error');
-  } else if (record.outcome === 'partial') {
-    record.importStatus = 'partial';
-    toast('部分数据导入成功', 'warning');
-  } else {
-    record.importStatus = 'success';
-    record.note = '学生照片已匹配并更新';
-    toast('导入成功', 'success');
-  }
+  record.matches.forEach(match => {
+    const student = FACE_STUDENTS.find(item => item.id === match.studentId);
+    if (student) {
+      if (student.photoUrl) URL.revokeObjectURL(student.photoUrl);
+      student.photoUrl = URL.createObjectURL(match.blob);
+      student.photoFile = match.originalName;
+      student.updatedAt = new Date().toLocaleString('zh-CN', { hour12: false }).replaceAll('/', '-');
+      student.recognitionSource = '上传照片';
+    }
+  });
+  record.importStatus = record.failures.length ? 'partial' : 'success';
+  record.note = `成功导入并替换 ${record.matches.length} 张照片${record.failures.length ? `，失败 ${record.failures.length} 张` : ''}`;
+  toast(record.failures.length ? '部分照片导入成功' : '导入成功', record.failures.length ? 'warning' : 'success');
   refreshFaceImportList();
+  renderApp('face-library', currentParams);
 }
+
 function renderFaceImportRow(record) {
-  if (record.uploadStatus === 'fail') {
-    return `<tr><td>${esc(record.fileName)}</td><td><span class="import-result-fail">上传失败</span></td><td>${esc(record.note)}</td><td>--</td></tr>`;
-  }
-  let noteCell = record.note ? esc(record.note) : '<span class="status-tag warning">等待导入</span>';
+  if (record.uploadStatus === 'checking') return `<tr><td>${esc(record.fileName)}</td><td>校验中</td><td>${esc(record.note)}</td><td>--</td></tr>`;
+  if (record.uploadStatus === 'fail') return `<tr><td>${esc(record.fileName)}</td><td><span class="import-result-fail">上传失败</span></td><td>${esc(record.note)}</td><td>--</td></tr>`;
   let actionCell = `<button class="btn-link" onclick="runFaceImport('${record.id}')">导入</button>`;
-  if (record.importStatus === 'success') {
-    noteCell = esc(record.note);
-    actionCell = '<span class="import-action-success">导入成功</span>';
-  } else if (record.importStatus === 'partial') {
-    noteCell = `${esc(record.note)}　<button class="btn-link" onclick="toast('失败明细下载（原型演示）')">下载失败明细</button>`;
-    actionCell = '<span class="status-tag warning">部分成功</span>';
-  } else if (record.importStatus === 'validation-fail') {
-    noteCell = `<span class="import-result-fail">${esc(record.note)}</span>`;
-    actionCell = '<span class="import-result-fail">校验失败</span>';
-  }
-  return `<tr><td>${esc(record.fileName)}</td><td>上传完成</td><td>${noteCell}</td><td>${actionCell}</td></tr>`;
+  if (record.importStatus === 'success') actionCell = '<span class="import-action-success">导入成功</span>';
+  if (record.importStatus === 'partial') actionCell = '<span class="status-tag warning">部分成功</span>';
+  const detail = record.failures.length ? `<details><summary>${esc(record.note)}</summary><div class="form-hint" style="margin-top:6px">${record.failures.map(item => esc(item)).join('<br>')}</div></details>` : esc(record.note);
+  return `<tr><td>${esc(record.fileName)}</td><td>上传完成</td><td>${detail}</td><td>${actionCell}</td></tr>`;
 }
+
 function renderFaceImportList() {
   if (!faceImportFiles.length) return '<div class="batch-import-empty">暂无上传记录</div>';
-  return `<div class="table-wrap"><table class="data-table"><thead><tr><th>文件名</th><th>上传结果</th><th>说明</th><th>操作</th></tr></thead><tbody>${faceImportFiles.map(renderFaceImportRow).join('')}</tbody></table></div>`;
+  return `<div class="table-wrap"><table class="data-table"><thead><tr><th>文件名</th><th>上传结果</th><th>匹配结果</th><th>操作</th></tr></thead><tbody>${faceImportFiles.map(renderFaceImportRow).join('')}</tbody></table></div>`;
 }
 
 function refreshFaceImportList() {
@@ -133,31 +172,22 @@ function refreshFaceImportList() {
 function openFaceImportModal() {
   faceImportFiles = [];
   const modal = document.getElementById('modal');
+  const school = FACE_SCHOOLS.find(item => item.id === faceSelectedSchool);
+  const classes = [...new Set(FACE_STUDENTS.filter(item => item.schoolId === faceSelectedSchool).map(item => item.className))];
   document.getElementById('modal-title').textContent = '导入学生照片';
   document.getElementById('modal-subtitle').style.display = 'none';
-  const school = FACE_SCHOOLS.find(item => item.id === faceSelectedSchool);
-  document.getElementById('modal-body').innerHTML = `<div class="batch-import-modal"><div class="batch-import-list" id="face-import-list">${renderFaceImportList()}</div><div class="batch-import-upload"><div class="batch-import-cabinet-row"><div class="batch-import-cabinet-field"><label class="form-label">当前学校</label><div class="input" style="width:100%;background:#f5f7fa">${esc(school?.name || '未选择学校')}</div></div></div><p class="form-hint">上传照片压缩包，照片按“学生编号.扩展名”命名。系统按当前学校的学生编号自动匹配，导入照片会替换当前识别数据。</p><div class="batch-import-dropzone" id="face-import-dropzone"><div class="batch-import-dropzone-icon">📄</div><p class="batch-import-dropzone-text">拖动或点击上传照片 ZIP 压缩包</p></div><input type="file" id="face-import-file-input" hidden accept=".zip"><div class="form-hint" style="margin-top:12px;line-height:1.8"><strong>照片命名规则</strong><br>格式：学生编号.扩展名<br>示例：2026001.jpg<br>支持：JPG、JPEG、PNG</div></div></div>`;
+  document.getElementById('modal-body').innerHTML = `<div class="batch-import-modal"><div class="face-import-main"><div class="batch-import-cabinet-row"><div class="batch-import-cabinet-field"><label class="form-label">当前学校</label><div class="input" style="width:100%;background:#f5f7fa">${esc(school?.name || '未选择学校')}</div></div><div class="batch-import-cabinet-field"><label class="form-label"><span class="required">*</span>班级</label><select class="select" id="face-import-class-select" style="width:100%"><option value="">请选择班级</option>${classes.map(item => `<option value="${esc(item)}">${esc(item)}</option>`).join('')}</select></div></div><div class="batch-import-list face-import-list" id="face-import-list">${renderFaceImportList()}</div></div><div class="batch-import-upload"><p class="form-hint">选择班级后上传该班照片 ZIP。系统按照片的完整姓名匹配该班学生编号，并将照片导入对应编号。</p><div class="batch-import-dropzone" id="face-import-dropzone"><div class="batch-import-dropzone-icon">📄</div><p class="batch-import-dropzone-text">拖动或点击上传该班照片 ZIP</p></div><input type="file" id="face-import-file-input" hidden accept=".zip"><div class="form-hint" style="margin-top:12px;line-height:1.8"><strong>照片命名规则</strong><br>格式：学生完整姓名.扩展名，例如：张三.jpg<br>同班重名示例：小明（01）.jpg、小明（02）.jpg<br>支持 JPG、JPEG、PNG；单张不超过 2MB；ZIP 不超过 50MB</div></div></div>`;
   document.getElementById('modal-footer').style.display = '';
-  document.getElementById('modal-footer').innerHTML = '<button type="button" class="btn" onclick="closeModal()">取消</button><button type="button" class="btn btn-primary" onclick="closeModal()">确定</button>';
+  document.getElementById('modal-footer').innerHTML = '<button type="button" class="btn" onclick="closeModal()">关闭</button>';
   modal.classList.remove('modal-sm'); modal.classList.add('modal-xl');
   document.getElementById('modal-overlay').hidden = false;
   const zone = document.getElementById('face-import-dropzone');
   const input = document.getElementById('face-import-file-input');
   zone?.addEventListener('click', triggerFaceImportUpload);
-  input?.addEventListener('change', event => {
-    handleFaceImportFiles(event.target.files);
-    event.target.value = '';
-  });
-  zone?.addEventListener('dragover', event => {
-    event.preventDefault();
-    zone.classList.add('batch-import-dropzone--active');
-  });
+  input?.addEventListener('change', async event => { await handleFaceImportFiles(event.target.files); event.target.value = ''; });
+  zone?.addEventListener('dragover', event => { event.preventDefault(); zone.classList.add('batch-import-dropzone--active'); });
   zone?.addEventListener('dragleave', () => zone.classList.remove('batch-import-dropzone--active'));
-  zone?.addEventListener('drop', event => {
-    event.preventDefault();
-    zone.classList.remove('batch-import-dropzone--active');
-    handleFaceImportFiles(event.dataTransfer.files);
-  });
+  zone?.addEventListener('drop', async event => { event.preventDefault(); zone.classList.remove('batch-import-dropzone--active'); await handleFaceImportFiles(event.dataTransfer.files); });
 }
 function switchFacePage(page) {
   faceCurrentPage = page;
