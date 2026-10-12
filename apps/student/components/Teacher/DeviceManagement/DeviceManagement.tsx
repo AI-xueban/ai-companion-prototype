@@ -12,6 +12,7 @@ import batchImportJs from '../../../../admin/prototype/assets/js/batch-import-mo
 import addCabinetJs from '../../../../admin/prototype/assets/js/add-cabinet-modal.js?raw';
 import editTabletJs from '../../../../admin/prototype/assets/js/edit-tablet-modal.js?raw';
 import devicePagesJs from '../../../../admin/prototype/assets/js/device-pages.js?raw';
+import facePhotoImporterJs from '../../../../admin/prototype/assets/js/face-photo-importer.js?raw';
 import facePagesJs from '../../../../admin/prototype/assets/js/face-pages.js?raw';
 import restoreDeviceJs from '../../../../admin/prototype/assets/js/restore-device-modal.js?raw';
 import carouselJs from '../../../../admin/prototype/assets/js/carousel-config.js?raw';
@@ -152,7 +153,13 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
       const firstTable=root.querySelector('.page-card > .table-wrap table');
       if(firstTable&&pageTitle==='设备概览') removeColumns(firstTable,['记录ID','所属柜机ID']);
       if(firstTable&&pageTitle==='柜机管理') removeColumns(firstTable,['柜机 ID','最近心跳','绑定手机号','负责人联系方式']);
-      if(firstTable&&pageTitle==='平板设备') removeColumns(firstTable,['设备ID','柜机ID','柜门','格口状态']);
+      if(firstTable&&pageTitle==='平板设备'){
+        removeColumns(firstTable,['设备ID','柜门','格口状态']);
+        root.querySelectorAll('.filter-item').forEach(field=>{
+          const label=(field.querySelector('label')?.textContent||'').trim();
+          if(label==='设备ID') field.remove();
+        });
+      }
       if(firstTable&&pageTitle==='使用记录') removeColumns(firstTable,['登录方式']);
 
       if(pageTitle.startsWith('柜机详情')){
@@ -434,7 +441,7 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
     if(__content)new MutationObserver(()=>stripTeacherCarouselUi(__content)).observe(__content,{childList:true,subtree:true});
     location.hash=${JSON.stringify(route)};
   `;
-  const scripts=[isolatedMock,scope,layoutTemplatesJs,layoutJs,contentModalJs,confirmModalJs,batchImportJs,addCabinetJs,editTabletJs,devicePagesJs,facePagesJs,restoreDeviceJs,carouselJs,pagesJs,enforceSchool,appJs];
+  const scripts=[isolatedMock,scope,layoutTemplatesJs,layoutJs,contentModalJs,confirmModalJs,batchImportJs,addCabinetJs,editTabletJs,devicePagesJs,facePhotoImporterJs,facePagesJs,restoreDeviceJs,carouselJs,pagesJs,enforceSchool,appJs];
   return `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${baseCss}\n${templateCss}\n${deviceCss}\nhtml,body{height:100%;overflow:auto;background:#f5f7fa}.layout{min-height:100%}.sider,.header,.tabs-bar,.req-panel,.req-panel-fab,.req-float-btn{display:none!important}.layout-main{margin-left:0!important;margin-right:0!important;height:100vh!important;min-height:0!important;overflow:hidden!important}.content{padding:20px!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain}.page-card{min-height:auto!important;box-shadow:0 1px 2px rgba(15,23,42,.05)}.modal-overlay{z-index:1000}.toast-container{z-index:1100}.teacher-usage-title{display:flex;align-items:center;justify-content:space-between}.teacher-usage-title span{color:var(--text-muted);font-size:12px;font-weight:400}.teacher-usage-row{margin-bottom:28px}.teacher-usage-row .value small{font-size:12px;font-weight:400;color:var(--text-muted)}</style></head><body><div class="layout"><aside class="sider" id="sider"><nav id="sider-menu"></nav></aside><div class="layout-main"><header class="header"><button id="menu-toggle"></button><div id="breadcrumb"></div></header><div id="tabs-bar"></div><main class="content" id="main-content"></main></div><aside id="req-panel"><button id="req-panel-close"></button><div id="req-panel-body"></div></aside><button id="req-panel-fab"></button></div><div id="toast-container" class="toast-container"></div><div class="modal-overlay" id="modal-overlay" hidden><div class="modal modal-xl" id="modal"><div class="modal-header"><div><h3 class="modal-title" id="modal-title"></h3><p class="modal-subtitle" id="modal-subtitle"></p></div><button type="button" class="modal-close" id="modal-close">&times;</button></div><div class="modal-body" id="modal-body"></div><div class="modal-footer" id="modal-footer"></div></div></div>${scripts.map(s=>`<script>${safeScript(s)}</script>`).join('')}</body></html>`;
  },[route,currentUser.schoolId,currentUser.schoolName]);
  return <div className="flex h-full min-h-0 flex-col bg-[#f5f7fa]"><iframe key={`${route}-${currentUser.schoolId}`} title={`设备管理-${route}`} srcDoc={srcDoc} sandbox="allow-scripts allow-forms allow-modals allow-same-origin" className="min-h-0 flex-1 border-0 bg-[#f5f7fa]"/></div>;

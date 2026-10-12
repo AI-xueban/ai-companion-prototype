@@ -57,14 +57,7 @@ function tabletDeviceStatusNote(tablet) {
     });
     return notes.length ? notes.join('；') : '—';
   }
-  if (tablet.status === 'borrowed') {
-    const record = data.usageRecords.find(r => r.tabletId === tablet.id && r.status === 'borrowed' && r.returnAttempt);
-    const issue = record?.returnAttempt?.issue;
-    if (issue === 'door_open') return '归还未关门';
-    if (issue === 'not_charging') return '归还未充电';
-    if (issue === 'misplaced') return '疑似误放';
-    if (record?.returnAttempt?.status === 'cancelled') return '归还已取消';
-  }
+  // 列表说明只反映当前设备状态；已借出设备的历史归还尝试仅在使用记录或告警中展示。
   return '—';
 }
 
