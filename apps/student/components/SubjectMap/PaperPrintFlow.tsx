@@ -3,10 +3,12 @@ import { createPortal } from 'react-dom';
 import { AlertTriangle, Check, CheckCircle2, ChevronLeft, ChevronRight, FileText, LoaderCircle, Minus, Plus, Printer, RefreshCw, Search, Wifi, X } from 'lucide-react';
 import type { QuestionTypeCount } from './PracticeSetupDialog';
 import { savePrintedFile } from '../../services/printedFileService';
+import type { PrintedFileSource } from '../../services/printedFileService';
 import { getRealPrintQuestionSamples } from '../../data/realPrintQuestionSamples';
 
 export interface PaperPrintJob {
   title: string;
+  source?: PrintedFileSource;
   questionCount: number;
   subject: string;
   questionTypeCounts?: QuestionTypeCount[];
@@ -99,6 +101,7 @@ export const PaperPrintFlow: React.FC<PaperPrintFlowProps> = ({ job, onClose, on
   const submitPrint = (simulateFailure = false) => {
     const record = savePrintedFile({
       title: job.title,
+      source: job.source ?? (job.questionItems?.length ? 'mistake_print' : 'precision_practice'),
       subject: job.subject,
       questionCount: selected.length,
       pageCount: pages,

@@ -1003,7 +1003,7 @@ export const SubjectMap: React.FC<SubjectMapProps> = ({
         setIsUnitTestSetupOpen(false);
         setShortageOverlay(null);
         if (options?.mode === 'print') {
-          setPrintJob({ title: setup.paperTitle || task.title, questionCount: setup.questionCount, subject: activeSubject, questionTypeCounts: setup.questionTypeCounts, includeAnswerAnalysis: setup.includeAnswerAnalysis });
+          setPrintJob({ title: setup.paperTitle || task.title, source: 'unit_test', questionCount: setup.questionCount, subject: activeSubject, questionTypeCounts: setup.questionTypeCounts, includeAnswerAnalysis: setup.includeAnswerAnalysis });
           return;
         }
         onStartLevel?.(task);

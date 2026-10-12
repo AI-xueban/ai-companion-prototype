@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, FileText, MoreHorizontal, Printer, Search, Trash2 } from 'lucide-react';
-import { deletePrintedFile, listPrintedFiles, loadPaperDocument, PRINTED_FILES_CHANGED_EVENT, retryPrintedFile, type PrintedFileRecord, type StoredPaperDocument } from '../../services/printedFileService';
+import { deletePrintedFile, listPrintedFiles, loadPaperDocument, MAX_SAVED_PRINTED_BYTES, MAX_SAVED_PRINTED_FILES, PRINTED_FILES_CHANGED_EVENT, PRINTED_FILE_SOURCE_LABELS, retryPrintedFile, type PrintedFileRecord, type StoredPaperDocument } from '../../services/printedFileService';
 import { PaperPdfViewer } from '../LumiSpace/PaperPdfViewer';
 
 const fileDateKey = (value: string | number) => new Date(value).toLocaleDateString('zh-CN', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -68,8 +68,8 @@ export const MyPrintedFilesPage: React.FC<{ onBack: () => void; initialFileId?: 
   }, [visible]);
 
   return <div className="flex h-full min-h-0 flex-col bg-slate-50">
-    <header className="flex h-16 shrink-0 items-center border-b border-slate-200 bg-white px-6"><button onClick={onBack} aria-label="返回" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-800 transition-colors hover:bg-slate-200"><ArrowLeft size={20} /></button><div className="ml-3"><h1 className="text-[18px] font-semibold text-slate-900">我的文件</h1><p className="text-[10px] text-slate-400">共 {visible.length} 份文档</p></div><div className="ml-auto flex h-9 w-[260px] items-center rounded-xl bg-slate-100 px-3"><Search size={14} className="text-slate-400" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索试卷或学科" className="ml-2 min-w-0 flex-1 bg-transparent text-[12px] outline-none" /></div></header>
-    {loading ? <p role="status" className="px-6 pt-3 text-sm text-slate-500">正在打开 PDF…</p> : null}{error ? <p role="alert" className="px-6 pt-3 text-sm text-rose-600">{error}</p> : null}<main className="min-h-0 flex-1 overflow-y-auto p-6">{visible.length === 0 ? <div className="mx-auto mt-20 max-w-sm text-center"><span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-50 text-violet-500"><FileText size={30} /></span><h2 className="mt-4 text-[16px] font-semibold">{files.length ? '没有匹配的文件' : '暂无文件'}</h2><p className="mt-2 text-[12px] text-slate-400">保存为 PDF 或生成打印文档后，试卷会自动显示在这里。</p></div> : <div className="mx-auto max-w-[1100px] space-y-5">
+    <header className="flex h-16 shrink-0 items-center border-b border-slate-200 bg-white px-6"><button onClick={onBack} aria-label="返回" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-800 transition-colors hover:bg-slate-200"><ArrowLeft size={20} /></button><div className="ml-3"><h1 className="text-[18px] font-semibold text-slate-900">我的文件</h1><p className="text-[10px] text-slate-400">共 {visible.length} 份 · 最多 {MAX_SAVED_PRINTED_FILES} 份 / {MAX_SAVED_PRINTED_BYTES / 1024 / 1024} MB</p></div><div className="ml-auto flex h-9 w-[260px] items-center rounded-xl bg-slate-100 px-3"><Search size={14} className="text-slate-400" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索试卷或学科" className="ml-2 min-w-0 flex-1 bg-transparent text-[12px] outline-none" /></div></header>
+    {loading ? <p role="status" className="px-6 pt-3 text-sm text-slate-500">正在打开 PDF…</p> : null}{error ? <p role="alert" className="px-6 pt-3 text-sm text-rose-600">{error}</p> : null}<main className="min-h-0 flex-1 overflow-y-auto p-6">{visible.length === 0 ? <div className="mx-auto mt-20 max-w-sm text-center"><span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-50 text-violet-500"><FileText size={30} /></span><h2 className="mt-4 text-[16px] font-semibold">{files.length ? '没有匹配的文件' : '暂无文件'}</h2><p className="mt-2 text-[12px] text-slate-400">已保存的试卷会显示在这里。</p></div> : <div className="mx-auto max-w-[1100px] space-y-5">
       {dateGroups.map((group) => (
         <section key={group.date} aria-label={group.label}>
           <div className="mb-3 flex items-center gap-3"><h2 className="shrink-0 text-xs font-medium text-slate-500">{group.label}</h2><div className="h-px flex-1 bg-slate-200" /></div>
@@ -80,6 +80,7 @@ export const MyPrintedFilesPage: React.FC<{ onBack: () => void; initialFileId?: 
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600"><FileText size={20} /></span>
             <div className="min-w-0 flex-1">
               <h3 className="overflow-hidden break-words text-[13px] font-semibold leading-5 text-slate-800" style={{ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2 }}>{file.title}</h3>
+              {file.source ? <span className="mt-1 inline-flex rounded-md bg-violet-50 px-1.5 py-0.5 text-[10px] font-medium text-violet-700">{PRINTED_FILE_SOURCE_LABELS[file.source]}</span> : null}
               <p className="mt-1 text-[10px] text-slate-400">共 {file.pageCount} 页</p>
               <p className="mt-0.5 text-[10px] text-slate-400">{new Date(file.createdAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</p>
             </div>

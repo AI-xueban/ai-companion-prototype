@@ -411,6 +411,7 @@ export const SyncSelfTestPage: React.FC<SyncSelfTestPageProps> = ({
       setShortageOverlay(null);
       setPrintJob({
         title: setup.paperTitle || `${subject}·自定义练习卷`,
+        source: pageTitle.includes('练习') ? 'precision_practice' : 'unit_test',
         questionCount: setup.questionCount,
         subject,
         questionTypeCounts: setup.questionTypeCounts,
@@ -488,6 +489,7 @@ export const SyncSelfTestPage: React.FC<SyncSelfTestPageProps> = ({
         const printPayload = { ...payload, printExceptionDemo };
         const requestedJob = onPrint?.(printPayload);
         setPrintJob({
+          source: pageTitle.includes('练习') ? 'precision_practice' : 'unit_test',
           ...(requestedJob ?? {
           title: payload.title,
           questionCount: payload.questionCount,

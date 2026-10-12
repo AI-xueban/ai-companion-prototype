@@ -2611,6 +2611,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
             exportState.stage = 'saving';
             const file = await savePaperDocument({
                 title: task.seed.title,
+                source: 'lumi_space',
                 subject: task.seed.scope.match(/数学|语文|英语|物理|化学|生物|历史|地理|道德与法治|科学/)?.[0] ?? '综合',
                 questionCount: questions.length,
                 pageCount: previewPages.length,
@@ -2628,6 +2629,9 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
             }
             return undefined;
         } catch (error) {
+            if (error instanceof Error && error.message.includes('单份文件超过 50 MB')) {
+                return { code: 'STORAGE_FULL', message: '文件超过 50 MB，无法保存。题目和选择已保留。' };
+            }
             if (error instanceof Error && error.name === 'QuotaExceededError') {
                 return { code: 'STORAGE_FULL', message: '失败原因：设备存储空间不足，无法保存 PDF。题目和选择已保留。' };
             }
