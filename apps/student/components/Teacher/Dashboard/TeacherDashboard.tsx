@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Sparkles, Activity, ArrowRight, BookOpen, Clock3 } from 'lucide-react';
+import { Activity, ArrowRight, BookOpen, Clock3 } from 'lucide-react';
 import { ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { Card } from '../../UI/Card';
 import { classOverview, highFreqMistakes, getTopRiskNodes } from '../data/mockTeacherData';
@@ -12,7 +12,6 @@ export const TeacherDashboard: React.FC<{ onNavigateAnalytics?: () => void; scop
 
   const metrics = [
     { label: '今日活跃率', value: `${Math.round(classOverview.activeRate * 100)}%`, trend: '+3%', icon: Activity, tone: 'up' },
-    { label: '班级平均积分', value: classOverview.avgPoints.toString(), trend: '+20', icon: Sparkles, tone: 'up' },
   ];
 
   const handleOpenAnalytics = () => {

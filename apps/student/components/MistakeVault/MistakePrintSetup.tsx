@@ -28,7 +28,7 @@ const questionTypeLabel = (type?: string) => {
   return '题目';
 };
 
-const mistakeSources = ['智阅作业', '灵镜讲题', '个性化学习', '相似题练习', '精准练习', '一课一练'];
+const mistakeSources = ['智阅作业', '灵镜讲题', '个性化学习', '举一反三练习', '精准练习', '一课一练'];
 const getMistakeSource = (item: MistakeItem) => {
   if (item.category === 'synchronous') return '一课一练';
   const hash = Array.from(item.id).reduce((sum, character) => sum + character.charCodeAt(0), 0);

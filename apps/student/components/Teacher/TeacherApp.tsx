@@ -67,10 +67,10 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRol
               return <SmartInbox />;
           case 'profile':
               return <TeacherProfile />;
-          case 'school': return <SchoolAdminManagement initialView="school" currentUser={teacherUser} />;
-          case 'classes': return <SchoolAdminManagement initialView="classes" currentUser={teacherUser} />;
-          case 'teachers': return <SchoolAdminManagement initialView="teachers" currentUser={teacherUser} />;
-          case 'students': return <SchoolAdminManagement initialView="students" currentUser={teacherUser} />;
+          case 'school': return <SchoolAdminManagement initialView="school" currentUser={teacherUser} onNavigate={navigate} />;
+          case 'classes': return <SchoolAdminManagement initialView="classes" currentUser={teacherUser} onNavigate={navigate} />;
+          case 'teachers': return <SchoolAdminManagement initialView="teachers" currentUser={teacherUser} onNavigate={navigate} />;
+          case 'students': return <SchoolAdminManagement initialView="students" currentUser={teacherUser} onNavigate={navigate} />;
           case 'device-overview': return <DeviceManagement initialView="overview" currentUser={teacherUser} />;
           case 'cabinet': return <DeviceManagement initialView="cabinets" currentUser={teacherUser} />;
           case 'tablet': return <DeviceManagement initialView="tablets" currentUser={teacherUser} />;

@@ -92,7 +92,6 @@ export const classOverview = {
   activeRate: 0.82, // 今日活跃率
   taskCompletionRate: 0.74, // 今日任务达标率
   alertCount: messages.filter((m) => m.status !== 'handled' && m.level === 'high').length, // 未处理高危预警数
-  avgPoints: 1280, // 班级平均积分
   periodLabel: '今日',
   updateTime: '10:00',
 };

@@ -4,6 +4,7 @@ import { AppWindow, ArrowLeft, ChevronRight, Download, Grid2X2, RefreshCw, Trash
 import type { ThirdPartyApp } from '../../data/thirdPartyApps';
 
 interface ThirdPartyAppRailProps {
+  showEntry?: boolean;
   isOpen: boolean;
   apps: ThirdPartyApp[];
   onToggle: () => void;
@@ -22,7 +23,7 @@ function getAppAction(app: ThirdPartyApp): AppAction {
 
 function actionLabel(action: AppAction) { return action === 'install' ? '安装' : '更新'; }
 
-export function ThirdPartyAppRail({ isOpen, apps, onToggle, onClose, onOpenApp }: ThirdPartyAppRailProps) {
+export function ThirdPartyAppRail({ showEntry = true, isOpen, apps, onToggle, onClose, onOpenApp }: ThirdPartyAppRailProps) {
   const [isMorePageOpen, setIsMorePageOpen] = React.useState(false);
   const [webViewApp, setWebViewApp] = React.useState<ThirdPartyApp | null>(null);
   const [nativeApp, setNativeApp] = React.useState<ThirdPartyApp | null>(null);
@@ -74,7 +75,9 @@ export function ThirdPartyAppRail({ isOpen, apps, onToggle, onClose, onOpenApp }
 
   return (
     <>
+      {showEntry && !isMorePageOpen && !webViewApp && (
       <button type="button" aria-label={isOpen ? '收起更多应用' : '打开更多应用'} aria-expanded={isOpen} onClick={onToggle} className={`absolute left-0 top-[80%] z-[700] flex h-14 w-[112px] -translate-y-1/2 items-center justify-center gap-2 rounded-r-2xl px-2 border border-l-0 border-white/70 bg-white/90 text-indigo-500 shadow-[4px_8px_24px_rgba(48,56,102,0.18)] backdrop-blur-xl transition-all hover:w-10 ${isOpen ? 'pointer-events-none opacity-0' : 'opacity-100'}`}><Grid2X2 size={18} /><span className="text-xs font-bold">更多应用</span></button>
+      )}
       <AnimatePresence>
         {pendingUninstall && (
           <>

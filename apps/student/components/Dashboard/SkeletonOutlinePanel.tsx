@@ -30,7 +30,7 @@ export const SkeletonOutlinePanel: React.FC<SkeletonOutlinePanelProps> = ({
     <div
       className={`rounded-xl border overflow-hidden flex flex-col min-h-0 ${
         isGuide
-          ? `bg-gradient-to-b from-white/95 to-amber-50/40 ${theme.cardBorder}`
+          ? `bg-white ${theme.cardBorder}`
           : `bg-white/90 ${theme.cardBorder}`
       } ${className}`}
     >
@@ -56,7 +56,7 @@ export const SkeletonOutlinePanel: React.FC<SkeletonOutlinePanelProps> = ({
 
       <div className="relative flex-1 min-h-0">
         <div className="absolute inset-x-0 top-0 h-3 bg-gradient-to-b from-white/80 to-transparent pointer-events-none z-10" />
-        <div className="absolute inset-x-0 bottom-0 h-4 bg-gradient-to-t from-amber-50/90 to-transparent pointer-events-none z-10" />
+        <div className="absolute inset-x-0 bottom-0 h-4 bg-white/90 pointer-events-none z-10" />
 
         <div className="h-full min-h-0 overflow-y-auto custom-scrollbar px-2.5 py-2.5 space-y-2">
           {steps.map((step, i) => {

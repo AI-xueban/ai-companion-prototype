@@ -35,10 +35,11 @@ import { AISolveProcessingOverlay } from '../Dashboard/AISolveProcessingOverlay'
 import { QuestionPickerOverlay } from '../Dashboard/QuestionPickerOverlay';
 import { LumiHubStage } from './LumiHubStage';
 import { PaperDraftWorkspace, type PaperDraftSeed } from './PaperDraftWorkspace';
-import { buildPaperQuestions, createCombinedPaperDocument, downloadPaperPdf, makePaperQuestion, type PaperPdfQuestion } from './lumiPaperPdf';
+import { buildPaperQuestions, createCombinedPaperDocument, makePaperQuestion, type PaperPdfQuestion } from './lumiPaperPdf';
+import { savePaperDocument, retryPrintedFile, type PaperContentMode } from '../../services/printedFileService';
 import { PaperTaskCard, type PaperTaskSnapshot } from './PaperTaskCard';
 import { PaperAgentProgress } from './PaperAgentProgress';
-import { PaperQuestionReview, type PaperPdfProgressStage } from './PaperQuestionReview';
+import { PaperQuestionReview, type PaperPdfProgressStage, type PaperPdfExportFailure, type PaperPdfFailureDemo } from './PaperQuestionReview';
 import { PaperPdfViewer } from './PaperPdfViewer';
 import { loadAcademicContext } from '../../services/academicContextStore';
 import { getAvailableTextbookVersions, resolveTextbookVersion } from '../../services/textbookVersionStore';
@@ -55,6 +56,7 @@ import {
 
 // Chat Data Types
 interface Message {
+    interrupted?: boolean;
     id: string;
     sender: 'lumi' | 'user';
     text: string;
@@ -96,6 +98,9 @@ interface HistoryItem {
     date: string;
     preview: string;
     messages?: Message[];
+    /** 演示：打开空会话时预填要求，发送后开始组卷 */
+    draftPrompt?: string;
+    paperClarificationDemo?: boolean;
     /** 演示：打开后本会话还剩 N 轮用户消息，发完后输入锁定 */
     sessionTurnRemaining?: number;
     /** 演示：打开后图片额度已满（50/50），禁拍照、可文字聊 */
@@ -189,20 +194,46 @@ const parsePaperNumber = (value: string | undefined): number => {
     return digits[value] ?? 0;
 };
 
-const resolvePaperRequest = (text: string): { seed?: PaperDraftSeed; question?: string; choices?: string[]; unsupported?: boolean } => {
+const resolvePaperRequest = (text: string, requireExplicitRequiredFields = false): { seed?: PaperDraftSeed; question?: string; choices?: string[]; unsupported?: boolean } => {
     const subject = text.match(/(语文|数学|英语|物理|化学|生物|历史|地理|道德与法治|政治)/)?.[1];
     const context = loadAcademicContext();
-    const requestedGrade = text.match(/([一二三四五六七八九十1-9]\s*年级)/)?.[1]?.replace(/\s+/g, '') ?? context.grade;
-    if (!subject) return { question: `这份卷子要出哪一科？我会按${requestedGrade}来准备；如果年级不同，也请一起告诉我。` };
+    const explicitGrade = text.match(/([一二三四五六七八九十1-9]\s*年级)/)?.[1]?.replace(/\s+/g, '');
+    const publisherVersions: Record<string, string> = {
+        人民教育出版社: '人教版', 北京师范大学出版社: '北师大版', 江苏凤凰教育出版社: '苏教版',
+    };
+    const publisherAlias = [...text.matchAll(/人民教育出版社|北京师范大学出版社|江苏凤凰教育出版社|人教版|沪教版|北师大版|苏教版|外研版|译林版|教科版|鲁教版|部编版|沪科版|浙教版/g)].at(-1)?.[0];
+    if (requireExplicitRequiredFields) {
+        // This demo intentionally provides no reliable textbook context for the three required fields.
+        const missing = [!explicitGrade ? '年级' : null, !subject ? '科目' : null, !publisherAlias ? '出版社' : null].filter(Boolean);
+        if (missing.length) {
+            const examples = [
+                { 年级: '七年级', 科目: '数学', 出版社: '人民教育出版社' },
+                { 年级: '八年级', 科目: '数学', 出版社: '北京师范大学出版社' },
+                { 年级: '六年级', 科目: '数学', 出版社: '江苏凤凰教育出版社' },
+            ];
+            return {
+                question: missing.length === 1
+                    ? missing[0] === '出版社' ? '你使用的是哪个出版社的教材？'
+                        : missing[0] === '年级' ? `这份${subject}练习卷是几年级的？`
+                            : `这份${explicitGrade}练习卷要出哪一科？`
+                    : `还需要确认${missing.join('、')}，请一起告诉我。`,
+                choices: missing.length === 1 && missing[0] === '科目' ? ['数学', '语文', '英语']
+                    : examples.map((example) => missing.map((field) => example[field as keyof typeof example]).join('，')),
+            };
+        }
+    }
+    const requestedGrade = explicitGrade ?? context.grade;
+    if (!subject) return { question: `这份${requestedGrade}卷子要出哪一科？`, choices: ['数学', '语文', '英语'] };
     if (!['语文', '数学', '英语'].includes(subject)) return { question: '当前原型样卷先支持语文、数学和英语。其他学科需要接入对应的出题与校验服务后才能生成可信试卷。', unsupported: true };
 
     const sameGrade = requestedGrade === context.grade;
     const termMentions = [...text.matchAll(/上册|上学期|下册|下学期/g)];
     const lastTermMention = termMentions.at(-1)?.[0];
     const explicitTerm = lastTermMention ? (/上册|上学期/.test(lastTermMention) ? '上册' : '下册') : null;
-    const term = explicitTerm ?? (sameGrade ? context.term : null);
+    const shanghaiMonth = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Shanghai', month: 'numeric' }).format(new Date()));
+    const term = explicitTerm ?? (requireExplicitRequiredFields ? shanghaiMonth <= 6 ? '下册' : '上册' : sameGrade ? context.term : null);
     const versionMentions = [...text.matchAll(/人教版|沪教版|北师大版|苏教版|外研版|译林版|教科版|鲁教版|部编版|沪科版|浙教版/g)];
-    const explicitVersion = versionMentions.at(-1)?.[0];
+    const explicitVersion = publisherAlias ? publisherVersions[publisherAlias] ?? publisherAlias : versionMentions.at(-1)?.[0];
     const available = getAvailableTextbookVersions(subject, requestedGrade, term ?? context.term, context.schoolSystem);
     const textbook = explicitVersion ?? (sameGrade && term
         ? resolveTextbookVersion(subject, available, context.schoolSystem)
@@ -247,6 +278,32 @@ const classifyPaperActivation = (text: string): PaperActivationLevel => {
 
 const INITIAL_HISTORY: HistoryItem[] = [
     {
+        id: 'h-paper-composition',
+        title: '组卷演示',
+        date: '今天',
+        preview: '填入示例要求，点击发送后开始组卷',
+        isDemo: true,
+        messages: [],
+        draftPrompt: '帮我出一份七年级数学一元一次方程练习卷，5 道题，30 分钟，包含答案和解析。',
+    },
+    {
+        id: 'h-paper-pdf-failure',
+        title: '组卷pdf保存失败',
+        date: '今天',
+        preview: '先查看并选择题目，演示保存失败后重试',
+        isDemo: true,
+        paperPdfFailureDemo: true,
+    },
+    {
+        id: 'h-paper-clarification',
+        title: '组卷信息补充确认',
+        date: '今天',
+        preview: '演示年级、科目、出版社缺失时合并追问',
+        isDemo: true,
+        paperClarificationDemo: true,
+        messages: [],
+    },
+    {
         id: 'h-token-session',
         title: '会话回合额度已满',
         date: '今天',
@@ -283,14 +340,6 @@ const INITIAL_HISTORY: HistoryItem[] = [
                 type: 'text',
             },
         ],
-    },
-    {
-        id: 'h-paper-pdf-failure',
-        title: 'PDF保存失败，点击重试',
-        date: '今天',
-        preview: '先查看并选择题目，演示保存失败后重试',
-        isDemo: true,
-        paperPdfFailureDemo: true,
     },
     {
         id: 'h1',
@@ -344,6 +393,7 @@ const SESSION_FEEDBACK_MIN_USER_MESSAGES = 2;
 const SESSION_FEEDBACK_MIN_TOTAL_MESSAGES = 15;
 
 interface LumiSpaceProps {
+    onOpenPrintedFile?: (id: string) => void;
     checkInMode?: boolean; // 是否进入晨检模式
     onCheckInComplete?: (data: any) => void; // 晨检完成回调
     existingPlan?: any; // 已存在的任务计划，用于编辑模式
@@ -383,6 +433,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
     onStartAISolve,
     onCameraFlowOpenChange,
     onChromeHiddenChange,
+    onOpenPrintedFile,
 }) => {
     // --- State ---
     const [messages, setMessages] = useState<Message[]>(checkInMode ? CHECK_IN_INITIAL_MESSAGES : INITIAL_MESSAGES);
@@ -411,7 +462,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
     const [workspaceTaskId, setWorkspaceTaskId] = useState<string | null>(null);
     const [paperReviewTaskId, setPaperReviewTaskId] = useState<string | null>(null);
     const paperReviewTask = paperReviewTaskId ? messages.find((message) => message.id === paperReviewTaskId)?.paperTask : undefined;
-    const [paperPdfOutput, setPaperPdfOutput] = useState<{ pdf: Blob; previewPages: Blob[]; title: string; version: number } | null>(null);
+    const [paperPdfOutput, setPaperPdfOutput] = useState<{ pdf: Blob; previewPages: Blob[]; title: string; version: number; fileId?: string; contentMode?: PaperContentMode } | null>(null);
     const pendingPaperRequestRef = useRef<string | null>(null);
 
     // History State
@@ -431,6 +482,24 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
     const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
     const [busyToast, setBusyToast] = useState<string | null>(null);
     const [isAgentSearching, setIsAgentSearching] = useState(false);
+    const [isAwaitingReply, setIsAwaitingReply] = useState(false);
+    const chatRunRef = useRef(0);
+    const chatTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+    const streamSnapshotRef = useRef(streamState);
+    streamSnapshotRef.current = streamState;
+
+    // Prototype run isolation: cancelled callbacks cannot append to the new conversation turn.
+    const scheduleChatReply = (callback: () => void, delay: number) => {
+        const run = chatRunRef.current;
+        const timer = setTimeout(() => {
+            chatTimersRef.current.delete(timer);
+            if (run !== chatRunRef.current) return;
+            setIsAwaitingReply(false);
+            callback();
+        }, delay);
+        chatTimersRef.current.add(timer);
+        return timer;
+    };
     const [isBackgroundVideoPlaying, setIsBackgroundVideoPlaying] = useState(false);
     const streamTimersRef = useRef<Record<string, ReturnType<typeof setInterval>>>({});
     const busyToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -609,6 +678,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
     };
 
     const getLumiDisplayText = (msg: Message) => {
+        if (msg.interrupted) return msg.text;
         if (msg.sender !== 'lumi' || !msg.text) return msg.text;
         const isStreamable = msg.type === 'text' || msg.type === 'quick-reply' || msg.type === 'search-answer';
         const state = streamState[msg.id];
@@ -617,12 +687,13 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
     };
 
     const isLumiStreamDone = (msg: Message) => {
+        if (msg.interrupted) return true;
         if (msg.sender !== 'lumi' || !msg.text) return true;
         if (msg.type !== 'text' && msg.type !== 'quick-reply' && msg.type !== 'search-answer') return true;
         return streamState[msg.id]?.done ?? false;
     };
 
-    const isLumiReplying = isAgentSearching || messages.some(
+    const isLumiReplying = isAwaitingReply || isAgentSearching || messages.some(
         (msg) =>
             (msg.type === 'search-status' && (msg.searchPhase === 'loading' || msg.searchPhase === 'searching'))
             || (msg.sender === 'lumi' && !!msg.text && (msg.type === 'text' || msg.type === 'quick-reply' || msg.type === 'search-answer') && !isLumiStreamDone(msg)),
@@ -630,6 +701,33 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
 
     const isSessionTurnLimited = sessionTurnCount >= SESSION_TURN_LIMIT;
     const isImageUploadLimited = imageUploadCount >= IMAGE_UPLOAD_LIMIT;
+
+    const interruptChatReply = () => {
+        chatRunRef.current += 1;
+        chatTimersRef.current.forEach(clearTimeout);
+        chatTimersRef.current.clear();
+        clearAllStreams();
+        stopLumiSpeech();
+        setSpeakingMessageId(null);
+        setIsAgentSearching(false);
+        setIsAwaitingReply(false);
+        setLumiEmotion('idle');
+        const snapshot = streamSnapshotRef.current;
+        setMessages((current) => current.flatMap((msg) => {
+            if (msg.type === 'search-status') return [];
+            if (msg.interrupted) return [msg];
+            const streamable = msg.sender === 'lumi' && !!msg.text
+                && (msg.type === 'text' || msg.type === 'quick-reply' || msg.type === 'search-answer');
+            if (!streamable || snapshot[msg.id]?.done) return [msg];
+            const shown = snapshot[msg.id]?.shown ?? '';
+            if (!shown) return [];
+            return [{ ...msg, text: shown, interrupted: true,
+                quickReplies: undefined, onQuickReply: undefined, photoActionButtons: undefined,
+                photoTriageItems: undefined }];
+        }));
+        setStreamState((current) => Object.fromEntries(Object.entries(current).map(([id, value]) =>
+            [id, { ...value, done: true }])));
+    };
 
     const showBusyToast = (message = '小晤还在说，稍等一下～') => {
         setBusyToast(message);
@@ -654,6 +752,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
         messages.forEach((msg) => {
             const isStreamable =
                 msg.sender === 'lumi'
+                && !msg.interrupted
                 && !!msg.text
                 && (msg.type === 'text' || msg.type === 'quick-reply' || msg.type === 'search-answer');
             if (isStreamable && !streamState[msg.id] && !streamTimersRef.current[msg.id]) {
@@ -665,6 +764,9 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
 
     useEffect(() => {
         return () => {
+            chatRunRef.current += 1;
+            chatTimersRef.current.forEach(clearTimeout);
+            chatTimersRef.current.clear();
             clearAllStreams();
             stopLumiSpeech();
             speechRecognitionRef.current?.stop();
@@ -817,14 +919,14 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
         setCheckInData(newData);
 
         // 下一个问题
-        setTimeout(() => {
+        scheduleChatReply(() => {
             askCheckInQuestion(step + 1);
         }, 800);
     };
 
     const showTaskPreview = () => {
         setLumiEmotion('happy');
-        setTimeout(() => {
+        scheduleChatReply(() => {
             const previewText = `我懂了！今天我们：
 1️⃣ ${checkInData.subject || '数学'} - 重点突破 (15分钟)
 2️⃣ 英语 - 听力日常对话 (10分钟) 
@@ -840,7 +942,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
             }]);
 
             // 添加确认按钮
-            setTimeout(() => {
+            scheduleChatReply(() => {
                 setMessages(prev => [...prev, {
                     id: Date.now().toString(),
                     sender: 'lumi',
@@ -867,7 +969,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
             type: 'text'
         }]);
 
-        setTimeout(() => {
+        scheduleChatReply(() => {
             setMessages(prev => [...prev, {
                 id: Date.now().toString(),
                 sender: 'lumi',
@@ -875,7 +977,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                 type: 'text'
             }]);
 
-            setTimeout(() => {
+            scheduleChatReply(() => {
                 if (onCheckInComplete) {
                     onCheckInComplete(checkInData);
                 }
@@ -891,7 +993,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
             type: 'text'
         }]);
 
-        setTimeout(() => {
+        scheduleChatReply(() => {
             setMessages(prev => [...prev, {
                 id: Date.now().toString(),
                 sender: 'lumi',
@@ -974,7 +1076,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
             type: 'text'
         }]);
         
-        setTimeout(() => {
+        scheduleChatReply(() => {
             if (reason.includes('太难') || reason.includes('简单点')) {
                 // 询问哪个任务
                 const taskOptions = plan.tasks.map((task, index) => 
@@ -1047,7 +1149,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
             type: 'text'
         }]);
         
-        setTimeout(() => {
+        scheduleChatReply(() => {
             if (reply.includes('都太难')) {
                 setMessages(prev => [...prev, {
                     id: Date.now().toString(),
@@ -1083,7 +1185,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
             type: 'text'
         }]);
         
-        setTimeout(() => {
+        scheduleChatReply(() => {
             if (reply.includes('删除')) {
                 const taskOptions = plan.tasks.map((task, index) => 
                     `${index + 1}️⃣ ${task.subject}`
@@ -1129,7 +1231,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
             type: 'text'
         }]);
         
-        setTimeout(() => {
+        scheduleChatReply(() => {
             if (reply.includes('减少任务数量')) {
                 const taskOptions = plan.tasks.map((task, index) => 
                     `${index + 1}️⃣ ${task.subject}`
@@ -1177,7 +1279,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
             type: 'text'
         }]);
         
-        setTimeout(() => {
+        scheduleChatReply(() => {
             const newTask: Task = {
                 id: `new-${Date.now()}`,
                 title: `${subject} - 基础练习`,
@@ -1197,7 +1299,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
         action: string, 
         taskIndex?: number
     ) => {
-        setTimeout(() => {
+        scheduleChatReply(() => {
             const adjustedTasks = plan.tasks.map((task, index) => {
                 if (action === 'reduce_all_difficulty' || 
                     (action === 'reduce_difficulty' && index === taskIndex)) {
@@ -1225,7 +1327,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
             `${index + 1}️⃣ ${task.subject} - ${task.title} (${task.durationMinutes}分钟)`
         ).join('\n');
         
-        setTimeout(() => {
+        scheduleChatReply(() => {
             setMessages(prev => [...prev, {
                 id: Date.now().toString(),
                 sender: 'lumi',
@@ -1233,7 +1335,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                 type: 'text'
             }]);
             
-            setTimeout(() => {
+            scheduleChatReply(() => {
                 setMessages(prev => [...prev, {
                     id: Date.now().toString(),
                     sender: 'lumi',
@@ -1264,7 +1366,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
             type: 'text'
         }]);
         
-        setTimeout(() => {
+        scheduleChatReply(() => {
             setMessages(prev => [...prev, {
                 id: Date.now().toString(),
                 sender: 'lumi',
@@ -1272,7 +1374,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                 type: 'text'
             }]);
             
-            setTimeout(() => {
+            scheduleChatReply(() => {
                 if (onCheckInComplete) {
                     onCheckInComplete({ adjustedPlan: plan });
                 }
@@ -1285,7 +1387,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
      */
     const startEditFlow = (plan: DayPlan) => {
         // 1. 展示当前任务
-        setTimeout(() => {
+        scheduleChatReply(() => {
             setMessages(prev => [...prev, {
                 id: Date.now().toString(),
                 sender: 'lumi',
@@ -1294,7 +1396,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
             }]);
             
             // 2. 询问调整原因
-            setTimeout(() => {
+            scheduleChatReply(() => {
                 setMessages(prev => [...prev, {
                     id: Date.now().toString(),
                     sender: 'lumi',
@@ -1385,65 +1487,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
         window.setTimeout(() => setLumiEmotion('idle'), 2000);
     };
 
-    const presentPaperDraft = (seed: PaperDraftSeed, draftQuestions?: PaperPdfQuestion[], existingId?: string): string => {
-        const id = existingId ?? `paper-task-${Date.now()}`;
-        const questions = draftQuestions ?? buildPaperQuestions(seed.scope, seed.questionCount, seed.difficulty);
-        const snapshot: PaperTaskSnapshot = {
-            seed: { ...seed, questionCount: questions.length }, questions, phase: 'ready',
-            runId: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        };
-        setPaperReviewTaskId(null);
-        setPaperPdfOutput(null);
-        setMessages((current) => existingId && current.some((message) => message.id === existingId)
-            ? [
-                ...current.filter((message) => message.id !== existingId),
-                { ...current.find((message) => message.id === existingId)!, type: 'paper-task' as const, paperStatus: undefined, paperTask: snapshot },
-            ]
-            : [...current, { id, sender: 'lumi', text: '', type: 'paper-task', paperTask: snapshot }]);
-        appendLumiMessage(existingId
-            ? `已按你的要求更新题目，共 ${questions.length} 道。你可以重新查看，或继续告诉我怎么修改。`
-            : `题目已经生成好了，共 ${questions.length} 道。点试卷卡片查看全部题目，满意后再选择保存或打印。`);
-        return id;
-    };
-
-    const startPaperGeneration = (seed: PaperDraftSeed, draftQuestions?: PaperPdfQuestion[], existingId?: string): string => {
-        const id = existingId ?? `paper-task-${Date.now()}`;
-        const runId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        const previous = messagesRef.current.find((message) => message.id === id)?.paperTask;
-        const snapshot: PaperTaskSnapshot = {
-            seed,
-            questions: previous?.questions ?? [],
-            phase: 'understanding',
-            runId,
-        };
-        setPaperReviewTaskId(null);
-        setPaperPdfOutput(null);
-        setMessages((current) => existingId && current.some((message) => message.id === existingId)
-            ? [
-                ...current.filter((message) => message.id !== existingId),
-                { ...current.find((message) => message.id === existingId)!, type: 'paper-task' as const, paperTask: snapshot },
-            ]
-            : [...current, { id, sender: 'lumi', text: '', type: 'paper-task', paperTask: snapshot }]);
-
-        const stages: Array<{ phase: PaperTaskSnapshot['phase']; delay: number }> = [
-            { phase: 'composing', delay: 900 },
-            { phase: 'checking', delay: 2100 },
-            { phase: 'assembling', delay: 3100 },
-            { phase: 'validating', delay: 4000 },
-        ];
-        stages.forEach(({ phase, delay }) => window.setTimeout(() => {
-            setMessages((current) => current.map((message) => message.id === id && message.paperTask?.runId === runId
-                ? { ...message, paperTask: { ...message.paperTask, phase } }
-                : message));
-        }, delay));
-        window.setTimeout(() => {
-            const stillActive = messagesRef.current.some((message) => message.id === id && message.paperTask?.runId === runId);
-            if (stillActive) presentPaperDraft(seed, draftQuestions, id);
-        }, 5000);
-        return id;
-    };
-
-    const launchPaperTask = (seed: PaperDraftSeed, draftQuestions?: PaperPdfQuestion[], existingId?: string, simulateExportFailure = false) => {
+    const presentPaperDraft = (seed: PaperDraftSeed, draftQuestions?: PaperPdfQuestion[], existingId?: string, simulateExportFailure = false): string => {
         const id = existingId ?? `paper-task-${Date.now()}`;
         const questions = draftQuestions ?? buildPaperQuestions(seed.scope, seed.questionCount, seed.difficulty);
         const snapshot: PaperTaskSnapshot = {
@@ -1453,16 +1497,62 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
         };
         setPaperReviewTaskId(null);
         setPaperPdfOutput(null);
+        setMessages((current) => existingId && current.some((message) => message.id === existingId)
+            ? [
+                ...current.map((message) => message.id === existingId
+                    ? { ...message, type: 'paper-task' as const, paperStatus: undefined, paperTask: snapshot }
+                    : message),
+            ]
+            : [...current, { id, sender: 'lumi', text: '', type: 'paper-task', paperTask: snapshot }]);
+        appendLumiMessage(existingId
+            ? `已按你的要求更新题目，共 ${questions.length} 道。你可以重新查看，或继续告诉我怎么修改。`
+            : `题目已经生成好了，共 ${questions.length} 道。点试卷卡片查看全部题目，满意后再选择保存或打印。`);
+        return id;
+    };
+
+    const startPaperGeneration = (seed: PaperDraftSeed, draftQuestions?: PaperPdfQuestion[], existingId?: string, simulateExportFailure = false): string => {
+        const id = existingId ?? `paper-task-${Date.now()}`;
+        const runId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const previous = messagesRef.current.find((message) => message.id === id)?.paperTask;
+        const snapshot: PaperTaskSnapshot = {
+            seed,
+            questions: previous?.questions ?? [],
+            phase: 'understanding',
+            phaseStatus: 'running',
+            runId,
+        };
+        setPaperReviewTaskId(null);
+        setPaperPdfOutput(null);
+        setMessages((current) => existingId && current.some((message) => message.id === existingId)
+            ? [
+                ...current.map((message) => message.id === existingId
+                    ? { ...message, type: 'paper-task' as const, paperStatus: undefined, paperTask: snapshot }
+                    : message),
+            ]
+            : [...current, { id, sender: 'lumi', text: '', type: 'paper-task', paperTask: snapshot }]);
+
+        const stages: PaperTaskSnapshot['phase'][] = ['understanding', 'composing', 'checking', 'assembling', 'validating'];
+        const updateStage = (phase: PaperTaskSnapshot['phase'], phaseStatus: 'running' | 'completed') => {
+            setMessages((current) => current.map((message) => message.id === id && message.paperTask?.runId === runId
+                ? { ...message, paperTask: { ...message.paperTask, phase, phaseStatus } }
+                : message));
+        };
+        stages.forEach((phase, index) => {
+            if (index > 0) window.setTimeout(() => updateStage(phase, 'running'), index * 1500);
+            window.setTimeout(() => updateStage(phase, 'completed'), index * 1500 + 1000);
+        });
+        window.setTimeout(() => {
+            const stillActive = messagesRef.current.some((message) => message.id === id && message.paperTask?.runId === runId);
+            if (stillActive) presentPaperDraft(seed, draftQuestions, id, simulateExportFailure);
+        }, stages.length * 1500);
+        return id;
+    };
+
+    const launchPaperTask = (seed: PaperDraftSeed, draftQuestions?: PaperPdfQuestion[], existingId?: string, simulateExportFailure = false) => {
         setPaperWorkspace(null);
         setWorkspaceTaskId(null);
         setWorkspaceQuestions(undefined);
-        setMessages((current) => existingId && current.some((message) => message.id === existingId)
-            ? [
-                ...current.filter((message) => message.id !== existingId),
-                { ...current.find((message) => message.id === existingId)!, type: 'paper-task' as const, paperStatus: undefined, paperTask: snapshot },
-            ]
-            : [...current, { id, sender: 'lumi', text: '', type: 'paper-task', paperTask: snapshot }]);
-        appendLumiMessage(`题目已经生成好了，共 ${questions.length} 道。点试卷卡片查看全部题目，满意后再选择保存或打印。`);
+        startPaperGeneration(seed, draftQuestions, existingId, simulateExportFailure);
     };
 
     const startPdfGenerationDemo = (version = 1, draftSeed?: PaperDraftSeed, draftQuestions?: PaperPdfQuestion[], existingId?: string) => {
@@ -1471,7 +1561,8 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
     };
 
     const beginPaperFromText = (sourceText: string) => {
-        const result = resolvePaperRequest(sourceText);
+        const clarificationDemo = history.some((item) => item.id === activeHistoryIdRef.current && item.paperClarificationDemo);
+        const result = resolvePaperRequest(sourceText, clarificationDemo);
         if (!result.seed) {
             pendingPaperRequestRef.current = result.unsupported ? null : sourceText;
             appendLumiMessage(result.question ?? '请补充这份试卷的学科与范围。', result.choices ? {
@@ -1618,7 +1709,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
         classifications: PhotoClassification[],
         userText: string,
     ) => {
-        window.setTimeout(() => {
+        scheduleChatReply(() => {
             const { text, buttons, triageItems } = buildPhotoReplyContent(
                 photosToSend,
                 classifications,
@@ -1642,7 +1733,6 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
     };
 
     const handleSendMessage = () => {
-        if (guardIfLumiReplying()) return;
         if (isSessionTurnLimited) {
             showBusyToast('这个话题聊得够久啦，新建一个会话继续吧～');
             return;
@@ -1656,6 +1746,9 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
             showBusyToast(`今天图片额度不够用啦（还剩 ${Math.max(0, IMAGE_UPLOAD_LIMIT - imageUploadCount)} 张）`);
             return;
         }
+
+        if (isLumiReplying) interruptChatReply();
+        const run = ++chatRunRef.current;
 
         const classifications = photosToSend.length > 0
             ? readyPhotos.map((photo) => photo.classification ?? classifyLumiPhoto(photo.url))
@@ -1697,14 +1790,16 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
         // #endregion
 
         if (photosToSend.length > 0) {
+            setIsAwaitingReply(true);
             handlePhotoMessageReply(photosToSend, classifications, userText);
             return;
         }
 
+        setIsAwaitingReply(true);
         // --- Check if in task adjustment mode ---
         if (existingPlan && isInCheckIn) {
             // 编辑模式 - 尝试解析用户意图
-            setTimeout(() => {
+            scheduleChatReply(() => {
                 const intent = parseAdjustmentIntent(userText, existingPlan);
                 
                 if (intent.action !== 'unknown') {
@@ -1719,12 +1814,12 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                         type: 'text'
                     }]);
                 }
-                setTimeout(() => setLumiEmotion('idle'), 2000);
+                scheduleChatReply(() => setLumiEmotion('idle'), 2000);
             }, 800);
             return;
         } else if (existingPlan && !isInCheckIn) {
             // 自由对话模式（编辑模式但不在结构化流程中）
-            setTimeout(() => {
+            scheduleChatReply(() => {
                 const intent = parseAdjustmentIntent(userText, existingPlan);
                 
                 if (intent.action !== 'unknown') {
@@ -1737,7 +1832,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                         type: 'text'
                     }]);
                 }
-                setTimeout(() => setLumiEmotion('idle'), 2000);
+                scheduleChatReply(() => setLumiEmotion('idle'), 2000);
             }, 800);
             return;
         }
@@ -1756,7 +1851,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
         }
 
         if (recommendedGame) {
-            setTimeout(() => {
+            scheduleChatReply(() => {
                 setLumiEmotion('idle');
                 setMessages(prev => [...prev, {
                     id: (Date.now()+1).toString(),
@@ -1764,7 +1859,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                     text: replyText,
                     type: 'text'
                 }]);
-                setTimeout(() => {
+                scheduleChatReply(() => {
                     setMessages(prev => [...prev, {
                         id: (Date.now()+2).toString(),
                         sender: 'lumi',
@@ -1779,7 +1874,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
 
         if (pendingPaperRequestRef.current) {
             const request = `${pendingPaperRequestRef.current} ${userText}`;
-            window.setTimeout(() => {
+            scheduleChatReply(() => {
                 setLumiEmotion('idle');
                 beginPaperFromText(request);
             }, 250);
@@ -1789,6 +1884,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
         const wantsPaperPdf = /(?:生成|导出|做成|制作).{0,6}PDF|PDF.{0,6}(?:生成|导出)|可以了.{0,8}PDF/i.test(userText)
             && !/(?:别|不要|暂不).{0,6}(?:生成|导出)/.test(userText);
         if (wantsPaperPdf && latestPaperTask?.paperTask) {
+            setIsAwaitingReply(false);
             const task = latestPaperTask.paperTask;
             if (task.phase === 'ready' || task.phase === 'draft') appendLumiMessage('题目已经生成好了，点试卷卡片查看并选择题目；确认后再保存为 PDF 或打印。');
             else appendLumiMessage('题目仍在生成中。完成后先查看并选择题目，再保存为 PDF 或打印。');
@@ -1796,6 +1892,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
             return;
         }
         if (handlePaperFollowup(userText)) {
+            setIsAwaitingReply(false);
             setLumiEmotion('idle');
             return;
         }
@@ -1803,7 +1900,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
         // 生成试卷能力按意图渐进浮现：明确需求直接生成；宽泛复习只把小测作为平级选项。
         const paperActivation = classifyPaperActivation(userText);
         if (paperActivation !== 'hidden') {
-            window.setTimeout(() => {
+            scheduleChatReply(() => {
                 setLumiEmotion('idle');
                 appendPaperSuggestion(paperActivation === 'direct', userText);
             }, 700);
@@ -1830,6 +1927,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
             try {
                 await new Promise((resolve) => setTimeout(resolve, 700));
 
+                if (run !== chatRunRef.current) return;
                 // ② 联网搜索中（直接替换思考中，单一指示器）
                 setMessages((prev) =>
                     prev.map((msg) =>
@@ -1844,6 +1942,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                 );
 
                 const result = await runLumiWebSearch(userText);
+                if (run !== chatRunRef.current) return;
 
                 // ③ 搜索完成：移除过程状态气泡，输出带 query 顶部小字的回答气泡
                 setMessages((prev) => prev.filter((msg) => msg.id !== statusId));
@@ -1860,12 +1959,16 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                     },
                 ]);
             } catch {
+                if (run !== chatRunRef.current) return;
                 setMessages((prev) => prev.filter((msg) => msg.id !== statusId));
                 setLumiEmotion('idle');
                 showAgentErrorToast();
             } finally {
-                setIsAgentSearching(false);
-                setTimeout(() => setLumiEmotion('idle'), 2000);
+                if (run === chatRunRef.current) {
+                    setIsAwaitingReply(false);
+                    setIsAgentSearching(false);
+                    scheduleChatReply(() => setLumiEmotion('idle'), 2000);
+                }
             }
         })();
     };
@@ -1952,7 +2055,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
             speechRecognitionRef.current?.stop();
             return;
         }
-        if (guardIfLumiReplying()) return;
+        if (isLumiReplying) interruptChatReply();
 
         const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -2053,6 +2156,11 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
     };
 
     const resetSessionChrome = () => {
+        chatRunRef.current += 1;
+        chatTimersRef.current.forEach(clearTimeout);
+        chatTimersRef.current.clear();
+        setIsAwaitingReply(false);
+        setIsAgentSearching(false);
         clearAllStreams();
         stopLumiSpeech();
         setSpeakingMessageId(null);
@@ -2235,7 +2343,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
     };
 
     const openHistoryItem = (item: HistoryItem) => {
-        if (item.id === activeHistoryIdRef.current && surface === 'session' && !item.paperPdfFailureDemo) {
+        if (item.id === activeHistoryIdRef.current && surface === 'session' && !item.paperPdfFailureDemo && !item.paperClarificationDemo) {
             setIsDrawerOpen(false);
             return;
         }
@@ -2247,11 +2355,29 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
             setHistory((prev) => commitSessionToHistory(prev, currentId, currentTitle, currentMessages));
         }
         const failureDemoTaskId = item.paperPdfFailureDemo ? `${item.id}-${Date.now()}` : undefined;
-        const loaded: Message[] = item.paperPdfFailureDemo
+        const loaded: Message[] = item.paperClarificationDemo
+            ? [{
+                id: `${item.id}-choose-${Date.now()}`, sender: 'lumi', type: 'quick-reply',
+                text: '组卷前必须确定年级、科目和出版社；能从对话或当前课本唯一获取时直接使用。本演示模拟缺失信息无法从上下文获取，选择场景后发送示例，小晤只追问缺失项，多项缺失会合并询问。',
+                quickReplies: ['缺少年级', '缺少科目', '缺少出版社', '三项都缺失'],
+                onQuickReply: (choice) => {
+                    const prompts: Record<string, string> = {
+                        缺少年级: '帮我出一份数学上册第一单元练习卷，人民教育出版社，5 道题，30 分钟。',
+                        缺少科目: '帮我出一份七年级上册第一单元练习卷，人民教育出版社，5 道题，30 分钟。',
+                        缺少出版社: '帮我出一份七年级数学上册第一单元练习卷，5 道题，30 分钟。',
+                        三项都缺失: '帮我出一份上册第一单元练习卷，5 道题，30 分钟。',
+                    };
+                    setInputText(prompts[choice] ?? '');
+                    window.setTimeout(() => chatInputRef.current?.focus(), 80);
+                },
+            }]
+            : item.paperPdfFailureDemo
             ? [{ id: `${failureDemoTaskId}-request`, sender: 'user', text: '生成一份 PDF，我要去打印。', type: 'text' }]
-            : item.messages?.length
-                ? item.messages
-                : [{ id: `${item.id}-l`, sender: 'lumi', text: item.preview || '我们接着聊。', type: 'text' }];
+            : item.draftPrompt && !item.messages?.length
+                ? []
+                : item.messages?.length
+                    ? item.messages
+                    : [{ id: `${item.id}-l`, sender: 'lumi', text: item.preview || '我们接着聊。', type: 'text' }];
         const interactiveMessages = item.paperDemoScenarioId
             ? loaded.map((message) => message.type === 'quick-reply'
                 ? {
@@ -2260,9 +2386,11 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                 }
                 : message)
             : loaded;
-        const demoPrompt = item.paperDemoScenarioId
-            ? loaded.find((message) => message.sender === 'user' && message.text.trim())?.text ?? ''
-            : '';
+        const demoPrompt = item.draftPrompt && !loaded.length
+            ? item.draftPrompt
+            : item.paperDemoScenarioId
+                ? loaded.find((message) => message.sender === 'user' && message.text.trim())?.text ?? ''
+                : '';
         setActiveHistoryId(item.id);
         setSessionTitle(item.title);
         setMessages(interactiveMessages);
@@ -2452,36 +2580,67 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
         }
     };
 
-    const exportSelectedPaper = async (questions: PaperPdfQuestion[], mode: 'save' | 'print', onProgress: (stage: PaperPdfProgressStage) => void): Promise<string | undefined> => {
+    const exportSelectedPaper = async (questions: PaperPdfQuestion[], mode: 'save' | 'print', onProgress: (stage: PaperPdfProgressStage) => void, requestedContentMode: PaperContentMode, failureDemo: PaperPdfFailureDemo = 'timeout'): Promise<string | PaperPdfExportFailure | undefined> => {
         if (!paperReviewTaskId) return '没有找到当前试卷，请返回聊天重新打开题目。';
         const task = messagesRef.current.find((message) => message.id === paperReviewTaskId)?.paperTask;
         if (!task) return '没有找到当前试卷，请返回聊天重新打开题目。';
 
         if (task.simulateExportFailure && !task.exportFailureConsumed) {
-            onProgress('rendering');
+            onProgress(failureDemo === 'validation' ? 'checking' : 'rendering');
             await new Promise((resolve) => window.setTimeout(resolve, 600));
             setMessages((current) => current.map((message) =>
                 message.id === paperReviewTaskId && message.paperTask
                     ? { ...message, paperTask: { ...message.paperTask, exportFailureConsumed: true } }
                     : message,
             ));
-            return '本次演示模拟文件生成失败，题目和选择已保留，可以重试。';
+            if (failureDemo === 'storage_full') {
+                return { code: 'STORAGE_FULL', message: '失败原因：设备存储空间不足，无法保存 PDF（本次为模拟失败）。题目和选择已保留。' };
+            }
+            const reason = failureDemo === 'validation' ? 'PDF 文件未通过完整性校验'
+                : failureDemo === 'write_failed' ? 'PDF 未能写入本地文件存储'
+                    : 'PDF 生成服务超时';
+            return `失败原因：${reason}（本次为模拟失败）。题目和选择已保留，可以重试。`;
         }
 
+        const exportState: { stage: 'rendering' | 'checking' | 'saving' } = { stage: 'rendering' };
         try {
             onProgress('rendering');
             await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
-            const { pdf, previewPages } = await createCombinedPaperDocument({ ...task.seed, questions }, () => onProgress('checking'));
+            const contentMode = mode === 'save' ? 'paper_answer_analysis' : task.seed.withAnswers ? requestedContentMode : 'paper_only';
+            const { pdf, previewPages } = await createCombinedPaperDocument({ ...task.seed, questions, contentMode, withAnswers: mode === 'save' || task.seed.withAnswers }, () => { exportState.stage = 'checking'; onProgress('checking'); });
+            exportState.stage = 'saving';
+            const file = await savePaperDocument({
+                title: task.seed.title,
+                source: 'lumi_space',
+                subject: task.seed.scope.match(/数学|语文|英语|物理|化学|生物|历史|地理|道德与法治|科学/)?.[0] ?? '综合',
+                questionCount: questions.length,
+                pageCount: previewPages.length,
+                version: task.seed.version,
+                contentMode,
+                status: 'saved',
+                statusLabel: '已保存',
+            }, { pdf, previewPages });
             if (mode === 'save') {
-                const fileName = `${task.seed.title.replace(/[\\/:*?"<>|]/g, '_')}_V${task.seed.version}.pdf`;
-                downloadPaperPdf(pdf, fileName);
-                appendLumiMessage(`已保存所选 ${questions.length} 道题的 PDF。你还可以继续修改题目后再查看或导出。`);
+                setPaperReviewTaskId(null);
+                if (onOpenPrintedFile) onOpenPrintedFile(file.id);
+                else setPaperPdfOutput({ pdf, previewPages, title: task.seed.title, version: task.seed.version, fileId: file.id, contentMode });
             } else {
-                setPaperPdfOutput({ pdf, previewPages, title: task.seed.title, version: task.seed.version });
+                setPaperPdfOutput({ pdf, previewPages, title: task.seed.title, version: task.seed.version, fileId: file.id, contentMode });
             }
             return undefined;
-        } catch {
-            return '文件生成或检查失败，题目仍已保留，请重试。';
+        } catch (error) {
+            if (error instanceof Error && error.message.includes('单份文件超过 50 MB')) {
+                return { code: 'STORAGE_FULL', message: '文件超过 50 MB，无法保存。题目和选择已保留。' };
+            }
+            if (error instanceof Error && error.name === 'QuotaExceededError') {
+                return { code: 'STORAGE_FULL', message: '失败原因：设备存储空间不足，无法保存 PDF。题目和选择已保留。' };
+            }
+            const reason = exportState.stage === 'saving'
+                    ? 'PDF 未能写入本地文件存储'
+                    : exportState.stage === 'checking'
+                        ? 'PDF 文件校验未完成'
+                        : 'PDF 生成或排版未完成';
+            return `失败原因：${reason}。题目和选择已保留，请使用底部按钮重试。`;
         }
     };
 
@@ -2579,6 +2738,13 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                             >
                                 <RefreshCw size={16} />
                             </motion.button>
+                        ) : history.some((item) => item.id === activeHistoryId && item.paperClarificationDemo) ? (
+                            <button type="button" onClick={() => {
+                                const demo = history.find((item) => item.id === activeHistoryId && item.paperClarificationDemo);
+                                if (demo) openHistoryItem(demo);
+                            }} className="inline-flex items-center gap-1.5 rounded-full border border-violet-100 bg-white/95 px-3 py-2 text-xs font-semibold text-violet-700 shadow-sm hover:bg-violet-50">
+                                <RefreshCw size={14} />切换场景
+                            </button>
                         ) : (
                             <span className="w-9 shrink-0" aria-hidden />
                         )}
@@ -2693,7 +2859,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                                                     ? 'bg-gray-100/80 text-gray-500 text-xs py-2 border border-gray-200 whitespace-pre-line' 
                                                     : 'bg-white text-gray-700 rounded-tl-sm border border-white/50 flex items-center justify-center gap-2'
                                         }`}>
-                                            {msg.sender === 'lumi' && msg.text && msg.type !== 'system' && isLumiStreamDone(msg) ? (
+                                            {msg.sender === 'lumi' && msg.text && !msg.interrupted && msg.type !== 'system' && isLumiStreamDone(msg) ? (
                                                 <button
                                                     type="button"
                                                     onClick={() => handlePlayMessage(msg.id, msg.text)}
@@ -2795,7 +2961,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                                             </div>
                                         ) : null}
                                         <div className="px-5 py-3 flex items-start gap-2">
-                                            {msg.text && isLumiStreamDone(msg) ? (
+                                            {msg.text && !msg.interrupted && isLumiStreamDone(msg) ? (
                                                 <button
                                                     type="button"
                                                     onClick={() => handlePlayMessage(msg.id, msg.text)}
@@ -2961,14 +3127,6 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                                 ? 'border-brand/30 ring-2 ring-brand/20'
                                 : 'border-gray-100 focus-within:ring-2 focus-within:ring-brand/20'
                         }`}
-                            onPointerDownCapture={(e) => {
-                                if (!isLumiReplying || isListening) return;
-                                const target = e.target as HTMLElement;
-                                if (target.closest('button')) return;
-                                e.preventDefault();
-                                (document.activeElement as HTMLElement | null)?.blur?.();
-                                showBusyToast();
-                            }}
                         >
                             {pendingPhotos.length > 0 ? (
                                 <div className="flex flex-col gap-1.5 pt-1">
@@ -3078,18 +3236,11 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                                             exit={{ opacity: 0 }}
                                             transition={{ duration: 0.15 }}
                                             type="text"
-                                            readOnly={isLumiReplying}
                                             className="flex-1 bg-transparent border-none outline-none text-gray-700 font-bold placeholder:text-gray-400 py-2.5"
                                             placeholder={pendingPhotos.length > 0 ? '补充说明' : '按住说话，或输入...'}
                                             value={inputText}
                                             onChange={(e) => {
-                                                if (isLumiReplying) return;
                                                 setInputText(e.target.value);
-                                            }}
-                                            onFocus={(e) => {
-                                                if (!isLumiReplying) return;
-                                                e.currentTarget.blur();
-                                                showBusyToast();
                                             }}
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter' && canSendMessage) handleSendMessage();
@@ -3111,7 +3262,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                                         <Mic size={17} strokeWidth={2.4} />
                                     </button>
                                     {canSendMessage && !isListening ? (
-                                        <button onClick={handleSendMessage} className="p-2.5 bg-brand text-white rounded-full shadow-md hover:bg-brand-dark transition-all active:scale-90">
+                                        <button type="button" aria-label="发送" title="发送" onClick={handleSendMessage} className="p-2.5 bg-brand text-white rounded-full shadow-md hover:bg-brand-dark transition-all active:scale-90">
                                             <Send size={18} className="ml-0.5" />
                                         </button>
                                     ) : null}
@@ -3352,7 +3503,6 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
             {paperReviewTask ? (
                 <PaperQuestionReview
                     task={paperReviewTask}
-                    onClose={() => setPaperReviewTaskId(null)}
                     onContinueChat={() => {
                         setPaperReviewTaskId(null);
                         window.setTimeout(() => chatInputRef.current?.focus(), 80);
@@ -3363,6 +3513,11 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                             : message));
                     }}
                     onExport={exportSelectedPaper}
+                    onResetFailureDemo={() => {
+                        setMessages((current) => current.map((message) => message.id === paperReviewTaskId && message.paperTask
+                            ? { ...message, paperTask: { ...message.paperTask, exportFailureConsumed: false } }
+                            : message));
+                    }}
                 />
             ) : null}
 
@@ -3372,6 +3527,8 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                     pages={paperPdfOutput.previewPages}
                     title={paperPdfOutput.title}
                     version={paperPdfOutput.version}
+                    contentMode={paperPdfOutput.contentMode}
+                    onPrint={() => { if (paperPdfOutput.fileId) retryPrintedFile(paperPdfOutput.fileId, 'unknown'); }}
                     onClose={() => setPaperPdfOutput(null)}
                 />
             ) : null}

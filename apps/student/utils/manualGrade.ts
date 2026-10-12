@@ -23,11 +23,11 @@ export function isMultiBlankManualGradeCorrect(
     ? correctAnswer.map(String)
     : parseXkwFillAnswers(correctAnswer as string | undefined);
 
-  const autoBlanksOk = userParts
+  const autoBlanksOk = correctParts
     .slice(0, manualGradeBlankIndex)
-    .every((ans, idx) => isBlankMatch(ans, correctParts[idx]));
+    .every((ans, idx) => isBlankMatch(userParts[idx], ans));
 
-  const manualOk = selfGrade === 'correct' || selfGrade === 'partial';
+  const manualOk = selfGrade === 'correct';
   return autoBlanksOk && manualOk;
 }
 

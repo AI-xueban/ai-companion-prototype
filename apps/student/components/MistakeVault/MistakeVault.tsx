@@ -6,17 +6,18 @@ import { MistakeVaultData, MistakeItem } from '../../types';
 import { getMistakeVaultData } from '../../services/geminiService';
 import { allQuestions } from '../../data/questionBank';
 import { Card } from '../UI/Card';
-import { AlertCircle, Check, CheckCircle2, ChevronRight, Filter, Zap, ArrowRight, Bookmark, Star, Flag, Trophy, X, Circle, Crown, Sparkles, Bot, RotateCcw, XCircle, ChevronDown, ChevronUp, Play, Pause, PackageOpen, Inbox, BookOpen, Calculator, Languages, Atom, FlaskConical, Scale, Landmark, Leaf, Globe, Microscope, Printer, type LucideIcon } from 'lucide-react';
+import { AlertCircle, Check, CheckCircle2, ChevronRight, Filter, Zap, ArrowRight, Bookmark, Star, Flag, Trophy, X, Circle, Crown, Bot, RotateCcw, XCircle, ChevronDown, ChevronUp, Play, Pause, PackageOpen, Inbox, BookOpen, Calculator, Languages, Atom, FlaskConical, Scale, Landmark, Leaf, Globe, Microscope, Printer, type LucideIcon } from 'lucide-react';
 import { getMistakeVaultSubjects } from '../../data/subjectCatalog';
 import { DailyConquerModal, DAILY_CONQUER_MAX } from './DailyConquerModal';
+import { BatchCorrectionSelectionPage } from './BatchCorrectionSelectionPage';
 import { QuestionPreviewModal } from '../Quiz/QuestionPreviewModal';
-import { UniversalQuizQuestion, UniversalQuizView, normalizeQuizSubmitPayload } from '../Quiz/UniversalQuizView';
+import { UniversalQuizQuestion, UniversalQuizView, normalizeQuizSubmitPayload, normalizeQuestionAnswer } from '../Quiz/UniversalQuizView';
 import { UniversalQuizResult, QuizSessionResult, QuizResultItem, enrichQuizResultWithPracticeStates } from '../Quiz/UniversalQuizResult';
-import { SingleQuestionResultCard } from '../Quiz/SingleQuestionResultCard';
 import { PaperSelfGrade } from '../Quiz/components/PaperSourceAnalysisPanel';
 import { resolveQuestionCorrectness } from '../../utils/manualGrade';
 import { getPortalRoot } from '../../utils/portal';
 import { RewardGrantResult } from '../../types/reward';
+import { grantQuizSessionReward } from '../../services/rewardService';
 import { UserStats } from '../../types';
 import { MistakePrintSetup } from './MistakePrintSetup';
 import { PaperPrintFlow, type PaperPrintJob } from '../SubjectMap/PaperPrintFlow';
@@ -148,6 +149,7 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
   const [isDailyChallengeOpen, setIsDailyChallengeOpen] = useState(false);
   const [isBatchConquerOpen, setIsBatchConquerOpen] = useState(false);
   const [batchConquerItems, setBatchConquerItems] = useState<MistakeItem[]>([]);
+  const [batchSelectionItems, setBatchSelectionItems] = useState<MistakeItem[] | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
@@ -162,9 +164,6 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
   const [isDrillOpen, setIsDrillOpen] = useState(false);
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const [drillPhase, setDrillPhase] = useState<'quiz' | 'result'>('quiz');
-  const [drillAnswers, setDrillAnswers] = useState<Record<string, any> | null>(null);
-  const [drillPaperDrafts, setDrillPaperDrafts] = useState<Record<string, string | null>>({});
-  const [drillPaperSelfGrades, setDrillPaperSelfGrades] = useState<Record<string, PaperSelfGrade>>({});
   const [drillResult, setDrillResult] = useState<QuizSessionResult | null>(null);
 
   useEffect(() => {
@@ -495,7 +494,7 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
   };
 
   const startBatchCorrection = () => {
-    startMistakeQuiz(batchPendingItems);
+    setBatchSelectionItems(batchPendingItems);
   };
 
   const getSubjectEmptyGuide = (subject: string) => {
@@ -538,13 +537,13 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
     const cognitiveState = item.status === 'mastered' ? 'MASTERED' : item.status === 'reviewing' ? 'FADED' : 'GAP';
     return {
       id: item.id,
-      type: (item.questionType as any) || 'fill_in_blank',
+      type: (item.questionType as any) || originalQuestion?.type || 'fill_in_blank',
       content: {
         stem: originalQuestion?.content?.originalImageUrl
           ? (originalQuestion.content.stem || '')
           : (item.fullQuestion || item.questionSnippet),
         // 从原始题目中提取选项和音频
-        options: originalQuestion?.content?.options || (item.questionType === 'single_choice' || item.questionType === 'multiple_choice' ? [] : undefined),
+        options: originalQuestion?.content?.options ?? item.options,
         audioUrl: originalQuestion?.content?.audioUrl,
         transcript: originalQuestion?.content?.transcript,
         examRules: originalQuestion?.content?.examRules,
@@ -596,10 +595,14 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
     questions: UniversalQuizQuestion[],
     userAnswers: Record<string, any>,
     paperSelfGrades: Record<string, PaperSelfGrade> = {},
+    times?: Record<string, number>,
+    totalTimeSec?: number,
+    drafts: Record<string, string | null> = {},
   ): QuizSessionResult => {
     const totalCount = questions.length;
     let correctCount = 0;
     const resultQuestions: QuizResultItem[] = questions.map((q, idx) => {
+            userAnswers[q.id] = normalizeQuestionAnswer(q, userAnswers[q.id]);
       const correct = resolveQuestionCorrectness(
         q.content?.manualGradeBlankIndex,
         q.result?.correctAnswer,
@@ -609,9 +612,12 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
       if (correct) correctCount += 1;
       return {
         questionId: q.id,
+        question: q,
+        paperSelfGrade: paperSelfGrades[q.id],
+        paperDraftImageUrl: drafts[q.id],
         index: idx + 1,
         isCorrect: !!correct,
-        timeSpentSec: 0,
+        timeSpentSec: Math.round(times?.[q.id] ?? 0),
         difficulty: q.difficulty || 1,
         stemSummary: (q.content.stem || '').slice(0, 50),
         correctAnswer: Array.isArray(q.result?.correctAnswer) ? (q.result?.correctAnswer as any[]).join('、') : (q.result?.correctAnswer as any) ?? '',
@@ -627,19 +633,39 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
       };
     });
     const score = Math.round((correctCount / totalCount) * 100);
+    const grantResult = grantQuizSessionReward({
+      sessionId: `drill-${Date.now()}`, quizSetId: `drill_${questions.map(q => q.id).join('_')}`,
+      title: '错题巩固练习', totalCount, correctCount, isWrongPractice: true,
+      totalTimeSec, questionTimesSec: times ? questions.map(q => times[q.id] ?? 0) : undefined,
+      questions: resultQuestions.map(q => ({ questionId: q.questionId, difficulty: q.difficulty, isCorrect: q.isCorrect })),
+    });
     return {
       sessionId: `drill-${Date.now()}`,
       timestamp: Date.now(),
-      totalTimeSec: 0,
+      totalTimeSec: totalTimeSec ?? 0,
       score,
       correctCount,
       totalCount,
-      rewards: { baseXp: 50 + correctCount * 10, bonusXp: 0, coins: 0 },
+      rewards: { baseXp: grantResult.xp, bonusXp: 0, coins: grantResult.coins },
+      grantResult,
       skillChanges: [],
       aiComment: '举一反三完成，建议对错题再练 1-2 道变式。',
       questions: enrichQuizResultWithPracticeStates(resultQuestions),
     };
   };
+
+  if (batchSelectionItems) {
+    return <BatchCorrectionSelectionPage
+      items={batchSelectionItems}
+      subject={activeSubjectFilter}
+      maxQuestions={DAILY_CONQUER_MAX}
+      onBack={() => setBatchSelectionItems(null)}
+      onStart={(items) => {
+        setBatchSelectionItems(null);
+        startMistakeQuiz(items);
+      }}
+    />;
+  }
 
   return (
     <div className={`flex-1 min-h-0 no-scrollbar bg-gray-50/50 relative ${
@@ -962,7 +988,7 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
                                 item={item}
                                 variant="compact"
                                 isEditMode={isEditMode}
-                                onClick={() => isPrintSelectMode ? togglePrintSelection(item.id) : startMistakeQuiz([item])} 
+                                onClick={() => isPrintSelectMode ? togglePrintSelection(item.id) : startMistakeQuiz([item])}
                                 onStar={handleStarToggle}
                                 onFlag={handleFlagClick}
                                 onReasonChange={updateMistakeReason}
@@ -1132,6 +1158,7 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
         )}
       </AnimatePresence>
 
+
       {/* Question Preview Bottom Sheet (题库样式) */}
       <QuestionPreviewModal 
         isOpen={isPreviewOpen} 
@@ -1143,9 +1170,7 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
           const list = buildDrillQuestions(q);
           setDrillQuestions(list);
           setIsPreviewOpen(false);
-          setDrillPhase('quiz');
-          setDrillAnswers(null);
-          setDrillResult(null);
+          setDrillPhase('quiz');          setDrillResult(null);
           setIsDrillOpen(true);
         }}
         onViewAnalysis={() => setIsPreviewOpen(false)}
@@ -1167,68 +1192,23 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
                   questions={drillQuestions}
                   onClose={() => { setIsDrillOpen(false); setDrillQuestions(null); setDrillResult(null); }}
                   onSubmit={(payload) => {
-                    const { answers: ans, paperDraftSnapshots, paperSelfGrades } = normalizeQuizSubmitPayload(payload);
-                    const res = buildDrillResult(drillQuestions, ans, paperSelfGrades ?? {});
-                    setDrillAnswers(ans);
-                    setDrillPaperDrafts(paperDraftSnapshots ?? {});
-                    setDrillPaperSelfGrades(paperSelfGrades ?? {});
-                    setDrillResult(res);
+                    const { answers: ans, paperDraftSnapshots, paperSelfGrades, questionTimesSec, totalTimeSec } = normalizeQuizSubmitPayload(payload);
+                    const res = buildDrillResult(drillQuestions, ans, paperSelfGrades ?? {}, questionTimesSec, totalTimeSec, paperDraftSnapshots ?? {});                    setDrillResult(res);
                     setDrillPhase('result');
+                    if (res.grantResult) onRewardGranted?.(res.grantResult);
                   }}
                   variant="mistake-daily"
                 />
               )}
 
               {drillPhase === 'result' && drillResult && (
-                drillQuestions.length === 1 ? (
-                  <div className="absolute inset-0 bg-gray-900/95 backdrop-blur-xl flex items-center justify-center p-4 z-[100] pointer-events-auto">
-                    {(() => {
-                      const q = drillQuestions[0];
-                      const drillIsCorrect = resolveQuestionCorrectness(
-                        q.content?.manualGradeBlankIndex,
-                        q.result?.correctAnswer,
-                        drillAnswers?.[q.id],
-                        drillPaperSelfGrades[q.id],
-                      );
-                      return (
-                    <SingleQuestionResultCard
-                      questionId={drillQuestions[0].id}
-                      questionType={drillQuestions[0].type}
-                      subject={(drillQuestions[0] as any).subject ?? 'math'}
-                      difficulty={drillQuestions[0].difficulty}
-                      stem={drillQuestions[0].content.stem}
-                      options={drillQuestions[0].content.options?.map(opt => ({
-                        label: opt,
-                        text: opt,
-                        isCorrect: Array.isArray(drillQuestions[0].result?.correctAnswer)
-                          ? (drillQuestions[0].result?.correctAnswer as any[]).includes(opt)
-                          : drillQuestions[0].result?.correctAnswer === opt,
-                        userSelected: Array.isArray(drillAnswers?.[drillQuestions[0].id])
-                          ? (drillAnswers?.[drillQuestions[0].id] as any[]).includes(opt)
-                          : drillAnswers?.[drillQuestions[0].id] === opt,
-                      }))}
-                      userAnswerPreview={drillAnswers ? (Array.isArray(drillAnswers[drillQuestions[0].id]) ? (drillAnswers[drillQuestions[0].id] as any[]).join('、') : (drillAnswers[drillQuestions[0].id] ?? '')) : ''}
-                      correctAnswerPreview={Array.isArray(drillQuestions[0].result?.correctAnswer) ? (drillQuestions[0].result?.correctAnswer as any[]).join('、') : (drillQuestions[0].result?.correctAnswer as any)}
-                      explanationText={drillQuestions[0].result?.explanation}
-                      knowledgePoints={drillQuestions[0].knowledgePoints?.map(k => ({ id: k, label: k, color: '#6C5DD3' }))}
-                      status={drillIsCorrect ? 'correct' : 'wrong'}
-                      timeUsedSec={0}
-                      attemptStats={{ totalAttempts: 1, correctCount: drillIsCorrect ? 1 : 0, wrongCount: drillIsCorrect ? 0 : 1 }}
-                      paperDraftImageUrl={drillPaperDrafts[drillQuestions[0].id] ?? null}
-                      paperSelfGrade={drillPaperSelfGrades[drillQuestions[0].id] ?? null}
-                      onPaperSelfGrade={(grade) => setDrillPaperSelfGrades((prev) => ({ ...prev, [drillQuestions[0].id]: grade }))}
-                      onOpenAITutor={onOpenAITutor}
-                      onClose={() => { setIsDrillOpen(false); setDrillQuestions(null); setDrillResult(null); }}
-                    />
-                      );
-                    })()}
-                  </div>
-                ) : (
                   <UniversalQuizResult
                     initialData={drillResult}
+                    onOpenAITutor={onOpenAITutor}
+                    onRestart={() => { setDrillResult(null); setDrillPhase('quiz'); }}
                     onClose={() => { setIsDrillOpen(false); setDrillQuestions(null); setDrillResult(null); }}
                   />
-                )
+
               )}
             </motion.div>
           )}
@@ -1424,6 +1404,7 @@ const SwipeableMistakeCard: React.FC<{
                         ))}
                     </div>
                 )}
+
 
                 {isEditMode && (
                     <div className="mt-3 pt-3 border-t border-gray-100 flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
