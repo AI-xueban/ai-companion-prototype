@@ -197,9 +197,24 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
         onConfirm:()=>toast('已向 '+cab.name+' 格口 #'+slotNo+' 下发开门指令','success'),
       });
     },true);
-    // 教师端告警默认展示当月待处理数据。
+    // 教师端告警默认展示本月第一天至今天的待处理数据。
+    function getTeacherAlertDefaultRange(){
+      const today=formatYmd(new Date());
+      return {dateStart:today.slice(0,8)+'01',dateEnd:today};
+    }
     getDefaultAlertFilter=function(){
-      return {type:'全部',status:'待处理',sn:'',cabinetId:'',month:formatYm(new Date())};
+      return {type:'全部',status:'待处理',sn:'',cabinetId:'',month:'',...getTeacherAlertDefaultRange()};
+    };
+    readAlertFilterFromForm=function(){
+      return {
+        type:document.getElementById('alert-filter-type')?.value||'全部',
+        status:document.getElementById('alert-filter-status')?.value||'全部',
+        sn:document.getElementById('alert-filter-sn')?.value||'',
+        cabinetId:document.getElementById('alert-filter-cabinet-id')?.value||'',
+        month:'',
+        dateStart:document.getElementById('alert-filter-start')?.value||'',
+        dateEnd:document.getElementById('alert-filter-end')?.value||'',
+      };
     };
 
     const TEACHER_ALERT_PAGE_SIZE=10;
@@ -288,6 +303,10 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
     renderDeviceAlertPage=function(params){
       const root=document.createElement('div');
       root.innerHTML=__renderTeacherAlertPage(params);
+      const timeItem=Array.from(root.querySelectorAll('.filter-item')).find(item=>(item.querySelector('label')?.textContent||'').trim()==='产生时间');
+      if(timeItem){
+        timeItem.innerHTML='<label>产生时间</label><div class="date-range"><input class="input" type="date" id="alert-filter-start" value="'+esc(alertFilterState.dateStart||'')+'"><span>至</span><input class="input" type="date" id="alert-filter-end" value="'+esc(alertFilterState.dateEnd||'')+'"></div>';
+      }
       const contentHeader=Array.from(root.querySelectorAll('thead th')).find(th=>(th.textContent||'').trim()==='告警内容');
       if(contentHeader&&(contentHeader.nextElementSibling?.textContent||'').trim()!=='处理建议')contentHeader.insertAdjacentHTML('afterend','<th>处理建议</th>');
       const filtered=filterDeviceAlerts(data.deviceAlerts,alertFilterState)
@@ -296,6 +315,8 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
       teacherAlertListPage=Math.min(teacherAlertListPage,totalPages);
       const start=(teacherAlertListPage-1)*TEACHER_ALERT_PAGE_SIZE;
       const tableWrap=root.querySelector('.page-card > .table-wrap');
+      const hint=root.querySelector('.page-card > .form-hint');
+      if(hint)hint.textContent='按产生时间查询，当前 '+(alertFilterState.dateStart||'不限')+' 至 '+(alertFilterState.dateEnd||'不限')+'，共 '+filtered.length+' 条';
       const tbody=tableWrap?.querySelector('tbody');
       if(tbody)tbody.innerHTML=renderAlertTableRows(filtered.slice(start,start+TEACHER_ALERT_PAGE_SIZE));
       if(tableWrap)tableWrap.insertAdjacentHTML('afterend',renderTeacherAlertPagination(filtered.length,teacherAlertListPage,'goToTeacherAlertPage'));
@@ -306,12 +327,14 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
     filterUsageRecords=function(records,filter){
       const filtered=__filterTeacherUsageRecords(records,filter);
       if(filter?.teacherMode==='successfulBorrow')return filtered.filter(item=>resolveUsageRecordState(item)!=='cancelled');
-      if(filter?.teacherMode==='currentBorrow')return filtered.filter(item=>resolveUsageRecordState(item)==='borrowed');
       return filtered;
     };
     const __filterTeacherDeviceAlerts=filterDeviceAlerts;
     filterDeviceAlerts=function(alerts,filter){
-      const filtered=__filterTeacherDeviceAlerts(alerts,filter);
+      let filtered=__filterTeacherDeviceAlerts(alerts,{...filter,month:''});
+      if(filter?.dateStart||filter?.dateEnd){
+        filtered=filtered.filter(item=>isYmdInRange(parseRecordYmd(item.createdAt),filter.dateStart,filter.dateEnd));
+      }
       if(filter?.teacherMode==='returnAbnormalToday')return filtered.filter(item=>parseRecordYmd(item.createdAt)===filter.teacherDate&&['damage','return_door_open','return_not_charging'].includes(item.type));
       return filtered;
     };
@@ -319,7 +342,6 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
       const today=formatYmd(new Date()),next=getDefaultUsageFilter();
       if(mode==='borrow'||mode==='people'){next.borrowStart=today;next.borrowEnd=today;next.teacherMode='successfulBorrow';}
       else if(mode==='return'){next.returnStart=today;next.returnEnd=today;next.status='已归还';}
-      else if(mode==='current')next.teacherMode='currentBorrow';
       else if(mode==='overdue')next.status='已逾期';
       usageFilterState=next;navigate('device-usage',{keepFilter:true});
     }
@@ -333,25 +355,23 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
       const borrowed=data.usageRecords.filter(item=>parseRecordYmd(item.borrowAt)===today&&resolveUsageRecordState(item)!=='cancelled');
       const returned=data.usageRecords.filter(item=>parseRecordYmd(item.returnAt)===today&&resolveUsageRecordState(item)==='returned');
       const people=new Set(borrowed.map(item=>item.studentId)).size;
-      const current=data.usageRecords.filter(item=>resolveUsageRecordState(item)==='borrowed').length;
       const overdue=data.usageRecords.filter(item=>resolveUsageRecordState(item)==='overdue').length;
       const abnormal=data.deviceAlerts.filter(item=>parseRecordYmd(item.createdAt)===today&&['damage','return_door_open','return_not_charging'].includes(item.type)).length;
-      return '<section class="teacher-usage-dashboard">'+
-        '<div class="teacher-usage-head"><div><h3>今日使用数据</h3><p>'+today+' · 本校设备借还运行概况</p></div><div class="teacher-usage-summary"><span class="summary-dot"></span>今日运行数据已汇总</div></div>'+
-        '<div class="teacher-usage-grid">'+
-          '<button class="teacher-metric tone-blue" onclick="openTeacherUsageMetric(\'borrow\')"><span class="metric-icon">借</span><span class="metric-copy"><span class="metric-label">今日借出设备</span><strong>'+borrowed.length+'<small>台</small></strong><span class="metric-note">成功完成借出</span></span><span class="metric-arrow">›</span></button>'+
-          '<button class="teacher-metric tone-green" onclick="openTeacherUsageMetric(\'return\')"><span class="metric-icon">还</span><span class="metric-copy"><span class="metric-label">今日归还设备</span><strong>'+returned.length+'<small>台</small></strong><span class="metric-note">成功完成归还</span></span><span class="metric-arrow">›</span></button>'+
-          '<button class="teacher-metric tone-violet" onclick="openTeacherUsageMetric(\'people\')"><span class="metric-icon">人</span><span class="metric-copy"><span class="metric-label">今日借用人数</span><strong>'+people+'<small>人</small></strong><span class="metric-note">按学生编号去重</span></span><span class="metric-arrow">›</span></button>'+
-          '<button class="teacher-metric tone-amber" onclick="openTeacherUsageMetric(\'current\')"><span class="metric-icon">用</span><span class="metric-copy"><span class="metric-label">当前借出设备</span><strong>'+current+'<small>台</small></strong><span class="metric-note">正常借出中</span></span><span class="metric-arrow">›</span></button>'+
-          '<button class="teacher-metric tone-slate" onclick="openTeacherUsageMetric(\'overdue\')"><span class="metric-icon">逾</span><span class="metric-copy"><span class="metric-label">今日逾期未归还</span><strong>'+overdue+'<small>台</small></strong><span class="metric-note">已逾期且尚未归还</span></span><span class="metric-arrow">›</span></button>'+
-          '<button class="teacher-metric tone-red" onclick="openTeacherReturnAbnormal()"><span class="metric-icon">警</span><span class="metric-copy"><span class="metric-label">今日归还异常</span><strong>'+abnormal+'<small>条</small></strong><span class="metric-note">归还相关异常告警</span></span><span class="metric-arrow">›</span></button>'+
-        '</div></section>';
+      return '<div class="form-section-title teacher-usage-title">今日使用数据<span>'+today+' · 本校范围</span></div>'+
+        '<div class="dev-stat-row teacher-usage-row">'+
+          '<div class="dev-stat-card ok" style="cursor:pointer" onclick="openTeacherUsageMetric(\'borrow\')"><div class="label">今日借出设备</div><div class="value">'+borrowed.length+'<small> 台</small></div><div class="sub">成功完成借出</div></div>'+
+          '<div class="dev-stat-card ok" style="cursor:pointer" onclick="openTeacherUsageMetric(\'return\')"><div class="label">今日归还设备</div><div class="value">'+returned.length+'<small> 台</small></div><div class="sub">成功完成归还</div></div>'+
+          '<div class="dev-stat-card" style="cursor:pointer" onclick="openTeacherUsageMetric(\'people\')"><div class="label">今日借用人数</div><div class="value">'+people+'<small> 人</small></div><div class="sub">按学生编号去重</div></div>'+
+          '<div class="dev-stat-card warn" style="cursor:pointer" onclick="openTeacherUsageMetric(\'overdue\')"><div class="label">今日逾期未归还</div><div class="value">'+overdue+'<small> 台</small></div><div class="sub">已逾期且尚未归还</div></div>'+
+          '<div class="dev-stat-card danger" style="cursor:pointer" onclick="openTeacherReturnAbnormal()"><div class="label">今日归还异常</div><div class="value">'+abnormal+'<small> 条</small></div><div class="sub">归还相关异常告警</div></div>'+
+        '</div>';
     }
-    let teacherOverviewAlertFilter={month:formatYm(new Date()),status:'待处理'};
+    let teacherOverviewAlertFilter={...getTeacherAlertDefaultRange(),status:'待处理'};
 
     function applyTeacherOverviewAlertFilter(){
       teacherOverviewAlertFilter={
-        month:document.getElementById('overview-alert-month')?.value||formatYm(new Date()),
+        dateStart:document.getElementById('overview-alert-start')?.value||'',
+        dateEnd:document.getElementById('overview-alert-end')?.value||'',
         status:document.getElementById('overview-alert-status')?.value||'待处理',
       };
       teacherOverviewAlertPage=1;
@@ -359,7 +379,7 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
     }
 
     function resetTeacherOverviewAlertFilter(){
-      teacherOverviewAlertFilter={month:formatYm(new Date()),status:'待处理'};
+      teacherOverviewAlertFilter={...getTeacherAlertDefaultRange(),status:'待处理'};
       teacherOverviewAlertPage=1;
       navigate('device-overview');
     }
@@ -383,7 +403,9 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
           status:teacherOverviewAlertFilter.status,
           sn:'',
           cabinetId:'',
-          month:teacherOverviewAlertFilter.month,
+          month:'',
+          dateStart:teacherOverviewAlertFilter.dateStart,
+          dateEnd:teacherOverviewAlertFilter.dateEnd,
         };
         const alerts=filterDeviceAlerts(data.deviceAlerts,filter)
           .sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
@@ -394,7 +416,7 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
         const filterForm=document.createElement('div');
         filterForm.className='filter-form';
         filterForm.innerHTML=
-          '<div class="filter-item"><label>产生月份</label><select class="select" id="overview-alert-month">'+renderAlertMonthSelect(teacherOverviewAlertFilter.month)+'</select></div>'+
+          '<div class="filter-item"><label>产生时间</label><div class="date-range"><input class="input" type="date" id="overview-alert-start" value="'+esc(teacherOverviewAlertFilter.dateStart||'')+'"><span>至</span><input class="input" type="date" id="overview-alert-end" value="'+esc(teacherOverviewAlertFilter.dateEnd||'')+'"></div></div>'+
           '<div class="filter-item"><label>处理状态</label><select class="select" id="overview-alert-status">'+
             '<option'+(teacherOverviewAlertFilter.status==='全部'?' selected':'')+'>全部</option>'+
             '<option'+(teacherOverviewAlertFilter.status==='待处理'?' selected':'')+'>待处理</option>'+
@@ -413,7 +435,7 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
     location.hash=${JSON.stringify(route)};
   `;
   const scripts=[isolatedMock,scope,layoutTemplatesJs,layoutJs,contentModalJs,confirmModalJs,batchImportJs,addCabinetJs,editTabletJs,devicePagesJs,facePagesJs,restoreDeviceJs,carouselJs,pagesJs,enforceSchool,appJs];
-  return `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${baseCss}\n${templateCss}\n${deviceCss}\nhtml,body{height:100%;overflow:auto;background:#f5f7fa}.layout{min-height:100%}.sider,.header,.tabs-bar,.req-panel,.req-panel-fab,.req-float-btn{display:none!important}.layout-main{margin-left:0!important;margin-right:0!important;height:100vh!important;min-height:0!important;overflow:hidden!important}.content{padding:20px!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain}.page-card{min-height:auto!important;box-shadow:0 1px 2px rgba(15,23,42,.05)}.modal-overlay{z-index:1000}.toast-container{z-index:1100}.teacher-usage-dashboard{margin:4px 0 24px;padding:20px;border:1px solid #dbe7f5;border-radius:16px;background:linear-gradient(135deg,#f8fbff 0%,#f3f7ff 55%,#f8fafc 100%);box-shadow:0 10px 30px rgba(41,72,122,.08)}.teacher-usage-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}.teacher-usage-head h3{margin:0 0 4px;font-size:18px;line-height:1.35;color:#172033}.teacher-usage-head p{margin:0;color:#738198;font-size:13px}.teacher-usage-eyebrow{font-size:10px;font-weight:700;letter-spacing:1.3px;color:#3b82f6}.teacher-usage-summary{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #d9e6f7;border-radius:999px;background:rgba(255,255,255,.82);color:#52647d;font-size:12px;white-space:nowrap}.summary-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.13)}.teacher-usage-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.teacher-metric{--tone:#3b82f6;--tone-bg:#eff6ff;position:relative;display:flex;align-items:center;gap:14px;width:100%;min-height:116px;padding:16px;border:1px solid #e2e8f0;border-radius:14px;background:#fff;color:#172033;text-align:left;font:inherit;cursor:pointer;overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}.teacher-metric:before{content:'';position:absolute;inset:0 auto 0 0;width:4px;background:var(--tone)}.teacher-metric:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--tone) 35%,#e2e8f0);box-shadow:0 10px 24px rgba(15,23,42,.09)}.teacher-metric:focus-visible{outline:3px solid color-mix(in srgb,var(--tone) 24%,transparent);outline-offset:2px}.metric-icon{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border-radius:12px;background:var(--tone-bg);color:var(--tone);font-size:16px;font-weight:700}.metric-copy{display:flex;min-width:0;flex:1;flex-direction:column}.metric-label{margin-bottom:5px;color:#526079;font-size:13px;font-weight:600}.teacher-metric strong{color:#172033;font-size:30px;line-height:1.1;letter-spacing:-.7px}.teacher-metric strong small{margin-left:4px;color:#7c8ba1;font-size:12px;font-weight:500;letter-spacing:0}.metric-note{margin-top:7px;color:#8a97a9;font-size:12px}.metric-arrow{color:#a4afbe;font-size:25px;line-height:1}.tone-green{--tone:#16a34a;--tone-bg:#eefbf3}.tone-violet{--tone:#7c3aed;--tone-bg:#f5f1ff}.tone-amber{--tone:#d97706;--tone-bg:#fff8e8}.tone-slate{--tone:#64748b;--tone-bg:#f1f5f9}.tone-red{--tone:#dc2626;--tone-bg:#fff1f1}@media(max-width:980px){.teacher-usage-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:640px){.teacher-usage-dashboard{padding:18px}.teacher-usage-head{flex-direction:column}.teacher-usage-grid{grid-template-columns:1fr}.teacher-usage-summary{align-self:flex-start}}</style></head><body><div class="layout"><aside class="sider" id="sider"><nav id="sider-menu"></nav></aside><div class="layout-main"><header class="header"><button id="menu-toggle"></button><div id="breadcrumb"></div></header><div id="tabs-bar"></div><main class="content" id="main-content"></main></div><aside id="req-panel"><button id="req-panel-close"></button><div id="req-panel-body"></div></aside><button id="req-panel-fab"></button></div><div id="toast-container" class="toast-container"></div><div class="modal-overlay" id="modal-overlay" hidden><div class="modal modal-xl" id="modal"><div class="modal-header"><div><h3 class="modal-title" id="modal-title"></h3><p class="modal-subtitle" id="modal-subtitle"></p></div><button type="button" class="modal-close" id="modal-close">&times;</button></div><div class="modal-body" id="modal-body"></div><div class="modal-footer" id="modal-footer"></div></div></div>${scripts.map(s=>`<script>${safeScript(s)}</script>`).join('')}</body></html>`;
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${baseCss}\n${templateCss}\n${deviceCss}\nhtml,body{height:100%;overflow:auto;background:#f5f7fa}.layout{min-height:100%}.sider,.header,.tabs-bar,.req-panel,.req-panel-fab,.req-float-btn{display:none!important}.layout-main{margin-left:0!important;margin-right:0!important;height:100vh!important;min-height:0!important;overflow:hidden!important}.content{padding:20px!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain}.page-card{min-height:auto!important;box-shadow:0 1px 2px rgba(15,23,42,.05)}.modal-overlay{z-index:1000}.toast-container{z-index:1100}.teacher-usage-title{display:flex;align-items:center;justify-content:space-between}.teacher-usage-title span{color:var(--text-muted);font-size:12px;font-weight:400}.teacher-usage-row{margin-bottom:28px}.teacher-usage-row .value small{font-size:12px;font-weight:400;color:var(--text-muted)}</style></head><body><div class="layout"><aside class="sider" id="sider"><nav id="sider-menu"></nav></aside><div class="layout-main"><header class="header"><button id="menu-toggle"></button><div id="breadcrumb"></div></header><div id="tabs-bar"></div><main class="content" id="main-content"></main></div><aside id="req-panel"><button id="req-panel-close"></button><div id="req-panel-body"></div></aside><button id="req-panel-fab"></button></div><div id="toast-container" class="toast-container"></div><div class="modal-overlay" id="modal-overlay" hidden><div class="modal modal-xl" id="modal"><div class="modal-header"><div><h3 class="modal-title" id="modal-title"></h3><p class="modal-subtitle" id="modal-subtitle"></p></div><button type="button" class="modal-close" id="modal-close">&times;</button></div><div class="modal-body" id="modal-body"></div><div class="modal-footer" id="modal-footer"></div></div></div>${scripts.map(s=>`<script>${safeScript(s)}</script>`).join('')}</body></html>`;
  },[route,currentUser.schoolId,currentUser.schoolName]);
  return <div className="flex h-full min-h-0 flex-col bg-[#f5f7fa]"><iframe key={`${route}-${currentUser.schoolId}`} title={`设备管理-${route}`} srcDoc={srcDoc} sandbox="allow-scripts allow-forms allow-modals allow-same-origin" className="min-h-0 flex-1 border-0 bg-[#f5f7fa]"/></div>;
 };
