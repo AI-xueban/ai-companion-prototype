@@ -37,6 +37,19 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
       d.cabinets=kept.map(c=>({...c,schoolId:window.__teacherSchool.id,schoolName:window.__teacherSchool.name}));
       d.tablets=(d.tablets||[]).filter(t=>ids.has(t.cabinetId));
       d.usageRecords=(d.usageRecords||[]).filter(r=>ids.has(r.cabinetBorrow)||ids.has(r.cabinetReturn));
+      const todayUsageRecords=Array.from({length:20},(_,offset)=>{
+        const n=offset+1,returned=n<=15,borrowed=n>=16&&n<=18;
+        const studentNo=n<=16?n:(n<=18?n-16:n);
+        const cabinetId='CAB-00'+Math.min(3,Math.floor((n-1)/8)+1);
+        const hour=8+Math.floor((n-1)/2),minute=(n%2)*15,pad=value=>String(value).padStart(2,'0');
+        const tabletNo=((n-1)%20)+1;
+        const base={id:'UR-20261010'+String(n).padStart(3,'0'),tabletId:'TAB-'+String(tabletNo).padStart(3,'0'),sn:'SN20260301'+String(tabletNo).padStart(3,'0'),studentId:'2024010'+String(studentNo).padStart(3,'0'),studentName:['王晨','李欣','张宇','陈曦','刘畅','赵宁','周悦','吴桐','徐嘉','孙浩','马琳','朱凯','胡雨','郭航','何静','高远','黄蕾','林峰','唐婧','许辰'][n-1],grade:['七年级1班','七年级2班','八年级1班','八年级2班'][n%4],loginMethod:n%3===0?'编号密码':'人脸识别',cabinetBorrow:cabinetId,slotBorrow:((n-1)%8)+1,borrowAt:'2026-10-10 '+pad(hour)+':'+pad(minute)+':00',beforeCondition:{aiResult:'normal'},overdue:false};
+        if(returned)return {...base,status:'returned',returnAt:'2026-10-10 '+pad(hour+1)+':'+pad((minute+12)%60)+':00',cabinetReturn:cabinetId,slotReturn:base.slotBorrow,returnInspection:{aiResult:'normal'}};
+        if(borrowed)return {...base,status:'borrowed',returnAt:null,cabinetReturn:null,slotReturn:null};
+        return {...base,status:'cancelled',cancelReason:'charger_connected',cancelledAt:'2026-10-10 '+pad(hour)+':'+pad(minute+3)+':00',cabinetReturn:cabinetId,slotReturn:base.slotBorrow};
+      });
+      const todayUsageIds=new Set(todayUsageRecords.map(item=>item.id));
+      d.usageRecords=[...todayUsageRecords,...d.usageRecords.filter(item=>!todayUsageIds.has(item.id))];
       d.deviceAlerts=(d.deviceAlerts||[]).filter(a=>ids.has(a.cabinetId));
       const octoberAlerts=[
         {id:'ALT-202610-001',tabletId:'TAB-001',sn:'SN20260301001',cabinetId:'CAB-001',slotNo:3,type:'damage',severity:'high',title:'外观损坏',message:'外观对比发现损坏',status:'pending',createdAt:'2026-10-10 16:42:18'},
@@ -184,9 +197,24 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
         onConfirm:()=>toast('已向 '+cab.name+' 格口 #'+slotNo+' 下发开门指令','success'),
       });
     },true);
-    // 教师端告警默认展示当月待处理数据。
+    // 教师端告警默认展示本月第一天至今天的待处理数据。
+    function getTeacherAlertDefaultRange(){
+      const today=formatYmd(new Date());
+      return {dateStart:today.slice(0,8)+'01',dateEnd:today};
+    }
     getDefaultAlertFilter=function(){
-      return {type:'全部',status:'待处理',sn:'',cabinetId:'',month:formatYm(new Date())};
+      return {type:'全部',status:'待处理',sn:'',cabinetId:'',month:'',...getTeacherAlertDefaultRange()};
+    };
+    readAlertFilterFromForm=function(){
+      return {
+        type:document.getElementById('alert-filter-type')?.value||'全部',
+        status:document.getElementById('alert-filter-status')?.value||'全部',
+        sn:document.getElementById('alert-filter-sn')?.value||'',
+        cabinetId:document.getElementById('alert-filter-cabinet-id')?.value||'',
+        month:'',
+        dateStart:document.getElementById('alert-filter-start')?.value||'',
+        dateEnd:document.getElementById('alert-filter-end')?.value||'',
+      };
     };
 
     const TEACHER_ALERT_PAGE_SIZE=10;
@@ -275,6 +303,10 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
     renderDeviceAlertPage=function(params){
       const root=document.createElement('div');
       root.innerHTML=__renderTeacherAlertPage(params);
+      const timeItem=Array.from(root.querySelectorAll('.filter-item')).find(item=>(item.querySelector('label')?.textContent||'').trim()==='产生时间');
+      if(timeItem){
+        timeItem.innerHTML='<label>产生时间</label><div class="date-range"><input class="input" type="date" id="alert-filter-start" value="'+esc(alertFilterState.dateStart||'')+'"><span>至</span><input class="input" type="date" id="alert-filter-end" value="'+esc(alertFilterState.dateEnd||'')+'"></div>';
+      }
       const contentHeader=Array.from(root.querySelectorAll('thead th')).find(th=>(th.textContent||'').trim()==='告警内容');
       if(contentHeader&&(contentHeader.nextElementSibling?.textContent||'').trim()!=='处理建议')contentHeader.insertAdjacentHTML('afterend','<th>处理建议</th>');
       const filtered=filterDeviceAlerts(data.deviceAlerts,alertFilterState)
@@ -283,17 +315,63 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
       teacherAlertListPage=Math.min(teacherAlertListPage,totalPages);
       const start=(teacherAlertListPage-1)*TEACHER_ALERT_PAGE_SIZE;
       const tableWrap=root.querySelector('.page-card > .table-wrap');
+      const hint=root.querySelector('.page-card > .form-hint');
+      if(hint)hint.textContent='按产生时间查询，当前 '+(alertFilterState.dateStart||'不限')+' 至 '+(alertFilterState.dateEnd||'不限')+'，共 '+filtered.length+' 条';
       const tbody=tableWrap?.querySelector('tbody');
       if(tbody)tbody.innerHTML=renderAlertTableRows(filtered.slice(start,start+TEACHER_ALERT_PAGE_SIZE));
       if(tableWrap)tableWrap.insertAdjacentHTML('afterend',renderTeacherAlertPagination(filtered.length,teacherAlertListPage,'goToTeacherAlertPage'));
       return root.innerHTML;
     };
 
-    let teacherOverviewAlertFilter={month:formatYm(new Date()),status:'待处理'};
+    const __filterTeacherUsageRecords=filterUsageRecords;
+    filterUsageRecords=function(records,filter){
+      const filtered=__filterTeacherUsageRecords(records,filter);
+      if(filter?.teacherMode==='successfulBorrow')return filtered.filter(item=>resolveUsageRecordState(item)!=='cancelled');
+      return filtered;
+    };
+    const __filterTeacherDeviceAlerts=filterDeviceAlerts;
+    filterDeviceAlerts=function(alerts,filter){
+      let filtered=__filterTeacherDeviceAlerts(alerts,{...filter,month:''});
+      if(filter?.dateStart||filter?.dateEnd){
+        filtered=filtered.filter(item=>isYmdInRange(parseRecordYmd(item.createdAt),filter.dateStart,filter.dateEnd));
+      }
+      if(filter?.teacherMode==='returnAbnormalToday')return filtered.filter(item=>parseRecordYmd(item.createdAt)===filter.teacherDate&&['damage','return_door_open','return_not_charging'].includes(item.type));
+      return filtered;
+    };
+    function openTeacherUsageMetric(mode){
+      const today=formatYmd(new Date()),next=getDefaultUsageFilter();
+      if(mode==='borrow'||mode==='people'){next.borrowStart=today;next.borrowEnd=today;next.teacherMode='successfulBorrow';}
+      else if(mode==='return'){next.returnStart=today;next.returnEnd=today;next.status='已归还';}
+      else if(mode==='overdue')next.status='已逾期';
+      usageFilterState=next;navigate('device-usage',{keepFilter:true});
+    }
+    function openTeacherReturnAbnormal(){
+      const today=formatYmd(new Date());
+      alertFilterState={...getDefaultAlertFilter(),status:'全部',teacherMode:'returnAbnormalToday',teacherDate:today};
+      teacherAlertListPage=1;navigate('device-alert',{keepFilter:true});
+    }
+    function renderTeacherTodayUsage(){
+      const today=formatYmd(new Date());
+      const borrowed=data.usageRecords.filter(item=>parseRecordYmd(item.borrowAt)===today&&resolveUsageRecordState(item)!=='cancelled');
+      const returned=data.usageRecords.filter(item=>parseRecordYmd(item.returnAt)===today&&resolveUsageRecordState(item)==='returned');
+      const people=new Set(borrowed.map(item=>item.studentId)).size;
+      const overdue=data.usageRecords.filter(item=>resolveUsageRecordState(item)==='overdue').length;
+      const abnormal=data.deviceAlerts.filter(item=>parseRecordYmd(item.createdAt)===today&&['damage','return_door_open','return_not_charging'].includes(item.type)).length;
+      return '<div class="form-section-title teacher-usage-title">今日使用数据<span>'+today+' · 本校范围</span></div>'+
+        '<div class="dev-stat-row teacher-usage-row">'+
+          '<div class="dev-stat-card ok" style="cursor:pointer" onclick="openTeacherUsageMetric(\'borrow\')"><div class="label">今日借出设备</div><div class="value">'+borrowed.length+'<small> 台</small></div><div class="sub">成功完成借出</div></div>'+
+          '<div class="dev-stat-card ok" style="cursor:pointer" onclick="openTeacherUsageMetric(\'return\')"><div class="label">今日归还设备</div><div class="value">'+returned.length+'<small> 台</small></div><div class="sub">成功完成归还</div></div>'+
+          '<div class="dev-stat-card" style="cursor:pointer" onclick="openTeacherUsageMetric(\'people\')"><div class="label">今日借用人数</div><div class="value">'+people+'<small> 人</small></div><div class="sub">按学生编号去重</div></div>'+
+          '<div class="dev-stat-card warn" style="cursor:pointer" onclick="openTeacherUsageMetric(\'overdue\')"><div class="label">今日逾期未归还</div><div class="value">'+overdue+'<small> 台</small></div><div class="sub">已逾期且尚未归还</div></div>'+
+          '<div class="dev-stat-card danger" style="cursor:pointer" onclick="openTeacherReturnAbnormal()"><div class="label">今日归还异常</div><div class="value">'+abnormal+'<small> 条</small></div><div class="sub">归还相关异常告警</div></div>'+
+        '</div>';
+    }
+    let teacherOverviewAlertFilter={...getTeacherAlertDefaultRange(),status:'待处理'};
 
     function applyTeacherOverviewAlertFilter(){
       teacherOverviewAlertFilter={
-        month:document.getElementById('overview-alert-month')?.value||formatYm(new Date()),
+        dateStart:document.getElementById('overview-alert-start')?.value||'',
+        dateEnd:document.getElementById('overview-alert-end')?.value||'',
         status:document.getElementById('overview-alert-status')?.value||'待处理',
       };
       teacherOverviewAlertPage=1;
@@ -301,7 +379,7 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
     }
 
     function resetTeacherOverviewAlertFilter(){
-      teacherOverviewAlertFilter={month:formatYm(new Date()),status:'待处理'};
+      teacherOverviewAlertFilter={...getTeacherAlertDefaultRange(),status:'待处理'};
       teacherOverviewAlertPage=1;
       navigate('device-overview');
     }
@@ -315,6 +393,8 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
     renderDeviceOverviewPage=function(){
       const root=document.createElement('div');
       root.innerHTML=__renderTeacherOverview();
+      const statusRow=root.querySelector('.dev-stat-row');
+      if(statusRow)statusRow.insertAdjacentHTML('afterend',renderTeacherTodayUsage());
       const section=Array.from(root.querySelectorAll('.form-section-title')).find(el=>(el.textContent||'').trim()==='最近使用记录');
       const tableWrap=section?.nextElementSibling;
       if(section&&tableWrap){
@@ -323,7 +403,9 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
           status:teacherOverviewAlertFilter.status,
           sn:'',
           cabinetId:'',
-          month:teacherOverviewAlertFilter.month,
+          month:'',
+          dateStart:teacherOverviewAlertFilter.dateStart,
+          dateEnd:teacherOverviewAlertFilter.dateEnd,
         };
         const alerts=filterDeviceAlerts(data.deviceAlerts,filter)
           .sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
@@ -334,7 +416,7 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
         const filterForm=document.createElement('div');
         filterForm.className='filter-form';
         filterForm.innerHTML=
-          '<div class="filter-item"><label>产生月份</label><select class="select" id="overview-alert-month">'+renderAlertMonthSelect(teacherOverviewAlertFilter.month)+'</select></div>'+
+          '<div class="filter-item"><label>产生时间</label><div class="date-range"><input class="input" type="date" id="overview-alert-start" value="'+esc(teacherOverviewAlertFilter.dateStart||'')+'"><span>至</span><input class="input" type="date" id="overview-alert-end" value="'+esc(teacherOverviewAlertFilter.dateEnd||'')+'"></div></div>'+
           '<div class="filter-item"><label>处理状态</label><select class="select" id="overview-alert-status">'+
             '<option'+(teacherOverviewAlertFilter.status==='全部'?' selected':'')+'>全部</option>'+
             '<option'+(teacherOverviewAlertFilter.status==='待处理'?' selected':'')+'>待处理</option>'+
@@ -353,7 +435,7 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
     location.hash=${JSON.stringify(route)};
   `;
   const scripts=[isolatedMock,scope,layoutTemplatesJs,layoutJs,contentModalJs,confirmModalJs,batchImportJs,addCabinetJs,editTabletJs,devicePagesJs,facePagesJs,restoreDeviceJs,carouselJs,pagesJs,enforceSchool,appJs];
-  return `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${baseCss}\n${templateCss}\n${deviceCss}\nhtml,body{height:100%;overflow:auto;background:#f5f7fa}.layout{min-height:100%}.sider,.header,.tabs-bar,.req-panel,.req-panel-fab,.req-float-btn{display:none!important}.layout-main{margin-left:0!important;margin-right:0!important;height:100vh!important;min-height:0!important;overflow:hidden!important}.content{padding:20px!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain}.page-card{min-height:auto!important;box-shadow:0 1px 2px rgba(15,23,42,.05)}.modal-overlay{z-index:1000}.toast-container{z-index:1100}</style></head><body><div class="layout"><aside class="sider" id="sider"><nav id="sider-menu"></nav></aside><div class="layout-main"><header class="header"><button id="menu-toggle"></button><div id="breadcrumb"></div></header><div id="tabs-bar"></div><main class="content" id="main-content"></main></div><aside id="req-panel"><button id="req-panel-close"></button><div id="req-panel-body"></div></aside><button id="req-panel-fab"></button></div><div id="toast-container" class="toast-container"></div><div class="modal-overlay" id="modal-overlay" hidden><div class="modal modal-xl" id="modal"><div class="modal-header"><div><h3 class="modal-title" id="modal-title"></h3><p class="modal-subtitle" id="modal-subtitle"></p></div><button type="button" class="modal-close" id="modal-close">&times;</button></div><div class="modal-body" id="modal-body"></div><div class="modal-footer" id="modal-footer"></div></div></div>${scripts.map(s=>`<script>${safeScript(s)}</script>`).join('')}</body></html>`;
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${baseCss}\n${templateCss}\n${deviceCss}\nhtml,body{height:100%;overflow:auto;background:#f5f7fa}.layout{min-height:100%}.sider,.header,.tabs-bar,.req-panel,.req-panel-fab,.req-float-btn{display:none!important}.layout-main{margin-left:0!important;margin-right:0!important;height:100vh!important;min-height:0!important;overflow:hidden!important}.content{padding:20px!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain}.page-card{min-height:auto!important;box-shadow:0 1px 2px rgba(15,23,42,.05)}.modal-overlay{z-index:1000}.toast-container{z-index:1100}.teacher-usage-title{display:flex;align-items:center;justify-content:space-between}.teacher-usage-title span{color:var(--text-muted);font-size:12px;font-weight:400}.teacher-usage-row{margin-bottom:28px}.teacher-usage-row .value small{font-size:12px;font-weight:400;color:var(--text-muted)}</style></head><body><div class="layout"><aside class="sider" id="sider"><nav id="sider-menu"></nav></aside><div class="layout-main"><header class="header"><button id="menu-toggle"></button><div id="breadcrumb"></div></header><div id="tabs-bar"></div><main class="content" id="main-content"></main></div><aside id="req-panel"><button id="req-panel-close"></button><div id="req-panel-body"></div></aside><button id="req-panel-fab"></button></div><div id="toast-container" class="toast-container"></div><div class="modal-overlay" id="modal-overlay" hidden><div class="modal modal-xl" id="modal"><div class="modal-header"><div><h3 class="modal-title" id="modal-title"></h3><p class="modal-subtitle" id="modal-subtitle"></p></div><button type="button" class="modal-close" id="modal-close">&times;</button></div><div class="modal-body" id="modal-body"></div><div class="modal-footer" id="modal-footer"></div></div></div>${scripts.map(s=>`<script>${safeScript(s)}</script>`).join('')}</body></html>`;
  },[route,currentUser.schoolId,currentUser.schoolName]);
  return <div className="flex h-full min-h-0 flex-col bg-[#f5f7fa]"><iframe key={`${route}-${currentUser.schoolId}`} title={`设备管理-${route}`} srcDoc={srcDoc} sandbox="allow-scripts allow-forms allow-modals allow-same-origin" className="min-h-0 flex-1 border-0 bg-[#f5f7fa]"/></div>;
 };
