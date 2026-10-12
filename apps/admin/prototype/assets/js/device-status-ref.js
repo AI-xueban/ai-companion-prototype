@@ -82,7 +82,7 @@ const STATUS_REF_E3 = [
 const STATUS_REF_DEVICE = [
   { value: 'in_cabinet', api: 'status=in_cabinet', label: '在柜', desc: '设备在本柜格口，可正常借还' },
   { value: 'borrowed', api: 'status=borrowed', label: '借出中', desc: '学生已借走，离柜使用中' },
-  { value: 'borrowed_overdue', api: 'status=borrowed + isOverdue=true', label: '逾期', desc: '借出满 24h 未还，仅展示逾期标签' },
+  { value: 'borrowed_overdue', api: 'status=borrowed + isOverdue=true', label: '逾期', desc: '超过应归还时间仍未归还，仅展示逾期标签' },
   { value: 'maintenance', api: 'status=maintenance', label: '检修中', desc: '损坏/检修，通常 E3=maintenance' },
 ];
 
