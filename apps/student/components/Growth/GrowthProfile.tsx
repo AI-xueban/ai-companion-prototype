@@ -7,7 +7,6 @@ import { getUserGrowthData } from '../../services/geminiService';
 import { ArrowLeft, ShoppingBag, Lock, Settings, Coins, Heart, BadgeCheck, Scroll, X, PiggyBank, Sparkles, BookOpen, FileText } from 'lucide-react';
 import { MyTextbooksPage } from './MyTextbooksPage';
 import { MyPrintedFilesPage } from './MyPrintedFilesPage';
-import { listPrintedFiles, PRINTED_FILES_CHANGED_EVENT } from '../../services/printedFileService';
 import { isJuniorGrade, type UiSchoolSystem } from '../../data/juniorDemoCatalog';
 import { InteractiveLumi } from '../LumiSpace/InteractiveLumi';
 import { UserAvatarImage } from '../User/UserAvatarImage';
@@ -122,7 +121,6 @@ export const GrowthProfile: React.FC<GrowthProfileProps> = ({
   const [isCharityOpen, setIsCharityOpen] = useState(false);
   const [isTextbooksOpen, setIsTextbooksOpen] = useState(false);
   const [isPrintedFilesOpen, setIsPrintedFilesOpen] = useState(false);
-  const [printedFileCount, setPrintedFileCount] = useState(() => listPrintedFiles().length);
   const [charityViewState, setCharityViewState] = useState<'OVERVIEW' | 'RECORDS' | 'CERTIFICATE'>('OVERVIEW');
   const [charityInput, setCharityInput] = useState(100);
   const [charityJustDonated, setCharityJustDonated] = useState(false);
@@ -150,12 +148,6 @@ export const GrowthProfile: React.FC<GrowthProfileProps> = ({
     onTextbooksOpenChange?.(isTextbooksOpen || isPrintedFilesOpen);
     return () => onTextbooksOpenChange?.(false);
   }, [isTextbooksOpen, isPrintedFilesOpen, onTextbooksOpenChange]);
-
-  useEffect(() => {
-    const refresh = () => setPrintedFileCount(listPrintedFiles().length);
-    window.addEventListener(PRINTED_FILES_CHANGED_EVENT, refresh);
-    return () => window.removeEventListener(PRINTED_FILES_CHANGED_EVENT, refresh);
-  }, []);
 
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
@@ -420,7 +412,6 @@ export const GrowthProfile: React.FC<GrowthProfileProps> = ({
                 >
                     <FileText size={14} strokeWidth={2.3} />
                     <span className="text-[11px] font-black">我的文件</span>
-                    <span className="text-[10px] font-bold text-white/70">{printedFileCount ? `${printedFileCount} 份` : '暂无文件'}</span>
                 </button>
                 <button 
                     type="button"
