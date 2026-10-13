@@ -9,6 +9,7 @@ const FACE_STUDENTS = [
   { id: '2026003', schoolId: 'school-001', name: '王五（01）', className: '一年级1班', photoFile: null, updatedAt: '2026-10-03 16:40:00', recognitionSource: '柜机视频' },
   { id: '2026025', schoolId: 'school-001', name: '王五（02）', className: '一年级1班', photoFile: null, updatedAt: null, recognitionSource: null },
   { id: '2026004', schoolId: 'school-001', name: '赵六', className: '一年级2班', photoFile: '2026004.jpg', updatedAt: '2026-09-18 15:22:00', recognitionSource: '上传照片' },
+  { id: '2026026', schoolId: 'school-001', name: '赵六', className: '一年级2班', photoFile: null, updatedAt: null, recognitionSource: null },
   { id: '2026005', schoolId: 'school-001', name: '孙七', className: '一年级3班', photoFile: '2026005.jpg', updatedAt: '2026-10-04 14:08:00', recognitionSource: '柜机视频' },
   { id: '2026006', schoolId: 'school-001', name: '周八', className: '一年级3班', photoFile: null, updatedAt: null, recognitionSource: null },
   { id: '2026007', schoolId: 'school-001', name: '吴九', className: '二年级1班', photoFile: '2026007.jpg', updatedAt: '2026-09-17 16:18:00', recognitionSource: '上传照片' },
