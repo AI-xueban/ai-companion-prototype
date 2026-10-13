@@ -142,7 +142,7 @@
         <section class="page page-pickup" data-page="pickup">
           <div class="page-center">
             <div class="face-login" id="faceLogin">
-              <div class="face-frame" aria-hidden="true"><span></span></div>
+              <div class="face-smile" aria-hidden="true"><span></span></div>
               <p class="face-status" id="faceStatus">正在识别</p>
               <p class="face-desc" id="faceDesc">请正对屏幕，保持面部处于识别框内</p>
               <button type="button" class="primary-btn face-retry" id="faceRetry" hidden>重新扫脸</button>
@@ -182,12 +182,13 @@
               <p class="login-tip" id="loginTip" hidden>请填写编号和密码</p>
               <button type="submit" class="primary-btn login-submit">登录</button>
               </form>
-              <button type="button" class="text-btn face-back" id="faceBack">返回</button>
               <button type="button" class="back-btn" id="passwordToFace">人脸识别</button>
+              <button type="button" class="text-btn face-back" id="faceBack">返回</button>
             </div>
 
             <div class="face-enroll" id="faceEnroll" hidden>
-              <div class="face-frame face-enroll-frame" aria-hidden="true"><span></span></div>
+              <button type="button" class="text-btn face-top-back face-enroll-back" id="faceEnrollBack">〈 返回</button>
+              <div class="face-smile face-enroll-smile" aria-hidden="true"><span></span></div>
               <p class="face-status" id="enrollStatus">录入人脸</p>
               <p class="face-desc" id="enrollDesc"></p>
               <p class="face-enroll-account">绑定编号：<strong id="enrollStudentId">—</strong></p>

@@ -1059,8 +1059,18 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  width: 760px;
+  height: 760px;
+  max-width: calc(100vw - 80px);
+  max-height: calc(100vw - 80px);
+  box-sizing: border-box;
+  border: 2px solid rgba(100, 116, 139, 0.24);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(191, 219, 254, 0.72), transparent 46%),
+    rgba(255, 255, 255, 0.2);
   text-align: center;
-  min-width: 760px;
 }
 
 .face-login[hidden],
@@ -1069,26 +1079,133 @@ button {
   display: none !important;
 }
 
+.face-smile {
+  position: relative;
+  width: 280px;
+  height: 280px;
+  margin-bottom: 0;
+  border: 8px solid #60a5fa;
+  border-radius: 50%;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 0 18px rgba(59, 130, 246, 0.08), 0 18px 44px rgba(37, 99, 235, 0.12);
+  animation: facePulse 1.8s ease-in-out infinite;
+}
+
+.face-smile::before {
+  content: "";
+  position: absolute;
+  top: 82px;
+  left: 70px;
+  width: 24px;
+  height: 34px;
+  border-radius: 50%;
+  background: #2563eb;
+  box-shadow: 92px 0 0 #2563eb;
+}
+
+.face-smile span {
+  position: absolute;
+  left: 50%;
+  bottom: 54px;
+  width: 126px;
+  height: 68px;
+  border-bottom: 9px solid #2563eb;
+  border-radius: 0 0 80px 80px;
+  transform: translateX(-50%);
+}
+
+.face-login .face-status {
+  position: absolute;
+  right: 32px;
+  bottom: 92px;
+  left: 32px;
+}
+
+.face-login .face-desc {
+  position: absolute;
+  right: 32px;
+  bottom: 38px;
+  left: 32px;
+  margin: 0;
+}
+
 .face-enroll {
   display: flex;
-  min-width: 760px;
+  width: 760px;
+  height: 760px;
+  max-width: calc(100vw - 80px);
+  max-height: calc(100vw - 80px);
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border: 2px solid rgba(100, 116, 139, 0.24);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(191, 219, 254, 0.72), transparent 46%),
+    rgba(255, 255, 255, 0.2);
   text-align: center;
 }
 
-.face-enroll-frame {
-  width: 330px;
-  height: 400px;
+.face-enroll-smile {
+  flex: 0 0 auto;
+  width: 240px;
+  height: 240px;
+  margin-bottom: 28px;
 }
 
+.face-enroll-smile::before {
+  top: 68px;
+  left: 58px;
+  width: 22px;
+  height: 31px;
+  box-shadow: 78px 0 0 #2563eb;
+}
+
+.face-enroll-smile span {
+  bottom: 46px;
+  width: 108px;
+  height: 58px;
+}
+
+.face-enroll .face-status {
+  position: absolute;
+  right: 32px;
+  bottom: 410px;
+  left: 32px;
+}
+
+.face-enroll .face-desc {
+  position: absolute;
+  right: 32px;
+  bottom: 360px;
+  left: 32px;
+  margin: 0;
+}
+
+.face-enroll-back {
+  z-index: 2;
+}
+
+.face-enroll-back[hidden] {
+  display: none !important;
+}
 .face-enroll-start {
+  position: absolute;
+  bottom: 96px;
+  left: 50%;
   width: 520px !important;
   margin-top: 0 !important;
+  transform: translateX(-50%);
 }
 
 .face-enroll-account {
-  margin: -12px 0 30px;
+  position: absolute;
+  bottom: 280px;
+  left: 50%;
+  margin: 0;
+  transform: translateX(-50%);
   padding: 14px 24px;
   border-radius: 14px;
   background: rgba(219, 234, 254, 0.72);
@@ -1102,8 +1219,12 @@ button {
 }
 
 .face-enroll-notice {
-  max-width: 620px;
-  margin: -12px 0 30px;
+  position: absolute;
+  right: 32px;
+  bottom: 218px;
+  left: 32px;
+  max-width: none;
+  margin: 0;
   color: #64748b;
   font-size: 23px;
   line-height: 1.55;
@@ -1303,7 +1424,46 @@ button {
   background: rgba(148, 163, 184, 0.12);
 }
 
-.page-pickup:has(#faceLogin:not([hidden])) > .page-center > .back-btn {
+.page-pickup #passwordToFace {
+  width: 100%;
+  height: 96px;
+  margin-top: 24px;
+  padding: 0 28px;
+  border: 2px solid #3b82f6;
+  border-radius: 18px;
+  color: #2563eb;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 26px rgba(37, 99, 235, 0.12);
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.page-pickup #passwordToFace:hover {
+  color: #1d4ed8;
+  background: #ffffff;
+  border-color: #2563eb;
+}
+
+.page-pickup #faceBack {
+  width: auto;
+  height: auto;
+  margin: 28px auto 0;
+  padding: 8px 20px;
+  border: 0;
+  color: #64748b;
+  background: transparent;
+  box-shadow: none;
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.page-pickup #faceBack:hover {
+  color: #334155;
+  background: rgba(148, 163, 184, 0.12);
+}
+
+.page-pickup:has(#faceLogin:not([hidden])) > .page-center > .back-btn,
+.page-pickup:has(#faceEnroll:not([hidden])) > .page-center > .back-btn {
   display: none !important;
 }
 
