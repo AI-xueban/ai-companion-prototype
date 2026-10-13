@@ -525,7 +525,7 @@ function alertContentText(a) {
   const map = {
     damage: '外观对比发现损坏',
     overdue: '借出逾期',
-    cabinet_offline: '柜机心跳超时',
+    cabinet_offline: '柜机连接超时',
     return_door_open: '未关门',
     return_not_charging: '未充电',
   };
