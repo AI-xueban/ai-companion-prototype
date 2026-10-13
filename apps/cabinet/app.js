@@ -36,6 +36,7 @@
   const enrollStudentId = document.getElementById("enrollStudentId");
   const enrollNotice = document.getElementById("enrollNotice");
   const faceEnrollStart = document.getElementById("faceEnrollStart");
+  const faceEnrollBack = document.getElementById("faceEnrollBack");
   const enrollFailureAction = document.getElementById("enrollFailureAction");
   let enrollmentTimer = null;
   const faceStatus = document.getElementById("faceStatus");
@@ -222,13 +223,14 @@
     passwordLogin.hidden = false;
     faceEnroll.hidden = true;
     passwordLoginDesc.textContent = mustEnrollAfterPassword
-      ? "验证后开始人脸注册；原有人脸将删除，录入完成前不可退出"
+      ? "验证后开始人脸注册；开始录入后不可退出"
       : "请输入编号和密码后查看可用设备";
     loginTip.hidden = true;
     hideKeypad();
   }
 
   function showFaceEnrollment() {
+    faceEnrollBack.hidden = false;
     enrollFailureAction.hidden = true;
     hideKeypad();
     faceLogin.hidden = true;
@@ -238,7 +240,7 @@
     enrollStatus.className = "face-status";
     enrollDesc.textContent = "";
     enrollStudentId.textContent = authenticatedStudentId || "—";
-    enrollNotice.textContent = "请完成新人脸录入，完成前不可退出";
+    enrollNotice.textContent = "请正对屏幕，开始录入后不可退出";
     faceEnrollStart.hidden = false;
     faceEnrollStart.disabled = false;
     faceEnrollStart.textContent = "开始录入";
@@ -689,7 +691,14 @@
     faceConfirmModal.hidden = true;
     showPage("devices");
   });
+  faceEnrollBack.addEventListener("click", () => {
+    clearTimeout(enrollmentTimer);
+    registrationLocked = false;
+    showPasswordLogin();
+  });
+
   faceEnrollStart.addEventListener("click", () => {
+    faceEnrollBack.hidden = true;
     enrollFailureAction.hidden = true;
     faceEnrollStart.disabled = true;
     faceEnrollStart.textContent = "正在录入…";
@@ -815,7 +824,7 @@
     enrollStatus.textContent = "录入失败";
     enrollStatus.className = "face-status is-failed";
     enrollDesc.textContent = "本次人脸未保存，请重新录入";
-    enrollNotice.textContent = "请完成新人脸录入，完成前不可退出";
+    enrollNotice.textContent = "请正对屏幕，开始录入后不可退出";
   }
 
   simulateNotCharging.addEventListener("click", (e) => {
