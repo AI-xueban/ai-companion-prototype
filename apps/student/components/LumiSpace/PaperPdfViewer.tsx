@@ -13,9 +13,10 @@ interface PaperPdfViewerProps {
     onPrint?: () => void;
     contentMode?: PaperContentMode;
     initialPrintOpen?: boolean;
+    layerClassName?: string;
 }
 
-export const PaperPdfViewer: React.FC<PaperPdfViewerProps> = ({ pages, title, onClose, backLabel = '返回', onPrint, contentMode, initialPrintOpen = false }) => {
+export const PaperPdfViewer: React.FC<PaperPdfViewerProps> = ({ pages, title, onClose, backLabel = '返回', onPrint, contentMode, initialPrintOpen = false, layerClassName = 'z-[500]' }) => {
     const [pageUrls, setPageUrls] = useState<string[]>([]);
     const [printOpen, setPrintOpen] = useState(initialPrintOpen);
     const [printComplete, setPrintComplete] = useState(false);
@@ -33,7 +34,7 @@ export const PaperPdfViewer: React.FC<PaperPdfViewerProps> = ({ pages, title, on
     const viewport = document.getElementById('app-viewport') ?? document.body;
 
     return createPortal(
-        <div id="paper-pdf-print-viewer" className="absolute inset-0 z-[500] flex min-h-0 flex-col overflow-hidden bg-slate-100">
+        <div id="paper-pdf-print-viewer" className={`absolute inset-0 ${layerClassName} flex min-h-0 flex-col overflow-hidden bg-slate-100`}>
             <header className="flex shrink-0 items-center gap-2 border-b border-slate-200 bg-white px-3 py-2.5 sm:px-5">
                 <button type="button" onClick={onClose} aria-label={backLabel} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-800 transition-colors hover:bg-slate-200">
                     <ArrowLeft size={20} />

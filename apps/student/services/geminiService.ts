@@ -825,7 +825,6 @@ export const getUserGrowthData = async (): Promise<UserProfileData> => {
                         }, 
                         achievements: [
                             { id: 'a1', title: '初来乍到', description: '完成注册', icon: '🐣', unlocked: true, dateUnlocked: '1天前' },
-                            { id: 'a3', title: '潜力无限', description: '完成能力画像测评', icon: '🔮', unlocked: true, dateUnlocked: '刚刚' },
                         ],
                         unlockedOutfitIds: ['uniform_school'],
                         currentOutfit: { outfit: 'uniform_school' },

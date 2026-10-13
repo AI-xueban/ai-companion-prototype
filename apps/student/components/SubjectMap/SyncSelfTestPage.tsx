@@ -483,7 +483,7 @@ export const SyncSelfTestPage: React.FC<SyncSelfTestPageProps> = ({
         scenarioLabel: setup.scenarioLabel,
         questionTypeCounts: setup.questionTypeCounts,
         includeAnswerAnalysis: setup.includeAnswerAnalysis,
-        title: mode === 'print' && setup.paperTitle ? setup.paperTitle : `${pageTitle.includes('练习') ? '自主练习' : '自主测'} · ${setup.questionCount}题 · ${setup.difficulty} · ${setup.scenarioLabel}`,
+        title: mode === 'print' && setup.paperTitle ? setup.paperTitle : `${pageTitle.includes('练习') ? '精准练习' : '自主测'} · ${setup.questionCount}题 · ${setup.difficulty} · ${setup.scenarioLabel}`,
       };
       if (mode === 'print') {
         const printPayload = { ...payload, printExceptionDemo };
@@ -686,7 +686,7 @@ export const SyncSelfTestPage: React.FC<SyncSelfTestPageProps> = ({
             mode={setupMode}
             startLabel={setupMode === 'print' ? '生成试卷' : startLabel}
             cancelLabel={setupMode === 'print' ? '暂不生成试卷' : '暂不练习'}
-            title={setupMode === 'print' ? '试卷设置' : '开始自主练习，先选好题量、难度和场景'}
+            title={setupMode === 'print' ? '试卷设置' : '开始精准练习，先选好题量、难度和场景'}
             guideText={undefined}
             assembling={isAssembling}
             dailyQuotaReached={setupMode === 'print' && printExceptionDemo === 'daily_limit'}

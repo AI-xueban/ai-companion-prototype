@@ -7,6 +7,8 @@ export interface PaperPdfQuestion {
     score: number;
     answer: string;
     explanation: string;
+    imageUrl?: string;
+    errorReason?: string;
 }
 
 export interface PaperPdfDocument {
@@ -19,6 +21,7 @@ export interface PaperPdfDocument {
     assumedTextbook?: string;
     withAnswers?: boolean;
     contentMode?: PaperContentMode;
+    sourceLabel?: string;
 }
 
 const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
@@ -249,12 +252,23 @@ const canvasToJpeg = (canvas: HTMLCanvasElement) => {
     return bytes;
 };
 
-const renderPages = (paper: PaperPdfDocument, answerCopy: boolean, pageOffset = 0, answerSummary = false): PdfPage[] => {
+const loadPaperImages = async (questions: PaperPdfQuestion[]) => new Map(await Promise.all(questions
+    .filter((question) => question.imageUrl)
+    .map((question) => new Promise<[number, HTMLImageElement]>((resolve, reject) => {
+        const image = new Image();
+        image.crossOrigin = 'anonymous';
+        image.onload = () => resolve([question.id, image]);
+        image.onerror = () => reject(new Error(`题目 ${question.id} 的配图加载失败`));
+        image.src = question.imageUrl!;
+    }))));
+
+const renderPages = (paper: PaperPdfDocument, answerCopy: boolean, pageOffset = 0, answerSummary = false, images = new Map<number, HTMLImageElement>()): PdfPage[] => {
     const pages: PdfPage[] = [];
     let canvas: HTMLCanvasElement;
     let ctx: CanvasRenderingContext2D;
     let y: number;
     const totalScore = paper.questions.reduce((sum, question) => sum + question.score, 0);
+    const isMistakePaper = paper.sourceLabel === '克漏空间';
     const paperStyle = /基础/.test(paper.difficulty) ? '基础巩固版'
         : /较高|提高|困难/.test(paper.difficulty) ? '提高拓展版' : '综合测试版';
     let pageIndex = 0;
@@ -272,7 +286,7 @@ const renderPages = (paper: PaperPdfDocument, answerCopy: boolean, pageOffset = 
             ctx.font = `8px ${FONT}`;
             ctx.fillText(answerCopy ? (answerSummary ? '参考答案' : '答案与解析') : paper.title, 46, 31, PAGE_WIDTH - 220);
             ctx.textAlign = 'right';
-            ctx.fillText('小晤同学 AI 生成', PAGE_WIDTH - 46, 31);
+            ctx.fillText(paper.sourceLabel ?? '小晤同学 AI 生成', PAGE_WIDTH - 46, 31);
             ctx.strokeStyle = '#e5e7eb';
             ctx.lineWidth = 0.6;
             ctx.beginPath();
@@ -287,20 +301,28 @@ const renderPages = (paper: PaperPdfDocument, answerCopy: boolean, pageOffset = 
             ctx.fillStyle = '#4b5563';
             ctx.font = `9px ${FONT}`;
             if (!answerSummary) {
-                ctx.fillText(answerCopy ? '按试卷题号逐题说明' : `${paperStyle}  满分：${totalScore}分　　考试时间：${paper.duration}`, PAGE_WIDTH / 2, 99);
+                ctx.fillText(answerCopy ? '按试卷题号逐题说明' : isMistakePaper ? `共 ${paper.questions.length} 道错题 · ${paper.scope}` : `${paperStyle}  满分：${totalScore}分　　考试时间：${paper.duration}`, PAGE_WIDTH / 2, 99);
             }
             if (paper.assumedTextbook && !answerCopy) {
                 ctx.fillStyle = '#6b7280';
                 ctx.font = `8px ${FONT}`;
                 ctx.fillText(`教材版本暂按：${paper.assumedTextbook}`, PAGE_WIDTH / 2, 116);
             }
+            if (isMistakePaper && !answerCopy) {
+                ctx.textAlign = 'left';
+                ctx.fillStyle = '#111827';
+                ctx.font = `9px ${FONT}`;
+                ctx.fillText('姓名：____________', 46, 117);
+                ctx.fillText('班级：____________', 190, 117);
+            }
             ctx.strokeStyle = '#1f2937';
             ctx.lineWidth = 0.9;
             ctx.beginPath();
-            ctx.moveTo(46, paper.assumedTextbook && !answerCopy ? 128 : 119);
-            ctx.lineTo(PAGE_WIDTH - 46, paper.assumedTextbook && !answerCopy ? 128 : 119);
+            const ruleY = isMistakePaper && !answerCopy ? 137 : paper.assumedTextbook && !answerCopy ? 128 : 119;
+            ctx.moveTo(46, ruleY);
+            ctx.lineTo(PAGE_WIDTH - 46, ruleY);
             ctx.stroke();
-            y = paper.assumedTextbook && !answerCopy ? 157 : 148;
+            y = isMistakePaper && !answerCopy ? 166 : paper.assumedTextbook && !answerCopy ? 157 : 148;
         } else {
             y = 62;
         }
@@ -334,6 +356,17 @@ const renderPages = (paper: PaperPdfDocument, answerCopy: boolean, pageOffset = 
         }
         y += 8;
     };
+    const writeImage = (image: HTMLImageElement) => {
+        const scale = Math.min(220 / image.naturalWidth, 240 / image.naturalHeight, 1);
+        const width = image.naturalWidth * scale;
+        const height = image.naturalHeight * scale;
+        if (y + height > PAGE_HEIGHT - 54) {
+            addFooter(pages.length);
+            beginPage();
+        }
+        ctx.drawImage(image, 54, y, width, height);
+        y += height + 12;
+    };
     const ensureQuestionSpace = (blocks: Array<{ text: string; fontSize: number; indent?: number }>) => {
         const requiredHeight = blocks.reduce((height, block) => {
             ctx.font = `${block.fontSize}px ${FONT}`;
@@ -349,14 +382,23 @@ const renderPages = (paper: PaperPdfDocument, answerCopy: boolean, pageOffset = 
     beginPage();
     if (!answerCopy) {
         for (const [index, question] of paper.questions.entries()) {
+            const questionHeading = `${index + 1}. ${question.type}${isMistakePaper ? '' : `（${question.score}分）`}`;
+            const answerPrompt = isMistakePaper && /选择题/.test(question.type)
+                ? '作答：________'
+                : '作答：____________________________________________________________';
+            const showAnswerPrompt = isMistakePaper || !/选择题/.test(question.type);
             ensureQuestionSpace([
-                { text: `${index + 1}. ${question.type}（${question.score}分）`, fontSize: 10 },
+                { text: questionHeading, fontSize: 10 },
                 { text: question.stem, fontSize: 11, indent: 8 },
-                ...(question.type !== '选择题' ? [{ text: '作答：____________________________________________________________', fontSize: 9, indent: 8 }] : []),
+                ...(showAnswerPrompt ? [{ text: answerPrompt, fontSize: 9, indent: 8 }] : []),
+                ...(isMistakePaper && question.errorReason ? [{ text: `错因：${question.errorReason}`, fontSize: 9, indent: 8 }] : []),
             ]);
-            writeBlock(`${index + 1}. ${question.type}（${question.score}分）`, 10, '#111827');
+            writeBlock(questionHeading, 10, '#111827');
             writeBlock(question.stem, 11, '#172033', 8);
-            if (question.type !== '选择题') writeBlock('作答：____________________________________________________________', 9, '#64748b', 8);
+            const image = images.get(question.id);
+            if (image) writeImage(image);
+            if (showAnswerPrompt) writeBlock(answerPrompt, 9, '#64748b', 8);
+            if (isMistakePaper && question.errorReason) writeBlock(`错因：${question.errorReason}`, 9, '#be123c', 8);
         }
     } else if (answerSummary) {
         for (const [index, question] of paper.questions.entries()) {
@@ -446,13 +488,15 @@ const createValidatedPdf = async (pages: PdfPage[]) => {
 
 export const createPaperPdf = async (paper: PaperPdfDocument, answerCopy = false) => {
     validatePaperQuestions(paper);
-    return createValidatedPdf(renderPages(paper, answerCopy));
+    const images = answerCopy ? new Map<number, HTMLImageElement>() : await loadPaperImages(paper.questions);
+    return createValidatedPdf(renderPages(paper, answerCopy, 0, false, images));
 };
 
 /** 题目独立分页；先汇总全部答案，再逐题展示答案与解析。 */
 export const createCombinedPaperDocument = async (paper: PaperPdfDocument, onBeforeValidation?: () => void) => {
     validatePaperQuestions(paper);
-    const questionPages = renderPages(paper, false);
+    const images = await loadPaperImages(paper.questions);
+    const questionPages = renderPages(paper, false, 0, false, images);
     const pages = [...questionPages];
     if (paper.withAnswers !== false && paper.contentMode !== 'paper_only') {
         pages.push(...renderPages(paper, true, pages.length, true));
