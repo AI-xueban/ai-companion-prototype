@@ -22,6 +22,7 @@ interface TeacherAppProps {
 
 export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRole = 'teacher' }) => {
   const [activePage, setActivePage] = useState('dashboard');
+  const [deviceMenuPage, setDeviceMenuPage] = useState<string | null>(null);
   const [loggedIn, setLoggedIn] = useState(false);
   const [teacherUser, setTeacherUser] = useState<TeacherPortalUser | null>(null);
   const [currentClassId, setCurrentClassId] = useState('c1');
@@ -42,10 +43,13 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRol
   const allowedPages: Record<TeacherPortalRole, string[]> = {
     teacher: ['dashboard', 'analytics', 'profiles', 'profile'],
     'class-teacher': ['dashboard', 'analytics', 'profiles', 'incentives', 'inbox', 'profile'],
-    'school-admin': ['dashboard', 'analytics', 'profiles', 'incentives', 'inbox', 'profile', 'school', 'classes', 'teachers', 'students', 'device-overview', 'cabinet', 'tablet', 'device-usage', 'device-alert', 'face-library'],
+    'school-admin': ['dashboard', 'analytics', 'profiles', 'incentives', 'inbox', 'profile', 'school', 'classes', 'teachers', 'students', 'face-library', 'device-overview', 'cabinet', 'tablet', 'device-usage'],
   };
   const navigate = (page: string) => {
-    if (teacherUser && allowedPages[teacherUser.role].includes(page)) setActivePage(page);
+    if (teacherUser && allowedPages[teacherUser.role].includes(page)) {
+      setDeviceMenuPage(null);
+      setActivePage(page);
+    }
   };
 
   const handleOpenInbox = () => {
@@ -71,12 +75,11 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRol
           case 'classes': return <SchoolAdminManagement initialView="classes" currentUser={teacherUser} />;
           case 'teachers': return <SchoolAdminManagement initialView="teachers" currentUser={teacherUser} />;
           case 'students': return <SchoolAdminManagement initialView="students" currentUser={teacherUser} />;
-          case 'device-overview': return <DeviceManagement initialView="overview" currentUser={teacherUser} />;
-          case 'cabinet': return <DeviceManagement initialView="cabinets" currentUser={teacherUser} />;
-          case 'tablet': return <DeviceManagement initialView="tablets" currentUser={teacherUser} />;
-          case 'device-usage': return <DeviceManagement initialView="usage" currentUser={teacherUser} />;
-          case 'device-alert': return <DeviceManagement initialView="alerts" currentUser={teacherUser} />;
-          case 'face-library': return <DeviceManagement initialView="faces" currentUser={teacherUser} />;
+          case 'device-overview': return <DeviceManagement initialView="overview" currentUser={teacherUser} onMenuNavigate={setDeviceMenuPage} />;
+          case 'cabinet': return <DeviceManagement initialView="cabinets" currentUser={teacherUser} onMenuNavigate={setDeviceMenuPage} />;
+          case 'tablet': return <DeviceManagement initialView="tablets" currentUser={teacherUser} onMenuNavigate={setDeviceMenuPage} />;
+          case 'device-usage': return <DeviceManagement initialView="usage" currentUser={teacherUser} onMenuNavigate={setDeviceMenuPage} />;
+          case 'face-library': return <DeviceManagement initialView="faces" currentUser={teacherUser} onMenuNavigate={setDeviceMenuPage} />;
           default:
               return (
                 <div className="flex flex-col items-center justify-center h-full text-gray-400">
@@ -109,7 +112,7 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRol
       
       {/* 1. Sidebar (Fixed Left) */}
       <TeacherSidebar 
-        activePage={activePage} 
+        activePage={deviceMenuPage ?? activePage}
         onNavigate={navigate}
         onLogout={handleLogout}
         user={teacherUser}
@@ -126,7 +129,7 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRol
             user={teacherUser}
             currentClassId={currentClassId}
             onClassChange={setCurrentClassId}
-            showClassSelector={!['device-overview', 'cabinet', 'tablet', 'device-usage', 'device-alert', 'face-library'].includes(activePage)}
+            showClassSelector={!['device-overview', 'cabinet', 'tablet', 'device-usage', 'face-library'].includes(activePage)}
           />
         )}
 

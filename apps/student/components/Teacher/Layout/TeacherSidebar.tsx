@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { AlertTriangle, Atom, BarChart3, Box, Building2, ChevronDown, ClipboardList, GraduationCap, Hexagon, LayoutDashboard, LogOut, MonitorSmartphone, ScanFace, Search, TabletSmartphone, Users } from 'lucide-react';
+import { Atom, BarChart3, Box, Building2, ChevronDown, ClipboardList, GraduationCap, Hexagon, LayoutDashboard, LogOut, MonitorSmartphone, ScanFace, Search, TabletSmartphone, Users } from 'lucide-react';
 import { TeacherPortalUser } from '../data/teacherAccess';
 
 interface TeacherSidebarProps { activePage: string; onNavigate: (page: string) => void; onLogout?: () => void; user: TeacherPortalUser }
-const schoolItems = [{id:'classes',icon:GraduationCap,label:'班级管理'},{id:'teachers',icon:Users,label:'教师账号'},{id:'students',icon:Users,label:'学生账号'},{id:'school',icon:Building2,label:'学校信息'}];
-const deviceItems = [{id:'device-overview',icon:TabletSmartphone,label:'概览'},{id:'cabinet',icon:Box,label:'柜机管理'},{id:'tablet',icon:MonitorSmartphone,label:'平板设备'},{id:'device-usage',icon:ClipboardList,label:'使用记录'},{id:'device-alert',icon:AlertTriangle,label:'状态告警'},{id:'face-library',icon:ScanFace,label:'人脸信息管理'}];
+const schoolItems = [{id:'classes',icon:GraduationCap,label:'班级管理'},{id:'teachers',icon:Users,label:'教师账号'},{id:'students',icon:Users,label:'学生账号'},{id:'face-library',icon:ScanFace,label:'人脸信息管理'},{id:'school',icon:Building2,label:'学校信息'}];
+const deviceItems = [{id:'device-overview',icon:TabletSmartphone,label:'概览'},{id:'cabinet',icon:Box,label:'柜机管理'},{id:'tablet',icon:MonitorSmartphone,label:'平板设备'},{id:'device-usage',icon:ClipboardList,label:'使用记录'}];
 
 export const TeacherSidebar: React.FC<TeacherSidebarProps> = ({ activePage, onNavigate, onLogout, user }) => {
   const [schoolMenuExpanded,setSchoolMenuExpanded]=useState(true);
