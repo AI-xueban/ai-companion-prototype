@@ -45,7 +45,6 @@
   const recognizedStudentId = document.getElementById("recognizedStudentId");
   const faceConfirmRetry = document.getElementById("faceConfirmRetry");
   const faceConfirmLogin = document.getElementById("faceConfirmLogin");
-  const loginChoice = document.getElementById("loginChoice");
   const faceBack = document.getElementById("faceBack");
   const deviceTableBody = document.getElementById("deviceTableBody");
   const deviceEmpty = document.getElementById("deviceEmpty");
@@ -149,8 +148,8 @@
     screenEl.dataset.page = name;
 
     if (name === "pickup") {
-      resetFaceLogin();
-      showLoginChoice();
+      mustEnrollAfterPassword = false;
+      showPasswordLogin();
       hideKeypad();
     } else {
       hideKeypad();
@@ -178,7 +177,6 @@
     faceConfirmModal.hidden = true;
     pickupPage.querySelector('[data-goto="home"]').hidden = false;
     faceBack.hidden = false;
-    loginChoice.hidden = true;
     mustEnrollAfterPassword = false;
     authenticatedStudentId = "";
     enrollmentMode = "replace";
@@ -195,7 +193,6 @@
   }
 
   function showFaceSuccess() {
-    loginChoice.hidden = true;
     faceLogin.hidden = false;
     passwordLogin.hidden = true;
     faceEnroll.hidden = true;
@@ -208,7 +205,6 @@
   }
 
   function showFaceFail(mode = enrollmentMode) {
-    loginChoice.hidden = true;
     mustEnrollAfterPassword = false;
     enrollmentMode = mode;
     faceLogin.hidden = false;
@@ -222,7 +218,6 @@
 
   function showPasswordLogin() {
     document.getElementById("passwordToFace").hidden = mustEnrollAfterPassword;
-    loginChoice.hidden = true;
     faceLogin.hidden = true;
     passwordLogin.hidden = false;
     faceEnroll.hidden = true;
@@ -234,7 +229,6 @@
   }
 
   function showFaceEnrollment() {
-    loginChoice.hidden = true;
     enrollFailureAction.hidden = true;
     hideKeypad();
     faceLogin.hidden = true;
@@ -276,7 +270,7 @@
       registrationLocked = false;
       authenticatedStudentId = "";
       mustEnrollAfterPassword = false;
-      showLoginChoice();
+      showPage("home");
     }, 700);
   }
 
@@ -466,7 +460,7 @@
   function closeSuccessToast() {
     clearToastTimers();
     successToast.hidden = true;
-    showLoginChoice();
+    showPage("home");
   }
 
   function confirmBorrow(deviceId, slot) {
@@ -670,14 +664,6 @@
     showPage("devices");
   });
 
-  function showLoginChoice() {
-    clearTimeout(enrollmentTimer);
-    hideKeypad();
-    loginChoice.hidden = false;
-    faceLogin.hidden = true;
-    passwordLogin.hidden = true;
-    faceEnroll.hidden = true;
-  }
   function openRegistration() {
     if (registrationLocked) return;
     showPage("pickup");
@@ -686,10 +672,8 @@
     faceBack.hidden = true;
   }
   document.getElementById("faceRegister").addEventListener("click", openRegistration);
-  document.getElementById("chooseFace").addEventListener("click", resetFaceLogin);
-  document.getElementById("choosePassword").addEventListener("click", showPasswordLogin);
-  document.getElementById("backToLoginChoice").addEventListener("click", showLoginChoice);
-  faceBack.addEventListener("click", showLoginChoice);
+  document.getElementById("backToLoginChoice").addEventListener("click", showPasswordLogin);
+  faceBack.addEventListener("click", () => showPage("home"));
   document.getElementById("passwordToFace").addEventListener("click", () => {
     hideKeypad();
     resetFaceLogin();
@@ -698,7 +682,7 @@
   faceConfirmRetry.addEventListener("click", () => {
     faceConfirmModal.hidden = true;
     authenticatedStudentId = "";
-    showLoginChoice();
+    showPasswordLogin();
   });
   faceConfirmLogin.addEventListener("click", () => {
     authenticatedStudentId = recognizedStudentId.textContent;

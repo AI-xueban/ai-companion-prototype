@@ -1064,14 +1064,10 @@ button {
 }
 
 .face-login[hidden],
-.login-choice[hidden],
 .password-login[hidden],
 .face-enroll[hidden] {
   display: none !important;
 }
-
-.login-choice { width: 760px; text-align: center; }
-.login-choice .primary-btn, .login-choice .face-back { height: 160px; font-size: 40px; }
 
 .face-enroll {
   display: flex;

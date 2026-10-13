@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20261010-6" />
+  <link rel="stylesheet" href="styles.css?v=20261013-1" />
 </head>
 <body>
   <aside class="studio-bar">
@@ -138,20 +138,15 @@
           </div>
         </section>
 
-        <!-- 取设备：扫脸优先，失败后使用编号密码 -->
+        <!-- 取设备：默认编号密码登录，可切换人脸识别 -->
         <section class="page page-pickup" data-page="pickup">
           <div class="page-center">
-            <div id="loginChoice" class="login-choice">
-              <h2 class="page-title">选择登录方式</h2>
-              <button type="button" class="primary-btn" id="chooseFace">人脸识别登录</button>
-              <button type="button" class="text-btn face-back" id="choosePassword">编号密码登录</button>
-            </div>
             <div class="face-login" id="faceLogin">
               <div class="face-frame" aria-hidden="true"><span></span></div>
               <p class="face-status" id="faceStatus">正在识别</p>
               <p class="face-desc" id="faceDesc">请正对屏幕，保持面部处于识别框内</p>
               <button type="button" class="primary-btn face-retry" id="faceRetry" hidden>重新扫脸</button>
-              <button type="button" class="text-btn face-top-back" id="backToLoginChoice" aria-label="返回登录方式选择页">〈 返回</button>
+              <button type="button" class="text-btn face-top-back" id="backToLoginChoice" aria-label="返回编号密码登录页">〈 返回</button>
             </div>
 
             <div class="password-login" id="passwordLogin" hidden>
@@ -358,6 +353,6 @@
     </div>
   </main>
 
-  <script src="app.js?v=20261010-6"></script>
+  <script src="app.js?v=20261013-1"></script>
 </body>
 </html>
