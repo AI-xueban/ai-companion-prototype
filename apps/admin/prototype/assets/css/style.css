@@ -1275,6 +1275,15 @@ body.req-annotate-on .req-active-target {
 
 .batch-import-list { flex: 1; min-width: 0; }
 
+.face-import-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.face-import-list {
+  margin-top: 16px;
+}
+
 .batch-import-empty {
   display: flex;
   align-items: center;

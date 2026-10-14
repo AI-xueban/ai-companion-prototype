@@ -24,8 +24,8 @@ export const AssessmentFlow: React.FC<AssessmentFlowProps> = ({ onComplete, onCa
   // Stage Transitions
   const handleStageComplete = (currentPhase: AssessmentPhase) => {
     // 统一只处理 cognitive 阶段，因为它现在包含了所有 8 个维度的测试
-    const sTitle = '全维能力扫描完成';
-    const sDesc = 'AI 已根据你的 8 大智能维度生成了专属认知模型。';
+    const sTitle = '测评完成';
+    const sDesc = '可以查看本次测评结果。';
 
     setSummaryData({ title: sTitle, desc: sDesc });
     setShowSummary(true);

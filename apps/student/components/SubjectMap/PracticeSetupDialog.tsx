@@ -88,7 +88,7 @@ interface PracticeSetupDialogProps {
   startLabel: string;
   /** 与 startLabel 对仗的次要按钮，如「暂不练习」「暂不测试」 */
   cancelLabel?: string;
-  /** 弹窗主标题，按入口区分（自主练习 / 单元测试） */
+  /** 弹窗主标题，按入口区分（精准练习 / 单元测试） */
   title?: string;
   /** 引导学生完成题量、难度、场景选择 */
   guideText?: string;

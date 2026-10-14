@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20261010-6" />
+  <link rel="stylesheet" href="styles.css?v=20261013-3" />
 </head>
 <body>
   <aside class="studio-bar">
@@ -100,7 +100,7 @@
               <button type="button" class="guide-col guide-pickup" data-goto="pickup">
                 <h3><span class="guide-char">借</span></h3>
                 <ol class="guide-steps">
-                  <li><span>1</span>扫脸识别，失败后使用编号密码</li>
+                  <li><span>1</span>编号密码登录，也可切换人脸识别</li>
                   <li><span>2</span>在可用列表中选择设备并取用</li>
                   <li><span>3</span>在确认弹窗中点击「确认」，柜门开启，取出平板使用</li>
                 </ol>
@@ -138,20 +138,15 @@
           </div>
         </section>
 
-        <!-- 取设备：扫脸优先，失败后使用编号密码 -->
+        <!-- 取设备：默认编号密码登录，可切换人脸识别 -->
         <section class="page page-pickup" data-page="pickup">
           <div class="page-center">
-            <div id="loginChoice" class="login-choice">
-              <h2 class="page-title">选择登录方式</h2>
-              <button type="button" class="primary-btn" id="chooseFace">人脸识别登录</button>
-              <button type="button" class="text-btn face-back" id="choosePassword">编号密码登录</button>
-            </div>
             <div class="face-login" id="faceLogin">
-              <div class="face-frame" aria-hidden="true"><span></span></div>
+              <div class="face-smile" aria-hidden="true"><span></span></div>
               <p class="face-status" id="faceStatus">正在识别</p>
               <p class="face-desc" id="faceDesc">请正对屏幕，保持面部处于识别框内</p>
               <button type="button" class="primary-btn face-retry" id="faceRetry" hidden>重新扫脸</button>
-              <button type="button" class="text-btn face-top-back" id="backToLoginChoice" aria-label="返回登录方式选择页">〈 返回</button>
+              <button type="button" class="text-btn face-top-back" id="backToLoginChoice" aria-label="返回编号密码登录页">〈 返回</button>
             </div>
 
             <div class="password-login" id="passwordLogin" hidden>
@@ -187,12 +182,13 @@
               <p class="login-tip" id="loginTip" hidden>请填写编号和密码</p>
               <button type="submit" class="primary-btn login-submit">登录</button>
               </form>
-              <button type="button" class="text-btn face-back" id="faceBack">返回</button>
               <button type="button" class="back-btn" id="passwordToFace">人脸识别</button>
+              <button type="button" class="text-btn face-back" id="faceBack">返回</button>
             </div>
 
             <div class="face-enroll" id="faceEnroll" hidden>
-              <div class="face-frame face-enroll-frame" aria-hidden="true"><span></span></div>
+              <button type="button" class="text-btn face-top-back face-enroll-back" id="faceEnrollBack">〈 返回</button>
+              <div class="face-smile face-enroll-smile" aria-hidden="true"><span></span></div>
               <p class="face-status" id="enrollStatus">录入人脸</p>
               <p class="face-desc" id="enrollDesc"></p>
               <p class="face-enroll-account">绑定编号：<strong id="enrollStudentId">—</strong></p>
@@ -358,6 +354,6 @@
     </div>
   </main>
 
-  <script src="app.js?v=20261010-6"></script>
+  <script src="app.js?v=20261013-3"></script>
 </body>
 </html>
