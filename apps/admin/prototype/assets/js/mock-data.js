@@ -234,7 +234,7 @@ const DEFAULT_DATA = {
       returnInspection: null, overdue: true,
       preAlertAt: '2026-07-24 09:55:00',
       forceLogoutAt: '2026-07-24 10:05:00',
-      lastUserNote: '借出满24小时未归还；已提前10分钟通知学生端，并执行强制退出登录',
+      lastUserNote: '借出逾期；已提前10分钟通知学生端，并执行强制退出登录',
     },
     {
       id: 'UR-20260605004', tabletId: 'TAB-016', sn: 'SN20260301016', studentId: '2024020777', studentName: '林涛', grade: '六年级2班',
@@ -244,7 +244,7 @@ const DEFAULT_DATA = {
       returnInspection: null, overdue: true,
       preAlertAt: '2026-07-24 11:20:00',
       forceLogoutAt: '2026-07-24 11:30:00',
-      lastUserNote: '借出满24小时未归还；已提前10分钟通知学生端，并执行强制退出登录',
+      lastUserNote: '借出逾期；已提前10分钟通知学生端，并执行强制退出登录',
     },
     {
       id: 'UR-20260608004', tabletId: 'TAB-001', sn: 'SN20260301001', studentId: '2024010201', studentName: '陈静', grade: '四年级1班',
@@ -437,8 +437,8 @@ const DEFAULT_DATA = {
   ],
   deviceAlerts: [
     { id: 'ALT-001', tabletId: 'TAB-005', sn: 'SN20260301005', type: 'damage', severity: 'high', title: '外观损坏', message: '外观对比发现损坏', status: 'pending', createdAt: '2026-07-24 16:40:25', inspectionId: 'INS-002', workorderId: 'WO-001' },
-    { id: 'ALT-002', tabletId: 'TAB-006', sn: 'SN20260301006', type: 'overdue', severity: 'medium', title: '逾期提醒', message: '借出满24小时未归还', status: 'pending', createdAt: '2026-07-24 10:05:00', workorderId: null },
-    { id: 'ALT-006', tabletId: 'TAB-016', sn: 'SN20260301016', type: 'overdue', severity: 'medium', title: '逾期提醒', message: '借出满24小时未归还', status: 'pending', createdAt: '2026-07-24 11:30:00', workorderId: null },
+    { id: 'ALT-002', tabletId: 'TAB-006', sn: 'SN20260301006', type: 'overdue', severity: 'medium', title: '逾期提醒', message: '借出逾期', status: 'pending', createdAt: '2026-07-24 10:05:00', workorderId: null },
+    { id: 'ALT-006', tabletId: 'TAB-016', sn: 'SN20260301016', type: 'overdue', severity: 'medium', title: '逾期提醒', message: '借出逾期', status: 'pending', createdAt: '2026-07-24 11:30:00', workorderId: null },
     { id: 'ALT-003', tabletId: '—', sn: '—', cabinetId: 'CAB-003', type: 'cabinet_offline', severity: 'low', title: '柜机离线', message: '柜机心跳超时', status: 'resolved', createdAt: '2026-06-08 09:20:00', workorderId: null },
     { id: 'ALT-004', tabletId: 'TAB-005', sn: 'SN20260301005', type: 'return_door_open', severity: 'medium', title: '归还异常', message: '未关门', status: 'resolved', createdAt: '2026-07-24 16:37:21', usageRecordId: 'UR-20260607002', workorderId: null },
     { id: 'ALT-005', tabletId: 'TAB-003', sn: 'SN20260301003', type: 'return_door_open', severity: 'medium', title: '归还异常', message: '未关门', status: 'resolved', createdAt: '2026-07-24 13:03:41', usageRecordId: 'UR-20260608005', workorderId: null },

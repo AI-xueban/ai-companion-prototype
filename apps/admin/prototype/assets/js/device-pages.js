@@ -49,7 +49,7 @@ function tabletDeviceStatusNote(tablet) {
   if (resolveTabletDeviceState(tablet) === 'abnormal') {
     const notes = [];
     if (isTabletScratchDamaged(tablet)) notes.push('设备擦伤');
-    if (tablet.isOverdue) notes.push('借出满24小时未归还');
+    if (tablet.isOverdue) notes.push('借出逾期');
     if (isTabletDoorOpenAbnormal(tablet)) notes.push('未关门');
     getTabletPendingAlerts(tablet.id).forEach(a => {
       const text = alertContentText(a);
@@ -57,14 +57,7 @@ function tabletDeviceStatusNote(tablet) {
     });
     return notes.length ? notes.join('；') : '—';
   }
-  if (tablet.status === 'borrowed') {
-    const record = data.usageRecords.find(r => r.tabletId === tablet.id && r.status === 'borrowed' && r.returnAttempt);
-    const issue = record?.returnAttempt?.issue;
-    if (issue === 'door_open') return '归还未关门';
-    if (issue === 'not_charging') return '归还未充电';
-    if (issue === 'misplaced') return '疑似误放';
-    if (record?.returnAttempt?.status === 'cancelled') return '归还已取消';
-  }
+  // 列表说明只反映当前设备状态；已借出设备的历史归还尝试仅在使用记录或告警中展示。
   return '—';
 }
 
@@ -134,7 +127,7 @@ function usageRecordStateNote(r) {
   if (r.returnAttempt?.issue === 'door_open') notes.push('柜门未关，待重试');
   if (r.returnAttempt?.issue === 'not_charging') notes.push('设备未充电，待重试');
   if (r.returnAttempt?.issue === 'misplaced') notes.push('疑似误放，设备仍借出');
-  if (r.overdue) notes.push('借出满24小时未归还');
+  if (r.overdue) notes.push('借出逾期');
   if (r.returnInspection?.aiResult === 'scratch') {
     notes.push(r.returnInspection.detail || '外观对比发现擦伤');
   } else if (r.returnInspection?.aiResult === 'crack') {
@@ -531,8 +524,8 @@ function alertContentText(a) {
   if (a.type === 'manual_feedback') return a.message || '—';
   const map = {
     damage: '外观对比发现损坏',
-    overdue: '借出满24小时未归还',
-    cabinet_offline: '柜机心跳超时',
+    overdue: '借出逾期',
+    cabinet_offline: '柜机连接超时',
     return_door_open: '未关门',
     return_not_charging: '未充电',
   };
@@ -1002,7 +995,7 @@ function renderPendingReturnTimelineItem(record) {
         <div class="dev-timeline-item warn">
           <div class="dev-timeline-time">${overdue ? (record.forceLogoutAt || '—') : '—'}</div>
           <div class="dev-timeline-title">${title}</div>
-          <div class="dev-timeline-desc">${overdue ? '借出满 24 小时未归还' : '等待学生归还'} ${stateTag}</div>
+          <div class="dev-timeline-desc">${overdue ? '借出逾期' : '等待学生归还'} ${stateTag}</div>
         </div>`;
 }
 
@@ -1051,7 +1044,7 @@ function renderDeviceOverviewPage() {
         <div class="dev-stat-card"><div class="label">平板总数</div><div class="value">${tablets.length}</div><div class="sub">已注册设备</div></div>
         <div class="dev-stat-card ok"><div class="label">在柜</div><div class="value">${inCabinet}</div><div class="sub">当前可借出</div></div>
         <div class="dev-stat-card"><div class="label">离柜</div><div class="value">${outCabinet}</div><div class="sub">不在任何柜机</div></div>
-        <div class="dev-stat-card warn"><div class="label">逾期提醒</div><div class="value">${overdue}</div><div class="sub">借出24h未还</div></div>
+        <div class="dev-stat-card warn"><div class="label">逾期提醒</div><div class="value">${overdue}</div><div class="sub">借出逾期</div></div>
         <div class="dev-stat-card danger"><div class="label">待处理告警</div><div class="value">${pendingAlerts}</div><div class="sub">含损坏/逾期</div></div>
       </div>
       ${renderAppearanceGuide()}
@@ -1386,7 +1379,7 @@ function renderDeviceUsageDetailPage(params) {
         <div class="detail-item"><label>状态</label><span>${usageRecordStateTag(r)}</span></div>
         ${usageRecordStateNote(r) !== '—' ? `<div class="detail-item"><label>说明</label><span>${esc(usageRecordStateNote(r))}</span></div>` : ''}
         ${r.preAlertAt ? `<div class="detail-item"><label>学生端提前告警</label><span>${r.preAlertAt} <span style="font-size:12px;color:var(--text-muted)">（借出后23h50m）</span></span></div>` : ''}
-        ${r.forceLogoutAt ? `<div class="detail-item"><label>强制退出登录</label><span>${r.forceLogoutAt} <span style="font-size:12px;color:var(--text-muted)">（借出满24h）</span></span></div>` : ''}
+        ${r.forceLogoutAt ? `<div class="detail-item"><label>强制退出登录</label><span>${r.forceLogoutAt} <span style="font-size:12px;color:var(--text-muted)">（借出逾期）</span></span></div>` : ''}
         ${r.alertId ? `<div class="detail-item"><label>关联告警</label><span><button class="btn-link" onclick="openTab('device-alert','状态告警')">${esc(r.alertId)}</button></span></div>` : ''}
         ${r.returnAlertIds?.length ? `<div class="detail-item"><label>归还异常告警</label><span>${r.returnAlertIds.map(id => `<button class="btn-link" onclick="openTab('device-alert','状态告警')">${esc(id)}</button>`).join(' ')}</span></div>` : ''}
       </div>

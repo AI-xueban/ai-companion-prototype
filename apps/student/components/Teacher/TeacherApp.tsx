@@ -25,6 +25,7 @@ interface TeacherAppProps {
 
 export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRole = 'teacher' }) => {
   const [activePage, setActivePage] = useState('dashboard');
+  const [deviceMenuPage, setDeviceMenuPage] = useState<string | null>(null);
   const [loggedIn, setLoggedIn] = useState(false);
   const [teacherUser, setTeacherUser] = useState<TeacherPortalUser | null>(null);
   const [currentClassId, setCurrentClassId] = useState('c1');
@@ -72,12 +73,13 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRol
       setLoggedIn(false);
       setTeacherUser(null);
       setActivePage('dashboard');
+      setDeviceMenuPage(null);
       localStorage.removeItem('mockTeacherToken');
   };
 
   const allowedPages: Record<TeacherPortalRole, string[]> = {
     teacher: ['dashboard', 'analytics', 'profiles', 'incentives', 'profile'],
-    'class-teacher': ['dashboard', 'analytics', 'profiles', 'incentives', 'profile'],
+    'class-teacher': ['dashboard', 'analytics', 'profiles', 'incentives', 'inbox', 'profile'],
     'school-admin': ['school-learning', 'school-device-usage', 'dashboard', 'analytics', 'profiles', 'incentives', 'inbox', 'profile', 'school', 'classes', 'teachers', 'students', 'device-overview', 'cabinet', 'tablet', 'device-usage', 'device-alert', 'face-library'],
   };
   const canOpenPage = (page: string) => {
@@ -87,6 +89,7 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRol
   };
   const navigate = (page: string) => {
     if (canOpenPage(page)) {
+      setDeviceMenuPage(null);
       setSelectedStudent(null);
       if (page === 'school-learning') {
         setSchoolScope(scope => ({ ...scope, classId: 'all', subject: 'all' }));
@@ -135,12 +138,11 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRol
           case 'classes': return <SchoolAdminManagement initialView="classes" currentUser={teacherUser} onNavigate={navigate} />;
           case 'teachers': return <SchoolAdminManagement initialView="teachers" currentUser={teacherUser} onNavigate={navigate} />;
           case 'students': return <SchoolAdminManagement initialView="students" currentUser={teacherUser} onNavigate={navigate} />;
-          case 'device-overview': return <DeviceManagement initialView="overview" currentUser={teacherUser} />;
-          case 'cabinet': return <DeviceManagement initialView="cabinets" currentUser={teacherUser} />;
-          case 'tablet': return <DeviceManagement initialView="tablets" currentUser={teacherUser} />;
-          case 'device-usage': return <DeviceManagement initialView="usage" currentUser={teacherUser} />;
-          case 'device-alert': return <DeviceManagement initialView="alerts" currentUser={teacherUser} />;
-          case 'face-library': return <DeviceManagement initialView="faces" currentUser={teacherUser} />;
+          case 'device-overview': return <DeviceManagement initialView="overview" currentUser={teacherUser} onMenuNavigate={setDeviceMenuPage} />;
+          case 'cabinet': return <DeviceManagement initialView="cabinets" currentUser={teacherUser} onMenuNavigate={setDeviceMenuPage} />;
+          case 'tablet': return <DeviceManagement initialView="tablets" currentUser={teacherUser} onMenuNavigate={setDeviceMenuPage} />;
+          case 'device-usage': return <DeviceManagement initialView="usage" currentUser={teacherUser} onMenuNavigate={setDeviceMenuPage} />;
+          case 'face-library': return <DeviceManagement initialView="faces" currentUser={teacherUser} onMenuNavigate={setDeviceMenuPage} />;
           default:
               return (
                 <div className="flex flex-col items-center justify-center h-full text-gray-400">
@@ -172,6 +174,7 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRol
           setCurrentClassId(user.classIds[0] ?? 'c1');
           setLoggedIn(true);
           setActivePage(user.role === 'school-admin' ? 'school-learning' : 'dashboard');
+          setDeviceMenuPage(null);
         }}
         onBack={onSwitchBack}
       />
@@ -185,7 +188,7 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRol
       
       {/* 1. Sidebar (Fixed Left) */}
       <TeacherSidebar 
-        activePage={activePage} 
+        activePage={deviceMenuPage ?? activePage}
         onNavigate={navigate}
         onLogout={handleLogout}
         user={teacherUser}
