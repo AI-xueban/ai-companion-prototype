@@ -20,7 +20,10 @@ import { RewardGrantResult } from '../../types/reward';
 import { grantQuizSessionReward } from '../../services/rewardService';
 import { UserStats } from '../../types';
 import { MistakePrintSetup } from './MistakePrintSetup';
-import { PaperPrintFlow, type PaperPrintJob } from '../SubjectMap/PaperPrintFlow';
+import type { PaperPrintJob } from '../SubjectMap/PaperPrintFlow';
+import { PaperPdfViewer } from '../LumiSpace/PaperPdfViewer';
+import { createCombinedPaperDocument, type PaperPdfQuestion } from '../LumiSpace/lumiPaperPdf';
+import { retryPrintedFile, savePaperDocument, type PaperContentMode, type StoredPaperDocument } from '../../services/printedFileService';
 
 const motion = motionOriginal as any;
 
@@ -138,7 +141,10 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
   const [showGlobalMistakeList, setShowGlobalMistakeList] = useState(false);
   const [showMemoryRule, setShowMemoryRule] = useState(false);
   const [mistakePrintContext, setMistakePrintContext] = useState<{ initialSubject?: string; initialIds?: string[] } | null>(null);
-  const [mistakePrintJob, setMistakePrintJob] = useState<PaperPrintJob | null>(null);
+  const [mistakePdfOutput, setMistakePdfOutput] = useState<(StoredPaperDocument & { title: string; fileId: string; contentMode: PaperContentMode }) | null>(null);
+  const [mistakePdfBusy, setMistakePdfBusy] = useState(false);
+  const [mistakePdfError, setMistakePdfError] = useState<string | null>(null);
+  const [mistakePendingJob, setMistakePendingJob] = useState<PaperPrintJob | null>(null);
   const [isPrintSelectMode, setIsPrintSelectMode] = useState(false);
   const [printSelectedIds, setPrintSelectedIds] = useState<Set<string>>(new Set());
   
@@ -174,7 +180,7 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
     setPortalTarget(getPortalRoot());
   }, []);
 
-  const isDetailMode = activeSubjectFilter !== 'All' || showGlobalMistakeList || Boolean(mistakePrintContext) || Boolean(mistakePrintJob);
+  const isDetailMode = activeSubjectFilter !== 'All' || showGlobalMistakeList || Boolean(mistakePrintContext) || Boolean(mistakePdfOutput);
   useEffect(() => {
     onDetailModeChange?.(isDetailMode);
   }, [isDetailMode, onDetailModeChange]);
@@ -485,6 +491,64 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
   const openMistakePrintFromSelection = () => {
     if (!printSelectedIds.size || activeSubjectFilter === 'All') return;
     setMistakePrintContext({ initialSubject: activeSubjectFilter, initialIds: Array.from(printSelectedIds) });
+  };
+
+  const createMistakePdf = async (job: PaperPrintJob) => {
+    setMistakePendingJob(job);
+    setMistakePdfError(null);
+    setMistakePdfBusy(true);
+    try {
+      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+      const contentMode = job.answerMode ?? (job.includeAnswerAnalysis ? 'paper_answer_analysis' : 'paper_only');
+      const questionItems = job.questionItems ?? [];
+      if (!questionItems.length) throw new Error('没有可生成的错题，请返回重新选择。');
+      if (contentMode !== 'paper_only' && questionItems.some((item) => !item.correctAnswer?.trim())) {
+        throw new Error('部分错题缺少答案，请返回选择“仅试题”或调整题目。');
+      }
+      if (contentMode === 'paper_answer_analysis' && questionItems.some((item) => !item.explanation?.trim())) {
+        throw new Error('部分错题缺少解析，请返回调整打印内容或题目。');
+      }
+      const questions: PaperPdfQuestion[] = questionItems.map((item, index) => {
+        const options = item.options?.map((option, optionIndex) => /^[A-Z][.、．]/.test(option.trim()) ? option : `${String.fromCharCode(65 + optionIndex)}. ${option}`);
+        return {
+          id: index + 1,
+          type: item.type,
+          stem: [item.text.replace(/<[^>]+>/g, ''), options?.join('  ')].filter(Boolean).join('\n'),
+          score: 1,
+          answer: item.correctAnswer?.trim() || '未提供',
+          explanation: item.explanation?.trim() || '',
+          imageUrl: item.imageUrl,
+          errorReason: item.errorReason,
+        };
+      });
+      const document = await createCombinedPaperDocument({
+        title: job.title,
+        scope: job.subject,
+        duration: '不限',
+        difficulty: '错题复习',
+        version: 1,
+        questions,
+        contentMode,
+        withAnswers: contentMode !== 'paper_only',
+        sourceLabel: '克漏空间',
+      });
+      const file = await savePaperDocument({
+        title: job.title,
+        source: 'mistake_print',
+        subject: job.subject,
+        questionCount: questions.length,
+        pageCount: document.previewPages.length,
+        contentMode,
+        version: 1,
+        status: 'saved',
+        statusLabel: '已保存',
+      }, document);
+      setMistakePdfOutput({ ...document, title: job.title, fileId: file.id, contentMode });
+    } catch (error) {
+      setMistakePdfError(error instanceof Error ? error.message : '错题卷 PDF 生成失败，请重试。');
+    } finally {
+      setMistakePdfBusy(false);
+    }
   };
 
   const startMistakeQuiz = (items: MistakeItem[]) => {
@@ -983,10 +1047,11 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
                         {selectedSubjectItems.map((item) => {
                           const selectedForPrint = printSelectedIds.has(item.id);
                           return <div key={item.id} className="relative">
-                            {isPrintSelectMode ? <span className={`pointer-events-none absolute left-3 top-3 z-10 flex h-6 w-6 items-center justify-center rounded-lg border-2 shadow-sm ${selectedForPrint ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300 bg-white'}`}>{selectedForPrint ? <Check size={14} /> : null}</span> : null}
+                            {isPrintSelectMode ? <span className={`pointer-events-none absolute left-4 top-4 z-10 flex h-6 w-6 items-center justify-center rounded-lg border-2 shadow-sm ${selectedForPrint ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300 bg-white'}`}>{selectedForPrint ? <Check size={14} /> : null}</span> : null}
                             <SwipeableMistakeCard 
                                 item={item}
                                 variant="compact"
+                                isPrintSelectMode={isPrintSelectMode}
                                 isEditMode={isEditMode}
                                 onClick={() => isPrintSelectMode ? togglePrintSelection(item.id) : startMistakeQuiz([item])}
                                 onStar={handleStarToggle}
@@ -1008,8 +1073,8 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
       {isPrintSelectMode && isSubjectMistakeListView && (
         <div className="shrink-0 w-full border-t border-slate-200 bg-white/95">
           <div className="mx-auto flex w-full max-w-4xl items-center gap-3 px-4 pb-4 pt-3 md:px-6 lg:px-8">
-            <div className="mr-auto"><p className="text-[13px] font-semibold text-slate-800">已选 {printSelectedIds.size} 题</p><p className="text-[10px] text-slate-400">单次最多 50 题</p></div>
             <button type="button" onClick={() => setPrintSelectedIds(printSelectedIds.size === selectedSubjectItems.length ? new Set() : new Set(selectedSubjectItems.slice(0, 50).map((item) => item.id)))} className="h-10 rounded-xl bg-slate-100 px-4 text-[11px] font-semibold text-slate-600">{printSelectedIds.size === selectedSubjectItems.length ? '取消全选' : '全选'}</button>
+            <div className="mr-auto"><p className="text-[13px] font-semibold text-slate-800">已选 {printSelectedIds.size} 题</p><p className="text-[10px] text-slate-400">单次最多 50 题</p></div>
             <button type="button" onClick={openMistakePrintFromSelection} disabled={!printSelectedIds.size} className="flex h-10 items-center gap-2 rounded-xl bg-indigo-600 px-5 text-[12px] font-semibold text-white disabled:opacity-40"><Printer size={14} />打印错题</button>
           </div>
         </div>
@@ -1029,8 +1094,10 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
         </div>
       )}
 
-      {mistakePrintContext ? <MistakePrintSetup items={stageItems} initialSubject={mistakePrintContext.initialSubject} initialIds={mistakePrintContext.initialIds} onClose={() => setMistakePrintContext(null)} onCreate={setMistakePrintJob} /> : null}
-      <PaperPrintFlow job={mistakePrintJob} onClose={() => { setMistakePrintJob(null); setMistakePrintContext(null); setIsPrintSelectMode(false); setPrintSelectedIds(new Set()); }} onModify={() => setMistakePrintJob(null)} />
+      {mistakePrintContext ? <MistakePrintSetup items={stageItems} initialSubject={mistakePrintContext.initialSubject} initialIds={mistakePrintContext.initialIds} onClose={() => { setMistakePrintContext(null); setMistakePdfError(null); setIsPrintSelectMode(false); setPrintSelectedIds(new Set()); }} onCreate={(job) => { void createMistakePdf(job); }} /> : null}
+      {mistakePdfBusy && createPortal(<div className="absolute inset-0 z-[790] flex items-center justify-center bg-slate-950/35" role="status"><div className="w-[360px] rounded-3xl bg-white p-7 text-center shadow-2xl"><div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-violet-100 border-t-violet-600" /><h2 className="mt-4 text-[17px] font-semibold">正在生成错题卷PDF</h2><p className="mt-2 text-[13px] text-slate-500">正在整理 {mistakePendingJob?.questionCount ?? 0} 道已选错题…</p></div></div>, document.getElementById('app-viewport') || document.body)}
+      {mistakePdfError && createPortal(<div className="absolute inset-0 z-[790] flex items-center justify-center bg-slate-950/35"><div role="alertdialog" aria-modal="true" className="w-[410px] rounded-3xl bg-white p-7 text-center shadow-2xl"><h2 className="text-[18px] font-semibold">错题卷 PDF 生成失败</h2><p className="mt-3 text-[13px] leading-6 text-slate-500">{mistakePdfError}</p><div className="mt-6 flex gap-3"><button type="button" onClick={() => setMistakePdfError(null)} className="h-10 flex-1 rounded-xl bg-slate-100 text-[12px] font-semibold">返回选题</button><button type="button" onClick={() => { if (mistakePendingJob) void createMistakePdf(mistakePendingJob); }} className="h-10 flex-1 rounded-xl bg-violet-600 text-[12px] font-semibold text-white">重试生成</button></div></div></div>, document.getElementById('app-viewport') || document.body)}
+      {mistakePdfOutput ? <PaperPdfViewer pdf={mistakePdfOutput.pdf} pages={mistakePdfOutput.previewPages} title={mistakePdfOutput.title} version={1} contentMode={mistakePdfOutput.contentMode} layerClassName="z-[800]" mistakePrintExceptionDemo onClose={() => setMistakePdfOutput(null)} onPrint={() => retryPrintedFile(mistakePdfOutput.fileId, 'unknown')} /> : null}
 
       {/* Daily Challenge Modal */}
       {isDailyChallengeOpen && data && (
@@ -1256,7 +1323,8 @@ const SwipeableMistakeCard: React.FC<{
     setEditingReasonId: (id: string | null) => void;
     variant?: 'default' | 'compact';
     isEditMode?: boolean;
-}> = ({ item, onClick, onStar, onFlag, onReasonChange, editingReasonId, setEditingReasonId, variant = 'default', isEditMode = false }) => {
+    isPrintSelectMode?: boolean;
+}> = ({ item, onClick, onStar, onFlag, onReasonChange, editingReasonId, setEditingReasonId, variant = 'default', isEditMode = false, isPrintSelectMode = false }) => {
     const REASONS: MistakeItem['errorType'][] = [
         '审题有误',
         '知识点忘了',
@@ -1360,7 +1428,7 @@ const SwipeableMistakeCard: React.FC<{
 
     if (variant === 'compact') {
         return (
-            <Card onClick={onClick} className="relative overflow-hidden group cursor-pointer border border-white bg-white hover:border-brand/20 hover:shadow-md transition-all p-4 rounded-[24px]">
+            <Card onClick={onClick} className={`relative overflow-hidden group cursor-pointer border border-white bg-white hover:border-brand/20 hover:shadow-md transition-all p-4 ${isPrintSelectMode ? 'pl-12' : ''} rounded-[24px]`}>
                 <div className={`flex items-start gap-3 mb-3 ${isImageQuestion ? 'justify-end' : 'justify-between'}`}>
                     {!isImageQuestion && (
                     <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold">
