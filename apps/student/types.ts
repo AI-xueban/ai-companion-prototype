@@ -624,16 +624,8 @@ export interface StudentSummary {
   level?: number;
   status: 'online' | 'offline' | 'away';
   alertLevel: 'none' | 'low' | 'medium' | 'high';
-  abilitySnapshot: {
-    logic: number;
-    calculation: number;
-    spatial: number;
-    application: number;
-    concept: number;
-  };
   recentTrend: 'up' | 'down' | 'stable';
   lastActive: string;
-  aiInsight?: string;
 }
 
 export interface ClassSummaryStats {

@@ -94,6 +94,7 @@ export function validateAccountRows(raw: { row: number; values: string[] }[], ki
       const errors: string[] = [];
       if (!/^[1-9]$/.test(grade)) errors.push('年级必填，填写1至9的数字');
       if (!name) errors.push('班级名称必填');
+      else if (/^[1-9]$/.test(grade) && !name.startsWith(`${'一二三四五六七八九'[Number(grade) - 1]}年级`)) errors.push('班级名称须以所填年级开头，如七年级(3)班');
       if (name && classes.some((item) => item.name === name)) errors.push('班级已存在，请在列表中编辑');
       if (name && (names.get(name)?.length ?? 0) > 1) errors.push(`文件内班级重复（第${names.get(name)!.join('、')}行）`);
       if (sort && (!/^\d+$/.test(sort) || !Number.isSafeInteger(Number(sort)) || Number(sort) < 1)) errors.push('排序须为大于0的整数，可留空');

@@ -115,12 +115,12 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
                           <div className="space-y-3 pt-2 border-t border-white/10">
                             <div>
                               <p className="text-gray-300 text-xs font-bold">教师端角色登录</p>
-                              <p className="mt-1 text-[10px] leading-relaxed text-gray-500">进入教师端后选择角色；菜单与数据范围会随角色变化。</p>
+                              <p className="mt-1 text-[10px] leading-relaxed text-gray-500">选择演示账号进入；学校管理员账号同时演示任教多班多科和班主任职责。</p>
                             </div>
                             {[
                               { key: 'teacher' as const, role: '教师', account: '13800000000', scope: '查看授权教学班' },
                               { key: 'class-teacher' as const, role: '班主任', account: '13800000001', scope: '管理所带班级与班级激励' },
-                              { key: 'school-admin' as const, role: '学校管理员', account: 'admin@luohu.edu', scope: '管理罗湖实验学校全校' },
+                              { key: 'school-admin' as const, role: '学校管理员', account: 'admin@luohu.edu', scope: '全校管理 · 兼任教师与班主任' },
                             ].map((item) => <button key={item.role} type="button" onClick={() => { onSwitchTeacherRole(item.key); setIsOpen(false); }} className="w-full rounded-xl border border-white/10 bg-white/5 p-3 text-left transition-colors hover:bg-white/10"><div className="flex items-center justify-between"><span className="text-xs font-bold text-white">{item.role}</span><ChevronRight size={14} className="text-gray-500"/></div><div className="mt-1 text-[10px] text-gray-400">{item.account} · {item.scope}</div></button>)}
                             <p className="text-[10px] text-gray-600">演示密码：12345678</p>
                           </div>

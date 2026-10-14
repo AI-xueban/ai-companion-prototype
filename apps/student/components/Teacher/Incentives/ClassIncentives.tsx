@@ -3,11 +3,13 @@ import { Card } from '../../UI/Card';
 import { incentiveGoods, redemptionRecords } from '../data/mockTeacherData';
 import { Plus, Check, XCircle, Power } from 'lucide-react';
 
-export const ClassIncentives: React.FC = () => {
+export const ClassIncentives: React.FC<{ classId: string; className: string; canManage: boolean }> = ({ classId, className, canManage }) => {
   const [tab, setTab] = useState<'store' | 'redeem'>('store');
   const [goods, setGoods] = useState(incentiveGoods);
   const [records, setRecords] = useState(redemptionRecords);
   const [highlightId, setHighlightId] = useState<string | null>(null);
+  const visibleGoods = goods.filter(item => item.classId === classId);
+  const visibleRecords = records.filter(item => item.classId === classId);
 
   useEffect(() => {
     const handleHighlight = (event: any) => {
@@ -33,12 +35,14 @@ export const ClassIncentives: React.FC = () => {
   };
 
   const handleToggleGoods = (id: string, name: string, status: string) => {
+    if (!canManage) return;
     const next = status === 'on' ? '下架' : '上架';
     if (!confirm(`确认${next}「${name}」？`)) return;
     toggleGoodsStatus(id);
   };
 
   const handleApprove = (id: string) => {
+    if (!canManage) return;
     setRecords((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: 'done', handler: '赵老师', handledAt: '立即', reason: '' } : r)),
     );
@@ -46,6 +50,7 @@ export const ClassIncentives: React.FC = () => {
   };
 
   const handleReject = (id: string) => {
+    if (!canManage) return;
     const reason = prompt('填写拒绝理由（必填）：', '积分规则不满足');
     if (reason === null || reason.trim() === '') return;
     setRecords((prev) =>
@@ -60,12 +65,12 @@ export const ClassIncentives: React.FC = () => {
         <div>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">班级激励</p>
           <h2 className="text-2xl font-black text-slate-900">许愿池配置 & 兑换核销</h2>
-          <p className="text-sm text-slate-500">PRD: Tab1 商品管理 · Tab2 兑换记录</p>
+          <p className="text-sm text-slate-500">{className || '当前班级'} · {canManage ? '班主任可管理本班配置与核销' : '任课教师仅查看本班记录'} · 演示数据</p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-bold flex items-center gap-2">
+          {canManage && <button className="px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-bold flex items-center gap-2">
             <Plus size={16} /> 新建商品
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -90,7 +95,7 @@ export const ClassIncentives: React.FC = () => {
 
       {tab === 'store' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {goods.map((g) => (
+          {visibleGoods.map((g) => (
             <Card key={g.id} className="p-5 border border-slate-100 shadow-sm">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-lg font-black text-slate-900">{g.name}</h3>
@@ -102,13 +107,13 @@ export const ClassIncentives: React.FC = () => {
               <p className="text-sm text-slate-600 mb-1">库存：{g.stock}</p>
               <p className="text-sm text-slate-600 mb-3">每人限兑：{g.limitPerUser} 次</p>
               <div className="flex items-center gap-2 text-xs font-bold">
-                <button className="px-3 py-2 rounded-md bg-slate-900 text-white">编辑</button>
+                {canManage && <><button className="px-3 py-2 rounded-md bg-slate-900 text-white">编辑</button>
                 <button
                   onClick={() => handleToggleGoods(g.id, g.name, g.status)}
                   className="px-3 py-2 rounded-md border border-slate-200 text-slate-700 bg-white flex items-center gap-1"
                 >
                   <Power size={14} /> {g.status === 'on' ? '下架' : '上架'}
-                </button>
+                </button></>}
               </div>
             </Card>
           ))}
@@ -130,7 +135,7 @@ export const ClassIncentives: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {records.map((r) => {
+              {visibleRecords.map((r) => {
                 const isPending = r.status === 'pending';
                 const rowHighlight = highlightId && highlightId === r.id ? 'bg-amber-50' : '';
                 return (
@@ -149,7 +154,7 @@ export const ClassIncentives: React.FC = () => {
                       {r.reason && <p className="text-[11px] text-red-500 mt-1">理由：{r.reason}</p>}
                     </td>
                     <td className="px-4 py-3 space-x-2">
-                      <button
+                      {canManage && <><button
                         disabled={!isPending}
                         onClick={() => handleApprove(r.id)}
                         className="px-3 py-1 rounded-md text-xs font-bold bg-emerald-600 text-white flex items-center gap-1 disabled:opacity-50"
@@ -162,7 +167,7 @@ export const ClassIncentives: React.FC = () => {
                         className="px-3 py-1 rounded-md text-xs font-bold bg-white border border-slate-200 text-slate-700 flex items-center gap-1 disabled:opacity-50"
                       >
                         <XCircle size={14} /> 拒绝
-                      </button>
+                      </button></>}
                     </td>
                   </tr>
                 );

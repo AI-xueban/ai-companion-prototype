@@ -1,13 +1,27 @@
 export type TeacherPortalRole = 'teacher' | 'class-teacher' | 'school-admin';
 export const TEACHER_ROLE_OPTIONS = ['教师', '班主任', '学校管理员'];
 export const TEACHER_SUBJECT_OPTIONS = ['语文', '数学', '英语', '物理', '化学', '生物', '道德与法治', '历史', '地理', '科学', '体育', '音乐', '美术', '信息科技', '劳动'];
-export interface TeacherPortalUser { id: string; name: string; account?: string; role: TeacherPortalRole; roleLabel: string; schoolId: string; schoolName: string; classIds: string[]; subject?: string }
+export interface TeachingAssignment { classId: string; subjects: string[] }
+export interface TeacherPortalUser {
+  id: string;
+  name: string;
+  account?: string;
+  role: TeacherPortalRole;
+  roleLabel: string;
+  schoolId: string;
+  schoolName: string;
+  // classIds 是账号可访问的班级；任教与班主任职责分别由下面两项限定。
+  classIds: string[];
+  teachingAssignments: TeachingAssignment[];
+  homeroomClassIds: string[];
+  subject?: string;
+}
 
 export const DEMO_TEACHER_ACCOUNTS: Array<TeacherPortalUser & { account: string; password: string }> = [
-  { id: 'teacher-01', account: '13800000000', password: '12345678', name: '张雨薇', role: 'teacher', roleLabel: '教师', schoolId: 'luohu-lab', schoolName: '罗湖实验学校', classIds: ['c1'], subject: '数学' },
-  { id: 'head-01', account: '13800000001', password: '12345678', name: '李老师', role: 'class-teacher', roleLabel: '班主任', schoolId: 'luohu-lab', schoolName: '罗湖实验学校', classIds: ['c1'], subject: '语文' },
-  { id: 'school-admin-01', account: 'admin@luohu.edu', password: '12345678', name: '学校管理员', role: 'school-admin', roleLabel: '学校管理员', schoolId: 'luohu-lab', schoolName: '罗湖实验学校', classIds: ['c1', 'c2', 'c3'] },
-  { id: 'legacy-demo', account: 'demo@turing.com', password: '12345678', name: '李老师', role: 'class-teacher', roleLabel: '班主任', schoolId: 'luohu-lab', schoolName: '罗湖实验学校', classIds: ['c1'], subject: '语文' },
+  { id: 'teacher-01', account: '13800000000', password: '12345678', name: '张雨薇', role: 'teacher', roleLabel: '教师', schoolId: 'luohu-lab', schoolName: '罗湖实验学校', classIds: ['c1'], teachingAssignments: [{ classId: 'c1', subjects: ['数学'] }], homeroomClassIds: [], subject: '数学' },
+  { id: 'head-01', account: '13800000001', password: '12345678', name: '李老师', role: 'class-teacher', roleLabel: '班主任', schoolId: 'luohu-lab', schoolName: '罗湖实验学校', classIds: ['c1'], teachingAssignments: [{ classId: 'c1', subjects: ['语文'] }], homeroomClassIds: ['c1'], subject: '语文' },
+  { id: 'school-admin-01', account: 'admin@luohu.edu', password: '12345678', name: '学校管理员', role: 'school-admin', roleLabel: '学校管理员', schoolId: 'luohu-lab', schoolName: '罗湖实验学校', classIds: ['c1', 'c2', 'c3'], teachingAssignments: [{ classId: 'c1', subjects: ['数学'] }, { classId: 'c2', subjects: ['语文', '英语'] }, { classId: 'c3', subjects: ['物理'] }], homeroomClassIds: ['c2'] },
+  { id: 'legacy-demo', account: 'demo@turing.com', password: '12345678', name: '李老师', role: 'class-teacher', roleLabel: '班主任', schoolId: 'luohu-lab', schoolName: '罗湖实验学校', classIds: ['c1'], teachingAssignments: [{ classId: 'c1', subjects: ['语文'] }], homeroomClassIds: ['c1'], subject: '语文' },
 ];
 
 export const PORTAL_CLASSES = [

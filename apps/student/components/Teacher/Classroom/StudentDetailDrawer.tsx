@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { X, BookOpen, Clock3, Brain, Filter, ChevronDown, ChevronUp } from 'lucide-react';
-import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from 'recharts';
-import { classRadar, studentDetailMap, knowledgeGraphBySubject } from '../data/mockTeacherData';
+import { studentDetailMap, knowledgeGraphBySubject } from '../data/mockTeacherData';
 
 interface StudentDetailDrawerProps {
   studentId: string | null;
@@ -10,11 +9,11 @@ interface StudentDetailDrawerProps {
 }
 
 export const StudentDetailDrawer: React.FC<StudentDetailDrawerProps> = ({ studentId, studentName, onClose }) => {
-  const [tab, setTab] = useState<'info' | 'knowledge' | 'mistake' | 'timeline'>('info');
+  const [tab, setTab] = useState<'knowledge' | 'mistake' | 'timeline'>('timeline');
 
   const detail = studentId ? studentDetailMap[studentId] : null;
   const knowledgeSubjects = useMemo(() => {
-    const base = detail?.knowledge?.map((k) => ({ subject: (k as any).subject || detail?.radar?.[0]?.subject || '数学', ...k })) || [];
+    const base = detail?.knowledge?.map((k) => ({ subject: (k as any).subject || '数学', ...k })) || [];
     const fallback = knowledgeGraphBySubject.flatMap((g) => g.nodes.map((n) => ({ ...n, subject: g.subject })));
     const allSubjects = Array.from(new Set([...base.map((k) => (k as any).subject || '数学'), ...knowledgeGraphBySubject.map((g) => g.subject)]));
     return { base, fallback, subjects: allSubjects };
@@ -25,16 +24,6 @@ export const StudentDetailDrawer: React.FC<StudentDetailDrawerProps> = ({ studen
   const [openMistakeId, setOpenMistakeId] = useState<string | null>(null);
   const [timelineType, setTimelineType] = useState<string>('all');
   const [timelineSubject, setTimelineSubject] = useState<string>('all');
-
-  const radarData = useMemo(() => {
-    if (!detail) return classRadar;
-    return detail.radar.map((d) => ({
-      subject: d.subject,
-      score: d.score,
-      prevScore: d.prevScore,
-      fullMark: d.fullMark,
-    }));
-  }, [detail]);
 
   const knowledgeOptions = useMemo(() => ['全部', ...knowledgeSubjects.subjects], [knowledgeSubjects]);
   const knowledgeItems = useMemo(() => {
@@ -88,7 +77,6 @@ export const StudentDetailDrawer: React.FC<StudentDetailDrawerProps> = ({ studen
         <div className="px-6 pt-4">
           <div className="flex items-center gap-2">
             {[
-              { key: 'info', label: '能力画像' },
               { key: 'knowledge', label: '知识图谱' },
               { key: 'mistake', label: '错题本' },
               { key: 'timeline', label: '学习记录' },
@@ -107,43 +95,6 @@ export const StudentDetailDrawer: React.FC<StudentDetailDrawerProps> = ({ studen
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          {tab === 'info' && (
-            <div className="space-y-4">
-              <div className="h-72 bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">能力雷达</p>
-                    <h3 className="text-sm font-black text-slate-900">个人 vs 班级均值</h3>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs font-bold text-slate-500">
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-500"></span> 个人</span>
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full border border-slate-400 border-dashed"></span> 班级</span>
-                  </div>
-                </div>
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart data={radarData}>
-                    <PolarGrid stroke="rgba(148,163,184,0.4)" />
-                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#475569', fontSize: 12, fontWeight: 700 }} />
-                    <PolarRadiusAxis tick={false} axisLine={false} />
-                    <Radar dataKey="prevScore" stroke="#94a3b8" strokeDasharray="4 4" fill="#cbd5e1" fillOpacity={0.15} name="班级" />
-                    <Radar dataKey="score" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.35} name="个人" />
-                    <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0' }} />
-                  </RadarChart>
-                </ResponsiveContainer>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {detail?.radar.slice(0, 4).map((item) => (
-                  <div key={item.subject} className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <p className="text-sm font-black text-slate-900">{item.subject}</p>
-                    <p className="text-xs text-slate-500 mt-1">{item.analysis}</p>
-                    <p className="text-lg font-black text-purple-600 mt-2">{item.score}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {tab === 'knowledge' && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">

@@ -17,6 +17,8 @@ const LOCAL_STORAGE_KEYS = new Set([
   'mockTeacherToken',
   'ai-companion:print-question-type-preferences:v1',
   'ai-companion:printed-files:v1',
+  'ai-companion:teacher-student-registry:v1',
+  'ai-companion:teacher-school-management:v1',
 ]);
 
 const LOCAL_STORAGE_PREFIXES = [
