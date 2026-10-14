@@ -10,6 +10,7 @@ type AnswerMode = 'paper_only' | 'paper_answer' | 'paper_answer_analysis';
 interface MistakePrintSetupProps {
   items: MistakeItem[];
   initialSubject?: string;
+  initialIds?: string[];
   onClose: () => void;
   onCreate: (job: PaperPrintJob) => void;
 }
@@ -35,7 +36,7 @@ const getMistakeSource = (item: MistakeItem) => {
   return mistakeSources[hash % (mistakeSources.length - 1)];
 };
 
-export const MistakePrintSetup: React.FC<MistakePrintSetupProps> = ({ items, initialSubject, onClose, onCreate }) => {
+export const MistakePrintSetup: React.FC<MistakePrintSetupProps> = ({ items, initialSubject, initialIds, onClose, onCreate }) => {
   const availableSubjects = useMemo(() => Array.from(new Set(items.map((item) => item.subject))), [items]);
   const [subject, setSubject] = useState(initialSubject || '全部学科');
   const [status, setStatus] = useState<'all' | 'new' | 'reviewing' | 'mastered'>('all');

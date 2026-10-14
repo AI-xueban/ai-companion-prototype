@@ -490,65 +490,7 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
 
   const openMistakePrintFromSelection = () => {
     if (!printSelectedIds.size || activeSubjectFilter === 'All') return;
-    setMistakePrintContext({ initialSubject: activeSubjectFilter });
-  };
-
-  const createMistakePdf = async (job: PaperPrintJob) => {
-    setMistakePendingJob(job);
-    setMistakePdfError(null);
-    setMistakePdfBusy(true);
-    try {
-      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
-      const contentMode = job.answerMode ?? (job.includeAnswerAnalysis ? 'paper_answer_analysis' : 'paper_only');
-      const questionItems = job.questionItems ?? [];
-      if (!questionItems.length) throw new Error('没有可生成的错题，请返回重新选择。');
-      if (contentMode !== 'paper_only' && questionItems.some((item) => !item.correctAnswer?.trim())) {
-        throw new Error('部分错题缺少答案，请返回选择“仅试题”或调整题目。');
-      }
-      if (contentMode === 'paper_answer_analysis' && questionItems.some((item) => !item.explanation?.trim())) {
-        throw new Error('部分错题缺少解析，请返回调整打印内容或题目。');
-      }
-      const questions: PaperPdfQuestion[] = questionItems.map((item, index) => {
-        const options = item.options?.map((option, optionIndex) => /^[A-Z][.、．]/.test(option.trim()) ? option : `${String.fromCharCode(65 + optionIndex)}. ${option}`);
-        return {
-          id: index + 1,
-          type: item.type,
-          stem: [item.text.replace(/<[^>]+>/g, ''), options?.join('  ')].filter(Boolean).join('\n'),
-          score: 1,
-          answer: item.correctAnswer?.trim() || '未提供',
-          explanation: item.explanation?.trim() || '',
-          imageUrl: item.imageUrl,
-          errorReason: item.errorReason,
-        };
-      });
-      const document = await createCombinedPaperDocument({
-        title: job.title,
-        scope: job.subject,
-        duration: '不限',
-        difficulty: '错题复习',
-        version: 1,
-        questions,
-        contentMode,
-        withAnswers: contentMode !== 'paper_only',
-        sourceLabel: '克漏空间',
-      });
-      const file = await savePaperDocument({
-        title: job.title,
-        source: 'mistake_print',
-        subject: job.subject,
-        questionCount: questions.length,
-        pageCount: document.previewPages.length,
-        contentMode,
-        version: 1,
-        status: 'saved',
-        statusLabel: '已保存',
-      }, document);
-      setMistakePdfOutput({ ...document, title: job.title, fileId: file.id, contentMode });
-    } catch (error) {
-      setMistakePdfError(error instanceof Error ? error.message : '错题卷 PDF 生成失败，请重试。');
-    } finally {
-      setMistakePdfBusy(false);
-    }
+    setMistakePrintContext({ initialSubject: activeSubjectFilter, initialIds: Array.from(printSelectedIds) });
   };
 
   const createMistakePdf = async (job: PaperPrintJob) => {
