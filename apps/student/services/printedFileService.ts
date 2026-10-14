@@ -37,18 +37,34 @@ const STORAGE_KEY = 'ai-companion:printed-files:v1';
 export const MAX_SAVED_PRINTED_FILES = 100;
 export const MAX_SAVED_PRINTED_BYTES = 500 * 1024 * 1024;
 export const MAX_SINGLE_PRINTED_FILE_BYTES = 50 * 1024 * 1024;
+export const MAX_SAVED_PRINTED_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 export const PRINTED_FILES_CHANGED_EVENT = 'ai-companion:printed-files-changed';
+
+function retainPrintedFiles(files: PrintedFileRecord[], now = Date.now()): PrintedFileRecord[] {
+  const ordered = [...files]
+    .filter((file) => {
+      const createdAt = Date.parse(file.createdAt);
+      return Number.isFinite(createdAt) && createdAt > now - MAX_SAVED_PRINTED_AGE_MS;
+    })
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  const retained: PrintedFileRecord[] = [];
+  for (const file of ordered) {
+    if (retained.length >= MAX_SAVED_PRINTED_FILES) break;
+    retained.push(file);
+  }
+  return retained;
+}
 
 export function listPrintedFiles(): PrintedFileRecord[] {
   if (typeof window === 'undefined') return [];
   try {
     const parsed = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || '[]') as PrintedFileRecord[];
     if (!Array.isArray(parsed)) return [];
-    const ordered = [...parsed].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
-    const retained = ordered.slice(0, MAX_SAVED_PRINTED_FILES);
-    if (retained.length < ordered.length) {
+    const retained = retainPrintedFiles(parsed);
+    if (retained.length !== parsed.length || retained.some((file, index) => file.id !== parsed[index]?.id)) {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(retained));
-      removeStoredDocuments(ordered.slice(MAX_SAVED_PRINTED_FILES));
+      const retainedIds = new Set(retained.map((file) => file.id));
+      removeStoredDocuments(parsed.filter((file) => !retainedIds.has(file.id)));
     }
     return retained;
   } catch {
@@ -57,18 +73,10 @@ export function listPrintedFiles(): PrintedFileRecord[] {
 }
 
 function write(files: PrintedFileRecord[]) {
-  const ordered = [...files].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
-  const retained: PrintedFileRecord[] = [];
-  let retainedBytes = 0;
-  for (const file of ordered) {
-    const fileBytes = Math.max(0, file.storageBytes ?? 0);
-    if (retained.length >= MAX_SAVED_PRINTED_FILES || retainedBytes + fileBytes > MAX_SAVED_PRINTED_BYTES) break;
-    retained.push(file);
-    retainedBytes += fileBytes;
-  }
+  const retained = retainPrintedFiles(files);
   const retainedIds = new Set(retained.map((file) => file.id));
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(retained));
-  removeStoredDocuments(ordered.filter((file) => !retainedIds.has(file.id)));
+  removeStoredDocuments(files.filter((file) => !retainedIds.has(file.id)));
   window.dispatchEvent(new CustomEvent(PRINTED_FILES_CHANGED_EVENT));
 }
 
@@ -105,6 +113,12 @@ export function deletePrintedFile(id: string) {
 }
 
 export interface StoredPaperDocument { pdf: Blob; previewPages: Blob[]; }
+export class PrintedFileCapacityError extends Error {
+  constructor() {
+    super('我的文件剩余容量不足，无法保存 PDF。');
+    this.name = 'PrintedFileCapacityError';
+  }
+}
 const DOCUMENT_DATABASE = 'ai-companion:paper-documents:v1';
 
 function documentOperation<T>(mode: IDBTransactionMode, action: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
@@ -145,6 +159,10 @@ export async function savePaperDocument(
     const legacyBytes = stored ? stored.pdf.size + stored.previewPages.reduce((total, page) => total + page.size, 0) : 0;
     return { ...file, storageBytes: legacyBytes };
   }));
+  const usedBytes = existingFiles.reduce((total, file) => total + Math.max(0, file.storageBytes ?? 0), 0);
+  if (usedBytes + storageBytes > MAX_SAVED_PRINTED_BYTES) {
+    throw new PrintedFileCapacityError();
+  }
   const id = `pdf-${crypto.randomUUID()}`;
   await documentOperation('readwrite', (store) => store.put(document, id));
   const now = new Date().toISOString();

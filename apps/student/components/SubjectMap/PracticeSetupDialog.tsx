@@ -383,6 +383,8 @@ export const PracticeSetupDialog: React.FC<PracticeSetupDialogProps> = ({
                     <div className="space-y-2.5">
                       <div className="flex items-start gap-3"><label className="flex min-w-0 flex-1 items-center gap-3" htmlFor="paper-title"><span className="w-14 shrink-0 text-[13px] font-semibold text-slate-700">试卷名称</span><input id="paper-title" value={paperTitle} maxLength={PAPER_TITLE_MAX_LENGTH} disabled={assembling} onChange={(event) => { setPaperTitle(event.target.value); setIsPaperTitleEdited(true); }} className="h-9 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-800 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100" /></label><span className="mt-2 shrink-0 text-[10px] text-slate-400">{paperTitle.length}/{PAPER_TITLE_MAX_LENGTH}</span></div>
                       <div className="flex items-center gap-3"><p className="w-14 shrink-0 text-[13px] font-semibold text-slate-700">难度</p><div className="flex flex-wrap gap-1.5">{PRACTICE_DIFFICULTIES.map((item) => { const active = difficulty === item.label; return <button key={item.label} type="button" disabled={assembling} onClick={() => setDifficulty(item.label)} className={`h-8 w-16 rounded-lg border text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${active ? 'border-violet-300 bg-violet-50 text-violet-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'}`}>{item.label}</button>; })}</div></div>
+                      <div className="flex items-center gap-3"><h3 className="w-14 shrink-0 text-[13px] font-semibold text-slate-700">试卷类型</h3><div className="flex gap-2">{['单元测试卷', '期中测评卷', '真题卷', '不限类型'].map((item) => <button key={item} type="button" disabled={assembling} onClick={() => { setPaperKind(item); if (!isPaperTitleEdited) setPaperTitle(generatePaperTitle({ subject, scopeLabels: selectedScopeLabels, paperKind: item, context: paperTitleContext })); }} className={`h-9 w-[100px] rounded-lg border px-1 text-[11px] font-semibold ${paperKind === item ? 'border-violet-300 bg-violet-50 text-violet-700' : 'border-slate-200 bg-white text-slate-500 hover:border-violet-200'}`}>{item}</button>)}</div></div>
+                      <div className="flex items-center gap-3"><h3 className="w-14 shrink-0 text-[13px] font-semibold text-slate-700">打印内容</h3><div className="flex gap-2"><button type="button" onClick={() => setIncludeAnswerAnalysis(true)} className={`h-9 w-[128px] rounded-lg border text-[11px] font-semibold ${includeAnswerAnalysis ? 'border-violet-300 bg-violet-50 text-violet-700' : 'border-slate-200 bg-white text-slate-500'}`}>试卷＋答案解析</button><button type="button" onClick={() => setIncludeAnswerAnalysis(false)} className={`h-9 w-[96px] rounded-lg border text-[11px] font-semibold ${!includeAnswerAnalysis ? 'border-violet-300 bg-violet-50 text-violet-700' : 'border-slate-200 bg-white text-slate-500'}`}>仅试卷</button></div></div>
                     </div>
                   </section>
                   <section className="max-w-[640px] space-y-2">
@@ -406,16 +408,6 @@ export const PracticeSetupDialog: React.FC<PracticeSetupDialogProps> = ({
                       ))}
                     </div>
                   </section>
-                  <div className="max-w-[900px] space-y-4">
-                    <section className="flex items-center gap-5">
-                      <h3 className="w-14 shrink-0 text-[14px] font-semibold text-slate-800">试卷类型</h3>
-                      <div className="flex gap-2">{['单元测试卷', '期中测评卷', '真题卷', '不限类型'].map((item) => <button key={item} type="button" disabled={assembling} onClick={() => { setPaperKind(item); if (!isPaperTitleEdited) setPaperTitle(generatePaperTitle({ subject, scopeLabels: selectedScopeLabels, paperKind: item, context: paperTitleContext })); }} className={`h-9 w-[100px] rounded-lg border px-1 text-[11px] font-semibold ${paperKind === item ? 'border-violet-300 bg-violet-50 text-violet-700' : 'border-slate-200 bg-white text-slate-500 hover:border-violet-200'}`}>{item}</button>)}</div>
-                    </section>
-                    <section className="flex items-center gap-5">
-                      <h3 className="w-14 shrink-0 text-[14px] font-semibold text-slate-800">打印内容</h3>
-                      <div className="flex gap-2"><button type="button" onClick={() => setIncludeAnswerAnalysis(true)} className={`h-9 w-[128px] rounded-lg border text-[11px] font-semibold ${includeAnswerAnalysis ? 'border-violet-300 bg-violet-50 text-violet-700' : 'border-slate-200 bg-white text-slate-500'}`}>试卷＋答案解析</button><button type="button" onClick={() => setIncludeAnswerAnalysis(false)} className={`h-9 w-[96px] rounded-lg border text-[11px] font-semibold ${!includeAnswerAnalysis ? 'border-violet-300 bg-violet-50 text-violet-700' : 'border-slate-200 bg-white text-slate-500'}`}>仅试卷</button></div>
-                    </section>
-                  </div>
                 </>
               ) : null}
 

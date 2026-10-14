@@ -4,6 +4,7 @@ import { PAPER_CONTENT_LABELS, type PaperContentMode } from '../../services/prin
 import type { PaperDraftSeed } from './PaperDraftWorkspace';
 import type { PaperPdfQuestion } from './lumiPaperPdf';
 import { MyPrintedFilesPage } from '../Growth/MyPrintedFilesPage';
+import { PdfCapacityDialog } from '../Growth/PdfCapacityDialog';
 
 export interface PaperQuestionReviewTask {
     seed: PaperDraftSeed;
@@ -16,7 +17,7 @@ export interface PaperQuestionReviewTask {
 export type PaperPdfProgressStage = 'preparing' | 'rendering' | 'checking';
 export type PaperPdfFailureDemo = 'timeout' | 'validation' | 'storage_full' | 'write_failed';
 export interface PaperPdfExportFailure {
-    code: 'STORAGE_FULL';
+    code: 'STORAGE_FULL' | 'FILE_TOO_LARGE';
     message: string;
 }
 
@@ -38,6 +39,7 @@ export const PaperQuestionReview: React.FC<PaperQuestionReviewProps> = ({ task, 
     const [contentMode, setContentMode] = useState<PaperContentMode>(task.seed.withAnswers ? 'paper_answer_analysis' : 'paper_only');
     const [failureDialogOpen, setFailureDialogOpen] = useState(false);
     const [storageFull, setStorageFull] = useState(false);
+    const [capacityDemoOpen, setCapacityDemoOpen] = useState(false);
     const [filesOpen, setFilesOpen] = useState(false);
     const [failureDemo, setFailureDemo] = useState<PaperPdfFailureDemo>('timeout');
 
@@ -49,6 +51,7 @@ export const PaperQuestionReview: React.FC<PaperQuestionReviewProps> = ({ task, 
         setContentMode(task.seed.withAnswers ? 'paper_answer_analysis' : 'paper_only');
         setFailureDialogOpen(false);
         setStorageFull(false);
+        setCapacityDemoOpen(false);
         setFilesOpen(false);
         setFailureDemo('timeout');
     }, [task.runId]);
@@ -191,12 +194,17 @@ export const PaperQuestionReview: React.FC<PaperQuestionReviewProps> = ({ task, 
                     <button type="button" onClick={() => void exportSelection('save')} disabled={!selectedQuestions.length || busy} className={`inline-flex items-center justify-center gap-1.5 rounded-xl border px-4 py-2.5 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${saveFailed ? 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100' : 'border-violet-200 text-violet-700 hover:bg-violet-50'}`}>
                         {busy && retryMode === 'save' ? <Loader2 size={14} className="animate-spin" /> : saveFailed ? <RotateCcw size={14} /> : <Save size={14} />}{busy && retryMode === 'save' ? '正在保存 PDF' : saveFailed ? '重试保存 PDF' : '保存为 PDF'}
                     </button>
+                    <button type="button" onClick={() => { setFailureDialogOpen(false); setCapacityDemoOpen(true); }} disabled={busy} className="rounded-xl border border-dashed border-violet-200 px-3 py-2.5 text-xs font-medium text-violet-600 hover:bg-violet-50 disabled:opacity-50">保存异常演示</button>
                     <button type="button" onClick={() => printFailed ? void exportSelection('print') : setPrintDialogOpen(true)} disabled={!selectedQuestions.length || busy} className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50">
                         {busy && retryMode === 'print' ? <Loader2 size={14} className="animate-spin" /> : printFailed ? <RotateCcw size={14} /> : <Printer size={14} />}{busy && retryMode === 'print' ? '正在准备打印' : printFailed ? '重试打印' : '打印'}
                     </button>
                 </div>
             </footer>
-            {failureDialogOpen && error ? (
+            {capacityDemoOpen ? (
+                <PdfCapacityDialog message="“我的文件”剩余容量不足，无法保存这份 PDF。" onClose={() => setCapacityDemoOpen(false)} onGoToFiles={() => { setCapacityDemoOpen(false); setFilesOpen(true); }} />
+            ) : failureDialogOpen && error && storageFull ? (
+                <PdfCapacityDialog message={error} onClose={() => setFailureDialogOpen(false)} onRetry={() => void exportSelection(retryMode)} onGoToFiles={() => { setFailureDialogOpen(false); setFilesOpen(true); }} />
+            ) : failureDialogOpen && error ? (
                 <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-900/40 p-4" onKeyDown={(event) => {
                     if (event.key === 'Escape') { event.stopPropagation(); setFailureDialogOpen(false); }
                     if (event.key === 'Tab') {
@@ -207,13 +215,11 @@ export const PaperQuestionReview: React.FC<PaperQuestionReviewProps> = ({ task, 
                     }
                 }}>
                     <section role="alertdialog" aria-modal="true" aria-labelledby="paper-failure-title" aria-describedby="paper-failure-reason" className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-                        <h2 id="paper-failure-title" className="text-lg font-bold text-slate-900">{storageFull ? '存储空间不足，保存失败' : retryMode === 'save' ? 'PDF 保存失败' : '打印文件生成失败'}</h2>
+                        <h2 id="paper-failure-title" className="text-lg font-bold text-slate-900">{retryMode === 'save' ? 'PDF 保存失败' : '打印文件生成失败'}</h2>
                         <p id="paper-failure-reason" className="mt-3 text-sm leading-6 text-slate-600">{error}</p>
-                        {storageFull ? <p className="mt-2 text-sm leading-6 text-slate-600">请前往“我的文件”删除不再需要的文件，释放空间后返回此页重试。当前题目和勾选会保留。</p> : null}
                         <div className="mt-6 flex flex-wrap justify-end gap-2">
                             <button type="button" autoFocus onClick={() => setFailureDialogOpen(false)} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100">取消</button>
                             <button type="button" onClick={() => void exportSelection(retryMode)} disabled={busy || !selectedQuestions.length} className="rounded-xl border border-violet-200 px-4 py-2.5 text-sm font-semibold text-violet-700 hover:bg-violet-50 disabled:opacity-50">重试</button>
-                            {storageFull ? <button type="button" onClick={() => { setFailureDialogOpen(false); setFilesOpen(true); }} className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-700">前往我的文件</button> : null}
                         </div>
                     </section>
                 </div>

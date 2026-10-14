@@ -36,7 +36,7 @@ import { QuestionPickerOverlay } from '../Dashboard/QuestionPickerOverlay';
 import { LumiHubStage } from './LumiHubStage';
 import { PaperDraftWorkspace, type PaperDraftSeed } from './PaperDraftWorkspace';
 import { buildPaperQuestions, createCombinedPaperDocument, makePaperQuestion, type PaperPdfQuestion } from './lumiPaperPdf';
-import { savePaperDocument, retryPrintedFile, type PaperContentMode } from '../../services/printedFileService';
+import { PrintedFileCapacityError, savePaperDocument, retryPrintedFile, type PaperContentMode } from '../../services/printedFileService';
 import { PaperTaskCard, type PaperTaskSnapshot } from './PaperTaskCard';
 import { PaperAgentProgress } from './PaperAgentProgress';
 import { PaperQuestionReview, type PaperPdfProgressStage, type PaperPdfExportFailure, type PaperPdfFailureDemo } from './PaperQuestionReview';
@@ -2594,7 +2594,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                     : message,
             ));
             if (failureDemo === 'storage_full') {
-                return { code: 'STORAGE_FULL', message: '失败原因：设备存储空间不足，无法保存 PDF（本次为模拟失败）。题目和选择已保留。' };
+                return { code: 'STORAGE_FULL', message: '“我的文件”剩余容量不足，无法保存这份 PDF（本次为模拟失败）。题目和选择已保留。' };
             }
             const reason = failureDemo === 'validation' ? 'PDF 文件未通过完整性校验'
                 : failureDemo === 'write_failed' ? 'PDF 未能写入本地文件存储'
@@ -2629,11 +2629,14 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
             }
             return undefined;
         } catch (error) {
+            if (error instanceof PrintedFileCapacityError) {
+                return { code: 'STORAGE_FULL', message: '“我的文件”剩余容量不足，无法保存这份 PDF。题目和选择已保留。' };
+            }
             if (error instanceof Error && error.message.includes('单份文件超过 50 MB')) {
-                return { code: 'STORAGE_FULL', message: '文件超过 50 MB，无法保存。题目和选择已保留。' };
+                return { code: 'FILE_TOO_LARGE', message: '单份文件超过 50 MB，无法保存。题目和选择已保留。' };
             }
             if (error instanceof Error && error.name === 'QuotaExceededError') {
-                return { code: 'STORAGE_FULL', message: '失败原因：设备存储空间不足，无法保存 PDF。题目和选择已保留。' };
+                return '设备存储空间不足，无法保存 PDF。题目和选择已保留，请清理设备存储后重试。';
             }
             const reason = exportState.stage === 'saving'
                     ? 'PDF 未能写入本地文件存储'

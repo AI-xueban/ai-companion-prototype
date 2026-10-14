@@ -43,7 +43,7 @@ export const MistakePrintSetup: React.FC<MistakePrintSetupProps> = ({ items, ini
   const [source, setSource] = useState('全部来源');
   const [answerMode, setAnswerMode] = useState<AnswerMode>('paper_only');
   const [selectionNotice, setSelectionNotice] = useState<string | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set((initialIds ?? []).slice(0, 50)));
 
   const reasons = useMemo(() => Array.from(new Set(items.map((item) => item.errorType).filter(Boolean))), [items]);
   const filtered = useMemo(() => items.filter((item) => {
