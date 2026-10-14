@@ -107,6 +107,7 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
   const [replyRevision, setReplyRevision] = useState(0);
   const replyTimerRef = useRef<number | undefined>(undefined);
   const replyVersionRef = useRef(0);
+  const checkingModeRef = useRef<InputMode>('idle');
   const planText = useMemo(() => quickSteps.map((step, index) =>
     '第' + (index + 1) + '步，' + step.title + '。' + step.skeleton,
   ).join('\n'), [quickSteps]);
@@ -483,10 +484,13 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
     }
 
     setPendingAnswer(text);
+    checkingModeRef.current = 'prereq_confirm';
+    const version = ++replyVersionRef.current;
     setInputMode('checking');
     setIsSpeaking(false);
 
     window.setTimeout(() => {
+      if (version !== replyVersionRef.current) return;
       if (matchPrereqAnswer(text, prereq)) {
         setHintText('');
         setBoardSteps((prev) =>
@@ -506,7 +510,9 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
               fills: i >= fallback && s.status !== 'done' ? [] : s.fills,
             })),
           );
-          window.setTimeout(() => enterGuideAnswer(fallback), 400);
+          window.setTimeout(() => {
+            if (version === replyVersionRef.current) enterGuideAnswer(fallback);
+          }, 400);
         } else {
           setPrereqWrongCount(next);
           setSpeechText(getPrereqRetry(characterId, prereq.hint));
@@ -524,6 +530,8 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
     if (!step) return;
 
     setPendingAnswer(text);
+    checkingModeRef.current = 'guide_answer';
+    const version = ++replyVersionRef.current;
     setInputMode('checking');
     setIsSpeaking(false);
     setDeepThinkingStep(0);
@@ -534,13 +542,16 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
     if (deepThinking) {
       DEEP_THINKING_STEPS.forEach((_, i) => {
         stepTimers.push(
-          window.setTimeout(() => setDeepThinkingStep(i), (checkDelay / DEEP_THINKING_STEPS.length) * i),
+          window.setTimeout(() => {
+            if (version === replyVersionRef.current) setDeepThinkingStep(i);
+          }, (checkDelay / DEEP_THINKING_STEPS.length) * i),
         );
       });
     }
 
     window.setTimeout(() => {
       stepTimers.forEach((t) => window.clearTimeout(t));
+      if (version !== replyVersionRef.current) return;
       setDeepThinkingStep(0);
 
       if (matchGuideAnswer(text, step)) {
@@ -551,8 +562,11 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
           prev.map((s, i) => (i === guideStepIndex ? { ...s, status: 'done' } : s)),
         );
         animateFills(guideStepIndex, () => {
+          if (version !== replyVersionRef.current) return;
           setIsWriting(false);
-          window.setTimeout(() => advanceGuideStep(guideStepIndex), 600);
+          window.setTimeout(() => {
+            if (version === replyVersionRef.current) advanceGuideStep(guideStepIndex);
+          }, 600);
         });
       } else {
         const next = wrongCount + 1;
@@ -569,11 +583,14 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
   };
 
   const handleGuideIntake = (text: string) => {
+    checkingModeRef.current = 'guide_intake';
+    const version = ++replyVersionRef.current;
     setInputMode('checking');
     setPendingAnswer(text);
     setIsSpeaking(false);
 
     window.setTimeout(() => {
+      if (version !== replyVersionRef.current) return;
       const parsed =
         scriptPack.scriptKey === 'paint-wall'
           ? parseGuideStartStepIndex(text)
@@ -593,6 +610,7 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
 
   const handleFreeAsk = (text: string) => {
     const version = ++replyVersionRef.current;
+    checkingModeRef.current = phase === 'guide' ? 'guide_answer' : 'idle';
     if (replyTimerRef.current) window.clearTimeout(replyTimerRef.current);
     setInputMode('checking');
     setPendingAnswer(text);
@@ -607,29 +625,46 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
     }, deepThinking ? 1800 : 1000);
   };
 
-  const handleSend = (text: string) => {
+  const interruptTutorReply = () => {
+    if (inputMode === 'checking' || isWriting) {
+      replyVersionRef.current += 1;
+      if (replyTimerRef.current) window.clearTimeout(replyTimerRef.current);
+      clearAnim();
+      setInputMode(inputMode === 'checking' ? checkingModeRef.current : inputMode);
+      setIsWriting(false);
+      setPendingAnswer('');
+      setDeepThinkingStep(0);
+      if (isWriting && phase === 'guide' && guideStepIndex >= 0) {
+        setBoardSteps(prev => prev.map((step, index) => index === guideStepIndex
+          ? { ...step, status: 'active', fills: [] }
+          : step));
+      }
+    }
     voice.stop();
+  };
+
+  const handleSend = (text: string) => {
+    const mode = inputMode === 'checking' ? checkingModeRef.current : inputMode;
+    interruptTutorReply();
     if (phase === 'guide_done' && /引导|填数|继续解|深入/.test(text)) {
       enterGuideIntake();
       return;
     }
     if (phase === 'quick' || phase === 'quick_done') handleFreeAsk(text);
-    else if (phase === 'guide' && inputMode === 'guide_intake') handleGuideIntake(text);
-    else if (phase === 'guide' && inputMode === 'prereq_confirm') handlePrereqAnswer(text);
-    else if (phase === 'guide' && inputMode === 'guide_answer') handleGuideAnswer(text);
+    else if (phase === 'guide' && mode === 'guide_intake') handleGuideIntake(text);
+    else if (phase === 'guide' && mode === 'prereq_confirm') handlePrereqAnswer(text);
+    else if (phase === 'guide' && mode === 'guide_answer') handleGuideAnswer(text);
     else if (phase === 'guide_done') handleFreeAsk(text);
   };
 
   const handleRecordingChange = (recording: boolean) => {
     setRecording(recording);
-    if (recording) voice.stop();
+    if (recording) interruptTutorReply();
     setIsSpeaking(false);
-    if (recording) setIsWriting(false);
   };
 
   const isGuideLayout = phase === 'guide' || phase === 'guide_done';
 
-  const inputDisabled = inputMode === 'checking' && phase !== 'quick_done';
   const inputPlaceholder =
     phase === 'guide' && inputMode === 'guide_intake'
       ? '说说卡在哪一步，或「从头讲」…'
@@ -641,7 +676,7 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
             ? `边看边问，${theme.name}会继续讲…`
             : phase === 'guide_done'
             ? `向${theme.name}自由提问…`
-            : phase === 'quick_done' ? '输入追问，或点击麦克风…' : '梳理思路中，请稍候…';
+            : phase === 'quick_done' ? '输入追问，或点击麦克风…' : '输入或语音提问，可打断当前讲解…';
 
   const speechVisible =
     inputMode === 'checking' ||
@@ -786,7 +821,6 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
                 <TutorInputBar
                   onSend={handleSend}
                   onRecordingChange={handleRecordingChange}
-                  disabled={inputDisabled}
                   placeholder={inputPlaceholder}
                   isSpeaking={voice.playing}
                   isWriting={isWriting}

@@ -8,19 +8,31 @@ export function useTutorVoice(text: string, enabled: boolean, recording: boolean
   const [error, setError] = useState('');
   const [replayCount, setReplayCount] = useState(0);
   const generation = useRef(0);
+  const interrupted = useRef(false);
+  const speechKey = useRef('');
   const recordingRef = useRef(recording);
   recordingRef.current = recording;
 
-  const stop = useCallback(() => {
+  const cancelSpeech = useCallback(() => {
     generation.current += 1;
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     setPlaying(false);
   }, []);
 
+  const stop = useCallback(() => {
+    interrupted.current = true;
+    cancelSpeech();
+  }, [cancelSpeech]);
+
   useEffect(() => {
-    stop();
+    const key = `${revision}\u0000${text}`;
+    if (speechKey.current !== key) {
+      speechKey.current = key;
+      interrupted.current = false;
+    }
+    cancelSpeech();
     setError('');
-    if (!enabled || !text.trim() || recordingRef.current) return;
+    if (!enabled || !text.trim() || recordingRef.current || interrupted.current) return;
     if (!('speechSynthesis' in window)) {
       setError('当前浏览器不支持语音播报，请阅读文字');
       return;
@@ -44,9 +56,12 @@ export function useTutorVoice(text: string, enabled: boolean, recording: boolean
       window.speechSynthesis.speak(utterance);
     };
     next();
-    return stop;
-  }, [text, enabled, revision, replayCount, stop]);
+    return cancelSpeech;
+  }, [text, enabled, revision, replayCount, cancelSpeech]);
 
-  const replay = useCallback(() => setReplayCount(value => value + 1), []);
+  const replay = useCallback(() => {
+    interrupted.current = false;
+    setReplayCount(value => value + 1);
+  }, []);
   return { playing, error, stop, replay };
 }
