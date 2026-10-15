@@ -1,4 +1,4 @@
-<view class="page">
+<view class="page {{stage === 'teacher-login' || stage === 'teacher-bind' ? 'teacher-page' : ''}}">
   <view wx:if="{{stage === 'role'}}" class="role-stage">
     <view class="decor decor-one"></view>
     <view class="decor decor-two"></view>
@@ -43,16 +43,56 @@
     <button class="primary-button" loading="{{isSubmitting}}" bindtap="completeGuardianBinding">微信授权并进入家长端</button>
   </view>
 
-  <view wx:else class="flow-stage">
-    <view class="back" bindtap="backToRole">‹ 返回身份选择</view>
-    <view class="eyebrow">TEACHER ACCESS</view>
-    <view class="title">验证教师身份</view>
-    <view class="subtitle">验证后，系统会按任教班级、学科与有效学期授予访问范围。</view>
-    <view class="card teacher-card">
-      <view class="card-title">学校教师账号</view>
-      <view class="card-text">当前为原型演示。正式接入后，请通过学校统一账号或手机号完成验证，前端不保存班级授权结果。</view>
-      <view class="scope"><view class="scope-dot"></view><view>演示权限：五年级 2 班 · 数学</view></view>
+  <view wx:elif="{{stage === 'teacher-login'}}" class="flow-stage teacher-flow">
+    <view class="teacher-back" bindtap="backToRole">‹ 返回身份选择</view>
+    <view class="teacher-hero">
+      <image class="teacher-art" src="/assets/teacher-login-illustration.png" mode="aspectFit" />
+      <view class="teacher-mark">师</view>
+      <view class="teacher-title">教师登录</view>
+      <view class="teacher-subtitle">使用教师账号登录，继续查看你的班级与教学工作。</view>
     </view>
-    <button class="primary-button teacher-button" loading="{{isSubmitting}}" bindtap="completeTeacherVerification">验证并进入教师端</button>
+    <view class="teacher-login-card">
+      <view class="teacher-modes">
+        <view class="teacher-mode {{teacherLoginMode === 'sms' ? 'active' : ''}}" data-mode="sms" bindtap="switchTeacherLoginMode">短信验证码</view>
+        <view class="teacher-mode {{teacherLoginMode === 'password' ? 'active' : ''}}" data-mode="password" bindtap="switchTeacherLoginMode">账号密码</view>
+      </view>
+      <view class="teacher-field-label">登录手机号</view>
+      <input class="teacher-input" type="number" maxlength="11" placeholder="请输入教师账号手机号" value="{{teacherPhone}}" bindinput="changeTeacherPhone" />
+      <view wx:if="{{teacherLoginMode === 'sms'}}">
+        <view class="teacher-field-label">短信验证码</view>
+        <view class="teacher-code-row">
+          <input class="teacher-input teacher-code-input" type="number" maxlength="6" placeholder="请输入验证码" value="{{teacherCode}}" bindinput="changeTeacherCode" />
+          <button class="teacher-code-button" bindtap="requestTeacherCode">获取验证码</button>
+        </view>
+        <view class="teacher-demo-note">演示账号 13800138000 · 验证码 123456，不发送短信</view>
+      </view>
+      <view wx:else>
+        <view class="teacher-field-label">登录密码</view>
+        <input class="teacher-input" password="true" placeholder="请输入登录密码" value="{{teacherPassword}}" bindinput="changeTeacherPassword" />
+        <view class="teacher-demo-note">演示账号 13800138000 · 密码 Demo@123456</view>
+      </view>
+    </view>
+    <view class="teacher-bottom">
+      <button class="teacher-submit" loading="{{isSubmitting}}" bindtap="completeTeacherVerification">进入教师工作台</button>
+      <button class="teacher-wechat-entry" loading="{{isSubmitting}}" bindtap="teacherWechatQuickLogin">微信一键登录</button>
+    </view>
+  </view>
+  <view wx:else class="flow-stage teacher-flow">
+    <view class="teacher-hero teacher-bind-hero">
+      <image class="teacher-art" src="/assets/teacher-login-illustration.png" mode="aspectFit" />
+      <view class="teacher-mark">师</view>
+      <view class="teacher-title">绑定当前微信</view>
+      <view class="teacher-subtitle">教师账号已验证。绑定后，下次可以使用微信一键登录。</view>
+    </view>
+    <view class="teacher-login-card teacher-bind-card">
+      <view class="teacher-bind-title">教师账号</view>
+      <view class="teacher-bind-account">{{teacherPhone}}</view>
+      <view class="teacher-bind-copy">请确认将当前微信与此教师账号绑定。一个教师账号仅能绑定一个微信身份。</view>
+      <view class="teacher-demo-note">原型演示：绑定状态仅保存在本机；正式绑定由业务后端校验并保存。</view>
+    </view>
+    <view class="teacher-bottom">
+      <button class="teacher-submit" loading="{{isSubmitting}}" bindtap="bindTeacherWechat">确认绑定并进入</button>
+      <button class="teacher-wechat-entry" bindtap="skipTeacherWechatBinding">暂不绑定，进入工作台</button>
+    </view>
   </view>
 </view>
