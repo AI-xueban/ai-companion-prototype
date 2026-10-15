@@ -39,7 +39,8 @@ let userUnlockedOutfits: string[] = ['uniform_school', 'none']; // Default owned
 let userCurrentOutfit: any = { outfit: 'uniform_school' };
 let userCoins = 850; 
 
-export const buyOutfit = async (id: string): Promise<{ success: boolean; message: string }> => {
+export const buyOutfit = async (id: string, availableCoins?: number): Promise<{ success: boolean; message: string }> => {
+    if (availableCoins !== undefined) userCoins = availableCoins;
     return new Promise(resolve => {
         setTimeout(() => {
             const item = OUTFIT_CATALOG.find(i => i.id === id);
@@ -682,19 +683,21 @@ export const getMistakeVaultData = async (): Promise<MistakeVaultData> => {
           subject: string;
           topic: string;
           stem: string;
+          options: string[];
           status: 'new' | 'reviewing' | 'mastered';
           lastReview: string;
         }> = [
-          { subject: '物理', topic: '力和运动', stem: '关于牛顿第一定律，下列说法正确的是？', status: 'new', lastReview: '2天前' },
-          { subject: '物理', topic: '光学', stem: '光从空气斜射入水中时，折射角与入射角的关系是？', status: 'reviewing', lastReview: '昨天' },
-          { subject: '化学', topic: '物质构成', stem: '原子由原子核和核外电子构成，原子核包含？', status: 'new', lastReview: '3天前' },
-          { subject: '道德与法治', topic: '权利与义务', stem: '公民的基本权利与义务之间的关系，下列理解正确的是？', status: 'reviewing', lastReview: '今天' },
-          { subject: '历史', topic: '中国近代史', stem: '辛亥革命的历史意义主要体现在？', status: 'new', lastReview: '4天前' },
-          { subject: '科学', topic: '生命科学', stem: '绿色植物进行光合作用需要的条件包括？', status: 'reviewing', lastReview: '1天前' },
+          { subject: '物理', topic: '力和运动', stem: '关于牛顿第一定律，下列说法正确的是？', options: ["A. 物体不受外力时保持静止或匀速直线运动","B. 物体运动必须有力维持","C. 物体不受外力时一定静止","D. 物体受到力就一定加速"], status: 'new', lastReview: '2天前' },
+          { subject: '物理', topic: '光学', stem: '光从空气斜射入水中时，折射角与入射角的关系是？', options: ["A. 折射角小于入射角","B. 折射角等于入射角","C. 折射角大于入射角","D. 折射角一定为零"], status: 'reviewing', lastReview: '昨天' },
+          { subject: '化学', topic: '物质构成', stem: '原子由原子核和核外电子构成，原子核包含？', options: ["A. 质子和中子","B. 电子和中子","C. 质子和电子","D. 只有电子"], status: 'new', lastReview: '3天前' },
+          { subject: '道德与法治', topic: '权利与义务', stem: '公民的基本权利与义务之间的关系，下列理解正确的是？', options: ["A. 权利与义务相统一","B. 只享有权利，不履行义务","C. 只履行义务，不享有权利","D. 权利与义务互不相关"], status: 'reviewing', lastReview: '今天' },
+          { subject: '历史', topic: '中国近代史', stem: '辛亥革命的历史意义主要体现在？', options: ["A. 结束了中国两千多年的封建帝制","B. 彻底完成了反帝反封建的任务","C. 结束了中国半殖民地半封建社会","D. 建立了中华人民共和国"], status: 'new', lastReview: '4天前' },
+          { subject: '科学', topic: '生命科学', stem: '绿色植物进行光合作用需要的条件包括？', options: ["A. 光、二氧化碳和水","B. 黑暗、氧气和水","C. 光、氧气和糖","D. 黑暗、二氧化碳和糖"], status: 'reviewing', lastReview: '1天前' },
         ];
 
         const extraSubjectMistakes = extraSubjectSeeds.map((seed, idx) => ({
           id: `mist-extra-${seed.subject}-${idx + 1}`,
+          options: seed.options,
           questionSnippet: seed.stem,
           fullQuestion: seed.stem,
           subject: seed.subject,
@@ -822,7 +825,6 @@ export const getUserGrowthData = async (): Promise<UserProfileData> => {
                         }, 
                         achievements: [
                             { id: 'a1', title: '初来乍到', description: '完成注册', icon: '🐣', unlocked: true, dateUnlocked: '1天前' },
-                            { id: 'a3', title: '潜力无限', description: '完成能力画像测评', icon: '🔮', unlocked: true, dateUnlocked: '刚刚' },
                         ],
                         unlockedOutfitIds: ['uniform_school'],
                         currentOutfit: { outfit: 'uniform_school' },

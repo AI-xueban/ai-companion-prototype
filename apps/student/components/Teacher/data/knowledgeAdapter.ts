@@ -1,6 +1,5 @@
-import { mockUniverseData } from '../../../data/mockKnowledgeGraph';
 import { KnowledgeNode, KnowledgeNodeStatus, UniverseData } from '../../../knowledgeGraphTypes';
-import { buildMathUniverseFromDir } from './knowledgeGenerator';
+import { buildTeacherUniverseFromDirs } from './knowledgeGenerator';
 
 type TrafficStatus = 'red' | 'yellow' | 'green';
 
@@ -99,6 +98,7 @@ const toTeacherNode = (node: KnowledgeNode): TeacherKnowledgeNode => {
     healthScore: health,
     importance,
     level,
+    parentId: node.parentId,
     lastPractice: node.stats?.lastPractice,
     lastActivityDays: days,
   };
@@ -113,7 +113,7 @@ const summarize = (nodes: TeacherKnowledgeNode[]) =>
     { red: 0, yellow: 0, green: 0 } as { red: number; yellow: number; green: number },
   );
 
-export const buildTeacherKnowledgeFromStudent = (data: UniverseData = buildMathUniverseFromDir()): TeacherKnowledgeGroup[] => {
+export const buildTeacherKnowledgeFromStudent = (data: UniverseData = buildTeacherUniverseFromDirs()): TeacherKnowledgeGroup[] => {
   const grouped = new Map<string, TeacherKnowledgeNode[]>();
   (data.nodes || [])
     .filter(node => !node.label.includes('示例')) // 核心过滤：去掉示例节点

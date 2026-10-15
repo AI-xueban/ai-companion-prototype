@@ -38,14 +38,16 @@ type MediaItem = {
 };
 
 interface SingleQuestionResultCardProps {
+  question?: UniversalQuizQuestion;
+  allowSimilarPractice?: boolean;
   subject?: SubjectType | string;
   questionId: string;
   questionType?: string;
   difficulty?: string | number;
   stem: string;
   options?: OptionView[];
-  userAnswerPreview?: string;
-  correctAnswerPreview?: string;
+  userAnswerPreview?: string | string[];
+  correctAnswerPreview?: string | string[];
   explanationText?: string;
   explanationPitfalls?: string[];
   mediaList?: MediaItem[];
@@ -85,6 +87,8 @@ const findBankQuestion = (questionId: string) =>
   allQuestions.find((q) => q.id === resolveBankQuestionId(questionId));
 
 export const SingleQuestionResultCard: React.FC<SingleQuestionResultCardProps> = ({
+  question: sourceQuestion,
+  allowSimilarPractice = true,
   subject,
   questionId,
   questionType,
@@ -129,12 +133,13 @@ export const SingleQuestionResultCard: React.FC<SingleQuestionResultCardProps> =
       ? 'GAP'
       : questionPracticeState ?? (isCorrect ? 'MASTERED' : 'GAP');
 
-  const bankQuestion = useMemo(() => findBankQuestion(questionId), [questionId]);
+  const bankQuestion = useMemo(() => sourceQuestion ?? findBankQuestion(questionId), [sourceQuestion, questionId]);
 
   const questionForPreview = useMemo<UniversalQuizQuestion>(() => ({
     id: questionId,
     type: (questionType as any) || bankQuestion?.type || 'single_choice',
     content: {
+      ...bankQuestion?.content,
       stem: bankQuestion?.content?.stem || stem,
       stemImages: bankQuestion?.content?.stemImages,
       originalImageUrl: bankQuestion?.content?.originalImageUrl,
@@ -155,6 +160,7 @@ export const SingleQuestionResultCard: React.FC<SingleQuestionResultCardProps> =
     knowledgePoints: knowledgePoints?.map(k => k.label).filter(Boolean) ?? bankQuestion?.knowledgePoints,
     userAnswer: userAnswerPreview ?? '',
     cognitiveState,
+    similarIds: bankQuestion?.similarIds,
   }), [
     bankQuestion,
     cognitiveState,
@@ -236,6 +242,7 @@ export const SingleQuestionResultCard: React.FC<SingleQuestionResultCardProps> =
 
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <MistakePreviewResultCard
+            allowSimilarPractice={allowSimilarPractice}
             question={questionForPreview}
             practiceStats={practiceStats}
             preferSplitLayout

@@ -80,6 +80,8 @@ export interface MoodOption {
 }
 
 export interface UserStats {
+  /** 终身累计经验，金币支出不会扣减。 */
+  totalXp?: number;
   xpToday: number;
   xpTarget: number;
   studyMinutesToday: number;
@@ -217,6 +219,7 @@ export interface MistakeItem {
   tags?: string[];
   knowledgePoints?: string[];
   questionType?: string;
+  options?: string[];
   difficulty?: number | string;
   category?: string;
   correctAttempts?: number;
@@ -621,16 +624,8 @@ export interface StudentSummary {
   level?: number;
   status: 'online' | 'offline' | 'away';
   alertLevel: 'none' | 'low' | 'medium' | 'high';
-  abilitySnapshot: {
-    logic: number;
-    calculation: number;
-    spatial: number;
-    application: number;
-    concept: number;
-  };
   recentTrend: 'up' | 'down' | 'stable';
   lastActive: string;
-  aiInsight?: string;
 }
 
 export interface ClassSummaryStats {

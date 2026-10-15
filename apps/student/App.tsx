@@ -57,6 +57,11 @@ import { SteppingQuizPage } from './components/Quiz/SteppingQuizPage';
 import { UniversalQuizQuestion } from './components/Quiz/UniversalQuizView';
 import { UniversalQuizResult, MOCK_PRACTICE_STATE_SESSION } from './components/Quiz/UniversalQuizResult';
 import { RewardGainOverlay } from './components/Rewards/RewardGainOverlay';
+import { RewardAccountModal } from './components/Rewards/RewardAccountModal';
+import { INITIAL_WISH_APPLICATIONS, type WishApplication } from './data/wishPoolStudentData';
+import { RewardGrantContext } from './components/Rewards/RewardGrantContext';
+import { recordReward, recordCoinSpend, saveRewardStats, loadRewardStats } from './services/rewardHistoryService';
+import { grantMoodCheckInReward, grantKnowledgePointReward } from './services/rewardService';
 import { RewardGrantResult } from './types/reward';
 import {
   demoDailyConquerReward,
@@ -171,6 +176,7 @@ const App: React.FC = () => {
   const [questionBankSubject, setQuestionBankSubject] = useState<'math' | 'chinese' | 'english'>('math');
   const [openCharitySignal, setOpenCharitySignal] = useState(0);
   const [openPrintedFilesSignal, setOpenPrintedFilesSignal] = useState(0);
+  const [openPrintedFileId, setOpenPrintedFileId] = useState<string | undefined>();
   const [showQuizResultDemo, setShowQuizResultDemo] = useState(false);
   const [remedialQuestions, setRemedialQuestions] = useState<UniversalQuizQuestion[] | null>(null);
   const [showRemedialQuiz, setShowRemedialQuiz] = useState(false);
@@ -188,6 +194,8 @@ const App: React.FC = () => {
   const [isCharityPageOpen, setIsCharityPageOpen] = useState(false);
   const [isTextbooksPageOpen, setIsTextbooksPageOpen] = useState(false);
   const [textbooksRevision, setTextbooksRevision] = useState(0);
+  const [rewardAccount, setRewardAccount] = useState<'coins' | 'xp' | null>(null);
+  const [rewardWishApplications, setRewardWishApplications] = useState<WishApplication[]>(INITIAL_WISH_APPLICATIONS);
   const [rewardOverlay, setRewardOverlay] = useState<RewardGrantResult | null>(null);
   const [achievementOverlay, setAchievementOverlay] = useState<Achievement | null>(null);
   const [achievementUnlockOverrides, setAchievementUnlockOverrides] = useState<Record<string, boolean>>({});
@@ -217,21 +225,27 @@ const App: React.FC = () => {
   const personaProgress = getDemoPersonaProgress(currentUserPersona);
 
   const handleRewardGranted = (result: RewardGrantResult) => {
-    if (result.xp <= 0 && result.coins <= 0) return;
-    setUserStats((prev) => ({
-      ...prev,
-      xpToday: Math.min(prev.xpTarget, prev.xpToday + result.xp),
-      weeklyXp: prev.weeklyXp + result.xp,
-      coins: prev.coins + result.coins,
-    }));
+    setIsMoodModalOpen(false);
+    if (result.xp <= 0 && result.coins <= 0) { setRewardOverlay(result); return; }
+    if (!recordReward(result)) return;
+    setUserStats(prev => {
+      const updated = { ...prev, totalXp: (prev.totalXp ?? prev.xpToday) + result.xp, xpToday: prev.xpToday + result.xp, weeklyXp: prev.weeklyXp + result.xp, coins: prev.coins + result.coins };
+      saveRewardStats(updated, currentUserPersona);
+      return updated;
+    });
     setRewardOverlay(result);
-    // 订正弹窗进行中时跳过 dataVersion 刷新，避免 MistakeVault 重挂载导致弹窗被关掉
-    if (!isDailyConquerActive) {
-      setDataVersion((v) => v + 1);
-    }
+    // 资产已通过状态更新；不重挂载正在展示解析或结算的练习页面。
   };
 
   const wasDailyConquerActiveRef = useRef(false);
+  const handleCoinSpend = (amount: number, title: string) => {
+    recordCoinSpend(amount, title);
+    setUserStats(prev => {
+      const updated = { ...prev, coins: Math.max(0, prev.coins - amount) };
+      saveRewardStats(updated, currentUserPersona);
+      return updated;
+    });
+  };
   useEffect(() => {
     if (wasDailyConquerActiveRef.current && !isDailyConquerActive) {
       setDataVersion((v) => v + 1);
@@ -243,7 +257,8 @@ const App: React.FC = () => {
     let cancelled = false;
     getUserGrowthData().then(data => {
         if (cancelled) return;
-        setUserStats((prev) => ({
+        setUserStats((prev) => loadRewardStats(currentUserPersona) || ({
+            totalXp: data.currentXp,
             xpToday: data.currentXp % 2000,
             xpTarget: 2000,
             studyMinutesToday: data.level * 10,
@@ -255,7 +270,7 @@ const App: React.FC = () => {
         setIsAssessed(!!data.assessmentResult);
     });
     return () => { cancelled = true; };
-  }, [dataVersion]);
+  }, [dataVersion, currentUserPersona]);
 
   useEffect(() => {
     if (activeTab !== 'mistake') {
@@ -648,7 +663,7 @@ const App: React.FC = () => {
       }
       try {
           const raw = sessionStorage.getItem(KG_PRACTICE_PENDING_KEY);
-          if (raw) {
+          if (raw && reason === 'complete') {
               const pending = JSON.parse(raw) as {
                   nodeId: string;
                   status?: string;
@@ -658,6 +673,8 @@ const App: React.FC = () => {
                   pending.nodeId,
                   pending.status as import('./knowledgeGraphTypes').KnowledgeNode['status']
               );
+              const explorationReward = grantKnowledgePointReward(pending.nodeId);
+              if (explorationReward.xp > 0) handleRewardGranted(explorationReward);
               sessionStorage.setItem(kgReturnNodeKey(pending.textbookId), pending.nodeId);
               sessionStorage.removeItem(KG_PRACTICE_PENDING_KEY);
               setDataVersion(v => v + 1);
@@ -771,6 +788,10 @@ const App: React.FC = () => {
   };
 
   const handleMoodToggle = (mood: MoodOption) => {
+    if (!selectedMoods.includes(mood)) {
+      const reward = grantMoodCheckInReward();
+      if (reward.xp > 0) { setIsMoodModalOpen(false); handleRewardGranted(reward); }
+    }
     setSelectedMoods(prev => {
         const exists = prev.find(m => m.value === mood.value);
         if (exists) {
@@ -820,6 +841,7 @@ const App: React.FC = () => {
   }
 
   return (
+    <RewardGrantContext.Provider value={handleRewardGranted}>
     <div
       ref={tabletHostRef}
       className="h-[100dvh] w-full flex justify-center items-center bg-gray-900 font-sans overflow-hidden"
@@ -939,6 +961,7 @@ const App: React.FC = () => {
                     {activeTab === 'today' ? (
                         <div className="flex-1 relative overflow-hidden">
                             <DashboardImmersive 
+                                showMoreAppsEntry={!rewardAccount && !isDailyConquerActive && !isCharityPageOpen && !isTextbooksPageOpen && !isSettingsOpen && !isStoreOpen && !isReportOpen && !isMoodModalOpen && !isEssayLabOpen && !showQuestionBankModal && !isSelfPracticeOpen && !isLessonPracticeOpen && !isSyncStudyPickerOpen && !isSyncStudySubjectOpen && !showOnboardingOverlay && !showWelcomeGift}
                                 key={`immersive-${currentUserPersona}-${newbieLeagueOpenSignal}-${dataVersion}`}
                                 userName={userName}
                                 userLevel={personaProgress.level}
@@ -954,6 +977,10 @@ const App: React.FC = () => {
                                 dayPlan={dayPlan}
                                 onStartQuiz={handleTaskStart}
                                 onOpenStore={() => setIsStoreOpen(true)}
+                                onOpenRewardAccount={() => setRewardAccount('coins')}
+                                onOpenMyExperience={() => setRewardAccount('xp')}
+                                isRewardAccountOpen={rewardAccount !== null}
+                                onCoinSpend={handleCoinSpend}
                                 onOpenMood={() => setIsMoodModalOpen(true)}
                                 selectedMoods={selectedMoods}
                                 onOpenCharity={() => {
@@ -1033,6 +1060,7 @@ const App: React.FC = () => {
                             resumeView={resumeView}
                             resumeViewSignal={resumeViewSignal}
                             onOpenPrintedFiles={() => {
+                                setOpenPrintedFileId(undefined);
                                 setActiveTab('me');
                                 setOpenPrintedFilesSignal((value) => value + 1);
                             }}
@@ -1044,6 +1072,11 @@ const App: React.FC = () => {
                             onStartAISolve={handleStartAISolveFromLumi}
                             onCameraFlowOpenChange={setIsCameraFlowOpen}
                             onChromeHiddenChange={setIsLumiChromeHidden}
+                            onOpenPrintedFile={(id) => {
+                                setOpenPrintedFileId(id);
+                                setActiveTab('me');
+                                setOpenPrintedFilesSignal((value) => value + 1);
+                            }}
                         />
                     ) : activeTab === 'mistake' ? (
                         <MistakeVault 
@@ -1060,6 +1093,8 @@ const App: React.FC = () => {
                         />
                     ) : activeTab === 'me' ? (
                         <GrowthProfile 
+                            onOpenRewardAccount={setRewardAccount}
+                            onCoinSpend={handleCoinSpend}
                             key={`growth-${dataVersion}`}
                             onStartAssessment={() => setJourneyPhase('assessment')} 
                             onOpenStore={() => setIsStoreOpen(true)}
@@ -1067,7 +1102,9 @@ const App: React.FC = () => {
                             onOpenSettings={() => setIsSettingsOpen(true)}
                             coins={userStats.coins}
                             openCharitySignal={openCharitySignal}
+                            totalXp={userStats.totalXp}
                             openPrintedFilesSignal={openPrintedFilesSignal}
+                            openPrintedFileId={openPrintedFileId}
                             onCharityOpenChange={setIsCharityPageOpen}
                             userGrade={userGrade}
                             textbookTerm={textbookTerm}
@@ -1084,7 +1121,7 @@ const App: React.FC = () => {
                     </div>
                     )}
                     <AnimatePresence initial={false}>
-                        {!isDailyConquerActive && !isMistakeVaultDetailOpen && !isSyncSectionPageOpen && !(activeTab === 'subject' && mapMode === 'sync' && personalizedScreen !== 'main') && !isCharityPageOpen && !isTextbooksPageOpen && !isCameraFlowOpen && !isTutorLayerOpen && !isNotificationLayerOpen && !isDiscoveryFullPageOpen && !isSettingsOpen && !isStoreOpen && !isReportOpen && !isMoodModalOpen && !isEssayLabOpen && !showQuestionBankModal && !isSelfPracticeOpen && !isLessonPracticeOpen && !isSyncStudyPickerOpen && !isSyncStudySubjectOpen && !isLumiChromeHidden && (
+                        {!rewardAccount && !isDailyConquerActive && !isMistakeVaultDetailOpen && !isSyncSectionPageOpen && !(activeTab === 'subject' && mapMode === 'sync' && personalizedScreen !== 'main') && !isCharityPageOpen && !isTextbooksPageOpen && !isCameraFlowOpen && !isTutorLayerOpen && !isNotificationLayerOpen && !isDiscoveryFullPageOpen && !isSettingsOpen && !isStoreOpen && !isReportOpen && !isMoodModalOpen && !isEssayLabOpen && !showQuestionBankModal && !isSelfPracticeOpen && !isLessonPracticeOpen && !isSyncStudyPickerOpen && !isSyncStudySubjectOpen && !isLumiChromeHidden && (
                             <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
                         )}
                     </AnimatePresence>
@@ -1153,11 +1190,18 @@ const App: React.FC = () => {
             )}
         </AnimatePresence>
 
+        <RewardAccountModal asset={rewardAccount} stats={userStats} wishApplications={rewardWishApplications} onClose={() => setRewardAccount(null)} onOpenStore={() => { setRewardAccount(null); setIsStoreOpen(true); }} />
         <CoinStoreModal 
+            onWishApplicationsChange={setRewardWishApplications}
             isOpen={isStoreOpen} 
             onClose={() => setIsStoreOpen(false)} 
             coins={userStats.coins}
-            onCoinsChange={(newCoins) => setUserStats(prev => ({ ...prev, coins: newCoins }))}
+            onOpenRewardAccount={() => { setIsStoreOpen(false); setRewardAccount('coins'); }}
+            onCoinsChange={newCoins => setUserStats(prev => {
+              const updated = { ...prev, coins: newCoins };
+              saveRewardStats(updated, currentUserPersona);
+              return updated;
+            })}
         />
 
         <MoodRecordModal
@@ -1329,6 +1373,7 @@ const App: React.FC = () => {
             subject={steppingSubject}
             grade={userGrade}
             knowledgePointLabel="未知知识点探索"
+            onRewardGranted={handleRewardGranted}
             userStats={userStats}
             onExit={() => setShowSteppingQuiz(false)}
           />
@@ -1357,6 +1402,7 @@ const App: React.FC = () => {
 
         <RewardGainOverlay
           result={rewardOverlay}
+          onViewAccount={asset => { setIsMoodModalOpen(false); setRewardOverlay(null); setRewardAccount(asset); }}
           onClose={() => setRewardOverlay(null)}
         />
 
@@ -1377,6 +1423,7 @@ const App: React.FC = () => {
       </div>
       </div>
     </div>
+    </RewardGrantContext.Provider>
   );
 };
 

@@ -28,19 +28,20 @@ import {
   getPrereqPrompt,
   getPrereqRetry,
   getPrereqFallback,
-  getQuickDoneSpeech,
   getGuideIntakeSpeech,
   getGuideIntakeUnclear,
 } from '../../data/tutorCharacterCopy';
 import { getQuickDoneHintLine, type QuickDoneHintLine } from '../../data/tutorQuickDoneHints';
 import { AISolveQuestion } from '../../data/aiSolveMockData';
 import { TutorExplainFeedback } from './TutorExplainFeedback';
+import { TUTOR_VOICE_KEY, useTutorVoice } from '../../hooks/useTutorVoice';
 
 type InputMode = 'idle' | 'guide_intake' | 'prereq_confirm' | 'guide_answer' | 'free_ask' | 'checking';
 
 interface AITutorLayerProps {
   onClose: () => void;
   mockProblemComponent?: React.ReactNode;
+  problemContent?: React.ReactNode;
   question?: AISolveQuestion | null;
   onPhaseChange?: (phase: TutorPhase) => void;
   enterFade?: boolean;
@@ -50,9 +51,6 @@ export interface AITutorLayerHandle {
   startGuide: () => void;
 }
 
-const QUICK_TITLE_CHAR_MS = 52;
-const QUICK_BODY_CHAR_MS = 42;
-const TITLE_TO_BODY_PAUSE_MS = 380;
 const FILL_CHAR_MS = 36;
 
 function buildInitialSteps(
@@ -73,7 +71,7 @@ function buildInitialSteps(
 }
 
 export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(function AITutorLayer(
-  { onClose, mockProblemComponent, question, onPhaseChange, enterFade = true },
+  { onClose, mockProblemComponent, problemContent, question, onPhaseChange, enterFade = true },
   ref,
 ) {
   const scriptPack = useMemo(() => getTutorScriptPack(question), [question]);
@@ -84,9 +82,8 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
     [scriptPack.scriptKey],
   );
 
-  const [phase, setPhase] = useState<TutorPhase>('quick');
+  const [phase, setPhase] = useState<TutorPhase>('quick_done');
   const [boardSteps, setBoardSteps] = useState<StepBoardView[]>(() => buildInitialSteps(quickSteps));
-  const [quickLineIndex, setQuickLineIndex] = useState(0);
   const [guideStepIndex, setGuideStepIndex] = useState(-1);
   const [speechText, setSpeechText] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -103,7 +100,34 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
   const animTimerRef = useRef<number | undefined>(undefined);
   const animTimeoutRef = useRef<number | undefined>(undefined);
 
+  const [voiceEnabled, setVoiceEnabled] = useState(() => {
+    try { return localStorage.getItem(TUTOR_VOICE_KEY) !== 'false'; } catch { return true; }
+  });
+  const [recording, setRecording] = useState(false);
+  const [replyRevision, setReplyRevision] = useState(0);
+  const replyTimerRef = useRef<number | undefined>(undefined);
+  const replyVersionRef = useRef(0);
+  const checkingModeRef = useRef<InputMode>('idle');
+  const planText = useMemo(() => quickSteps.map((step, index) =>
+    '第' + (index + 1) + '步，' + step.title + '。' + step.skeleton,
+  ).join('\n'), [quickSteps]);
+  const voiceText = phase === 'quick_done' ? speechText || planText : speechText;
+  const voice = useTutorVoice(voiceText, voiceEnabled, recording, replyRevision);
+  const toggleVoice = () => {
+    if (voiceEnabled && !voice.playing) {
+      voice.replay();
+      return;
+    }
+    const next = !voiceEnabled;
+    if (!next) voice.stop();
+    setVoiceEnabled(next);
+    try { localStorage.setItem(TUTOR_VOICE_KEY, String(next)); } catch { /* Keep session preference. */ }
+  };
   const theme = getTutorCharacter(characterId);
+  useEffect(() => () => {
+    replyVersionRef.current += 1;
+    if (replyTimerRef.current) window.clearTimeout(replyTimerRef.current);
+  }, []);
 
   const clearAnim = useCallback(() => {
     if (animTimerRef.current) {
@@ -123,13 +147,17 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
 
   useEffect(() => {
     clearAnim();
-    setPhase('quick');
-    setBoardSteps(buildInitialSteps(quickSteps));
-    setQuickLineIndex(0);
+    replyVersionRef.current += 1;
+    if (replyTimerRef.current) window.clearTimeout(replyTimerRef.current);
+    setPhase('quick_done');
+    setBoardSteps(buildInitialSteps(quickSteps).map(step => ({
+      ...step, titleRevealed: step.title.length, titleComplete: true,
+      skeletonRevealed: step.skeleton.length, skeletonComplete: true, status: 'done' as const,
+    })));
     setGuideStepIndex(-1);
     setSpeechText('');
     setIsSpeaking(false);
-    setIsWriting(true);
+    setIsWriting(false);
     setInputMode('idle');
     setPendingAnswer('');
     setHintText('');
@@ -137,112 +165,6 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
     setPrereqWrongCount(0);
     setQuickDoneHint(getQuickDoneHintLine());
   }, [scriptPack.scriptKey, quickSteps, clearAnim]);
-
-  useEffect(() => {
-    if (phase !== 'quick') return;
-
-    const stepIndex = quickLineIndex;
-    const scriptStep = quickSteps[stepIndex];
-    if (!scriptStep) {
-      setIsWriting(false);
-      setIsSpeaking(false);
-      setSpeechText(getQuickDoneSpeech(characterId));
-      setQuickDoneHint(getQuickDoneHintLine(quickSteps.length + stepIndex));
-      setPhase('quick_done');
-      return;
-    }
-
-    setIsSpeaking(false);
-    setSpeechText('');
-    setIsWriting(true);
-
-    setBoardSteps((prev) =>
-      prev.map((s, i) => {
-        if (i < stepIndex) {
-          return { ...s, status: 'done' as const };
-        }
-        if (i === stepIndex) {
-          return {
-            ...s,
-            status: 'active' as const,
-            titleRevealed: 0,
-            titleComplete: false,
-            skeletonRevealed: 0,
-            skeletonComplete: false,
-          };
-        }
-        return { ...s, status: 'pending' as const };
-      }),
-    );
-
-    let cancelled = false;
-    let charIdx = 0;
-
-    const schedule = (fn: () => void, ms: number) => {
-      animTimeoutRef.current = window.setTimeout(() => {
-        if (!cancelled) fn();
-      }, ms);
-    };
-
-    const runBodyTick = () => {
-      charIdx += 1;
-      const skLen = scriptStep.skeleton.length;
-      const skDone = charIdx >= skLen;
-
-      setBoardSteps((prev) =>
-        prev.map((s, i) => {
-          if (i !== stepIndex) return s;
-          return {
-            ...s,
-            titleRevealed: scriptStep.title.length,
-            titleComplete: true,
-            skeletonRevealed: Math.min(charIdx, skLen),
-            skeletonComplete: skDone,
-            status: skDone ? ('done' as const) : ('active' as const),
-          };
-        }),
-      );
-
-      if (skDone) {
-        schedule(() => setQuickLineIndex((i) => i + 1), 450);
-        return;
-      }
-
-      schedule(runBodyTick, QUICK_BODY_CHAR_MS);
-    };
-
-    const runTitleTick = () => {
-      charIdx += 1;
-      const titleLen = scriptStep.title.length;
-      const titleDone = charIdx >= titleLen;
-
-      setBoardSteps((prev) =>
-        prev.map((s, i) => {
-          if (i !== stepIndex) return s;
-          return {
-            ...s,
-            titleRevealed: Math.min(charIdx, titleLen),
-            titleComplete: titleDone,
-          };
-        }),
-      );
-
-      if (titleDone) {
-        charIdx = 0;
-        schedule(runBodyTick, TITLE_TO_BODY_PAUSE_MS);
-        return;
-      }
-
-      schedule(runTitleTick, QUICK_TITLE_CHAR_MS);
-    };
-
-    schedule(runTitleTick, QUICK_TITLE_CHAR_MS);
-
-    return () => {
-      cancelled = true;
-      clearAnim();
-    };
-  }, [phase, quickLineIndex, clearAnim, characterId, quickSteps]);
 
   const needsPrereqForStep = useCallback(
     (targetIndex: number, steps: StepBoardView[], fromStepIndex = -1) => {
@@ -390,6 +312,8 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
 
   const enterGuideIntake = useCallback(() => {
     clearAnim();
+    replyVersionRef.current += 1;
+    if (replyTimerRef.current) window.clearTimeout(replyTimerRef.current);
     setPhase('guide');
     setGuideStepIndex(-1);
     setWrongCount(0);
@@ -560,10 +484,13 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
     }
 
     setPendingAnswer(text);
+    checkingModeRef.current = 'prereq_confirm';
+    const version = ++replyVersionRef.current;
     setInputMode('checking');
     setIsSpeaking(false);
 
     window.setTimeout(() => {
+      if (version !== replyVersionRef.current) return;
       if (matchPrereqAnswer(text, prereq)) {
         setHintText('');
         setBoardSteps((prev) =>
@@ -583,7 +510,9 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
               fills: i >= fallback && s.status !== 'done' ? [] : s.fills,
             })),
           );
-          window.setTimeout(() => enterGuideAnswer(fallback), 400);
+          window.setTimeout(() => {
+            if (version === replyVersionRef.current) enterGuideAnswer(fallback);
+          }, 400);
         } else {
           setPrereqWrongCount(next);
           setSpeechText(getPrereqRetry(characterId, prereq.hint));
@@ -601,6 +530,8 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
     if (!step) return;
 
     setPendingAnswer(text);
+    checkingModeRef.current = 'guide_answer';
+    const version = ++replyVersionRef.current;
     setInputMode('checking');
     setIsSpeaking(false);
     setDeepThinkingStep(0);
@@ -611,13 +542,16 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
     if (deepThinking) {
       DEEP_THINKING_STEPS.forEach((_, i) => {
         stepTimers.push(
-          window.setTimeout(() => setDeepThinkingStep(i), (checkDelay / DEEP_THINKING_STEPS.length) * i),
+          window.setTimeout(() => {
+            if (version === replyVersionRef.current) setDeepThinkingStep(i);
+          }, (checkDelay / DEEP_THINKING_STEPS.length) * i),
         );
       });
     }
 
     window.setTimeout(() => {
       stepTimers.forEach((t) => window.clearTimeout(t));
+      if (version !== replyVersionRef.current) return;
       setDeepThinkingStep(0);
 
       if (matchGuideAnswer(text, step)) {
@@ -628,8 +562,11 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
           prev.map((s, i) => (i === guideStepIndex ? { ...s, status: 'done' } : s)),
         );
         animateFills(guideStepIndex, () => {
+          if (version !== replyVersionRef.current) return;
           setIsWriting(false);
-          window.setTimeout(() => advanceGuideStep(guideStepIndex), 600);
+          window.setTimeout(() => {
+            if (version === replyVersionRef.current) advanceGuideStep(guideStepIndex);
+          }, 600);
         });
       } else {
         const next = wrongCount + 1;
@@ -646,11 +583,14 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
   };
 
   const handleGuideIntake = (text: string) => {
+    checkingModeRef.current = 'guide_intake';
+    const version = ++replyVersionRef.current;
     setInputMode('checking');
     setPendingAnswer(text);
     setIsSpeaking(false);
 
     window.setTimeout(() => {
+      if (version !== replyVersionRef.current) return;
       const parsed =
         scriptPack.scriptKey === 'paint-wall'
           ? parseGuideStartStepIndex(text)
@@ -669,37 +609,62 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
   };
 
   const handleFreeAsk = (text: string) => {
+    const version = ++replyVersionRef.current;
+    checkingModeRef.current = phase === 'guide' ? 'guide_answer' : 'idle';
+    if (replyTimerRef.current) window.clearTimeout(replyTimerRef.current);
     setInputMode('checking');
     setPendingAnswer(text);
     setIsSpeaking(false);
-    window.setTimeout(() => {
+    replyTimerRef.current = window.setTimeout(() => {
+      if (version !== replyVersionRef.current) return;
       setSpeechText(getFreeAskReply(text, characterId));
+      setReplyRevision(value => value + 1);
       setIsSpeaking(true);
       setInputMode(phase === 'guide' ? 'guide_answer' : 'idle');
       setPendingAnswer('');
     }, deepThinking ? 1800 : 1000);
   };
 
+  const interruptTutorReply = () => {
+    if (inputMode === 'checking' || isWriting) {
+      replyVersionRef.current += 1;
+      if (replyTimerRef.current) window.clearTimeout(replyTimerRef.current);
+      clearAnim();
+      setInputMode(inputMode === 'checking' ? checkingModeRef.current : inputMode);
+      setIsWriting(false);
+      setPendingAnswer('');
+      setDeepThinkingStep(0);
+      if (isWriting && phase === 'guide' && guideStepIndex >= 0) {
+        setBoardSteps(prev => prev.map((step, index) => index === guideStepIndex
+          ? { ...step, status: 'active', fills: [] }
+          : step));
+      }
+    }
+    voice.stop();
+  };
+
   const handleSend = (text: string) => {
+    const mode = inputMode === 'checking' ? checkingModeRef.current : inputMode;
+    interruptTutorReply();
     if (phase === 'guide_done' && /引导|填数|继续解|深入/.test(text)) {
       enterGuideIntake();
       return;
     }
-    if (phase === 'quick') handleFreeAsk(text);
-    else if (phase === 'guide' && inputMode === 'guide_intake') handleGuideIntake(text);
-    else if (phase === 'guide' && inputMode === 'prereq_confirm') handlePrereqAnswer(text);
-    else if (phase === 'guide' && inputMode === 'guide_answer') handleGuideAnswer(text);
+    if (phase === 'quick' || phase === 'quick_done') handleFreeAsk(text);
+    else if (phase === 'guide' && mode === 'guide_intake') handleGuideIntake(text);
+    else if (phase === 'guide' && mode === 'prereq_confirm') handlePrereqAnswer(text);
+    else if (phase === 'guide' && mode === 'guide_answer') handleGuideAnswer(text);
     else if (phase === 'guide_done') handleFreeAsk(text);
   };
 
   const handleRecordingChange = (recording: boolean) => {
-    setIsSpeaking(recording);
-    if (recording) setIsWriting(false);
+    setRecording(recording);
+    if (recording) interruptTutorReply();
+    setIsSpeaking(false);
   };
 
   const isGuideLayout = phase === 'guide' || phase === 'guide_done';
 
-  const inputDisabled = inputMode === 'checking';
   const inputPlaceholder =
     phase === 'guide' && inputMode === 'guide_intake'
       ? '说说卡在哪一步，或「从头讲」…'
@@ -711,19 +676,19 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
             ? `边看边问，${theme.name}会继续讲…`
             : phase === 'guide_done'
             ? `向${theme.name}自由提问…`
-            : '梳理思路中，请稍候…';
+            : phase === 'quick_done' ? '输入追问，或点击麦克风…' : '输入或语音提问，可打断当前讲解…';
 
   const speechVisible =
     inputMode === 'checking' ||
     phase === 'guide' ||
-    phase === 'guide_done';
+    phase === 'guide_done' || (phase === 'quick_done' && Boolean(speechText));
 
-  const problemView =
+  const problemView = problemContent ?? (
     question != null ? (
       <InteractiveProblemView question={question ?? undefined} onAnnotate={handleAnnotate} />
     ) : (
       mockProblemComponent
-    );
+    ));
 
   useEffect(() => () => clearAnim(), [clearAnim]);
 
@@ -783,6 +748,28 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
           </div>
 
           <div className="flex-1 flex flex-col min-h-0 min-w-0">
+            <div className="shrink-0 flex items-center justify-between gap-3 pb-2">
+              <span className="text-sm font-bold text-slate-700">{isGuideLayout ? '1对1讲题' : '解题方案'}</span>
+              <button type="button"
+                aria-label={!voiceEnabled ? '开启语音播报' : voice.playing ? '正在播报，点击静音' : '重新播放语音'}
+                title={!voiceEnabled ? '开启播报' : voice.playing ? '点击静音' : '从头播放'}
+                disabled={recording}
+                onClick={toggleVoice}
+                className={`interactive-control inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-full px-2.5 transition-colors disabled:opacity-40 ${voiceEnabled ? 'bg-violet-50 text-brand hover:bg-violet-100' : 'text-slate-400 hover:bg-slate-100'}`}>
+                <svg aria-hidden="true" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 5 6 9H3v6h3l5 4V5Z" />
+                    <path d="M15.5 8.5a5 5 0 0 1 0 7">
+                      {voiceEnabled && voice.playing && <animate attributeName="opacity" values="0.25;1;0.25" dur="1s" repeatCount="indefinite" />}
+                    </path>
+                    <path d="M19 5a10 10 0 0 1 0 14">
+                      {voiceEnabled && voice.playing && <animate attributeName="opacity" values="0.15;0.15;1;0.15" dur="1s" repeatCount="indefinite" />}
+                    </path>
+                  {!voiceEnabled && <path d="m3 3 18 18" />}
+                </svg>
+                <span className="text-xs">播报</span>
+              </button>
+            </div>
+            {voice.error && <p role="status" className="shrink-0 pb-2 text-xs text-slate-500">{voice.error}</p>}
             <div
               className={`flex-1 min-h-0 ${
                 phase === 'quick' || phase === 'quick_done'
@@ -794,7 +781,7 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
                 speechText={speechText}
                 speechVisible={speechVisible}
                 boardSteps={boardSteps}
-                isSpeaking={isSpeaking}
+                isSpeaking={voice.playing}
                 isWriting={isWriting}
                 theme={theme}
                 boardVariant={isGuideLayout ? 'guide' : 'skeleton'}
@@ -827,16 +814,15 @@ export const AITutorLayer = forwardRef<AITutorLayerHandle, AITutorLayerProps>(fu
                   hint={quickDoneHint}
                   onStartGuide={startGuide}
                   onCharacterSelect={setCharacterId}
-                  isSpeaking={isSpeaking}
+                  isSpeaking={voice.playing}
                   isWriting={isWriting}
                 />
               ) : (
                 <TutorInputBar
                   onSend={handleSend}
                   onRecordingChange={handleRecordingChange}
-                  disabled={inputDisabled}
                   placeholder={inputPlaceholder}
-                  isSpeaking={isSpeaking}
+                  isSpeaking={voice.playing}
                   isWriting={isWriting}
                   theme={theme}
                   onCharacterSelect={setCharacterId}

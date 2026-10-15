@@ -1,7 +1,19 @@
 const MENU = [
   { key: 'home', label: '首页', icon: '🏠', route: null },
   { key: 'school', label: '学校信息管理', icon: '🏫', route: null },
-  { key: 'user', label: '用户管理', icon: '👤', route: null },
+  {
+    key: 'user', label: '用户管理', icon: '👤', expanded: true,
+    children: [
+      { key: 'teacher-accounts', label: '教师账号', route: null },
+      {
+        key: 'student-accounts', label: '学生账号', expanded: true,
+        children: [
+          { key: 'face-library', label: '人脸信息管理', route: 'face-library' },
+        ]
+      },
+      { key: 'admin-accounts', label: '后台账号', route: null },
+    ]
+  },
   {
     key: 'device-mgmt', label: '设备管理', icon: '📱', expanded: true,
     children: [
@@ -10,7 +22,6 @@ const MENU = [
       { key: 'tablet', label: '平板设备', route: 'tablet' },
       { key: 'device-usage', label: '使用记录', route: 'device-usage' },
       { key: 'device-alert', label: '状态告警', route: 'device-alert' },
-      { key: 'face-library', label: '人脸信息管理', route: 'face-library' },
     ]
   },
   {
@@ -78,7 +89,7 @@ const ROUTE_META = {
   'third-party-apps': { title: '第三方应用', breadcrumb: ['第三方应用'] },
   'app-library': { title: '第三方应用', breadcrumb: ['第三方应用'] },
   'school-apps': { title: '学校应用', breadcrumb: ['第三方应用', '学校应用'] },
-  'face-library': { title: '人脸信息管理', breadcrumb: ['设备管理', '人脸信息管理'] },
+  'face-library': { title: '人脸信息管理', breadcrumb: ['用户管理', '学生账号', '人脸信息管理'] },
 };
 
 function renderSiderMenu(activeRoute) {

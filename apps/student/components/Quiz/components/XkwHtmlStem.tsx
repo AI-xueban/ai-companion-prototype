@@ -7,7 +7,10 @@ const sanitizeXkwHtml = (html: string) =>
     .replace(/on\w+="[^"]*"/gi, '');
 
 const XKW_STEM_STYLES = `
-.xkw-html-stem table { border-collapse: collapse; width: 100%; max-width: 520px; margin: 8px 0; font-size: 13px; }
+.xkw-html-stem { max-width: 100%; }
+.xkw-html-stem .xkw-table-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+.xkw-html-stem table { border-collapse: collapse; width: 100%; min-width: 420px; max-width: 520px; margin: 8px 0; font-size: 13px; }
+.xkw-html-stem td, .xkw-html-stem th { white-space: nowrap; }
 .xkw-html-stem td { border: 1px solid #334155; padding: 6px 8px; vertical-align: middle; }
 .xkw-html-stem p { margin: 0.35em 0; }
 .xkw-html-stem .qml-bk {
@@ -27,7 +30,10 @@ interface XkwHtmlStemProps {
 
 /** 学科网 HTML 题干（含表格、填空下划线） */
 export const XkwHtmlStem: React.FC<XkwHtmlStemProps> = ({ html, className = '' }) => {
-  const safeHtml = useMemo(() => sanitizeXkwHtml(html), [html]);
+  const safeHtml = useMemo(() => sanitizeXkwHtml(html).replace(
+    /(<table\b[\s\S]*?<\/table>)/gi,
+    '<div class="xkw-table-scroll" tabindex="0" role="region" aria-label="题目表格，可左右滚动">$1</div>',
+  ), [html]);
 
   return (
     <>

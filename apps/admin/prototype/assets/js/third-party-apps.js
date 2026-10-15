@@ -2,6 +2,18 @@ function renderThirdPartyIcon(icon, fallback = '▦') { return icon && String(ic
 const THIRD_PARTY_SCHOOLS = ['实验中学', '培英小学', '湖丰镇中学', '莲王柏中学'];
 const THIRD_PARTY_STATUS = { enabled: '已上架', disabled: '已下架' };
 
+const DEMO_APP_VERSION_HISTORY = {
+  'demo-wechat': [
+    { name: '微信', icon: '微', packageName: 'com.tencent.mm', version: '8.0.50', uploadedAt: '2026-09-23 10:00:00', resource: 'wechat-8.0.50.apk' },
+    { name: '微信', icon: '微', packageName: 'com.tencent.mm', version: '8.0.49', uploadedAt: '2026-08-28 15:20:00', resource: 'wechat-8.0.49.apk' },
+    { name: '微信', icon: '微', packageName: 'com.tencent.mm', version: '8.0.48', uploadedAt: '2026-07-16 09:35:00', resource: 'wechat-8.0.48.apk' }
+  ],
+  'demo-browser': [
+    { name: '浏览器', icon: '网', packageName: 'com.android.browser', version: '12.4.1', uploadedAt: '2026-09-22 16:30:00', resource: 'browser-12.4.1.apk' },
+    { name: '浏览器', icon: '网', packageName: 'com.android.browser', version: '12.3.8', uploadedAt: '2026-08-11 11:10:00', resource: 'browser-12.3.8.apk' }
+  ]
+};
+
 function openSimpleModal({ title, body, footer, size = 'lg' }) {
   const overlay = document.getElementById('modal-overlay');
   const modal = document.getElementById('modal');
@@ -41,6 +53,10 @@ function getThirdPartyApps() {
   data.thirdPartyApps.forEach((app) => {
     if (!Array.isArray(app.schools)) app.schools = [];
     if (!app.type) app.type = app.launchUrl ? 'web' : 'apk';
+    if ((!Array.isArray(app.versionHistory) || !app.versionHistory.length) && DEMO_APP_VERSION_HISTORY[app.id]) {
+      app.versionHistory = DEMO_APP_VERSION_HISTORY[app.id].map((item) => ({ ...item }));
+      changed = true;
+    }
   });
   if (changed) saveData(data);
   return data.thirdPartyApps;
@@ -203,11 +219,22 @@ function openAppVersionHistory(appId) {
   const app = getLibraryApps().find((item) => String(item.id) === String(appId));
   if (!app) return;
   const currentResource = app.type === 'web' ? (app.launchUrl || '—') : (app.fileName || '—');
-  const history = (Array.isArray(app.versionHistory) && app.versionHistory.length ? app.versionHistory : [{ name: app.name || '—', icon: app.icon || '', packageName: app.type === 'web' ? '—' : (app.packageName || '—'), version: app.type === 'web' ? '—' : (app.version || '—'), uploadedAt: app.updatedAt || '—', resource: currentResource }])
-    .slice()
-    .sort((a, b) => String(b.uploadedAt || '').localeCompare(String(a.uploadedAt || '')));
-  const body = `<div class="table-wrap"><table class="third-party-table version-history-table"><thead><tr><th>名称</th><th>图标</th><th>包名</th><th>版本号</th><th>上传时间</th><th>${app.type === 'web' ? 'Web 地址' : '安装包'}</th></tr></thead><tbody>${history.map((item) => `<tr><td><strong>${esc(item.name || app.name || '—')}</strong></td><td><span class="third-party-app-icon">${renderThirdPartyIcon(item.icon || app.icon)}</span></td><td class="muted">${esc(app.type === 'web' ? '—' : (item.packageName || app.packageName || '—'))}</td><td>${esc(app.type === 'web' ? '—' : (item.version || app.version || '—'))}</td><td>${esc(item.uploadedAt || '—')}</td><td class="muted">${esc(item.resource || '—')}</td></tr>`).join('')}</tbody></table></div>`;
+  const currentRecord = { name: app.name || '—', icon: app.icon || '', packageName: app.type === 'web' ? '—' : (app.packageName || '—'), version: app.type === 'web' ? '—' : (app.version || '—'), uploadedAt: app.updatedAt || '—', resource: currentResource };
+  const storedHistory = Array.isArray(app.versionHistory) ? app.versionHistory.slice() : [];
+  const hasCurrentRecord = storedHistory.some((item) => String(item.resource || '') === String(currentResource) && String(item.version || '—') === String(currentRecord.version));
+  if (!hasCurrentRecord) storedHistory.push(currentRecord);
+  const history = (storedHistory.length ? storedHistory : [currentRecord]).slice().sort((x, y) => String(y.uploadedAt || '').localeCompare(String(x.uploadedAt || '')));
+  const body = `<div class="table-wrap"><table class="third-party-table version-history-table"><thead><tr><th>名称</th><th>图标</th><th>包名</th><th>版本号</th><th>上传时间</th><th>${app.type === 'web' ? 'Web 地址' : '安装包'}</th>${app.type === 'apk' ? '<th>操作</th>' : ''}</tr></thead><tbody>${history.map((item, index) => `<tr><td><strong>${esc(item.name || app.name || '—')}</strong></td><td><span class="third-party-app-icon">${renderThirdPartyIcon(item.icon || app.icon)}</span></td><td class="muted">${esc(app.type === 'web' ? '—' : (item.packageName || app.packageName || '—'))}</td><td>${esc(app.type === 'web' ? '—' : (item.version || app.version || '—'))}</td><td>${esc(item.uploadedAt || '—')}</td><td class="muted">${app.type === 'web' ? `<a class="btn-link" href="${esc(item.resource || '#')}" target="_blank" rel="noopener noreferrer">${esc(item.resource || '—')}</a>` : esc(item.resource || '—')}</td>${app.type === 'apk' ? `<td><button class="btn btn-primary btn-sm" onclick="downloadAppVersionApk('${app.id}', ${index})">下载 APK</button></td>` : ''}</tr>`).join('')}</tbody></table></div>`;
+  window.__activeAppVersionHistory = { appId: app.id, history };
   openSimpleModal({ size: 'xl', title: '版本历史 - ' + app.name, body, footer: '<button class="btn btn-primary" onclick="closeModal()">关闭</button>' });
+}
+
+function downloadAppVersionApk(appId, historyIndex) {
+  const active = window.__activeAppVersionHistory;
+  if (!active || String(active.appId) !== String(appId)) return toast('未找到安装包记录', 'warning');
+  const record = active.history?.[Number(historyIndex)];
+  if (!record?.resource || record.resource === '—') return toast('未找到可下载的 APK', 'warning');
+  toast(`已开始下载 ${record.resource}`, 'success');
 }
 function openAppSchoolRelationForm(appId) {
   const app = getLibraryApps().find((item) => String(item.id) === String(appId));
@@ -267,7 +294,7 @@ function saveLibraryApp(id) {
   if (!Array.isArray(app.versionHistory)) app.versionHistory = existing && previousResource ? [{ name: existing.name || '—', icon: existing.icon || '', packageName: existing.packageName || '—', version: existing.version || '—', uploadedAt: existing.updatedAt || uploadedAt, resource: previousResource }] : [];
   Object.assign(app, { name, type, launchUrl, icon, iconFileName: iconFile?.name || existing?.iconFileName || '', packageName: type === 'apk' ? packageName : '', version: type === 'apk' ? version : '', fileName: type === 'apk' ? (file?.name || existing?.fileName || '') : '', forceUpdate: type === 'apk' ? forceUpdateValue === 'force' : false, enabled: true, updatedAt: uploadedAt });
   const currentResource = type === 'web' ? launchUrl : app.fileName;
-  if (!existing || currentResource !== previousResource) app.versionHistory.unshift({ name: name || '—', icon: icon || '', packageName: type === 'web' ? '—' : (packageName || '—'), version: type === 'web' ? '—' : (version || '—'), uploadedAt, resource: currentResource || '—' });
+  if (!existing || (type === 'apk' && file) || (type === 'web' && currentResource !== previousResource)) app.versionHistory.unshift({ name: name || '—', icon: icon || '', packageName: type === 'web' ? '—' : (packageName || '—'), version: type === 'web' ? '—' : (version || '—'), uploadedAt, resource: currentResource || '—' });
   saveData(data); closeModal(); toast('应用库保存成功', 'success'); navigate('app-library');
 }
 function toggleLibraryApp(id) {
