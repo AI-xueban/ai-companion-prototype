@@ -15,4 +15,6 @@ export interface SessionProfile {
 export interface LoginResult {
   accessToken: string;
   profile: SessionProfile;
+  /** 原型会话过期时间；正式环境以服务端校验结果为准。 */
+  expiresAt?: number;
 }

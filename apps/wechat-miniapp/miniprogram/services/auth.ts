@@ -41,6 +41,7 @@ export function createDemoLoginResult(role: UserRole, activeStudentId?: string):
   const isGuardian = role === "guardian";
   return {
     accessToken: "demo-short-lived-session",
+    expiresAt: Date.now() + 30 * 60 * 1000,
     profile: {
       userId: isGuardian ? "guardian-demo-001" : "teacher-demo-001",
       roles: [role],
@@ -66,6 +67,18 @@ export function createDemoTeacherPasswordResult(phone: string, password: string)
 }
 
 const DEMO_TEACHER_WECHAT_BINDING_KEY = "ai_companion_demo_teacher_wechat_binding";
+const DEMO_TEACHER_MANUAL_LOGOUT_KEY = "ai_companion_demo_teacher_manual_logout";
+
+/** 主动退出后停在登录页，直到老师再次主动登录。 */
+export function setDemoTeacherManualLogout(value: boolean): void {
+  if (value) wx.setStorageSync(DEMO_TEACHER_MANUAL_LOGOUT_KEY, true);
+  else wx.removeStorageSync(DEMO_TEACHER_MANUAL_LOGOUT_KEY);
+}
+
+export function wasDemoTeacherManualLogout(): boolean {
+  // 退出标记与微信绑定分开保存，退出登录不会解除账号绑定。
+  return wx.getStorageSync(DEMO_TEACHER_MANUAL_LOGOUT_KEY) === true;
+}
 
 /** 原型专用：只记录是否绑定演示教师账号，不存 openid 或 session_key。正式环境由后端维护绑定关系。 */
 export function getDemoTeacherWechatBinding(): string {
