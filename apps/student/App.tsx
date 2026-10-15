@@ -20,6 +20,7 @@ import { isKgMicroLessonTask, KG_SCOPE_SECTION_PRACTICE } from './utils/kgMicroL
 import { AssessmentFlow } from './components/Assessment/AssessmentFlow';
 import { CoinStoreModal } from './components/Store/CoinStoreModal';
 import { DemoControls } from './components/Demo/DemoControls'; 
+import { DeviceLockDemo, type DemoLockType } from './components/Demo/DeviceLockDemo';
 import { EssayLabContainer } from './components/EssayLab/EssayLabContainer';  
 import { LumiSpace } from './components/LumiSpace/LumiSpace';
 import { generateDailyPlan, setMockPersona, getUserGrowthData, completeMockAssessment, setMockNewbieCalibrated, resetMockStateForDemo } from './services/geminiService';
@@ -135,6 +136,7 @@ const App: React.FC = () => {
   // --- Global Mode State ---
   const [appMode, setAppMode] = useState<'student' | 'teacher'>('student');
   const [teacherEntryRole, setTeacherEntryRole] = useState<TeacherPortalRole>('teacher');
+  const [demoLockScreen, setDemoLockScreen] = useState<DemoLockType | null>(null);
 
   // --- Global Journey State ---
   const [journeyPhase, setJourneyPhase] = useState<UserJourneyPhase>('dashboard');
@@ -821,6 +823,10 @@ const App: React.FC = () => {
       onResetDemoData={handleResetDemoData}
       onDemoLeagueSparse={handleDemoLeagueSparse}
       onDemoAchievement={handleDemoAchievement}
+      onDemoLockScreen={(type) => {
+        setAppMode('student');
+        setDemoLockScreen(type);
+      }}
     />
   ) : null;
 
@@ -1410,6 +1416,13 @@ const App: React.FC = () => {
           achievement={achievementOverlay}
           onClaim={handleAchievementClaim}
         />
+
+        {demoLockScreen && (
+          <DeviceLockDemo
+            type={demoLockScreen}
+            onExit={() => setDemoLockScreen(null)}
+          />
+        )}
 
         <QuestionBankModal
             isOpen={showQuestionBankModal}
