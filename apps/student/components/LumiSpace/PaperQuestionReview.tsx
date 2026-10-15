@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Printer, Save, RotateCcw, Square, SquareCheck, Eye, EyeOff, Loader2, X } from 'lucide-react';
+import { ArrowLeft, Printer, Save, RotateCcw, Square, SquareCheck, Eye, EyeOff, Loader2, X, Wifi, WifiOff, Check } from 'lucide-react';
 import { PAPER_CONTENT_LABELS, type PaperContentMode } from '../../services/printedFileService';
 import type { PaperDraftSeed } from './PaperDraftWorkspace';
 import type { PaperPdfQuestion } from './lumiPaperPdf';
@@ -15,9 +15,9 @@ export interface PaperQuestionReviewTask {
 }
 
 export type PaperPdfProgressStage = 'preparing' | 'rendering' | 'checking';
-export type PaperPdfFailureDemo = 'timeout' | 'validation' | 'storage_full' | 'write_failed';
+export type PaperPdfFailureDemo = 'timeout' | 'validation' | 'storage_full' | 'write_failed' | 'network_failed' | 'network_disconnected' | 'file_too_large' | 'file_count_limit';
 export interface PaperPdfExportFailure {
-    code: 'STORAGE_FULL' | 'FILE_TOO_LARGE';
+    code: 'STORAGE_FULL' | 'FILE_TOO_LARGE' | 'FILE_COUNT_LIMIT';
     message: string;
 }
 
@@ -39,8 +39,11 @@ export const PaperQuestionReview: React.FC<PaperQuestionReviewProps> = ({ task, 
     const [contentMode, setContentMode] = useState<PaperContentMode>(task.seed.withAnswers ? 'paper_answer_analysis' : 'paper_only');
     const [failureDialogOpen, setFailureDialogOpen] = useState(false);
     const [storageFull, setStorageFull] = useState(false);
+    const [fileCountLimit, setFileCountLimit] = useState(false);
     const [capacityDemoOpen, setCapacityDemoOpen] = useState(false);
     const [filesOpen, setFilesOpen] = useState(false);
+    const [networkPageOpen, setNetworkPageOpen] = useState(false);
+    const [selectedNetwork, setSelectedNetwork] = useState('AI-Classroom');
     const [failureDemo, setFailureDemo] = useState<PaperPdfFailureDemo>('timeout');
 
     useEffect(() => {
@@ -51,8 +54,11 @@ export const PaperQuestionReview: React.FC<PaperQuestionReviewProps> = ({ task, 
         setContentMode(task.seed.withAnswers ? 'paper_answer_analysis' : 'paper_only');
         setFailureDialogOpen(false);
         setStorageFull(false);
+        setFileCountLimit(false);
         setCapacityDemoOpen(false);
         setFilesOpen(false);
+        setNetworkPageOpen(false);
+        setSelectedNetwork('AI-Classroom');
         setFailureDemo('timeout');
     }, [task.runId]);
 
@@ -81,6 +87,7 @@ export const PaperQuestionReview: React.FC<PaperQuestionReviewProps> = ({ task, 
         setError(null);
         setFailureDialogOpen(false);
         setStorageFull(false);
+        setFileCountLimit(false);
         setPdfStage('preparing');
         setRetryMode(mode);
         try {
@@ -89,6 +96,7 @@ export const PaperQuestionReview: React.FC<PaperQuestionReviewProps> = ({ task, 
             if (failure) {
                 setError(typeof failure === 'string' ? failure : failure.message);
                 setStorageFull(typeof failure !== 'string' && failure.code === 'STORAGE_FULL');
+                setFileCountLimit(typeof failure !== 'string' && failure.code === 'FILE_COUNT_LIMIT');
                 setFailureDialogOpen(true);
             }
         } catch {
@@ -125,16 +133,20 @@ export const PaperQuestionReview: React.FC<PaperQuestionReviewProps> = ({ task, 
                                 <label className="flex items-center gap-2 text-xs font-semibold text-amber-900">保存失败演示
                                     <select aria-label="保存失败演示原因" value={failureDemo} disabled={busy} onChange={(event) => {
                                         setFailureDemo(event.target.value as PaperPdfFailureDemo);
-                                        setError(null); setStorageFull(false); setFailureDialogOpen(false);
+                                        setError(null); setStorageFull(false); setFileCountLimit(false); setFailureDialogOpen(false);
                                         onResetFailureDemo?.();
                                     }} className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs text-slate-700 disabled:opacity-50">
                                         <option value="timeout">PDF 生成超时</option>
                                         <option value="validation">PDF 文件校验失败</option>
                                         <option value="storage_full">存储空间不足</option>
                                         <option value="write_failed">文件写入失败</option>
+                                        <option value="network_failed">网络连接失败</option>
+                                        <option value="network_disconnected">设备断网</option>
+                                        <option value="file_too_large">PDF 文件过大</option>
+                                        <option value="file_count_limit">超过 100 份上限</option>
                                     </select>
                                 </label>
-                                <button type="button" disabled={busy} onClick={() => { setError(null); setStorageFull(false); setFailureDialogOpen(false); onResetFailureDemo?.(); }} className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-100 disabled:opacity-50">重新触发此失败</button>
+                                <button type="button" disabled={busy} onClick={() => { setError(null); setStorageFull(false); setFileCountLimit(false); setFailureDialogOpen(false); onResetFailureDemo?.(); }} className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-100 disabled:opacity-50">重新触发此失败</button>
                             </div>
                             <p className="mt-2 text-xs leading-5 text-amber-800">选择原因后点击“保存为 PDF”触发模拟失败；点击“重试”演示恢复。切换原因或重新触发可重复演示。</p>
                         </div>
@@ -202,6 +214,8 @@ export const PaperQuestionReview: React.FC<PaperQuestionReviewProps> = ({ task, 
             </footer>
             {capacityDemoOpen ? (
                 <PdfCapacityDialog message="“我的文件”剩余容量不足，无法保存这份 PDF。" onClose={() => setCapacityDemoOpen(false)} onGoToFiles={() => { setCapacityDemoOpen(false); setFilesOpen(true); }} />
+            ) : failureDialogOpen && error && fileCountLimit ? (
+                <PdfCapacityDialog title="保存失败，文件份数已达上限" message={error} recoveryHint="请前往“我的文件”删除不需要的文件，再返回重试保存。" onClose={() => setFailureDialogOpen(false)} onGoToFiles={() => { setFailureDialogOpen(false); setFilesOpen(true); }} />
             ) : failureDialogOpen && error && storageFull ? (
                 <PdfCapacityDialog message={error} onClose={() => setFailureDialogOpen(false)} onRetry={() => void exportSelection(retryMode)} onGoToFiles={() => { setFailureDialogOpen(false); setFilesOpen(true); }} />
             ) : failureDialogOpen && error ? (
@@ -215,11 +229,16 @@ export const PaperQuestionReview: React.FC<PaperQuestionReviewProps> = ({ task, 
                     }
                 }}>
                     <section role="alertdialog" aria-modal="true" aria-labelledby="paper-failure-title" aria-describedby="paper-failure-reason" className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-                        <h2 id="paper-failure-title" className="text-lg font-bold text-slate-900">{retryMode === 'save' ? 'PDF 保存失败' : '打印文件生成失败'}</h2>
+                        <h2 id="paper-failure-title" className="text-lg font-bold text-slate-900">{retryMode === 'save' && failureDemo === 'network_disconnected' && task.simulateExportFailure ? '网络已断开，保存失败' : retryMode === 'save' ? 'PDF 保存失败' : '打印文件生成失败'}</h2>
                         <p id="paper-failure-reason" className="mt-3 text-sm leading-6 text-slate-600">{error}</p>
                         <div className="mt-6 flex flex-wrap justify-end gap-2">
                             <button type="button" autoFocus onClick={() => setFailureDialogOpen(false)} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100">取消</button>
-                            <button type="button" onClick={() => void exportSelection(retryMode)} disabled={busy || !selectedQuestions.length} className="rounded-xl border border-violet-200 px-4 py-2.5 text-sm font-semibold text-violet-700 hover:bg-violet-50 disabled:opacity-50">重试</button>
+                            <button type="button" onClick={() => {
+                                if (retryMode === 'save' && (failureDemo === 'network_failed' || failureDemo === 'network_disconnected') && task.simulateExportFailure) {
+                                    setFailureDialogOpen(false);
+                                    setNetworkPageOpen(true);
+                                } else void exportSelection(retryMode);
+                            }} disabled={busy || !selectedQuestions.length} className="rounded-xl border border-violet-200 px-4 py-2.5 text-sm font-semibold text-violet-700 hover:bg-violet-50 disabled:opacity-50">{retryMode === 'save' && failureDemo === 'network_disconnected' && task.simulateExportFailure ? '去联网' : retryMode === 'save' && failureDemo === 'network_failed' && task.simulateExportFailure ? '联网重试' : '重试'}</button>
                         </div>
                     </section>
                 </div>
@@ -227,6 +246,36 @@ export const PaperQuestionReview: React.FC<PaperQuestionReviewProps> = ({ task, 
             {filesOpen ? (
                 <div className="absolute inset-0 z-30 bg-slate-50">
                     <MyPrintedFilesPage onBack={() => setFilesOpen(false)} />
+                </div>
+            ) : null}
+            {networkPageOpen ? (
+                <div className="absolute inset-0 z-30 flex flex-col bg-slate-50">
+                    <header className="flex h-14 shrink-0 items-center border-b border-slate-200 bg-white px-4 sm:px-6">
+                        <button type="button" onClick={() => setNetworkPageOpen(false)} aria-label="返回题目查看" className="flex h-9 w-9 items-center justify-center rounded-full text-slate-700 hover:bg-slate-100"><ArrowLeft size={20} /></button>
+                        <h2 className="ml-3 text-sm font-bold text-slate-900">网络连接</h2>
+                    </header>
+                    <main className="flex-1 overflow-y-auto px-4 py-8 sm:px-6">
+                        <section className="mx-auto max-w-lg rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                            <div className="flex items-center gap-3">
+                                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-rose-50 text-rose-600"><WifiOff size={22} /></span>
+                                <div><h3 className="text-base font-bold text-slate-900">网络连接不可用</h3><p className="mt-1 text-xs text-slate-500">连接网络后，可继续重试保存 PDF。</p></div>
+                            </div>
+                            <div className="mt-6">
+                                <h4 className="mb-2 text-xs font-semibold text-slate-600">可用网络</h4>
+                                <div className="space-y-2">
+                                    {['AI-Classroom', 'Guest-WiFi'].map((network) => (
+                                        <button key={network} type="button" onClick={() => setSelectedNetwork(network)} aria-pressed={selectedNetwork === network} className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors ${selectedNetwork === network ? 'border-violet-300 bg-violet-50' : 'border-slate-200 hover:border-slate-300'}`}>
+                                            <Wifi size={18} className={selectedNetwork === network ? 'text-violet-600' : 'text-slate-400'} />
+                                            <span className="flex-1 text-sm font-medium text-slate-800">{network}</span>
+                                            {selectedNetwork === network ? <Check size={16} className="text-violet-600" /> : null}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <button type="button" disabled={!selectedNetwork || busy} onClick={() => { setNetworkPageOpen(false); void exportSelection('save'); }} className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50">连接 {selectedNetwork} 并重试保存</button>
+                            <p className="mt-3 text-center text-[11px] leading-5 text-slate-400">联网后将返回当前试卷并重新保存，题目和选择会保留。</p>
+                        </section>
+                    </main>
                 </div>
             ) : null}
             {printDialogOpen ? (

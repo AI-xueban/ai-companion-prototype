@@ -2594,12 +2594,24 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                     : message,
             ));
             if (failureDemo === 'storage_full') {
-                return { code: 'STORAGE_FULL', message: '“我的文件”剩余容量不足，无法保存这份 PDF（本次为模拟失败）。题目和选择已保留。' };
+                return { code: 'STORAGE_FULL', message: '“我的文件”剩余容量不足，无法保存这份 PDF。题目和选择已保留。' };
+            }
+            if (failureDemo === 'file_count_limit') {
+                return { code: 'FILE_COUNT_LIMIT', message: '“我的文件”已达到最多保存 100 份的上限，无法保存这份 PDF。题目和选择已保留。' };
+            }
+            if (failureDemo === 'file_too_large') {
+                return { code: 'FILE_TOO_LARGE', message: 'PDF 文件超过单份文件大小限制，无法保存。题目和选择已保留。' };
+            }
+            if (failureDemo === 'network_failed') {
+                return '网络连接异常，PDF 保存失败。请检查网络后重试，题目和选择已保留。';
+            }
+            if (failureDemo === 'network_disconnected') {
+                return '设备当前未连接网络，PDF 保存失败。请先连接网络，再继续保存。题目和选择已保留。';
             }
             const reason = failureDemo === 'validation' ? 'PDF 文件未通过完整性校验'
                 : failureDemo === 'write_failed' ? 'PDF 未能写入本地文件存储'
                     : 'PDF 生成服务超时';
-            return `失败原因：${reason}（本次为模拟失败）。题目和选择已保留，可以重试。`;
+            return `失败原因：${reason}。题目和选择已保留，可以重试。`;
         }
 
         const exportState: { stage: 'rendering' | 'checking' | 'saving' } = { stage: 'rendering' };
