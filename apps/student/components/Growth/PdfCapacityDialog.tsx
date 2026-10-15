@@ -5,9 +5,11 @@ interface PdfCapacityDialogProps {
   onClose: () => void;
   onGoToFiles: () => void;
   onRetry?: () => void;
+  title?: string;
+  recoveryHint?: string;
 }
 
-export const PdfCapacityDialog: React.FC<PdfCapacityDialogProps> = ({ message, onClose, onGoToFiles, onRetry }) => (
+export const PdfCapacityDialog: React.FC<PdfCapacityDialogProps> = ({ message, onClose, onGoToFiles, onRetry, title = '存储空间不足，保存失败', recoveryHint = '请前往“我的文件”删除不再需要的文件，释放空间后重试。' }) => (
   <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" onKeyDown={(event) => {
     if (event.key === 'Escape') { event.stopPropagation(); onClose(); }
     if (event.key === 'Tab') {
@@ -18,9 +20,9 @@ export const PdfCapacityDialog: React.FC<PdfCapacityDialogProps> = ({ message, o
     }
   }}>
     <section role="alertdialog" aria-modal="true" aria-labelledby="pdf-capacity-title" aria-describedby="pdf-capacity-reason" className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-      <h2 id="pdf-capacity-title" className="text-lg font-bold text-slate-900">存储空间不足，保存失败</h2>
+      <h2 id="pdf-capacity-title" className="text-lg font-bold text-slate-900">{title}</h2>
       <p id="pdf-capacity-reason" className="mt-3 text-sm leading-6 text-slate-600">{message}</p>
-      <p className="mt-2 text-sm leading-6 text-slate-600">请前往“我的文件”删除不再需要的文件，释放空间后重试。</p>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{recoveryHint}</p>
       <div className="mt-6 flex flex-wrap justify-end gap-2">
         <button type="button" autoFocus onClick={onClose} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100">取消</button>
         {onRetry ? <button type="button" onClick={onRetry} className="rounded-xl border border-violet-200 px-4 py-2.5 text-sm font-semibold text-violet-700 hover:bg-violet-50">重试</button> : null}
