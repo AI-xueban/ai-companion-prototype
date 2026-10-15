@@ -36,12 +36,16 @@
   const enrollStudentId = document.getElementById("enrollStudentId");
   const enrollNotice = document.getElementById("enrollNotice");
   const faceEnrollStart = document.getElementById("faceEnrollStart");
+  const faceEnrollBack = document.getElementById("faceEnrollBack");
   const enrollFailureAction = document.getElementById("enrollFailureAction");
   let enrollmentTimer = null;
   const faceStatus = document.getElementById("faceStatus");
   const faceDesc = document.getElementById("faceDesc");
   const faceRetry = document.getElementById("faceRetry");
-  const loginChoice = document.getElementById("loginChoice");
+  const faceConfirmModal = document.getElementById("faceConfirmModal");
+  const recognizedStudentId = document.getElementById("recognizedStudentId");
+  const faceConfirmRetry = document.getElementById("faceConfirmRetry");
+  const faceConfirmLogin = document.getElementById("faceConfirmLogin");
   const faceBack = document.getElementById("faceBack");
   const deviceTableBody = document.getElementById("deviceTableBody");
   const deviceEmpty = document.getElementById("deviceEmpty");
@@ -145,8 +149,8 @@
     screenEl.dataset.page = name;
 
     if (name === "pickup") {
-      resetFaceLogin();
-      showLoginChoice();
+      mustEnrollAfterPassword = false;
+      showPasswordLogin();
       hideKeypad();
     } else {
       hideKeypad();
@@ -171,9 +175,9 @@
   }
 
   function resetFaceLogin() {
+    faceConfirmModal.hidden = true;
     pickupPage.querySelector('[data-goto="home"]').hidden = false;
     faceBack.hidden = false;
-    loginChoice.hidden = true;
     mustEnrollAfterPassword = false;
     authenticatedStudentId = "";
     enrollmentMode = "replace";
@@ -190,19 +194,18 @@
   }
 
   function showFaceSuccess() {
-    loginChoice.hidden = true;
     faceLogin.hidden = false;
     passwordLogin.hidden = true;
     faceEnroll.hidden = true;
-    faceStatus.textContent = "识别成功，正在登录";
+    faceStatus.textContent = "识别成功";
     faceStatus.className = "face-status is-success";
-    faceDesc.textContent = "已确认身份，即将进入可用设备列表";
+    faceDesc.textContent = "请确认识别到的编号";
     faceRetry.hidden = true;
-    enrollmentTimer = window.setTimeout(() => showPage("devices"), 650);
+    recognizedStudentId.textContent = "2026001";
+    faceConfirmModal.hidden = false;
   }
 
   function showFaceFail(mode = enrollmentMode) {
-    loginChoice.hidden = true;
     mustEnrollAfterPassword = false;
     enrollmentMode = mode;
     faceLogin.hidden = false;
@@ -216,19 +219,18 @@
 
   function showPasswordLogin() {
     document.getElementById("passwordToFace").hidden = mustEnrollAfterPassword;
-    loginChoice.hidden = true;
     faceLogin.hidden = true;
     passwordLogin.hidden = false;
     faceEnroll.hidden = true;
     passwordLoginDesc.textContent = mustEnrollAfterPassword
-      ? "验证后开始人脸注册；原有人脸将删除，录入完成前不可退出"
+      ? "验证后开始人脸注册；开始录入后不可退出"
       : "请输入编号和密码后查看可用设备";
     loginTip.hidden = true;
     hideKeypad();
   }
 
   function showFaceEnrollment() {
-    loginChoice.hidden = true;
+    faceEnrollBack.hidden = false;
     enrollFailureAction.hidden = true;
     hideKeypad();
     faceLogin.hidden = true;
@@ -238,7 +240,7 @@
     enrollStatus.className = "face-status";
     enrollDesc.textContent = "";
     enrollStudentId.textContent = authenticatedStudentId || "—";
-    enrollNotice.textContent = "请完成新人脸录入，完成前不可退出";
+    enrollNotice.textContent = "请正对屏幕，开始录入后不可退出";
     faceEnrollStart.hidden = false;
     faceEnrollStart.disabled = false;
     faceEnrollStart.textContent = "开始录入";
@@ -664,14 +666,6 @@
     showPage("devices");
   });
 
-  function showLoginChoice() {
-    clearTimeout(enrollmentTimer);
-    hideKeypad();
-    loginChoice.hidden = false;
-    faceLogin.hidden = true;
-    passwordLogin.hidden = true;
-    faceEnroll.hidden = true;
-  }
   function openRegistration() {
     if (registrationLocked) return;
     showPage("pickup");
@@ -680,16 +674,31 @@
     faceBack.hidden = true;
   }
   document.getElementById("faceRegister").addEventListener("click", openRegistration);
-  document.getElementById("chooseFace").addEventListener("click", resetFaceLogin);
-  document.getElementById("choosePassword").addEventListener("click", showPasswordLogin);
-  document.getElementById("backToLoginChoice").addEventListener("click", showLoginChoice);
-  faceBack.addEventListener("click", showLoginChoice);
+  document.getElementById("backToLoginChoice").addEventListener("click", showPasswordLogin);
+  faceBack.addEventListener("click", () => showPage("home"));
   document.getElementById("passwordToFace").addEventListener("click", () => {
     hideKeypad();
     resetFaceLogin();
   });
   faceRetry.addEventListener("click", resetFaceLogin);
+  faceConfirmRetry.addEventListener("click", () => {
+    faceConfirmModal.hidden = true;
+    authenticatedStudentId = "";
+    showPasswordLogin();
+  });
+  faceConfirmLogin.addEventListener("click", () => {
+    authenticatedStudentId = recognizedStudentId.textContent;
+    faceConfirmModal.hidden = true;
+    showPage("devices");
+  });
+  faceEnrollBack.addEventListener("click", () => {
+    clearTimeout(enrollmentTimer);
+    registrationLocked = false;
+    showPasswordLogin();
+  });
+
   faceEnrollStart.addEventListener("click", () => {
+    faceEnrollBack.hidden = true;
     enrollFailureAction.hidden = true;
     faceEnrollStart.disabled = true;
     faceEnrollStart.textContent = "正在录入…";
@@ -815,7 +824,7 @@
     enrollStatus.textContent = "录入失败";
     enrollStatus.className = "face-status is-failed";
     enrollDesc.textContent = "本次人脸未保存，请重新录入";
-    enrollNotice.textContent = "请完成新人脸录入，完成前不可退出";
+    enrollNotice.textContent = "请正对屏幕，开始录入后不可退出";
   }
 
   simulateNotCharging.addEventListener("click", (e) => {

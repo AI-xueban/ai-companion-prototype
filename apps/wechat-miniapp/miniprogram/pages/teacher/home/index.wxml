@@ -1,10 +1,43 @@
 <view class="page">
-  <view class="page-head"><view class="page-title">班级学情</view><view class="page-desc">仅展示当前教师已授权的班级与学科数据。</view></view>
-  <view class="section-label">教学待办</view>
-  <view class="cell-list">
-    <view class="cell"><view class="cell-main"><view class="cell-title">待处理作业</view><view class="cell-desc">查看未提交和待订正情况</view></view><view class="cell-extra">7 人</view><view class="cell-arrow">›</view></view>
-    <view class="cell"><view class="cell-main"><view class="cell-title">班级错题</view><view class="cell-desc">查看需要讲评的共性问题</view></view><view class="cell-arrow">›</view></view>
+  <view wx:if="{{securityOpen}}" class="security-page">
+    <view class="security-back" bindtap="closeSecurity">‹ 返回教师工作台</view>
+    <view class="security-title">账号与安全</view>
+    <view class="security-card">
+      <view class="security-row"><view>登录账号</view><view>138****8000</view></view>
+      <view class="security-row"><view>微信绑定状态</view><view>{{wechatBound ? '已绑定' : '未绑定'}}</view></view>
+    </view>
+    <view wx:if="{{wechatBound}}" class="security-card security-unbind">
+      <view class="security-heading">解绑当前微信</view>
+      <view class="security-copy">解绑后需使用教师账号登录。为确认是你本人操作，请再次输入登录密码。</view>
+      <input class="security-input" password="true" placeholder="请输入登录密码完成二次验证" value="{{reauthPassword}}" bindinput="changeReauthPassword" />
+      <button class="security-button" bindtap="confirmUnbind">验证并解绑</button>
+      <view class="security-demo">原型演示密码：Demo@123456；正式解绑须由后端二次验证。</view>
+    </view>
   </view>
-  <view class="section-label">班级管理</view>
-  <view class="cell-list"><view class="cell"><view class="cell-main"><view class="cell-title">班级学习报告</view><view class="cell-desc">按任教学科查看学习情况</view></view><view class="cell-arrow">›</view></view></view>
+  <view wx:else>
+  <view class="hero">
+    <view class="top-row"><view class="school">{{schoolName}}</view><view class="top-actions"><view class="security-link" bindtap="openSecurity">账号与安全</view><view class="logout" bindtap="logout">退出</view></view></view>
+    <view class="greeting">{{teacherName}}，你好</view>
+    <view class="hero-subtitle">选择任教班级，查看对应学科的教学工作。</view>
+  </view>
+
+  <view class="section-title">我的任教班级</view>
+  <view class="class-list">
+    <view wx:for="{{classes}}" wx:key="id" class="class-card {{selectedClassId === item.id ? 'selected' : ''}}" data-id="{{item.id}}" bindtap="selectClass">
+      <view><view class="class-name">{{item.name}}</view><view class="class-meta">{{item.subject}} · {{item.students}} 名学生</view></view>
+      <view wx:if="{{item.isHeadTeacher}}" class="role-tag">班主任</view>
+    </view>
+  </view>
+
+  <view class="section-title">{{selectedClass.name}} · {{selectedClass.subject}}</view>
+  <view class="module-grid">
+    <view class="module" data-name="班级学情" bindtap="openModule"><view class="module-icon">学</view><view class="module-name">班级学情</view><view class="module-desc">学习概况与趋势</view></view>
+    <view class="module" data-name="学生学情" bindtap="openModule"><view class="module-icon">生</view><view class="module-name">学生学情</view><view class="module-desc">查看班内学生</view></view>
+    <view class="module" data-name="错题分析" bindtap="openModule"><view class="module-icon">题</view><view class="module-name">错题分析</view><view class="module-desc">定位共性问题</view></view>
+    <view class="module" data-name="学习时长" bindtap="openModule"><view class="module-icon">时</view><view class="module-name">学习时长</view><view class="module-desc">查看学习投入</view></view>
+    <view class="module" data-name="作业" bindtap="openModule"><view class="module-icon">作</view><view class="module-name">作业</view><view class="module-desc">查看与发布作业</view></view>
+    <view class="module" data-name="答案管控" bindtap="openModule"><view class="module-icon">控</view><view class="module-name">答案管控</view><view class="module-desc">设置答案开放</view></view>
+  </view>
+  <view class="demo-note">原型演示数据。正式系统由服务端按教师、班级、学科和学期校验每次请求。</view>
+  </view>
 </view>

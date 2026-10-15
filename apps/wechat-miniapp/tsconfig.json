@@ -8,5 +8,5 @@
     "skipLibCheck": true,
     "types": ["miniprogram-api-typings"]
   },
-  "include": ["miniprogram/**/*.ts", "miniprogram/**/*.d.ts", "miniprogram/*.d.ts"]
+  "include": ["miniprogram/**/*.ts", "miniprogram/**/*.d.ts"]
 }

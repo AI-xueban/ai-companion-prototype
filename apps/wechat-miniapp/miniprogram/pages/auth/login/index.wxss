@@ -1,1 +1,47 @@
-.page-note { margin-top: 0; }
+.page { min-height: 100vh; padding: 68rpx 48rpx 56rpx; box-sizing: border-box; overflow: hidden; background: linear-gradient(155deg, #f0fcf4 0%, #f1fbff 49%, #f6f7ff 100%); }
+.role-stage, .flow-stage { max-width: 680rpx; margin: 0 auto; }.role-stage { position: relative; }
+.decor { position: absolute; z-index: 0; border-radius: 50%; opacity: .72; }.decor-one { width: 236rpx; height: 236rpx; top: -126rpx; right: -120rpx; background: #bcefd9; }.decor-two { width: 142rpx; height: 142rpx; top: 146rpx; left: -100rpx; background: #c9eaff; }
+.brand-row { position: relative; z-index: 1; display: flex; align-items: center; color: #273350; }.brand-mark { width: 54rpx; height: 54rpx; display: flex; align-items: center; justify-content: center; border-radius: 18rpx; background: linear-gradient(135deg, #4a78ee, #52c8cf); color: #fff; font-size: 22rpx; font-weight: 800; box-shadow: 0 10rpx 22rpx rgba(74, 120, 238, .22); }.brand-name { margin-left: 14rpx; letter-spacing: 1rpx; font-size: 30rpx; font-weight: 700; }
+.eyebrow { position: relative; z-index: 1; margin-top: 76rpx; color: #449c8e; letter-spacing: 4rpx; font-size: 20rpx; font-weight: 700; }
+.title { position: relative; z-index: 1; margin-top: 18rpx; color: #1f2a44; font-size: 56rpx; font-weight: 700; line-height: 1.25; letter-spacing: 1rpx; }.subtitle { position: relative; z-index: 1; margin-top: 18rpx; color: #667085; font-size: 28rpx; line-height: 1.7; }
+.role-list { position: relative; z-index: 1; margin-top: 60rpx; display: flex; flex-direction: column; gap: 28rpx; }.role-card { width: 100%; min-height: 178rpx; padding: 30rpx 32rpx; box-sizing: border-box; display: flex; align-items: center; text-align: left; border-radius: 30rpx; background: #fff; border: 2rpx solid transparent; box-shadow: 0 16rpx 42rpx rgba(61, 73, 127, .08); }
+.role-card::after { border: 0; }
+.role-card.guardian { background: #fff9f5; border-color: #ffe4d3; }
+.role-card.teacher { background: #f4f8ff; border-color: #dbe7ff; }
+.role-icon { position: relative; width: 88rpx; height: 88rpx; margin-right: 24rpx; border-radius: 28rpx; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 38rpx; font-weight: 700; }.role-icon.warm { background: linear-gradient(145deg, #ffad78, #f17878); }.role-icon.cool { background: linear-gradient(145deg, #59c7d4, #4b76e9); }
+.icon-dot { position: absolute; top: 12rpx; right: 12rpx; width: 12rpx; height: 12rpx; border-radius: 50%; background: #fff7cd; }.icon-spark { position: absolute; right: 8rpx; top: 5rpx; color: #e9fbff; font-size: 19rpx; }
+.role-copy { flex: 1; }.role-label { color: #8b9bae; font-size: 18rpx; letter-spacing: 2rpx; font-weight: 700; }.role-title { margin-top: 5rpx; color: #273350; font-size: 36rpx; font-weight: 700; }.role-desc { margin-top: 8rpx; color: #71809b; font-size: 25rpx; }.arrow { color: #50617e; font-size: 52rpx; font-weight: 300; }
+.tip { position: relative; z-index: 1; margin-top: 48rpx; color: #98a2b3; font-size: 24rpx; text-align: center; }.back { margin-bottom: 42rpx; color: #5267d8; font-size: 27rpx; }
+.card { margin-top: 44rpx; padding: 32rpx; border-radius: 28rpx; background: #fff; box-shadow: 0 16rpx 42rpx rgba(61, 73, 127, .08); }.card-title { color: #273350; font-size: 34rpx; font-weight: 700; }.card-text { margin-top: 14rpx; color: #71809b; font-size: 26rpx; line-height: 1.75; }
+.child-list { margin-top: 26rpx; display: flex; flex-direction: column; gap: 18rpx; }.child-item { padding: 22rpx; display: flex; align-items: center; border: 2rpx solid #edf0f6; border-radius: 20rpx; }.child-item.selected { border-color: #5267d8; background: #f5f6ff; }.child-avatar { width: 62rpx; height: 62rpx; margin-right: 20rpx; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #ffd9c7; color: #9e4f2b; font-weight: 700; }.child-name { color: #273350; font-size: 29rpx; font-weight: 700; }.child-meta { margin-top: 4rpx; color: #71809b; font-size: 23rpx; }.check { margin-left: auto; color: #5267d8; font-size: 32rpx; font-weight: 700; }
+.agreement { margin-top: 32rpx; color: #667085; font-size: 24rpx; line-height: 1.6; }.primary-button { margin-top: 32rpx; border-radius: 22rpx; background: linear-gradient(100deg, #5267d8, #4e9fed); color: #fff; font-size: 30rpx; font-weight: 700; box-shadow: 0 14rpx 26rpx rgba(79, 119, 224, .24); }
+
+.teacher-page { padding: 42rpx 40rpx 48rpx; overflow: visible; background: radial-gradient(circle at 94% 21%, rgba(174, 217, 255, .64), transparent 28%), linear-gradient(155deg, #eaf6ff 0%, #f8fcff 60%, #eaf8f4 100%); }
+.teacher-flow { position: relative; min-height: calc(100vh - 90rpx); display: flex; flex-direction: column; }
+.teacher-back { color: #416f9a; font-size: 26rpx; }
+.teacher-hero { position: relative; padding-top: 86rpx; }
+.teacher-art { position: absolute; top: 40rpx; right: -10rpx; width: 270rpx; height: 270rpx; opacity: .94; }
+.teacher-mark { width: 78rpx; height: 78rpx; display: flex; align-items: center; justify-content: center; border-radius: 26rpx; background: linear-gradient(140deg, #72bcf2, #4b8ee7); color: #fff; font-size: 40rpx; font-weight: 700; box-shadow: 0 14rpx 28rpx rgba(75, 142, 231, .22); }
+.teacher-title { margin-top: 34rpx; color: #173866; font-size: 54rpx; font-weight: 700; letter-spacing: 1rpx; }
+.teacher-subtitle { margin-top: 12rpx; color: #6680a1; font-size: 26rpx; line-height: 1.6; }
+.teacher-login-card { margin-top: 48rpx; padding: 30rpx; border: 2rpx solid #e5f0fa; border-radius: 32rpx; background: rgba(255, 255, 255, .94); box-shadow: 0 22rpx 54rpx rgba(72, 120, 172, .11); }
+.teacher-modes { display: flex; border-bottom: 2rpx solid #e9f0f6; }
+.teacher-mode { flex: 1; padding: 10rpx 0 22rpx; border-bottom: 5rpx solid transparent; color: #8294aa; font-size: 27rpx; font-weight: 600; text-align: center; }
+.teacher-mode.active { border-bottom-color: #5a9cec; color: #285f9d; }
+.teacher-field-label { margin-top: 32rpx; color: #365273; font-size: 25rpx; font-weight: 600; }
+.teacher-input { height: 86rpx; margin-top: 12rpx; padding: 0 24rpx; box-sizing: border-box; border: 2rpx solid #e0eaf5; border-radius: 20rpx; background: #f6faff; color: #203b5d; font-size: 28rpx; }
+.teacher-code-row { display: flex; align-items: center; gap: 14rpx; }
+.teacher-code-input { flex: 1; min-width: 0; }
+.teacher-code-button { flex: 0 0 auto; height: 86rpx; margin: 12rpx 0 0; padding: 0 18rpx; line-height: 86rpx; border: 2rpx solid #bfddf5; border-radius: 20rpx; background: #eaf6ff; color: #3779b4; font-size: 24rpx; font-weight: 600; }
+.teacher-code-button::after { border: 0; }
+.teacher-demo-note { margin-top: 28rpx; padding: 18rpx 20rpx; border-radius: 16rpx; background: #f2f8ff; color: #6e89a4; font-size: 22rpx; line-height: 1.5; }
+.teacher-bottom { margin-top: auto; padding-top: 60rpx; }
+.teacher-submit { border-radius: 22rpx; background: linear-gradient(100deg, #5198ed, #6cbfe5); color: #fff; font-size: 30rpx; font-weight: 700; box-shadow: 0 16rpx 34rpx rgba(70, 142, 220, .22); }
+.teacher-submit::after { border: 0; }
+.teacher-wechat-entry { margin-top: 20rpx; border: 2rpx solid #bedbf5; border-radius: 22rpx; background: rgba(255, 255, 255, .78); color: #3474b4; font-size: 29rpx; font-weight: 700; }
+.teacher-wechat-entry::after { border: 0; }
+.teacher-bind-hero { padding-top: 110rpx; }
+.teacher-bind-card { padding: 42rpx 34rpx; }
+.teacher-bind-title { color: #6680a1; font-size: 25rpx; }
+.teacher-bind-account { margin-top: 8rpx; color: #173866; font-size: 36rpx; font-weight: 700; }
+.teacher-bind-copy { margin-top: 30rpx; color: #365273; font-size: 27rpx; line-height: 1.7; }

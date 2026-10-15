@@ -13,12 +13,16 @@ export const TeacherHeader: React.FC<{
   user: TeacherPortalUser;
   currentClassId: string;
   onClassChange: (classId: string) => void;
+  showClassSelector?: boolean;
+  showMessages?: boolean;
 }> = ({
   unreadMessageCount = 0,
   onOpenInbox,
   user,
   currentClassId,
   onClassChange,
+  showClassSelector = true,
+  showMessages = true,
 }) => {
   const allowedClasses = PORTAL_CLASSES.filter((item) => user.classIds.includes(item.id));
   const currentClass = allowedClasses.find((item) => item.id === currentClassId) ?? allowedClasses[0];
@@ -38,8 +42,8 @@ export const TeacherHeader: React.FC<{
         
         {/* 左侧：增强型班级切换器 (Rich Popover) */}
         <div className="flex items-center gap-2 text-sm font-bold select-none">
-          <span className="text-slate-500">{user.schoolName}</span><span className="text-slate-300">/</span>
-          <div className="relative">
+          <span className="text-slate-500">{user.schoolName}</span><span className={showClassSelector ? "text-slate-300" : "hidden"}>/</span>
+          <div className={showClassSelector ? "relative" : "hidden"}>
             <button 
               disabled={allowedClasses.length < 2}
               onClick={(e) => {
@@ -65,7 +69,7 @@ export const TeacherHeader: React.FC<{
                 className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-slate-100 p-2 animate-in fade-in zoom-in-95 duration-100 origin-top-left z-50"
                 onClick={(e) => e.stopPropagation()} // 防止点击内部关闭
               >
-                <div className="text-xs font-medium text-slate-400 px-2 py-1 mb-1">切换教学班级</div>
+                <div className="text-xs font-medium text-slate-400 px-2 py-1 mb-1">{user.role === 'school-admin' ? '选择查看班级' : '切换教学班级'}</div>
                 {allowedClasses.map((cls) => (
                   <div 
                     key={cls.id}
@@ -101,7 +105,7 @@ export const TeacherHeader: React.FC<{
 
         <div className="flex items-center gap-4 text-slate-500">
           {/* 消息按钮 */}
-          <button
+          {showMessages && <button
             onClick={onOpenInbox}
             className="relative p-2 hover:bg-slate-100 rounded-lg transition-colors group"
           >
@@ -111,7 +115,7 @@ export const TeacherHeader: React.FC<{
                 {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
               </span>
             )}
-          </button>
+          </button>}
         </div>
       </div>
     </>

@@ -49,7 +49,7 @@ function tabletDeviceStatusNote(tablet) {
   if (resolveTabletDeviceState(tablet) === 'abnormal') {
     const notes = [];
     if (isTabletScratchDamaged(tablet)) notes.push('设备擦伤');
-    if (tablet.isOverdue) notes.push('借出满24小时未归还');
+    if (tablet.isOverdue) notes.push('借出逾期');
     if (isTabletDoorOpenAbnormal(tablet)) notes.push('未关门');
     getTabletPendingAlerts(tablet.id).forEach(a => {
       const text = alertContentText(a);
@@ -57,14 +57,7 @@ function tabletDeviceStatusNote(tablet) {
     });
     return notes.length ? notes.join('；') : '—';
   }
-  if (tablet.status === 'borrowed') {
-    const record = data.usageRecords.find(r => r.tabletId === tablet.id && r.status === 'borrowed' && r.returnAttempt);
-    const issue = record?.returnAttempt?.issue;
-    if (issue === 'door_open') return '归还未关门';
-    if (issue === 'not_charging') return '归还未充电';
-    if (issue === 'misplaced') return '疑似误放';
-    if (record?.returnAttempt?.status === 'cancelled') return '归还已取消';
-  }
+  // 列表说明只反映当前设备状态；已借出设备的历史归还尝试仅在使用记录或告警中展示。
   return '—';
 }
 
@@ -134,7 +127,7 @@ function usageRecordStateNote(r) {
   if (r.returnAttempt?.issue === 'door_open') notes.push('柜门未关，待重试');
   if (r.returnAttempt?.issue === 'not_charging') notes.push('设备未充电，待重试');
   if (r.returnAttempt?.issue === 'misplaced') notes.push('疑似误放，设备仍借出');
-  if (r.overdue) notes.push('借出满24小时未归还');
+  if (r.overdue) notes.push('借出逾期');
   if (r.returnInspection?.aiResult === 'scratch') {
     notes.push(r.returnInspection.detail || '外观对比发现擦伤');
   } else if (r.returnInspection?.aiResult === 'crack') {
@@ -531,8 +524,8 @@ function alertContentText(a) {
   if (a.type === 'manual_feedback') return a.message || '—';
   const map = {
     damage: '外观对比发现损坏',
-    overdue: '借出满24小时未归还',
-    cabinet_offline: '柜机心跳超时',
+    overdue: '借出逾期',
+    cabinet_offline: '柜机连接超时',
     return_door_open: '未关门',
     return_not_charging: '未充电',
   };
@@ -635,12 +628,14 @@ function getDefaultUsageFilter() {
 }
 
 function getDefaultAlertFilter() {
+  const today = formatYmd(new Date());
   return {
     type: '全部',
     status: '全部',
     sn: '',
     cabinetId: '',
-    month: formatYm(new Date()),
+    dateStart: today.slice(0, 8) + '01',
+    dateEnd: today,
   };
 }
 
@@ -742,10 +737,8 @@ function filterDeviceAlerts(alerts, filter) {
       const cabinetId = a.cabinetId || data.tablets.find(t => t.id === a.tabletId)?.cabinetId || '';
       if (!String(cabinetId).toLowerCase().includes(cabinetKey)) return false;
     }
-    if (filter.month) {
-      const createdYm = parseRecordYm(a.createdAt);
-      if (createdYm !== filter.month) return false;
-    }
+    const createdYmd = parseRecordYmd(a.createdAt);
+    if (!isYmdInRange(createdYmd, filter.dateStart, filter.dateEnd)) return false;
     return true;
   });
 }
@@ -771,7 +764,8 @@ function readAlertFilterFromForm() {
     status: document.getElementById('alert-filter-status')?.value || '全部',
     sn: document.getElementById('alert-filter-sn')?.value || '',
     cabinetId: document.getElementById('alert-filter-cabinet-id')?.value || '',
-    month: document.getElementById('alert-filter-month')?.value || formatYm(new Date()),
+    dateStart: document.getElementById('alert-filter-start')?.value || '',
+    dateEnd: document.getElementById('alert-filter-end')?.value || '',
   };
 }
 
@@ -826,9 +820,9 @@ function resetAlertFilter() {
 
 function renderUsageTableRows(records) {
   if (!records.length) {
-    return '<tr><td colspan="13" style="text-align:center;color:var(--text-muted);padding:32px">暂无符合条件的使用记录</td></tr>';
+    return '<tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:32px">暂无符合条件的使用记录</td></tr>';
   }
-  return records.map((r, index) => `
+  return records.map(r => `
     <tr>
       <td>${esc(r.id)}</td>
       <td>${esc(r.sn || '—')}</td>
@@ -837,7 +831,7 @@ function renderUsageTableRows(records) {
       <td>${esc(r.studentId || '—')}</td>
       <td>${esc(r.studentName)}</td>
       <td>${esc(r.grade || '—')}</td>
-      <td>${esc(r.authMethod || (index % 4 === 1 ? '编号密码' : '人脸识别'))}</td>
+
       <td>${usageRecordStateTag(r)}</td>
       <td class="status-ref-note">${esc(usageRecordStateNote(r))}</td>
       <td>${r.borrowAt}</td>
@@ -847,6 +841,23 @@ function renderUsageTableRows(records) {
   `).join('');
 }
 
+function changeAlertStatus(alertId) {
+  const alert = data.deviceAlerts.find(item => item.id === alertId);
+  if (!alert) { toast('未找到告警记录', 'error'); return; }
+  const willResolve = alert.status !== 'resolved';
+  showConfirmModal({
+    title: willResolve ? '确认标记已解决' : '确认恢复待处理',
+    message: willResolve ? '确认将告警 '+alert.id+' 标记为已解决？' : '确认将告警 '+alert.id+' 恢复为待处理？',
+    hint: willResolve ? '请确认问题已完成处理。' : '恢复后该告警将重新进入待处理列表。',
+    confirmText: willResolve ? '标记已解决' : '恢复待处理',
+    onConfirm: () => {
+      alert.status = willResolve ? 'resolved' : 'pending';
+      saveData(data);
+      toast('告警 '+alert.id+' 已'+(willResolve ? '标记为已解决' : '恢复为待处理'), 'success');
+      navigate('device-alert', { keepFilter: true });
+    },
+  });
+}
 function renderAlertTableRows(alerts) {
   if (!alerts.length) {
     return '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:32px">暂无符合条件的告警</td></tr>';
@@ -861,7 +872,7 @@ function renderAlertTableRows(alerts) {
       <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(alertContentText(a))}</td>
       <td>${alertStatusTag(a.status)}</td>
       <td>${a.createdAt}</td>
-      <td>${a.status === 'resolved' ? '<span style="color:var(--text-muted)">已处理</span>' : '<button class="btn-link" onclick="toast(\'已标记处理\',\'success\')">处理</button>'}</td>
+      <td><button class="btn-link" onclick="changeAlertStatus('${a.id}')">${a.status === 'resolved' ? '恢复待处理' : '标记已解决'}</button></td>
     </tr>
   `).join('');
 }
@@ -984,7 +995,7 @@ function renderPendingReturnTimelineItem(record) {
         <div class="dev-timeline-item warn">
           <div class="dev-timeline-time">${overdue ? (record.forceLogoutAt || '—') : '—'}</div>
           <div class="dev-timeline-title">${title}</div>
-          <div class="dev-timeline-desc">${overdue ? '借出满 24 小时未归还' : '等待学生归还'} ${stateTag}</div>
+          <div class="dev-timeline-desc">${overdue ? '借出逾期' : '等待学生归还'} ${stateTag}</div>
         </div>`;
 }
 
@@ -1033,7 +1044,7 @@ function renderDeviceOverviewPage() {
         <div class="dev-stat-card"><div class="label">平板总数</div><div class="value">${tablets.length}</div><div class="sub">已注册设备</div></div>
         <div class="dev-stat-card ok"><div class="label">在柜</div><div class="value">${inCabinet}</div><div class="sub">当前可借出</div></div>
         <div class="dev-stat-card"><div class="label">离柜</div><div class="value">${outCabinet}</div><div class="sub">不在任何柜机</div></div>
-        <div class="dev-stat-card warn"><div class="label">逾期提醒</div><div class="value">${overdue}</div><div class="sub">借出24h未还</div></div>
+        <div class="dev-stat-card warn"><div class="label">逾期提醒</div><div class="value">${overdue}</div><div class="sub">借出逾期</div></div>
         <div class="dev-stat-card danger"><div class="label">待处理告警</div><div class="value">${pendingAlerts}</div><div class="sub">含损坏/逾期</div></div>
       </div>
       ${renderAppearanceGuide()}
@@ -1341,7 +1352,7 @@ function renderDeviceUsagePage(params) {
       <div class="table-wrap">
         <table class="data-table">
           <thead><tr>
-            <th>记录ID</th><th>设备SN</th><th>格口号</th><th>所属柜机ID</th><th>编号</th><th>学生</th><th>班级</th><th>登录方式</th><th>状态</th><th>说明</th><th>借出时间</th><th>归还时间</th><th>操作</th>
+            <th>记录ID</th><th>设备SN</th><th>格口号</th><th>所属柜机ID</th><th>编号</th><th>学生</th><th>班级</th><th>状态</th><th>说明</th><th>借出时间</th><th>归还时间</th><th>操作</th>
           </tr></thead>
           <tbody>${renderUsageTableRows(pageRows)}</tbody>
         </table>
@@ -1368,7 +1379,7 @@ function renderDeviceUsageDetailPage(params) {
         <div class="detail-item"><label>状态</label><span>${usageRecordStateTag(r)}</span></div>
         ${usageRecordStateNote(r) !== '—' ? `<div class="detail-item"><label>说明</label><span>${esc(usageRecordStateNote(r))}</span></div>` : ''}
         ${r.preAlertAt ? `<div class="detail-item"><label>学生端提前告警</label><span>${r.preAlertAt} <span style="font-size:12px;color:var(--text-muted)">（借出后23h50m）</span></span></div>` : ''}
-        ${r.forceLogoutAt ? `<div class="detail-item"><label>强制退出登录</label><span>${r.forceLogoutAt} <span style="font-size:12px;color:var(--text-muted)">（借出满24h）</span></span></div>` : ''}
+        ${r.forceLogoutAt ? `<div class="detail-item"><label>强制退出登录</label><span>${r.forceLogoutAt} <span style="font-size:12px;color:var(--text-muted)">（借出逾期）</span></span></div>` : ''}
         ${r.alertId ? `<div class="detail-item"><label>关联告警</label><span><button class="btn-link" onclick="openTab('device-alert','状态告警')">${esc(r.alertId)}</button></span></div>` : ''}
         ${r.returnAlertIds?.length ? `<div class="detail-item"><label>归还异常告警</label><span>${r.returnAlertIds.map(id => `<button class="btn-link" onclick="openTab('device-alert','状态告警')">${esc(id)}</button>`).join(' ')}</span></div>` : ''}
       </div>
@@ -1399,10 +1410,10 @@ function renderDeviceAlertPage(params) {
         <div class="filter-item"><label>所属柜机ID</label><input class="input" id="alert-filter-cabinet-id" placeholder="请输入" value="${esc(f.cabinetId)}"></div>
         <div class="filter-item"><label>告警类型</label><select class="select" id="alert-filter-type"><option${f.type === '全部' ? ' selected' : ''}>全部</option><option${f.type === '外观损坏' ? ' selected' : ''}>外观损坏</option><option${f.type === '逾期提醒' ? ' selected' : ''}>逾期提醒</option><option${f.type === '未关门' ? ' selected' : ''}>未关门</option><option${f.type === '未充电' ? ' selected' : ''}>未充电</option><option${f.type === '柜机离线' ? ' selected' : ''}>柜机离线</option><option${f.type === '人工问题反馈' ? ' selected' : ''}>人工问题反馈</option></select></div>
         <div class="filter-item"><label>处理状态</label><select class="select" id="alert-filter-status"><option${f.status === '全部' ? ' selected' : ''}>全部</option><option${f.status === '待处理' ? ' selected' : ''}>待处理</option><option${f.status === '已解决' ? ' selected' : ''}>已解决</option></select></div>
-        <div class="filter-item"><label>产生时间</label><select class="select" id="alert-filter-month">${renderAlertMonthSelect(f.month)}</select></div>
+        <div class="filter-item"><label>产生时间</label><div class="date-range"><input class="input" type="date" id="alert-filter-start" value="${esc(f.dateStart || '')}"><span>至</span><input class="input" type="date" id="alert-filter-end" value="${esc(f.dateEnd || '')}"></div></div>
         <div class="filter-actions"><button type="button" class="btn" onclick="resetAlertFilter()">重置</button><button type="button" class="btn btn-primary" onclick="applyAlertFilter()">搜索</button></div>
       </div>
-      <p class="form-hint" style="margin:0 0 12px">按月份查询，当前 ${esc(formatMonthLabel(f.month))}，共 ${filtered.length} 条</p>
+      <p class="form-hint" style="margin:0 0 12px">按产生时间查询，当前 ${esc(f.dateStart || '不限')} 至 ${esc(f.dateEnd || '不限')}，共 ${filtered.length} 条</p>
       <div class="table-wrap">
         <table class="data-table">
           <thead><tr>

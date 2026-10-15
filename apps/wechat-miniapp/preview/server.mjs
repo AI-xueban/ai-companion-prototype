@@ -18,9 +18,10 @@ const server = http.createServer(async (request, response) => {
       : pathname === '/assets/role-selection-approved.png'
         ? 'role-selection-approved.png'
         : null;
-    const file = assetName ? join(root, 'assets', assetName) : join(root, 'index.html');
+    const teacherArt = pathname === '/assets/teacher-login-illustration.png';
+    const file = teacherArt ? join(root, '..', 'miniprogram', 'assets', 'teacher-login-illustration.png') : assetName ? join(root, 'assets', assetName) : join(root, 'index.html');
     const content = await readFile(file);
-    response.writeHead(200, { 'Content-Type': assetName ? 'image/png' : 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+    response.writeHead(200, { 'Content-Type': assetName || teacherArt ? 'image/png' : 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
     response.end(content);
   } catch { response.writeHead(500); response.end('Preview unavailable'); }
 });

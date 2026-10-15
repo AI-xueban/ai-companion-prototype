@@ -6,6 +6,7 @@ import { XkwHtmlStem } from './XkwHtmlStem';
 
 interface QuestionRichContentProps {
   question: UniversalQuizQuestion;
+  previewOnly?: boolean;
   showAudioPlayer?: boolean; // 是否显示音频播放器
 }
 
@@ -25,6 +26,7 @@ const STEM_SECTION_LABEL: Record<'reading' | 'image' | 'default', string> = {
 
 export const QuestionRichContent: React.FC<QuestionRichContentProps> = ({
   question,
+  previewOnly = false,
   showAudioPlayer = true
 }) => {
   const [previewAudio, setPreviewAudio] = useState<HTMLAudioElement | null>(null);
@@ -161,7 +163,7 @@ export const QuestionRichContent: React.FC<QuestionRichContentProps> = ({
                 <div className="text-sm font-semibold text-slate-800">
                   {formatSubQuestionText(idx, sq.question)}
                 </div>
-                {sq.options && (
+                {!previewOnly && sq.options && (
                   <div className="grid grid-cols-1 gap-2">
                     {sq.options.map((opt, oidx) => {
                       const hasPrefix = /^[A-Z]\.\s*/.test(opt);
@@ -189,7 +191,7 @@ export const QuestionRichContent: React.FC<QuestionRichContentProps> = ({
         </div>
       ) : (
         /* 普通选项展示区块 (Options) */
-        question.content.options && question.content.options.length > 0 && (
+        !previewOnly && question.content.options && question.content.options.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
             {question.content.options.map((option, idx) => {
               const hasPrefix = /^[A-Z]\.\s*/.test(option);

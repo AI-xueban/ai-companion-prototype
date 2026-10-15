@@ -92,22 +92,9 @@ export const classOverview = {
   activeRate: 0.82, // 今日活跃率
   taskCompletionRate: 0.74, // 今日任务达标率
   alertCount: messages.filter((m) => m.status !== 'handled' && m.level === 'high').length, // 未处理高危预警数
-  avgPoints: 1280, // 班级平均积分
   periodLabel: '今日',
   updateTime: '10:00',
 };
-
-// 班级能力雷达（班级均值 + 上月对照）
-export const classRadar = [
-  { subject: '逻辑', score: 86, prevScore: 81, fullMark: 100 },
-  { subject: '言语', score: 78, prevScore: 75, fullMark: 100 },
-  { subject: '空间', score: 83, prevScore: 79, fullMark: 100 },
-  { subject: '动觉', score: 69, prevScore: 68, fullMark: 100 },
-  { subject: '音乐', score: 64, prevScore: 63, fullMark: 100 },
-  { subject: '人际', score: 80, prevScore: 78, fullMark: 100 },
-  { subject: '内省', score: 76, prevScore: 74, fullMark: 100 },
-  { subject: '自然', score: 58, prevScore: 57, fullMark: 100 },
-];
 
 // 知识图谱（按科目分组，带状态列）- 由学生端知识数据生成
 export const knowledgeGraphBySubject = buildTeacherKnowledgeFromStudent();
@@ -257,10 +244,8 @@ export const students: StudentSummary[] = [
     level: genLevel('stu-001'),
     status: 'online',
     alertLevel: 'medium',
-    abilitySnapshot: { logic: 85, calculation: 60, spatial: 90, application: 75, concept: 80 },
     recentTrend: 'up',
     lastActive: '10分钟前',
-    aiInsight: '空间几何突出，代数需巩固',
   },
   {
     id: 'stu-002',
@@ -271,10 +256,8 @@ export const students: StudentSummary[] = [
     level: genLevel('stu-002'),
     status: 'online',
     alertLevel: 'none',
-    abilitySnapshot: { logic: 95, calculation: 92, spatial: 88, application: 90, concept: 98 },
     recentTrend: 'up',
     lastActive: '5分钟前',
-    aiInsight: '全面发展，可带组内答疑',
   },
   {
     id: 'stu-003',
@@ -285,10 +268,8 @@ export const students: StudentSummary[] = [
     level: genLevel('stu-003'),
     status: 'away',
     alertLevel: 'high',
-    abilitySnapshot: { logic: 60, calculation: 65, spatial: 50, application: 55, concept: 70 },
     recentTrend: 'down',
     lastActive: '2小时前',
-    aiInsight: '基础薄弱，需要个别辅导',
   },
   {
     id: 'stu-004',
@@ -299,10 +280,8 @@ export const students: StudentSummary[] = [
     level: genLevel('stu-004'),
     status: 'online',
     alertLevel: 'none',
-    abilitySnapshot: { logic: 90, calculation: 88, spatial: 95, application: 92, concept: 90 },
     recentTrend: 'stable',
     lastActive: '刚刚',
-    aiInsight: '表现稳定，可挑战拔高题',
   },
   {
     id: 'stu-005',
@@ -313,26 +292,14 @@ export const students: StudentSummary[] = [
     level: genLevel('stu-005'),
     status: 'online',
     alertLevel: 'low',
-    abilitySnapshot: { logic: 75, calculation: 80, spatial: 70, application: 85, concept: 80 },
     recentTrend: 'up',
     lastActive: '15分钟前',
-    aiInsight: '应用能力强，逻辑需提升',
   },
 ];
 
-// 学生详情（雷达、记录、错题/知识/时间线）
+// 学生详情（记录、错题/知识/时间线）
 export const studentDetailMap = {
   'stu-001': {
-    radar: [
-      { subject: '逻辑', score: 85, prevScore: 80, fullMark: 100, analysis: '推理流畅，代数细节需练习' },
-      { subject: '言语', score: 72, prevScore: 70, fullMark: 100, analysis: '描述简练，可增加论证' },
-      { subject: '空间', score: 90, prevScore: 86, fullMark: 100, analysis: '空间想象突出，可多做立体几何' },
-      { subject: '动觉', score: 65, prevScore: 64, fullMark: 100, analysis: '动手实验兴趣一般' },
-      { subject: '音乐', score: 60, prevScore: 60, fullMark: 100, analysis: '节奏感一般' },
-      { subject: '人际', score: 78, prevScore: 76, fullMark: 100, analysis: '小组协作良好' },
-      { subject: '内省', score: 74, prevScore: 72, fullMark: 100, analysis: '复盘习惯已建立' },
-      { subject: '自然', score: 55, prevScore: 55, fullMark: 100, analysis: '需更多实验观察' },
-    ],
     timeline: [
       { time: '10-24 16:30', type: '每日任务', subject: '数学', summary: '正确率 82%，+50 积分，用时 18min' },
       { time: '10-24 15:10', type: '专项练习', subject: '数学', summary: '几何专项，正确率 76%' },
@@ -344,15 +311,16 @@ export const studentDetailMap = {
 };
 
 // 激励 - 商品配置
-export const incentiveGoods = [
+const incentiveGoodsTemplate = [
   { id: 'g-001', name: '免做卡', cost: 150, stock: 12, status: 'on', limitPerUser: 1 },
   { id: 'g-002', name: '早退 10 分钟', cost: 200, stock: 8, status: 'off', limitPerUser: 1 },
   { id: 'g-003', name: '课堂加分 +5', cost: 80, stock: 30, status: 'on', limitPerUser: 2 },
 ];
+export const incentiveGoods = ['c1', 'c2', 'c3'].flatMap(classId => incentiveGoodsTemplate.map(good => ({ ...good, id: `${classId}-${good.id}`, classId })));
 
 // 激励 - 兑换记录
 export const redemptionRecords = [
-  { id: 'r-001', student: '李明', item: '免做卡', points: 150, time: '10-24 10:20', status: 'pending', handler: '', handledAt: '', reason: '' },
-  { id: 'r-002', student: '王强', item: '课堂加分 +5', points: 80, time: '10-24 09:50', status: 'done', handler: '赵老师', handledAt: '10-24 10:00', reason: '' },
-  { id: 'r-003', student: '张小花', item: '早退 10 分钟', points: 200, time: '10-23 17:10', status: 'rejected', handler: '赵老师', handledAt: '10-23 18:00', reason: '未满足积分规则' },
+  { id: 'r-001', classId: 'c1', student: '李明', item: '免做卡', points: 150, time: '10-12 10:20', status: 'pending', handler: '', handledAt: '', reason: '' },
+  { id: 'r-002', classId: 'c2', student: '王强', item: '课堂加分 +5', points: 80, time: '10-12 09:50', status: 'done', handler: '赵老师', handledAt: '10-12 10:00', reason: '' },
+  { id: 'r-003', classId: 'c3', student: '张小花', item: '早退 10 分钟', points: 200, time: '10-11 17:10', status: 'rejected', handler: '赵老师', handledAt: '10-11 18:00', reason: '未满足积分规则' },
 ];

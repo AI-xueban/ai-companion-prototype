@@ -1003,7 +1003,7 @@ export const SubjectMap: React.FC<SubjectMapProps> = ({
         setIsUnitTestSetupOpen(false);
         setShortageOverlay(null);
         if (options?.mode === 'print') {
-          setPrintJob({ title: setup.paperTitle || task.title, questionCount: setup.questionCount, subject: activeSubject, questionTypeCounts: setup.questionTypeCounts, includeAnswerAnalysis: setup.includeAnswerAnalysis });
+          setPrintJob({ title: setup.paperTitle || task.title, source: 'unit_test', questionCount: setup.questionCount, subject: activeSubject, questionTypeCounts: setup.questionTypeCounts, includeAnswerAnalysis: setup.includeAnswerAnalysis });
           return;
         }
         onStartLevel?.(task);
@@ -2231,7 +2231,7 @@ export const SubjectMap: React.FC<SubjectMapProps> = ({
                       <BookOpen size={18} />
                     </span>
                     <div className="mt-2 flex min-h-0 flex-1 flex-col items-center justify-center">
-                      <h2 className="text-[14px] font-semibold leading-tight text-slate-900">自主练习</h2>
+                      <h2 className="text-[14px] font-semibold leading-tight text-slate-900">精准练习</h2>
                     </div>
                     <span className="mt-2 flex items-center gap-0.5 text-[11px] font-semibold text-violet-600">
                       进入练习
@@ -2452,7 +2452,7 @@ export const SubjectMap: React.FC<SubjectMapProps> = ({
               || (isCatalogSubject ? catalogUnit?.lessons[0]?.title : visibleChapterTopics[0]?.section)
               || undefined)
         }
-        pageTitle="自主练习"
+        pageTitle="精准练习"
         startLabel="开始练习"
         onBack={() => setIsSelfPracticeOpen(false)}
         onStart={startSelfPractice}

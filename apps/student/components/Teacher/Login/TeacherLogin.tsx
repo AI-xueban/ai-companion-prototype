@@ -37,7 +37,7 @@ export const TeacherLogin: React.FC<TeacherLoginProps> = ({ onLogin, initialRole
       setLoading(false);
       if (matched) {
         localStorage.setItem('mockTeacherToken', 'true');
-        onLogin({ id: matched.id, name: matched.name, account: matched.account, role: matched.role, roleLabel: matched.roleLabel, schoolId: matched.schoolId, schoolName: matched.schoolName, classIds: matched.classIds, subject: matched.subject });
+        onLogin({ id: matched.id, name: matched.name, account: matched.account, role: matched.role, roleLabel: matched.roleLabel, schoolId: matched.schoolId, schoolName: matched.schoolName, classIds: matched.classIds, teachingAssignments: matched.teachingAssignments, homeroomClassIds: matched.homeroomClassIds, subject: matched.subject });
       } else {
         setError('账号、密码或登录角色不匹配，请使用页面下方的演示账号');
       }
@@ -122,7 +122,7 @@ export const TeacherLogin: React.FC<TeacherLoginProps> = ({ onLogin, initialRole
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-500">登录角色</label>
+            <label className="text-xs font-bold text-slate-500">登录入口（兼任职责登录后可切换）</label>
             <select value={role} onChange={(event) => { const nextRole = event.target.value as TeacherPortalRole; setRole(nextRole); setAccount(DEMO_TEACHER_ACCOUNTS.find((item) => item.role === nextRole)?.account ?? ''); }} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm">
               <option value="teacher">教师</option><option value="class-teacher">班主任</option><option value="school-admin">学校管理员</option>
             </select>
@@ -181,7 +181,7 @@ export const TeacherLogin: React.FC<TeacherLoginProps> = ({ onLogin, initialRole
             </button>
           )}
         </form>
-        <div className="rounded-xl bg-slate-50 p-3 text-[11px] leading-5 text-slate-500">演示密码均为 12345678：教师 13800000000；班主任 13800000001；学校管理员 admin@luohu.edu。</div>
+        <div className="rounded-xl bg-slate-50 p-3 text-[11px] leading-5 text-slate-500">学校管理员可查看独立的全校学情与全校设备使用页面；兼任任课教师或班主任时，还可在「我的班级」四个入口内切换职责范围。演示密码均为 12345678：教师 13800000000；班主任 13800000001；学校管理员 admin@luohu.edu。</div>
 
         {isResetOpen && (
           <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">

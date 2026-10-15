@@ -1,0 +1,45 @@
+import React from 'react';
+import { ChevronRight } from 'lucide-react';
+import { TeacherPortalUser } from '../data/teacherAccess';
+import { ReportData, ReportScope, Population, groupActivities, queryReport, percentage, minutesLabel, reportDate } from '../data/learningReportData';
+import { Metric, panel, ReportFootnote } from '../Analytics/LearningReportShared';
+
+interface Props { user: TeacherPortalUser; scope: ReportScope; data: ReportData; onAnalyze: (changes?: Partial<ReportScope>, feature?: string) => void; onStudents: (population: Population) => void; onClass: (classId: string) => void }
+export const SchoolLearningDashboard: React.FC<Props> = ({ user, scope, data, onAnalyze, onStudents, onClass }) => {
+  const subjects = groupActivities(data, 'subject');
+  const features = groupActivities(data, 'feature');
+  const used = data.usedIds.size, learned = data.learnedIds.size, enrolled = data.roster.length;
+  const windowDays = scope.period === '7d' ? 7 : 30, chunk = scope.period === '7d' ? 1 : 7;
+  const trend = Array.from({ length: Math.ceil(windowDays / chunk) }, (_, i) => {
+    const oldest = windowDays - 1 - i * chunk, newest = Math.max(0, oldest - chunk + 1);
+    return { label: chunk === 1 ? reportDate(oldest).slice(5) : `${reportDate(oldest).slice(5)}～${reportDate(newest).slice(5)}`, used: new Set(data.operations.filter(a => a.day >= newest && a.day <= oldest).map(a => a.studentId)).size, learned: new Set(data.activities.filter(a => a.day >= newest && a.day <= oldest).map(a => a.studentId)).size };
+  });
+  const max = Math.max(1, ...trend.map(item => item.used));
+  const days = data.roster.map(s => new Set(data.activities.filter(a => a.studentId === s.id).map(a => a.day)).size);
+  const bands = [{ label: '暂无学习记录', count: days.filter(n => n === 0).length }, { label: '学习 1 天', count: days.filter(n => n === 1).length }, { label: '学习 2–3 天', count: days.filter(n => n >= 2 && n <= 3).length }, { label: '学习 4 天及以上', count: days.filter(n => n >= 4).length }];
+  return <div className="h-full overflow-y-auto bg-[#F8F9FC]"><div className="mx-auto max-w-[1480px] space-y-6 p-6 lg:p-8">
+    <div className="flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-2xl font-black text-slate-900">全校学情</h1></div><span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">演示数据</span></div>
+    <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-500"><span>{user.schoolName}</span><span>当前范围 {new Set(data.classes.map(row => row.grade)).size} 个年级 · {data.classes.length} 个班级 · {enrolled} 名学生</span></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <Metric label="使用人数" value={<>{used}<small className="ml-1 text-sm font-medium text-slate-400">人</small></>} note={`覆盖当前范围 ${enrolled} 人的 ${percentage(used, enrolled)}%`} onClick={() => onStudents('used')} />
+      <Metric label="学习人数" value={<>{learned}<small className="ml-1 text-sm font-medium text-slate-400">人</small></>} note="有观看、练习或学习互动的学生" accent onClick={() => onStudents('learned')} />
+      <Metric label="学习总时长" value={<>{(data.minutes / 60).toFixed(1)}<small className="ml-1 text-sm font-medium text-slate-400">小时</small></>} note={`${data.activities.length} 条学习活动 · 查看内容分布`} onClick={() => onAnalyze()} />
+      <Metric label="人均学习时长" value={<>{learned ? Math.round(data.minutes / learned) : '—'}<small className="ml-1 text-sm font-medium text-slate-400">分钟</small></>} note={`本期总时长 ÷ ${learned} 名学习学生`} />
+    </div>
+    <section className={panel}><div className="flex items-center justify-between"><div><h2 className="font-black text-slate-900">各班开展情况</h2><p className="mt-1 text-xs text-slate-400">按年级、班级查看使用覆盖与学习投入 · 点击进入班级概览</p></div><span className="text-xs text-slate-400">{data.classes.length} 个班级</span></div><div className="mt-5 overflow-x-auto"><table className="w-full min-w-[680px] text-left text-sm"><thead className="border-b border-slate-100 text-xs text-slate-400"><tr>{['班级', '使用人数', '学习人数', '学习时长', '人均学习时长', ''].map((label, i) => <th key={i} className="pb-3 font-medium">{label}</th>)}</tr></thead><tbody>{data.classes.map(row => {
+      const summary = queryReport(user, { ...scope, classId: row.id });
+      return <tr key={row.id} className="border-b border-slate-100 last:border-0"><td className="py-4 font-bold text-slate-800">{row.name}</td><td>{summary.usedIds.size}/{summary.roster.length}</td><td>{summary.learnedIds.size} 人</td><td>{summary.minutes} 分钟</td><td>{summary.learnedIds.size ? Math.round(summary.minutes / summary.learnedIds.size) : '—'} 分钟</td><td><button className="text-xs font-bold text-indigo-600" aria-label={`查看${row.name}概览`} onClick={() => onClass(row.id)}>进入班级 →</button></td></tr>;
+    })}</tbody></table></div></section>
+    <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
+      <section className={panel}><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-black text-slate-900">使用与学习趋势</h2><p className="mt-1 text-xs text-slate-400">{chunk === 1 ? '每日' : '每段'}分别按学生去重</p></div><div className="flex gap-3 text-xs text-slate-500"><span><i className="mr-1 inline-block h-2 w-2 bg-indigo-200" />使用人数</span><span><i className="mr-1 inline-block h-2 w-2 bg-indigo-600" />学习人数</span></div></div><div className="mt-7 flex items-end gap-2">{trend.map(item => <div key={item.label} className="min-w-0 flex-1 text-center"><div className="mb-2 text-[10px] font-semibold text-slate-500">{item.used} / {item.learned}</div><div className="flex h-28 items-end justify-center gap-1"><div className="w-3 rounded-t bg-indigo-200 sm:w-5" style={{ height: `${item.used / max * 100}%` }} /><div className="w-3 rounded-t bg-indigo-600 sm:w-5" style={{ height: `${item.learned / max * 100}%` }} /></div><div className="mt-2 text-[10px] text-slate-400">{item.label}</div></div>)}</div></section>
+      <section className={panel}><h2 className="font-black text-slate-900">学习是否持续</h2><p className="mt-1 text-xs text-slate-400">本期每名学生有学习活动的天数</p><div className="mt-5 space-y-4">{bands.map(band => <div key={band.label}><div className="mb-1 flex justify-between text-xs"><span className="text-slate-600">{band.label}</span><strong>{band.count} 人</strong></div><div className="h-1.5 rounded-full bg-slate-100"><div className="h-full rounded-full bg-teal-500" style={{ width: `${percentage(band.count, enrolled)}%` }} /></div></div>)}</div><button onClick={() => onStudents('all')} className="mt-4 text-xs font-bold text-indigo-600">查看学生明细 →</button></section>
+    </div>
+    <div className="grid gap-5 lg:grid-cols-2">
+      <section className={panel}><h2 className="font-black text-slate-900">学生主要学哪些科目</h2><p className="mt-1 text-xs text-slate-400">学习人数 / 该科适用学生 · 点击进入学科分析</p><div className="mt-5 divide-y divide-slate-100">{subjects.map(item => {
+        const eligible = queryReport(user, { ...scope, subject: item.name }).roster.length;
+        return <button key={item.name} onClick={() => onAnalyze({ subject: item.name })} className="w-full py-3 text-left hover:bg-slate-50"><div className="flex items-center justify-between gap-3 text-sm"><strong>{item.name}</strong><span className="text-slate-600">{item.people}/{eligible} 人 · {percentage(item.people, eligible)}% <ChevronRight size={13} className="inline text-indigo-500" /></span></div><div className="mt-2 h-1.5 rounded-full bg-slate-100"><div className="h-full rounded-full bg-indigo-500" style={{ width: `${percentage(item.people, eligible)}%` }} /></div><p className="mt-2 text-xs text-slate-400">学习 {minutesLabel(item.minutes)}</p></button>;
+      })}</div>{!subjects.length && <p className="py-8 text-sm text-slate-400">当前范围暂无学科学习记录</p>}<p className="mt-3 text-xs text-slate-400">学生可学习多个科目，各科人数不能相加为总人数。</p></section>
+      <section className={panel}><h2 className="font-black text-slate-900">学生用哪些功能学习</h2><p className="mt-1 text-xs text-slate-400">按学习时长分布 · 点击查看内容及活动</p><div className="mt-5 space-y-4">{features.map((item, i) => <button key={item.name} onClick={() => onAnalyze(undefined, item.name)} className="block w-full text-left"><div className="mb-2 flex items-center justify-between gap-2 text-sm"><strong>{item.name}</strong><span className="text-xs text-slate-500">{item.people} 人 · {item.minutes} 分钟 · {percentage(item.minutes, data.minutes)}%</span></div><div className="h-2 rounded-full bg-slate-100"><div className={`h-2 rounded-full ${i % 2 ? 'bg-teal-500' : 'bg-indigo-500'}`} style={{ width: `${percentage(item.minutes, data.minutes)}%` }} /></div></button>)}</div>{!features.length && <p className="py-8 text-sm text-slate-400">当前范围暂无功能学习记录</p>}</section>
+    </div>
+<ReportFootnote />
+  </div></div>;
+};

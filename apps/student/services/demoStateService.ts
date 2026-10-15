@@ -1,10 +1,14 @@
+import { clearPaperDocuments } from './printedFileService';
+
 const LOCAL_STORAGE_KEYS = new Set([
   'ai_friend_daily_word_check_ins',
   'ai_friend_mistake_reasons',
   'ai_friend_question_feedback',
   'ai_friend_reward_ledger_v1',
+  'ai_friend_reward_history_v1',
   'ai_friend_similar_attempts',
   'ai_friend_tutor_explain_feedback',
+  'ai_friend_tutor_auto_voice',
   'ai_friend_textbook_versions_v1',
   'ai_friend_academic_context_v1',
   'kg-chinese-display-scheme',
@@ -13,9 +17,12 @@ const LOCAL_STORAGE_KEYS = new Set([
   'mockTeacherToken',
   'ai-companion:print-question-type-preferences:v1',
   'ai-companion:printed-files:v1',
+  'ai-companion:teacher-student-registry:v1',
+  'ai-companion:teacher-school-management:v1',
 ]);
 
 const LOCAL_STORAGE_PREFIXES = [
+  'ai_friend_reward_stats_',
   'kg-last-scope-',
   'sync-lesson-progress-',
 ];
@@ -47,6 +54,7 @@ function removeProjectEntries(
 
 export function resetDemoPersistentState(): number {
   if (typeof window === 'undefined') return 0;
+  void clearPaperDocuments().catch(console.error);
 
   return removeProjectEntries(localStorage, LOCAL_STORAGE_KEYS, LOCAL_STORAGE_PREFIXES)
     + removeProjectEntries(sessionStorage, SESSION_STORAGE_KEYS, SESSION_STORAGE_PREFIXES);

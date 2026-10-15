@@ -73,8 +73,8 @@ export const PaperDraftWorkspace: React.FC<PaperDraftWorkspaceProps> = ({ seed, 
                         </div>
                         <p className="mt-1 text-xs text-slate-500">题目预览 · 修改后会创建新版本</p>
                     </div>
-                    <button type="button" onClick={onClose} className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200" aria-label="返回聊天">
-                        <ArrowLeft size={16} /> 返回聊天
+                    <button type="button" onClick={onClose} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-800 transition-colors hover:bg-slate-200" aria-label="返回">
+                        <ArrowLeft size={20} />
                     </button>
                 </header>
 

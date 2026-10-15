@@ -350,6 +350,7 @@ const ELEMENTARY_HOME_RAIL: HomeRailEntry[] = [
 ];
 
 interface DashboardImmersiveProps {
+  showMoreAppsEntry?: boolean;
   userName: string;
   userLevel?: number;
   nextLevelXp?: number;
@@ -362,6 +363,10 @@ interface DashboardImmersiveProps {
   dayPlan: DayPlan | null;
   onStartQuiz: (task: Task) => void;
   onOpenStore?: () => void;
+  onOpenRewardAccount?: () => void;
+  onOpenMyExperience?: () => void;
+  isRewardAccountOpen?: boolean;
+  onCoinSpend?: (amount: number, title: string) => void;
   onOpenMood?: () => void;
   selectedMoods?: MoodOption[];
   onOpenCharity?: () => void;
@@ -378,6 +383,7 @@ interface DashboardImmersiveProps {
 }
 
 export const DashboardImmersive: React.FC<DashboardImmersiveProps> = ({
+  showMoreAppsEntry = true,
   userName,
   userLevel = 5,
   nextLevelXp = 1000,
@@ -386,6 +392,10 @@ export const DashboardImmersive: React.FC<DashboardImmersiveProps> = ({
   dayPlan,
   onStartQuiz,
   onOpenStore,
+  onOpenRewardAccount,
+  onOpenMyExperience,
+  isRewardAccountOpen = false,
+  onCoinSpend,
   onOpenMood,
   selectedMoods = [],
   onOpenCharity,
@@ -448,6 +458,7 @@ export const DashboardImmersive: React.FC<DashboardImmersiveProps> = ({
       setCharityStageHint('捐赠未成功，请稍后重试');
       return;
     }
+    onCoinSpend?.(charityInput, '爱心大使捐赠');
     setCharityStageHint('');
     setCharityJustDonated(true);
     setCharityViewState('CERTIFICATE');
@@ -852,8 +863,8 @@ export const DashboardImmersive: React.FC<DashboardImmersiveProps> = ({
            {/* Right: Stats & Notification */}
            <div className="flex items-center gap-3">
                <button 
-                    onClick={onOpenStore}
-                    aria-label={`打开金币商店，当前 ${coins} 金币`}
+                    onClick={onOpenRewardAccount || onOpenStore}
+                    aria-label={`查看我的金币，当前 ${coins} 金币`}
                     className="h-9 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95 select-none backdrop-blur-2xl bg-white/10 border border-white/30 pl-3 pr-3 gap-2 shadow-[0_4px_24px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.2)] ring-1 ring-white/10 hover:bg-white/15 hover:border-white/35 hover:shadow-[0_6px_28px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.25)]"
                 >
                    <div className="relative">
@@ -1319,6 +1330,7 @@ export const DashboardImmersive: React.FC<DashboardImmersiveProps> = ({
       </AnimatePresence>
 
       <ThirdPartyAppRail
+        showEntry={showMoreAppsEntry && activePanel === null && !readingArticleId && !isFullLeagueOpen && !isCharityOpen && !isUserMenuOpen && !isMessageOpen && !isCameraOpen && processingShotIds === null && !isQuestionPickerOpen && !isZhiyueOpen}
         isOpen={isThirdPartyOpen}
         apps={THIRD_PARTY_APPS}
         onToggle={() => setIsThirdPartyOpen((open) => !open)}
@@ -1533,7 +1545,7 @@ export const DashboardImmersive: React.FC<DashboardImmersiveProps> = ({
       {/* ================= Layer 3.5: 星光学榜右侧抽屉 + 蒙层 ================= */}
       {typeof document !== 'undefined' && createPortal(
           <AnimatePresence>
-              {activePanel === 'league' && (
+              {activePanel === 'league' && !isRewardAccountOpen && (
                   <>
                       <motion.div
                           key="league-drawer-mask"
@@ -1614,6 +1626,21 @@ export const DashboardImmersive: React.FC<DashboardImmersiveProps> = ({
                                       </div>
                                       <ChevronRight size={18} className="absolute right-2 top-2 text-slate-800/35" />
                                   </button>
+
+                                  <div className="mb-3 flex items-center justify-between gap-2 border-b border-slate-200/70 px-1 pb-2">
+                                      <div className="flex min-w-0 items-center gap-1.5 text-[12px] text-slate-500">
+                                          <Zap size={13} className="shrink-0 text-amber-500" />
+                                          <span>本周经验</span>
+                                          <span className="font-bold tabular-nums text-slate-700">{weeklyXp.toLocaleString()} XP</span>
+                                      </div>
+                                      {onOpenMyExperience && <button
+                                          type="button"
+                                          onClick={() => { setActivePanel(null); onOpenMyExperience(); }}
+                                          className="flex shrink-0 items-center gap-1 rounded-lg px-2 py-2 text-[12px] font-bold text-indigo-600 transition hover:bg-indigo-50"
+                                      >
+                                          我的经验<ChevronRight size={14} />
+                                      </button>}
+                                  </div>
 
                                   {isLeagueLocked ? (
                                     <div className="rounded-2xl border border-slate-200 bg-white p-3">

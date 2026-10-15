@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, Check, CheckCircle2, ChevronLeft, ChevronRight, FileText, LoaderCircle, Minus, Plus, Printer, RefreshCw, Search, Wifi, X } from 'lucide-react';
 import type { QuestionTypeCount } from './PracticeSetupDialog';
 import { savePrintedFile } from '../../services/printedFileService';
+import type { PrintedFileSource } from '../../services/printedFileService';
 import { getRealPrintQuestionSamples } from '../../data/realPrintQuestionSamples';
 
 export interface PaperPrintJob {
   title: string;
+  source?: PrintedFileSource;
   questionCount: number;
   subject: string;
   questionTypeCounts?: QuestionTypeCount[];
@@ -28,8 +30,19 @@ export interface PaperPrintJob {
 }
 
 interface PaperPrintFlowProps { job: PaperPrintJob | null; onClose: () => void; onModify?: () => void; onOpenMyFiles?: () => void; }
-type Stage = 'assembling' | 'review' | 'saving' | 'print' | 'completed' | 'failed' | 'shortage' | 'saveFailed' | 'dailyLimit' | 'selectionLimit' | 'unavailableQuestions' | 'previewFailed';
+type Stage = 'assembling' | 'review' | 'saving' | 'checkingPdf' | 'print' | 'completed' | 'failed' | 'shortage' | 'saveFailed' | 'dailyLimit' | 'selectionLimit' | 'unavailableQuestions' | 'previewFailed';
 type DeviceState = 'idle' | 'searching' | 'results' | 'empty' | 'connecting' | 'connected' | 'connectFailed';
+type PdfFailureReason = 'offline' | 'timeout' | 'invalidQuestion' | 'write';
+
+const PDF_FAILURE_COPY: Record<PdfFailureReason, { title: string; description: string; primary: string }> = {
+  offline: { title: '网络中断，PDF 未生成', description: '生成服务暂时无法连接。已保留本次选题；恢复网络后可以重试。', primary: '联网重试' },
+  timeout: { title: 'PDF 生成结果尚未确认', description: '请求等待超时，原任务可能仍在处理。请先查询结果，避免重复生成文件。', primary: '检查生成结果' },
+  invalidQuestion: { title: '题目内容不完整', description: '有题目的题干或图片资源缺失。已保留本次选题，请返回预览调整后再生成。', primary: '返回' },
+  write: { title: 'PDF 生成失败', description: '文件排版或保存未完成，尚无可用 PDF。已保留本次选题，可以重试。', primary: '重试生成' },
+};
+
+// 本期暂不展示打印参数和设备选择；保留交互代码供后续启用。
+const SHOW_PRINT_CONFIGURATION = false;
 
 interface PreviewQuestion { id: string; type: string; text: string; selected: boolean; options?: string[]; knowledgePoint?: string; sourceLabel?: string; imageUrl?: string; errorReason?: string; correctAnswer?: string; explanation?: string; }
 
@@ -66,15 +79,25 @@ export const PaperPrintFlow: React.FC<PaperPrintFlowProps> = ({ job, onClose, on
   const [color, setColor] = useState('黑白');
   const [zoom, setZoom] = useState(88);
   const [savedFileId, setSavedFileId] = useState<string | null>(null);
+  const [showPdfFailureDemos, setShowPdfFailureDemos] = useState(false);
+  const [pdfFailureReason, setPdfFailureReason] = useState<PdfFailureReason>('write');
+  const pdfGenerationTimerRef = useRef<number | null>(null);
+  const initialPdfFailurePendingRef = useRef(false);
 
   useEffect(() => {
     if (!job) return;
+    initialPdfFailurePendingRef.current = job.printExceptionDemo === 'pdf_save_failed';
     setQuestions(buildQuestions(job));
     setSavedFileId(null);
+    setShowPdfFailureDemos(false);
+    setPdfFailureReason('write');
     setStage(job.printExceptionDemo === 'daily_limit' ? 'dailyLimit' : 'assembling');
     if (job.printExceptionDemo === 'daily_limit') return;
     const timer = window.setTimeout(() => setStage(job.printExceptionDemo === 'paper_shortage' ? 'shortage' : 'review'), 850);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      if (pdfGenerationTimerRef.current !== null) window.clearTimeout(pdfGenerationTimerRef.current);
+    };
   }, [job]);
 
   const selected = questions.filter((item) => item.selected);
@@ -85,10 +108,26 @@ export const PaperPrintFlow: React.FC<PaperPrintFlowProps> = ({ job, onClose, on
   if (!job || typeof document === 'undefined') return null;
   const viewport = document.getElementById('app-viewport') || document.body;
 
-  const generatePdf = () => {
+  const generatePdf = (demoReason?: PdfFailureReason) => {
     if (selected.length === 0) return;
+    const failureReason = demoReason ?? (initialPdfFailurePendingRef.current ? 'write' : null);
+    initialPdfFailurePendingRef.current = false;
+    if (pdfGenerationTimerRef.current !== null) window.clearTimeout(pdfGenerationTimerRef.current);
+    setShowPdfFailureDemos(false);
+    if (failureReason) setPdfFailureReason(failureReason);
     setStage('saving');
-    window.setTimeout(() => setStage(job.printExceptionDemo === 'pdf_save_failed' ? 'saveFailed' : 'print'), 900);
+    pdfGenerationTimerRef.current = window.setTimeout(() => {
+      pdfGenerationTimerRef.current = null;
+      setStage(failureReason ? 'saveFailed' : 'print');
+    }, 900);
+  };
+
+  const checkTimedOutPdf = () => {
+    setStage('checkingPdf');
+    pdfGenerationTimerRef.current = window.setTimeout(() => {
+      pdfGenerationTimerRef.current = null;
+      setStage('print');
+    }, 900);
   };
 
   const retryPreview = () => {
@@ -99,6 +138,7 @@ export const PaperPrintFlow: React.FC<PaperPrintFlowProps> = ({ job, onClose, on
   const submitPrint = (simulateFailure = false) => {
     const record = savePrintedFile({
       title: job.title,
+      source: job.source ?? (job.questionItems?.length ? 'mistake_print' : 'precision_practice'),
       subject: job.subject,
       questionCount: selected.length,
       pageCount: pages,
@@ -116,9 +156,13 @@ export const PaperPrintFlow: React.FC<PaperPrintFlowProps> = ({ job, onClose, on
   if (stage === 'dailyLimit') return createPortal(<IssueDialog title="今日组卷次数已达上限" description="今日组卷机会已用完，请明日再来。" primary="知道了" onPrimary={onClose} />, viewport);
   if (stage === 'shortage') return createPortal(<IssueDialog title="可用试题不足" description={`当前题型、知识范围和难度下仅找到 ${Math.max(1, job.questionCount - 6)} 道题。不会自动使用你关闭的题型。`} primary="按实际题量预览" secondary="返回修改" onPrimary={() => { setQuestions(buildQuestions({ ...job, questionCount: Math.max(1, job.questionCount - 6) })); setStage('review'); }} onSecondary={() => onModify?.() ?? onClose()} />, viewport);
   if (stage === 'selectionLimit') return createPortal(<IssueDialog title="已达到 50 题上限" description="单次最多打印 50 道错题。请取消部分已选题，或分批完成打印。" primary="返回继续选择" onPrimary={() => { if (onModify) onModify(); else setStage('review'); }} />, viewport);
-  if (stage === 'unavailableQuestions') return createPortal(<IssueDialog title="部分错题暂不可打印" description="有 2 道题的题干或图片资源已失效，系统不会将它们加入试卷，其余已选题会保留。" primary="跳过并继续" secondary="返回挑题" onPrimary={() => setStage('review')} onSecondary={() => { if (onModify) onModify(); else setStage('review'); }} />, viewport);
-  if (stage === 'previewFailed') return createPortal(<IssueDialog title="错题卷预览生成失败" description="当前选择结果已保留。请检查网络后重试，或返回调整错题范围。" primary="重试生成" secondary="返回挑题" onPrimary={retryPreview} onSecondary={() => { if (onModify) onModify(); else setStage('review'); }} />, viewport);
-  if (stage === 'saveFailed') return createPortal(<IssueDialog title="PDF 生成失败" description="尚未生成可用文件，因此不会写入“我的文件”。你可以重试或返回挑题。" primary="重试生成" secondary="返回挑题" onPrimary={generatePdf} onSecondary={() => setStage('review')} />, viewport);
+  if (stage === 'unavailableQuestions') return createPortal(<IssueDialog title="部分错题暂不可打印" description="有 2 道题的题干或图片资源已失效，系统不会将它们加入试卷，其余已选题会保留。" primary="跳过并继续" secondary="返回" onPrimary={() => setStage('review')} onSecondary={() => { if (onModify) onModify(); else setStage('review'); }} />, viewport);
+  if (stage === 'previewFailed') return createPortal(<IssueDialog title="错题卷预览生成失败" description="当前选择结果已保留。请检查网络后重试，或返回调整错题范围。" primary="重试生成" secondary="返回" onPrimary={retryPreview} onSecondary={() => { if (onModify) onModify(); else setStage('review'); }} />, viewport);
+  if (stage === 'saveFailed') {
+    const copy = PDF_FAILURE_COPY[pdfFailureReason];
+    return createPortal(<IssueDialog title={copy.title} description={copy.description} primary={copy.primary} secondary={pdfFailureReason === 'invalidQuestion' ? undefined : '返回'} onPrimary={pdfFailureReason === 'timeout' ? checkTimedOutPdf : pdfFailureReason === 'invalidQuestion' ? () => setStage('review') : () => generatePdf()} onSecondary={() => setStage('review')} />, viewport);
+  }
+  if (stage === 'checkingPdf') return createPortal(<LoadingCard title="正在查询生成结果" description="正在确认原任务是否已生成 PDF，不会重复提交。" />, viewport);
   if (stage === 'completed') return createPortal(<IssueDialog success title="打印成功" description="试卷已打印，并保存在当前账户的“我的文件”中。" primary="返回学习" onPrimary={onClose} footnote={savedFileId ? '可在“我的 → 我的文件”中查看本次试卷' : undefined} />, viewport);
 
   return createPortal(
@@ -127,15 +171,12 @@ export const PaperPrintFlow: React.FC<PaperPrintFlowProps> = ({ job, onClose, on
         <>
           <header className="flex h-[76px] shrink-0 items-center gap-4 border-b border-slate-200 bg-white px-5">
             <button type="button" onClick={() => onModify?.() ?? onClose()} aria-label={job.questionItems?.length ? '返回错题选择' : '返回组卷设置'} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-50 text-slate-700 transition hover:bg-slate-100"><ChevronLeft size={22} /></button>
-            <div className="min-w-0 flex-1"><h1 className="truncate text-[16px] font-semibold leading-6 text-slate-900">{job.title}</h1><p className="mt-0.5 truncate text-[10px] text-slate-400">试题列表</p></div>
-            <div className="shrink-0 border-l border-slate-200 pl-4 text-right"><p className="whitespace-nowrap text-[12px] font-semibold text-violet-700">已保留 {selected.length}/{questions.length} 题</p><p className="mt-0.5 whitespace-nowrap text-[10px] text-slate-400">预计 {pages} 页</p></div>
-            <button type="button" disabled={selected.length === 0} onClick={generatePdf} className="h-11 w-[150px] shrink-0 rounded-2xl bg-violet-600 px-5 text-[13px] font-semibold text-white shadow-sm shadow-violet-200 transition hover:bg-violet-700 disabled:opacity-40">生成 PDF</button>
+            <div className="min-w-0 flex-1"><h1 className="truncate text-[16px] font-semibold leading-6 text-slate-900">{job.title}</h1></div>
+            <div className="shrink-0 border-l border-slate-200 pl-4 text-right"><p className="whitespace-nowrap text-[12px] font-semibold text-violet-700">已保留 {selected.length}/{questions.length} 题</p></div>
+            <button type="button" onClick={() => { const shouldSelect = selected.length !== questions.length; setQuestions((items) => items.map((item) => ({ ...item, selected: shouldSelect }))); }} className="h-9 shrink-0 rounded-lg px-2.5 text-[11px] font-medium text-slate-600 transition hover:bg-slate-100 hover:text-violet-600">{selected.length === questions.length ? '取消全选' : '全选'}</button>
+            {job.source === 'precision_practice' ? <div className="relative shrink-0"><button type="button" aria-expanded={showPdfFailureDemos} onClick={() => setShowPdfFailureDemos((open) => !open)} className="h-9 rounded-lg px-2.5 text-[11px] font-medium text-slate-500 hover:bg-slate-100">异常演示</button>{showPdfFailureDemos ? <div className="absolute right-0 top-11 z-40 w-[190px] rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">{([['offline', '生成时断网'], ['timeout', '生成请求超时'], ['invalidQuestion', '题目资源缺失'], ['write', '排版或保存失败']] as const).map(([reason, label]) => <button key={reason} type="button" disabled={selected.length === 0} onClick={() => generatePdf(reason)} className="flex h-9 w-full items-center rounded-lg px-3 text-left text-[11px] text-slate-600 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40">{label}</button>)}</div> : null}</div> : null}
+            <button type="button" disabled={selected.length === 0} onClick={() => generatePdf()} className="h-11 w-[150px] shrink-0 rounded-2xl bg-violet-600 px-5 text-[13px] font-semibold text-white shadow-sm shadow-violet-200 transition hover:bg-violet-700 disabled:opacity-40">生成 PDF</button>
           </header>
-          <div className="h-10 shrink-0 border-b border-slate-100 bg-white px-5">
-            <div className="mx-auto flex h-full max-w-[860px] items-center">
-              <button type="button" onClick={() => { const shouldSelect = selected.length !== questions.length; setQuestions((items) => items.map((item) => ({ ...item, selected: shouldSelect }))); }} className="ml-auto px-2 py-1 text-[10px] font-medium text-slate-500 transition hover:text-violet-600">{selected.length === questions.length ? '取消全选' : '全选'}</button>
-            </div>
-          </div>
           <main className="min-h-0 flex-1 overflow-y-auto bg-gradient-to-b from-[#eef2ff] via-[#f7f8ff] to-slate-100 p-5">
             <section className="mx-auto flex w-full max-w-[860px] flex-col gap-3 pb-4">
               {questions.map((question, index) => <button key={question.id} type="button" aria-pressed={question.selected} onClick={() => setQuestions((items) => items.map((item) => item.id === question.id ? { ...item, selected: !item.selected } : item))} className={`group w-full rounded-[24px] border bg-white p-4 text-left shadow-sm transition-all hover:shadow-md ${question.selected ? 'border-white hover:border-violet-200' : 'border-slate-200 opacity-50'}`}><span className="flex items-start justify-between gap-4"><span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2 text-[11px] font-semibold"><span className="mr-1 text-[14px] font-bold tabular-nums text-slate-800">{index + 1}.</span><span className="rounded-full bg-slate-900 px-2.5 py-0.5 text-white">{question.type}</span><span className="rounded-full border border-amber-100 bg-amber-50 px-2.5 py-0.5 text-amber-700">难度 中等</span>{question.knowledgePoint ? <span className="rounded-full border border-indigo-100 bg-indigo-50 px-2.5 py-0.5 text-indigo-600">{question.knowledgePoint}</span> : null}{question.errorReason ? <span className="rounded-full border border-rose-100 bg-rose-50 px-2.5 py-0.5 text-rose-600">错因：{question.errorReason}</span> : null}<span className="ml-auto shrink-0 whitespace-nowrap text-slate-400">{question.sourceLabel}</span></span>{question.imageUrl ? <img src={question.imageUrl} alt="题目配图" className="mt-3 max-h-[180px] max-w-full rounded-xl object-contain" /> : null}<span className="mt-3 block whitespace-pre-line text-[13px] font-medium leading-6 text-slate-800">{question.text}</span><QuestionPreviewBody type={question.type} options={question.options} /></span><span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border ${question.selected ? 'border-violet-600 bg-violet-600 text-white' : 'border-slate-300 bg-white'}`}>{question.selected ? <Check size={14} /> : null}</span></span></button>)}
@@ -145,8 +186,8 @@ export const PaperPrintFlow: React.FC<PaperPrintFlowProps> = ({ job, onClose, on
       ) : (
         <>
           <header className="shrink-0 border-b border-slate-200 bg-white px-5 py-3">
-            <div className="flex items-center gap-3"><button type="button" onClick={() => setStage('review')} aria-label="返回" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-700 hover:bg-slate-100"><ChevronLeft size={20} /></button><div className="mr-auto"><h1 className="text-[16px] font-semibold text-slate-900">打印预览</h1><p className="mt-0.5 text-[10px] text-slate-400">确认打印设置后开始打印</p></div><button type="button" onClick={() => setShowDevices(true)} className="flex h-10 min-w-[250px] items-center rounded-xl border border-slate-200 bg-white px-3 text-left"><Printer size={16} className="mr-2 text-blue-600" /><span className="min-w-0 flex-1"><span className="block truncate text-[12px] font-semibold">{printerName}</span><span className="block text-[9px] text-emerald-600">{deviceState === 'connected' ? '已连接 · IPP Everywhere' : '选择打印机'}</span></span><ChevronRight size={16} /></button><button type="button" onClick={() => submitPrint(false)} disabled={deviceState !== 'connected'} className="h-10 rounded-xl bg-blue-600 px-5 text-[13px] font-semibold text-white disabled:opacity-40">开始打印</button></div>
-            <div className="mt-3 flex items-center gap-2 rounded-xl bg-slate-50 p-1.5"><CompactSetting label="份数" value={`${copies}`} onMinus={() => setCopies(Math.max(1, copies - 1))} onPlus={() => setCopies(Math.min(99, copies + 1))} /><SelectSetting label="范围" value={range} options={['全部页面', '当前页']} onChange={setRange} /><SelectSetting label="方向" value={orientation} options={['纵向', '横向']} onChange={setOrientation} /><SelectSetting label="纸张" value={paperSize} options={['A4', 'A3']} onChange={setPaperSize} /><SelectSetting label="单双面" value={duplex} options={['单面', '双面（长边）', '双面（短边）']} onChange={setDuplex} /><SelectSetting label="色彩" value={color} options={['黑白', '彩色']} onChange={setColor} /><div className="relative ml-auto shrink-0"><button type="button" aria-expanded={showExceptionDemos} onClick={() => setShowExceptionDemos((open) => !open)} className="flex h-9 items-center gap-1.5 rounded-lg px-3 text-[10px] font-medium text-slate-500 hover:bg-white hover:text-rose-500"><AlertTriangle size={13} />异常演示<ChevronRight size={11} className={`transition ${showExceptionDemos ? 'rotate-90' : ''}`} /></button>{showExceptionDemos ? <div className="absolute right-0 top-11 z-40 w-[230px] rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">{isMistakePrint ? <><p className="px-2 pb-1 pt-0.5 text-[9px] font-semibold text-slate-400">选题与预览</p><DemoAction label="达到 50 题上限" onClick={() => { setShowExceptionDemos(false); setStage('selectionLimit'); }} /><DemoAction label="部分题目不可打印" onClick={() => { setShowExceptionDemos(false); setStage('unavailableQuestions'); }} /><DemoAction label="预览生成失败" onClick={() => { setShowExceptionDemos(false); setStage('previewFailed'); }} /></> : <><p className="px-2 pb-1 pt-0.5 text-[9px] font-semibold text-slate-400">组卷</p><DemoAction label="组卷试题不足" onClick={() => { setShowExceptionDemos(false); setStage('shortage'); }} /><DemoAction label="今日组卷次数已达上限" onClick={() => { setShowExceptionDemos(false); setStage('dailyLimit'); }} /></>}<p className="mt-1 border-t border-slate-100 px-2 pb-1 pt-2 text-[9px] font-semibold text-slate-400">文件生成</p><DemoAction label="PDF 生成失败" onClick={() => { setShowExceptionDemos(false); setStage('saveFailed'); }} /><p className="mt-1 border-t border-slate-100 px-2 pb-1 pt-2 text-[9px] font-semibold text-slate-400">设备与打印</p><DemoAction label="打印机未连接" onClick={() => { setShowExceptionDemos(false); setDeviceState('idle'); setShowDevices(true); }} /><DemoAction label="未搜索到打印机" onClick={() => { setShowExceptionDemos(false); setDeviceState('empty'); setShowDevices(true); }} /><DemoAction label="连接打印机失败" onClick={() => { setShowExceptionDemos(false); setDeviceState('connectFailed'); setShowDevices(true); }} /><DemoAction label="打印中断失败" onClick={() => { setShowExceptionDemos(false); submitPrint(true); }} /></div> : null}</div></div>
+            <div className="flex items-center gap-3"><button type="button" onClick={() => setStage('review')} aria-label="返回" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-700 hover:bg-slate-100"><ChevronLeft size={20} /></button><div className="mr-auto"><h1 className="text-[16px] font-semibold text-slate-900">打印预览</h1></div>{SHOW_PRINT_CONFIGURATION && <button type="button" onClick={() => setShowDevices(true)} className="flex h-10 min-w-[250px] items-center rounded-xl border border-slate-200 bg-white px-3 text-left"><Printer size={16} className="mr-2 text-blue-600" /><span className="min-w-0 flex-1"><span className="block truncate text-[12px] font-semibold">{printerName}</span><span className="block text-[9px] text-emerald-600">{deviceState === 'connected' ? '已连接 · IPP Everywhere' : '选择打印机'}</span></span><ChevronRight size={16} /></button>}<button type="button" onClick={() => submitPrint(false)} disabled={deviceState !== 'connected'} className="h-10 rounded-xl bg-blue-600 px-5 text-[13px] font-semibold text-white disabled:opacity-40">开始打印</button></div>
+            {SHOW_PRINT_CONFIGURATION && <div className="mt-3 flex items-center gap-2 rounded-xl bg-slate-50 p-1.5"><CompactSetting label="份数" value={`${copies}`} onMinus={() => setCopies(Math.max(1, copies - 1))} onPlus={() => setCopies(Math.min(99, copies + 1))} /><SelectSetting label="范围" value={range} options={['全部页面', '当前页']} onChange={setRange} /><SelectSetting label="方向" value={orientation} options={['纵向', '横向']} onChange={setOrientation} /><SelectSetting label="纸张" value={paperSize} options={['A4', 'A3']} onChange={setPaperSize} /><SelectSetting label="单双面" value={duplex} options={['单面', '双面（长边）', '双面（短边）']} onChange={setDuplex} /><SelectSetting label="色彩" value={color} options={['黑白', '彩色']} onChange={setColor} /><div className="relative ml-auto shrink-0"><button type="button" aria-expanded={showExceptionDemos} onClick={() => setShowExceptionDemos((open) => !open)} className="flex h-9 items-center gap-1.5 rounded-lg px-3 text-[10px] font-medium text-slate-500 hover:bg-white hover:text-rose-500"><AlertTriangle size={13} />异常演示<ChevronRight size={11} className={`transition ${showExceptionDemos ? 'rotate-90' : ''}`} /></button>{showExceptionDemos ? <div className="absolute right-0 top-11 z-40 w-[230px] rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">{isMistakePrint ? <><p className="px-2 pb-1 pt-0.5 text-[9px] font-semibold text-slate-400">选题与预览</p><DemoAction label="达到 50 题上限" onClick={() => { setShowExceptionDemos(false); setStage('selectionLimit'); }} /><DemoAction label="部分题目不可打印" onClick={() => { setShowExceptionDemos(false); setStage('unavailableQuestions'); }} /><DemoAction label="预览生成失败" onClick={() => { setShowExceptionDemos(false); setStage('previewFailed'); }} /></> : <><p className="px-2 pb-1 pt-0.5 text-[9px] font-semibold text-slate-400">组卷</p><DemoAction label="组卷试题不足" onClick={() => { setShowExceptionDemos(false); setStage('shortage'); }} /><DemoAction label="今日组卷次数已达上限" onClick={() => { setShowExceptionDemos(false); setStage('dailyLimit'); }} /></>}<p className="mt-1 border-t border-slate-100 px-2 pb-1 pt-2 text-[9px] font-semibold text-slate-400">文件生成</p><DemoAction label="PDF 生成失败" onClick={() => { setShowExceptionDemos(false); setPdfFailureReason('write'); setStage('saveFailed'); }} /><p className="mt-1 border-t border-slate-100 px-2 pb-1 pt-2 text-[9px] font-semibold text-slate-400">设备与打印</p><DemoAction label="打印机未连接" onClick={() => { setShowExceptionDemos(false); setDeviceState('idle'); setShowDevices(true); }} /><DemoAction label="未搜索到打印机" onClick={() => { setShowExceptionDemos(false); setDeviceState('empty'); setShowDevices(true); }} /><DemoAction label="连接打印机失败" onClick={() => { setShowExceptionDemos(false); setDeviceState('connectFailed'); setShowDevices(true); }} /><DemoAction label="打印中断失败" onClick={() => { setShowExceptionDemos(false); submitPrint(true); }} /></div> : null}</div></div>}
           </header>
           <main className="relative flex min-h-0 flex-1 justify-center overflow-auto bg-slate-200/70 p-5"><div className="fixed bottom-6 right-5 z-10 rounded-xl bg-white/95 px-3 py-2 text-[11px] font-medium text-slate-600 shadow-sm">共 {selected.length} 题 · {pages} 页</div><div className="fixed bottom-6 left-1/2 z-10 flex -translate-x-1/2 items-center gap-3 rounded-full bg-slate-900 px-4 py-2 text-white shadow-xl"><button onClick={() => setZoom(Math.max(55, zoom - 10))}><Minus size={15} /></button><span className="w-12 text-center text-[11px]">{zoom}%</span><button onClick={() => setZoom(Math.min(130, zoom + 10))}><Plus size={15} /></button></div><PaperSheet job={job} questions={selected} scale={zoom / 100} paperSize={paperSize} answerMode={answerMode} /></main>
         </>

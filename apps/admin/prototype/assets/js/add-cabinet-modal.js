@@ -61,9 +61,9 @@ function renderCabinetFormModal(cabinet) {
         <input class="input add-tag-input" id="add-cabinet-location" placeholder="请输入" value="${isEdit ? esc(cabinet.location) : ''}">
       </div>
       <div class="add-tag-field">
-        <label class="add-tag-label">学校</label>
+        <label class="add-tag-label"><span class="required">*</span>学校</label>
         <select class="select add-tag-input" id="add-cabinet-school">
-          <option value="">请选择学校（选填）</option>
+          <option value="">请选择学校</option>
           ${schoolOptions}
         </select>
       </div>
@@ -124,6 +124,11 @@ function saveCabinetFormModal() {
   }
   if (!location) {
     toast('请填写安装位置', 'warning');
+    return;
+  }
+  if (!schoolId) {
+    toast('请选择学校', 'warning');
+    schoolSelect?.focus();
     return;
   }
   if (!boundPhone) {
