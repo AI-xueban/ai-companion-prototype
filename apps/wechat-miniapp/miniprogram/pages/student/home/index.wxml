@@ -1,1 +1,10 @@
-<view class="page"><view class="title">学生首页</view><view class="card">作业、学情、活动与学习管控将在此按本人数据展示。</view></view>
+<view class="page">
+  <view class="page-head"><view class="page-title">我的学习</view><view class="page-desc">学习任务和进度只展示当前学生本人的数据。</view></view>
+  <view class="section-label">今日学习</view>
+  <view class="cell-list">
+    <view class="cell"><view class="cell-main"><view class="cell-title">待完成任务</view><view class="cell-desc">按老师发布的任务安排学习</view></view><view class="cell-extra">2 项</view><view class="cell-arrow">›</view></view>
+    <view class="cell"><view class="cell-main"><view class="cell-title">学习进度</view><view class="cell-desc">查看本周学习情况</view></view><view class="cell-arrow">›</view></view>
+  </view>
+  <view class="section-label">学习服务</view>
+  <view class="cell-list"><view class="cell"><view class="cell-main"><view class="cell-title">错题整理</view><view class="cell-desc">按学科查看需要订正的题目</view></view><view class="cell-arrow">›</view></view></view>
+</view>

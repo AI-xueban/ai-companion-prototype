@@ -1,0 +1,15 @@
+<view class="page">
+  <view class="page-head">
+    <view class="page-title">确认学生信息</view>
+    <view class="page-desc">请确认以下基础信息。提交后由学校审核，审核通过前无法查看学习数据。</view>
+  </view>
+  <view class="section-label">待绑定学生</view>
+  <view class="cell-list">
+    <view class="cell"><view class="cell-main"><view class="cell-title">{{student.name}}</view><view class="cell-desc">{{student.school}} · {{student.className}}</view></view></view>
+    <view class="cell"><view class="cell-title">学生编号</view><view class="cell-extra">{{maskedCode}}</view></view>
+  </view>
+  <view class="page-actions">
+    <button class="primary-button" bindtap="handleSubmit">确认并提交申请</button>
+    <button class="secondary-button" bindtap="handleModify">返回修改</button>
+  </view>
+</view>
