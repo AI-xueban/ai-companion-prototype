@@ -12,6 +12,7 @@ export type ControlEditorValue = {
   schedule?: BorrowSchedule;
   answer?: boolean;
   explanation?: boolean;
+  applyScope?: "all" | "unmodified";
 };
 export const StudentControlEditor: React.FC<{
   targetLabel: string;
@@ -19,15 +20,17 @@ export const StudentControlEditor: React.FC<{
   selectedObjects?: string[];
   schedule?: BorrowSchedule;
   homework?: Pick<StudentControl, "answer" | "explanation">;
+  requireApplyScope?: boolean;
   onClose: () => void;
   onSave: (value: ControlEditorValue) => void;
-}> = ({ targetLabel, count, selectedObjects, schedule, homework, onClose, onSave }) => {
+}> = ({ targetLabel, count, selectedObjects, schedule, homework, requireApplyScope, onClose, onSave }) => {
   const [draft, setDraft] = useState(schedule);
   const [answer, setAnswer] = useState(homework?.answer ?? false);
   const [explanation, setExplanation] = useState(
     homework?.explanation ?? false,
   );
   const [error, setError] = useState("");
+  const [applyScope, setApplyScope] = useState<"all" | "unmodified" | null>(null);
   const update = (changes: Partial<BorrowSchedule>) => {
     setError("");
     setDraft((current) => (current ? { ...current, ...changes } : current));
@@ -40,8 +43,12 @@ export const StudentControlEditor: React.FC<{
         return;
       }
     }
+    if (requireApplyScope && !applyScope) {
+      setError("请选择本次修改范围");
+      return;
+    }
     setError("");
-    onSave(draft ? { schedule: draft } : { answer, explanation });
+    onSave(draft ? { schedule: draft, applyScope: applyScope ?? undefined } : { answer, explanation, applyScope: applyScope ?? undefined });
   };
   const inputClass =
     "rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm";
@@ -91,7 +98,7 @@ export const StudentControlEditor: React.FC<{
               <>
                 <div>
                   <h3 className="mb-3 text-sm font-bold text-slate-800">
-                    {draft.mode === "weekly" ? "适用星期" : "适用日期"}
+                    <span className="mr-1 text-red-500">*</span>{draft.mode === "weekly" ? "适用星期" : "适用日期"}
                   </h3>
                   {draft.mode === "weekly" ? (
                     <div className="dc-weekdays">
@@ -163,7 +170,7 @@ export const StudentControlEditor: React.FC<{
                 {!(draft.mode === "dates" && draft.deny) && (
                   <div>
                     <h3 className="mb-3 text-sm font-bold text-slate-800">
-                      借用时段
+                      <span className="mr-1 text-red-500">*</span>借用时段
                     </h3>
                     <div className="space-y-3">
                       {draft.periods.map((period, index) => (
@@ -262,7 +269,7 @@ export const StudentControlEditor: React.FC<{
                     className="dc-rule-card rounded-xl border p-4"
                   >
                     <h3 className="mb-3 text-sm font-bold text-slate-800">
-                      {item.label}
+                      <span className="mr-1 text-red-500">*</span>{item.label}
                     </h3>
                     <div className="flex gap-8">
                       {[false, true].map((allowed) => (
@@ -280,6 +287,19 @@ export const StudentControlEditor: React.FC<{
                   </div>
                 ))}
               </div>
+            )}
+            {requireApplyScope && (
+              <fieldset className="rounded-lg bg-slate-50 p-4">
+                <legend className="text-sm font-bold text-slate-800"><span className="text-red-500">*</span> 修改范围</legend>
+                <div className="mt-3 space-y-3">
+                  <label className="block cursor-pointer">
+                    <span className="flex items-start gap-3"><input type="radio" name="apply-scope" checked={applyScope === "all"} onChange={() => { setApplyScope("all"); setError(""); }} className="mt-1" /><span><b className="block text-sm text-slate-900">{targetLabel === "全校" ? "全校修改" : "修改当前范围全部学生"}</b><span className="mt-1 block text-xs leading-5 text-slate-500">覆盖本次范围内全部学生，包括老师此前单独设置的学生。</span></span></span>
+                  </label>
+                  <label className="block cursor-pointer">
+                    <span className="flex items-start gap-3"><input type="radio" name="apply-scope" checked={applyScope === "unmodified"} onChange={() => { setApplyScope("unmodified"); setError(""); }} className="mt-1" /><span><b className="block text-sm text-slate-900">仅修改老师未单独设置的学生</b><span className="mt-1 block text-xs leading-5 text-slate-500">保留老师已按班级或学生设置的规则。</span></span></span>
+                  </label>
+                </div>
+              </fieldset>
             )}
             {error && (
               <p

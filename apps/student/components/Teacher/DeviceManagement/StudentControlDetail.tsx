@@ -5,9 +5,12 @@ import {
   BorrowSchedule,
   ControlModule,
   DeviceStudent,
+  durationRuleText,
+  DurationRule,
   scheduleDateText,
   schedulePeriodText,
   StudentControl,
+  weekdayRangeText,
 } from "../data/hierarchicalDeviceControl";
 import { DeviceControlLayer } from "./DeviceControlLayer";
 
@@ -22,6 +25,11 @@ export const StudentControlDetail: React.FC<{
   onDelete: (schedule: BorrowSchedule) => void;
   onAdd: (mode: BorrowSchedule["mode"]) => void;
   onAction: (value: boolean) => void;
+  defaultDurationEnabled?: boolean;
+  defaultDurationRule?: DurationRule;
+  onDurationAdd?: () => void;
+  onDurationEdit?: (rule: DurationRule) => void;
+  onDurationDelete?: (rule: DurationRule) => void;
 }> = ({
   student,
   control,
@@ -33,10 +41,27 @@ export const StudentControlDetail: React.FC<{
   onDelete,
   onAdd,
   onAction,
+  defaultDurationEnabled,
+  defaultDurationRule,
+  onDurationAdd,
+  onDurationEdit,
+  onDurationDelete,
 }) => {
   const [mode, setMode] = useState<"weekly" | "dates">(initialMode);
   const schedules = control.schedules.filter((s) => s.mode === mode);
   const modified = control.updated[module];
+  const weekdayNames = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"];
+  const durationDayLabel = (days: number[]) => {
+    return weekdayRangeText(days);
+  };
+  const effectiveDurationRules = weekdayNames.reduce<Array<{ text: string; days: number[] }>>((groups, _, day) => {
+    const rule = control.durationRules.find((item) => item.weekdays.includes(day)) ?? (defaultDurationEnabled ? defaultDurationRule : undefined);
+    const text = rule ? durationRuleText(rule) : "不限制使用时长";
+    const group = groups.find((item) => item.text === text);
+    if (group) group.days.push(day);
+    else groups.push({ text, days: [day] });
+    return groups;
+  }, []);
   return (
     <DeviceControlLayer
       labelId="student-control-detail-title"
@@ -78,11 +103,19 @@ export const StudentControlDetail: React.FC<{
               <ArrowLeft size={17} />
               返回学生列表
             </button>
-            {module === "borrowing" ? (
+            {module === "duration" ? <>
+              <div className="space-y-2 rounded-xl border bg-slate-50 p-4 text-sm text-slate-700">
+                {effectiveDurationRules.map((rule) => (
+                  <p key={`${rule.text}-${rule.days.join("-")}`}><span className="font-bold">{durationDayLabel(rule.days)}：</span>{rule.text}</p>
+                ))}
+              </div>
+              <button type="button" className="dc-btn-primary" onClick={onDurationAdd}>新增使用时长规则</button>
+              {control.durationRules.map((rule) => <article key={rule.id} className="dc-rule-card rounded-xl border p-4"><p className="font-bold text-slate-800">{weekdayRangeText(rule.weekdays)}</p><p className="mt-2 text-sm text-slate-600">{durationRuleText(rule)}</p><div className="mt-4 flex justify-end gap-5"><button type="button" className="text-sm font-bold text-indigo-600" onClick={() => onDurationEdit?.(rule)}>编辑</button><button type="button" className="text-sm font-bold text-red-600" onClick={() => onDurationDelete?.(rule)}>删除</button></div></article>)}
+            </> : module === "borrowing" ? (
               <>
                 {!borrowingEnabled && (
                   <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
-                    全校借用管控已关闭，当前不限制借用时间。
+                    全校借用管控已关闭，设备不能从柜机借出。
                   </p>
                 )}
                 <div

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, User, Baby, X, ChevronRight, LayoutDashboard, RotateCcw, CheckCircle2, Trophy, Users, Sparkles, BatteryLow, LockKeyhole } from 'lucide-react';
+import { Settings, User, Baby, X, ChevronRight, LayoutDashboard, RotateCcw, CheckCircle2, Trophy, Users, Sparkles, LockKeyhole } from 'lucide-react';
 import { UserPersona } from '../../types';
 import type { DonationStageStatus } from '../../data/charityStage';
 import type { TeacherPortalRole } from '../Teacher/data/teacherAccess';
@@ -23,6 +23,8 @@ interface DemoControlsProps {
     onDemoLeagueSparse?: () => void;
     onDemoAchievement?: (achievementId: string) => void;
     onDemoLockScreen?: (type: DemoLockType) => void;
+    worldLocked?: boolean;
+    onDemoWorldLockToggle?: () => void;
 }
 
 export const DemoControls: React.FC<DemoControlsProps> = ({ 
@@ -41,6 +43,8 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
     onDemoLeagueSparse,
     onDemoAchievement,
     onDemoLockScreen,
+    worldLocked = false,
+    onDemoWorldLockToggle,
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [resetComplete, setResetComplete] = useState(false);
@@ -187,11 +191,13 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
                             <div className="grid grid-cols-2 gap-2">
                                 <button
                                     type="button"
-                                    onClick={() => { onDemoLockScreen?.('low-battery'); setIsOpen(false); }}
-                                    className="flex min-h-20 flex-col items-center justify-center rounded-xl border border-amber-300/20 bg-amber-400/10 px-2 text-center transition-colors hover:bg-amber-400/20"
+                                    onClick={() => { onDemoWorldLockToggle?.(); setIsOpen(false); }}
+                                    aria-pressed={worldLocked}
+                                    className="flex min-h-20 flex-col items-center justify-center rounded-xl border border-sky-300/20 bg-sky-400/10 px-2 text-center transition-colors hover:bg-sky-400/20"
                                 >
-                                    <BatteryLow size={20} className="text-amber-300" />
-                                    <span className="mt-2 text-[11px] font-bold text-white">低电量锁屏</span>
+                                    <Sparkles size={20} className="text-sky-300" />
+                                    <span className="mt-2 text-[11px] font-bold text-white">万象视界锁屏</span>
+                                    <span className="mt-1 text-[10px] text-sky-200">{worldLocked ? '已锁定 · 点击解锁' : '未锁定 · 点击锁定'}</span>
                                 </button>
                                 <button
                                     type="button"

@@ -1,9 +1,13 @@
 import { schoolDeviceClasses } from './schoolDeviceClasses';
 
-export type ControlModule = 'borrowing' | 'homework' | 'world' | 'lock';
+export type ControlModule = 'borrowing' | 'duration' | 'homework' | 'world' | 'lock';
 export type DeviceStudent = { id: string; number: string; name: string; classId: string; grade: number };
 export type BorrowSchedule = { id: string; mode: 'weekly' | 'dates'; weekdays: number[]; startDate: string; endDate: string; deny: boolean; periods: { start: string; end: string }[] };
-export type StudentControl = { schedules: BorrowSchedule[]; answer: boolean; explanation: boolean; world: boolean; locked: boolean; updated: Partial<Record<ControlModule, { by: string; at: string }>> };
+export type DurationRule = { id: string; weekdays: number[]; useDefault: boolean; continuousMinutes: number; restMinutes: number; dailyMinutes: number; periods: { start: string; end: string }[] };
+export const defaultDurationRule: Omit<DurationRule, 'id' | 'weekdays' | 'useDefault'> = { continuousMinutes: 60, restMinutes: 15, dailyMinutes: 180, periods: [] };
+export const newDurationRule = (): DurationRule => ({ id: `duration-${Date.now()}`, weekdays: [], useDefault: false, ...defaultDurationRule, periods: [] });
+export const durationRuleText = (rule: DurationRule) => `${rule.useDefault ? '默认规则 · ' : ''}连续 ${rule.continuousMinutes} 分钟 · 休息 ${rule.restMinutes} 分钟 · 每日累计 ${rule.dailyMinutes} 分钟 · ${rule.periods.length ? rule.periods.map(p => `${p.start}–${p.end}`).join('、') : '不限可用时段'}`;
+export type StudentControl = { schedules: BorrowSchedule[]; durationRules: DurationRule[]; answer: boolean; explanation: boolean; world: boolean; locked: boolean; updated: Partial<Record<ControlModule, { by: string; at: string }>> };
 export const controlGrades = [...new Set(schoolDeviceClasses.map(c => c.grade))].sort((a, b) => a - b);
 const surnames = ['李', '王', '张', '刘', '陈', '杨', '赵', '黄', '周', '吴'];
 const givenNames = ['明', '梓涵', '宇轩', '诗涵', '一诺', '浩然', '欣怡', '子墨', '雨桐', '沐辰', '若溪', '佳宁', '思远', '可欣', '书瑶', '星宇', '语彤', '嘉言', '晨曦', '安然', '文博', '乐瑶', '奕辰', '心悦', '景行', '知夏', '清越', '亦凡', '舒然', '予安'];
@@ -13,10 +17,24 @@ export const deviceControlStudents: DeviceStudent[] = schoolDeviceClasses.flatMa
 })));
 export const newBorrowSchedule = (mode: BorrowSchedule['mode']): BorrowSchedule => ({ id: `schedule-${Date.now()}`, mode, weekdays: [], startDate: '', endDate: '', deny: false, periods: [{ start: '', end: '' }] });
 export const initialStudentControls = (): Record<string, StudentControl> => Object.fromEntries(deviceControlStudents.map(s => [s.id, {
-  schedules: [], answer: false, explanation: false, world: true, locked: false, updated: {},
+  schedules: [], durationRules: [], answer: false, explanation: false, world: true, locked: false, updated: {},
 }]));
 export const weekdayNames = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
-export const scheduleDateText = (s: BorrowSchedule) => s.mode === 'weekly' ? s.weekdays.map(d => weekdayNames[d]).join('、') : `${s.startDate} 至 ${s.endDate}`;
+export const weekdayRangeText = (weekdays: number[]) => {
+  const names = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+  const days = [...new Set(weekdays)].sort((a, b) => a - b);
+  const parts: string[] = [];
+  for (let start = 0; start < days.length;) {
+    let end = start;
+    while (end + 1 < days.length && days[end + 1] === days[end] + 1) end += 1;
+    const length = end - start + 1;
+    if (length >= 3) parts.push(`${names[days[start]]}至${names[days[end]]}`);
+    else for (let index = start; index <= end; index += 1) parts.push(names[days[index]]);
+    start = end + 1;
+  }
+  return parts.join('、');
+};
+export const scheduleDateText = (s: BorrowSchedule) => s.mode === 'weekly' ? weekdayRangeText(s.weekdays) : `${s.startDate} 至 ${s.endDate}`;
 export const schedulePeriodText = (s: BorrowSchedule) => s.deny ? '全天禁止借用' : s.periods.map(p => `${p.start}–${p.end}`).join('、');
 export const validateSchedule = (s: BorrowSchedule): string => {
   if (s.mode === 'weekly' && !s.weekdays.length) return '请至少选择一个星期';
@@ -44,6 +62,7 @@ export const mergeBorrowSchedule = (existing: BorrowSchedule[], next: BorrowSche
   return [...retained, { ...next, weekdays: [...next.weekdays], periods: next.periods.map(p => ({ ...p })) }];
 };
 export const policySignature = (s: StudentControl, module: ControlModule) => {
+  if (module === 'duration') return JSON.stringify(s.durationRules.map(({ id: _id, ...rule }) => rule).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))));
   if (module === 'homework') return `${s.answer}-${s.explanation}`;
   if (module === 'world') return String(s.world);
   if (module === 'lock') return String(s.locked);
