@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20261013-3" />
+  <link rel="stylesheet" href="styles.css?v=20261016-13" />
 </head>
 <body>
   <aside class="studio-bar">
@@ -145,8 +145,8 @@
               <div class="face-smile" aria-hidden="true"><span></span></div>
               <p class="face-status" id="faceStatus">正在识别</p>
               <p class="face-desc" id="faceDesc">请正对屏幕，保持面部处于识别框内</p>
-              <button type="button" class="primary-btn face-retry" id="faceRetry" hidden>重新扫脸</button>
-              <button type="button" class="text-btn face-top-back" id="backToLoginChoice" aria-label="返回编号密码登录页">〈 返回</button>
+              <div class="face-login-actions"><button type="button" class="primary-btn" id="faceStart">开始人脸识别</button><button type="button" class="primary-btn face-retry" id="faceRetry" hidden>重新识别</button><button type="button" class="text-btn" id="faceToPassword">使用编号密码登录</button><button type="button" class="text-btn face-login-back" id="backToLoginChoice" aria-label="返回首页">← 返回首页</button></div>
+
             </div>
 
             <div class="password-login" id="passwordLogin" hidden>
@@ -183,7 +183,7 @@
               <button type="submit" class="primary-btn login-submit">登录</button>
               </form>
               <button type="button" class="back-btn" id="passwordToFace">人脸识别</button>
-              <button type="button" class="text-btn face-back" id="faceBack">返回</button>
+              <button type="button" class="text-btn face-back" id="faceBack">← 返回首页</button>
             </div>
 
             <div class="face-enroll" id="faceEnroll" hidden>
@@ -287,6 +287,17 @@
           </div>
         </div>
 
+        <div class="enrollment-toast" id="enrollmentToast" role="status" aria-live="polite" hidden><span>✓</span><p>录入成功，可开启人脸识别</p></div>
+        <div class="confirm-mask" id="enrollmentFailureModal" hidden>
+          <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="enrollmentFailureTitle">
+            <h3 id="enrollmentFailureTitle">录入失败</h3>
+            <p>人脸未录入成功，请重新录入或返回首页</p>
+            <div class="confirm-actions">
+              <button type="button" class="confirm-cancel" id="enrollmentFailureHome">返回首页</button>
+              <button type="button" class="confirm-ok" id="enrollmentFailureRetry">重新录入</button>
+            </div>
+          </div>
+        </div>
         <!-- 人脸识别成功后确认身份 -->
         <div class="confirm-mask" id="faceConfirmModal" hidden>
           <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="faceConfirmTitle">
@@ -354,6 +365,6 @@
     </div>
   </main>
 
-  <script src="app.js?v=20261013-3"></script>
+  <script src="app.js?v=20261016-13"></script>
 </body>
 </html>
