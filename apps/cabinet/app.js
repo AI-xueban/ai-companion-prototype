@@ -178,6 +178,7 @@
   }
 
   function resetFaceLogin() {
+    faceLogin.classList.remove("is-processing");
     clearTimeout(recognitionTimer);
     faceStart.hidden = false;
     faceToPassword.hidden = false;
@@ -200,6 +201,7 @@
   }
 
   function showFaceSuccess() {
+    faceLogin.classList.remove("is-processing");
     faceLogin.hidden = false;
     passwordLogin.hidden = true;
     faceEnroll.hidden = true;
@@ -212,6 +214,7 @@
   }
 
   function showFaceFail(mode = enrollmentMode) {
+    faceLogin.classList.remove("is-processing");
     clearTimeout(recognitionTimer);
     faceStart.hidden = true;
     faceToPassword.hidden = false;
@@ -227,6 +230,7 @@
   }
 
   function showPasswordLogin() {
+    faceLogin.classList.remove("is-processing");
     clearTimeout(recognitionTimer);
     document.getElementById("passwordToFace").hidden = mustEnrollAfterPassword;
     faceLogin.hidden = true;
@@ -691,13 +695,14 @@
     resetFaceLogin();
   });
   function startRecognition() {
+    faceLogin.classList.add("is-processing");
     clearTimeout(recognitionTimer);
     faceStart.hidden = true;
     faceToPassword.hidden = true;
     faceRetry.hidden = true;
     faceStatus.textContent = "正在识别";
     faceDesc.textContent = "请将面部置于正方形框内，并确保框内只有本人";
-    recognitionTimer = window.setTimeout(showFaceSuccess, 2400);
+    recognitionTimer = window.setTimeout(showFaceSuccess, 1000);
   }
   faceStart.addEventListener("click", startRecognition);
   faceToPassword.addEventListener("click", showPasswordLogin);
@@ -705,7 +710,7 @@
   faceConfirmRetry.addEventListener("click", () => {
     faceConfirmModal.hidden = true;
     authenticatedStudentId = "";
-    showPage("home");
+    resetFaceLogin();
   });
   faceConfirmLogin.addEventListener("click", () => {
     authenticatedStudentId = recognizedStudentId.textContent;
