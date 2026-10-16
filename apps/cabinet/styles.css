@@ -2376,3 +2376,28 @@ button {
 .enrollment-toast[hidden] { display: none !important; }
 .enrollment-toast span { font-size: 58px; color: #86efac; }
 .enrollment-toast p { margin: 0; font-size: 32px; font-weight: 600; }
+/* 在原取景框中直接提示识别进度 */
+.face-login.is-processing .face-smile {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  animation: none;
+}
+.face-login.is-processing .face-smile::before,
+.face-login.is-processing .face-smile span { display: none; }
+.face-login.is-processing .face-smile::after {
+  content: "正在识别中...";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1e3a5f;
+  font-size: 44px;
+  font-weight: 700;
+}
+.face-login.is-processing .face-status,
+.face-login.is-processing .face-desc { visibility: hidden; }
