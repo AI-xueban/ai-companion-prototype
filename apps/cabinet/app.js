@@ -41,6 +41,9 @@
   let enrollmentTimer = null;
   const faceStatus = document.getElementById("faceStatus");
   const faceDesc = document.getElementById("faceDesc");
+  let recognitionTimer = null;
+  const faceStart = document.getElementById("faceStart");
+  const faceToPassword = document.getElementById("faceToPassword");
   const faceRetry = document.getElementById("faceRetry");
   const faceConfirmModal = document.getElementById("faceConfirmModal");
   const recognizedStudentId = document.getElementById("recognizedStudentId");
@@ -150,7 +153,7 @@
 
     if (name === "pickup") {
       mustEnrollAfterPassword = false;
-      showPasswordLogin();
+      resetFaceLogin();
       hideKeypad();
     } else {
       hideKeypad();
@@ -175,6 +178,9 @@
   }
 
   function resetFaceLogin() {
+    clearTimeout(recognitionTimer);
+    faceStart.hidden = false;
+    faceToPassword.hidden = false;
     faceConfirmModal.hidden = true;
     pickupPage.querySelector('[data-goto="home"]').hidden = false;
     faceBack.hidden = false;
@@ -184,9 +190,9 @@
     faceLogin.hidden = false;
     passwordLogin.hidden = true;
     faceEnroll.hidden = true;
-    faceStatus.textContent = "正在识别";
+    faceStatus.textContent = "人脸识别登录";
     faceStatus.className = "face-status is-recognizing";
-    faceDesc.textContent = "请正对屏幕，保持面部处于识别框内";
+    faceDesc.textContent = "请本人站到屏幕前，点击开始人脸识别";
     faceRetry.hidden = true;
     loginTip.hidden = true;
     studentId.value = "";
@@ -206,18 +212,22 @@
   }
 
   function showFaceFail(mode = enrollmentMode) {
+    clearTimeout(recognitionTimer);
+    faceStart.hidden = true;
+    faceToPassword.hidden = false;
     mustEnrollAfterPassword = false;
     enrollmentMode = mode;
     faceLogin.hidden = false;
     passwordLogin.hidden = true;
     faceEnroll.hidden = true;
-    faceStatus.textContent = "人脸库未找到匹配";
+    faceStatus.textContent = "未找到匹配人脸";
     faceStatus.className = "face-status is-failed";
-    faceDesc.textContent = "请重试，尚未注册人脸可返回首页进行人脸注册";
+    faceDesc.textContent = "请重新识别，或使用编号密码登录";
     faceRetry.hidden = false;
   }
 
   function showPasswordLogin() {
+    clearTimeout(recognitionTimer);
     document.getElementById("passwordToFace").hidden = mustEnrollAfterPassword;
     faceLogin.hidden = true;
     passwordLogin.hidden = false;
@@ -264,16 +274,16 @@
       operation: enrollmentMode === "first" ? "首次录入" : "覆盖原有人脸",
     });
 
-    enrollStatus.textContent = "录入成功";
-    enrollStatus.className = "face-status is-success";
-    enrollDesc.textContent = `人脸已绑定至编号 ${authenticatedStudentId}，即将返回首页`;
     faceEnrollStart.hidden = true;
+    const enrollmentToast = document.getElementById("enrollmentToast");
+    enrollmentToast.hidden = false;
     enrollmentTimer = window.setTimeout(() => {
+      enrollmentToast.hidden = true;
       registrationLocked = false;
       authenticatedStudentId = "";
       mustEnrollAfterPassword = false;
-      showPage("home");
-    }, 700);
+      showPage("pickup");
+    }, 1500);
   }
 
   function prepareOriginalSlotData() {
@@ -674,13 +684,24 @@
     faceBack.hidden = true;
   }
   document.getElementById("faceRegister").addEventListener("click", openRegistration);
-  document.getElementById("backToLoginChoice").addEventListener("click", showPasswordLogin);
+  document.getElementById("backToLoginChoice").addEventListener("click", () => showPage("home"));
   faceBack.addEventListener("click", () => showPage("home"));
   document.getElementById("passwordToFace").addEventListener("click", () => {
     hideKeypad();
     resetFaceLogin();
   });
-  faceRetry.addEventListener("click", resetFaceLogin);
+  function startRecognition() {
+    clearTimeout(recognitionTimer);
+    faceStart.hidden = true;
+    faceToPassword.hidden = true;
+    faceRetry.hidden = true;
+    faceStatus.textContent = "正在识别";
+    faceDesc.textContent = "请将面部置于正方形框内，并确保框内只有本人";
+    recognitionTimer = window.setTimeout(showFaceSuccess, 2400);
+  }
+  faceStart.addEventListener("click", startRecognition);
+  faceToPassword.addEventListener("click", showPasswordLogin);
+  faceRetry.addEventListener("click", startRecognition);
   faceConfirmRetry.addEventListener("click", () => {
     faceConfirmModal.hidden = true;
     authenticatedStudentId = "";
@@ -811,22 +832,35 @@
   });
 
   function previewEnrollmentFailure(mode) {
-    if (!registrationLocked || faceEnrollStart.hidden) return;
     clearTimeout(enrollmentTimer);
-    const verifiedId = authenticatedStudentId || "20260001";
+    document.getElementById("enrollmentToast").hidden = true;
+    const verifiedId = authenticatedStudentId || "2026001";
+    registrationLocked = false;
+    showPage("pickup");
     mustEnrollAfterPassword = true;
     enrollmentMode = mode;
     authenticatedStudentId = verifiedId;
+    registrationLocked = true;
     showFaceEnrollment();
     faceEnrollStart.textContent = "重新录入";
-    enrollFailureAction.hidden = true;
-    enrollFailureAction.textContent = "使用已验证账号登录";
-    enrollStatus.textContent = "录入失败";
-    enrollStatus.className = "face-status is-failed";
-    enrollDesc.textContent = "本次人脸未保存，请重新录入";
-    enrollNotice.textContent = "请正对屏幕，开始录入后不可退出";
+    enrollStatus.textContent = "录入人脸";
+    enrollDesc.textContent = "";
+    document.getElementById("enrollmentFailureModal").hidden = false;
   }
 
+  document.getElementById("enrollmentFailureRetry").addEventListener("click", () => {
+    document.getElementById("enrollmentFailureModal").hidden = true;
+    showFaceEnrollment();
+    faceEnrollStart.click();
+  });
+  document.getElementById("enrollmentFailureHome").addEventListener("click", () => {
+    document.getElementById("enrollmentFailureModal").hidden = true;
+    clearTimeout(enrollmentTimer);
+    registrationLocked = false;
+    authenticatedStudentId = "";
+    mustEnrollAfterPassword = false;
+    showPage("home");
+  });
   simulateNotCharging.addEventListener("click", (e) => {
     e.stopPropagation();
     ensureReturnScene();
