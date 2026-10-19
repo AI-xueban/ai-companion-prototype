@@ -1976,9 +1976,16 @@ window.parentPrototype = (() => {
     function returnToTeacherMineHome(){teacherTab='mine';go('teacherDesk')}
     function returnToControlModuleHome(){controlView='entry';controlBatch=false;controlSelected.clear();controlQuery='';controlFilter='all';adminLevel='school';adminSelectedGrade='';adminBatchMode=false;adminSelectedScopes.clear();renderControl()}
     function controlNavigateBack(){if(controlDemoRole==='admin'){adminBack();return}if(controlView==='studentDetail'){openControlModule(controlModule);return}if(controlView==='students'){backControlHome();return}leaveControlCenter()}
-    function openControlTab(){teacherTab='control';controlView='entry';teacherDesk()}
+    function openControlTab(){
+      const target=new URL('control-prototype.html',location.href),scope=workbenchPrototype.getScope();
+      target.searchParams.set('page','teacherDesk');target.searchParams.set('tab','control');
+      target.searchParams.set('availability',teacherAvailability);target.searchParams.set('workView',scope.view);target.searchParams.set('classId',scope.classId);
+      target.searchParams.set('identity',workbenchPrototype.getGrantedViews().length>1?'all':scope.view);
+      if(params.get('review')==='1')target.searchParams.set('review','1');
+      location.assign(target.href);
+    }
     // 以下为本地演示状态；正式系统由服务端返回账号有效性和各职责数据范围。
-    let teacherAvailability=localStorage.getItem('ai_companion_demo_teacher_deleted')==='1'?'deleted':'normal';
+    let teacherAvailability=localStorage.getItem('ai_companion_demo_teacher_deleted')==='1'?'deleted':['noClasses','noStudents'].includes(params.get('availability'))?params.get('availability'):'normal';
     function setTeacherAvailability(value){
       if(!['normal','noClasses','noStudents','deleted'].includes(value))return;
       teacherAvailability=value;if(value==='deleted')localStorage.setItem('ai_companion_demo_teacher_deleted','1');else localStorage.removeItem('ai_companion_demo_teacher_deleted');teacherTab='learning';teacherFlow='';teacherScenario='';teacherBranch='normal';teacherFlowOutcome='';
@@ -2368,6 +2375,7 @@ app.innerHTML='<main class="screen control-screen">'+top+'<section class="contro
     function startParentScenario(name){parentPrototype.scenario(name)}
     function restartTeacherScenario(){startTeacherFlow(teacherScenario||'first')}
     function clearDemoCacheAndRestart(){['ai_companion_demo_parent_v2',teacherDemoSessionKey,teacherManualLogoutKey,'ai_companion_demo_teacher_wechat_binding'].forEach(key=>localStorage.removeItem(key));if(stage==='parent')parentPrototype.restart();else restartTeacherScenario()}
+    if(params.has('workView')){workbenchPrototype.demoIdentity(params.get('identity')||'subject');workbenchPrototype.view(params.get('workView'));if(params.get('classId'))workbenchPrototype.class(params.get('classId'));if(['learning','homework','mine'].includes(params.get('tab')))teacherTab=params.get('tab');}
     document.querySelectorAll('[data-teacher-flow]').forEach(b=>b.addEventListener('click',()=>startTeacherFlow(b.dataset.teacherFlow)));if(['auth','code','confirm','pending','approved'].includes(stage))stage='parent';restoreDemoTeacherOnLaunch();if(stage==='teacherLaunch'&&!teacherScenario)startTeacherFlow('first');else if(stage==='parent'){if(params.get('scenario'))parentPrototype.scenario(params.get('scenario'));else parentPrototype.start();}else ({home,parent:parentPrototype.render,teacherLaunch,teacherLogin,teacherPhone:teacherPhoneLogin,teacherBind,teacherDeviceConfirm,teacherDeviceKicked,teacherDesk,teacherSecurity,teacherUnavailable:showTeacherAccountUnavailable}[stage]||home)();
   </script>
 </body>

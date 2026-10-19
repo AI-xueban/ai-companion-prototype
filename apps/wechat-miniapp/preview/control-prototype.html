@@ -425,7 +425,24 @@
     function switchControlDemoRole(role){const view=role==='admin'?'school':role==='teacher'?'homeroom':role;if(!controlRoleNames[view])return;controlWorkView=view;controlDemoRole=view==='school'?'admin':'teacher';selectedTeacherClass=controlClasses[0];controlEntryGrade='';controlEntryClass='';teacherTab='control';controlView='entry';adminLevel='school';adminSelectedGrade='';adminBatchMode=false;adminSelectedScopes.clear();controlSelected.clear();controlQuery='';stage='teacherDesk';renderControl()}
     function controlRoleSwitcher(){return '<div class="wb-condition-row wb-homework-toolbar control-workbench-tools">'+controlScopeSwitcher()+'<div class="wb-homework-identity"><details class="wb-role-menu"><summary aria-label="切换工作身份，当前'+controlRoleNames[controlWorkView]+'">'+controlRoleNames[controlWorkView]+'<span class="wb-chevron" aria-hidden="true"></span></summary><div class="wb-role-menu-list">'+Object.entries(controlRoleNames).filter(([view])=>view!==controlWorkView).map(([view,label])=>'<button class="wb-role-option" type="button" onclick="switchControlDemoRole(\''+view+'\')">'+label+'<span>›</span></button>').join('')+'</div></details></div></div>'}
     function teacherTabBar(){const tabs=[['learning','学情','M4 19V11M10 19V5M16 19v-9M3 21h18'],['homework','作业','M5 3h14v18H5z M8 8h8 M8 12h8 M8 16h5'],['control','管控','M12 3l8 3v6c0 5-8 9-8 9s-8-4-8-9V6z M9 12l2 2 4-4'],['mine','我的','M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M4 21v-2a8 8 0 0 1 16 0v2']];return '<nav class="teacher-tabbar" role="tablist" aria-label="教师端导航">'+tabs.map(([id,label,path])=>`<button role="tab" aria-selected="${teacherTab===id}" aria-controls="teacher-tab-panel" onclick="${id==='control'?'openControlTab()':`switchTeacherTab('${id}')`}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${path}"/></svg><span>${label}</span></button>`).join('')+'</nav>'}
-    function switchTeacherTab(tab){if(tab!=='control'){const target=new URL('index.html',location.href);target.searchParams.set('page','teacherDesk');target.searchParams.set('tab',tab);if(params.get('review')==='1')target.searchParams.set('review','1');location.assign(target.href);return}teacherTab=tab;teacherDesk()}
+    function teacherWorkbenchUrl(tab){
+      const target=new URL('index.html',location.href);target.searchParams.set('page','teacherDesk');target.searchParams.set('tab',tab);
+      for(const key of ['availability','identity','classId'])if(params.has(key))target.searchParams.set(key,params.get(key));
+      target.searchParams.set('workView',controlWorkView);if(params.get('review')==='1')target.searchParams.set('review','1');return target;
+    }
+    function switchTeacherTab(tab){if(tab!=='control'){location.assign(teacherWorkbenchUrl(tab).href);return}teacherTab=tab;teacherDesk()}
+    // 跳转后由管控页展示账号和名单状态，不在来源页拦截导航。
+    function renderControlAvailability(){
+      if(localStorage.getItem('ai_companion_demo_teacher_deleted')==='1'||params.get('availability')==='deleted'){
+        const target=teacherWorkbenchUrl('learning');target.searchParams.set('page','teacherUnavailable');location.replace(target.href);return true;
+      }
+      const availability=params.get('availability'),noClasses=availability==='noClasses';
+      if(controlWorkView==='school'||(!noClasses&&(availability!=='noStudents'||params.get('classId')==='c2')))return false;
+      const title=noClasses?'暂无已分配班级':'当前班级暂无学生';
+      const copy=noClasses?'请联系学校管理员分配任教班级或班主任班级，分配完成后刷新即可查看。':'请联系学校管理员在该班级添加或调整学生，更新后刷新即可查看。';
+      app.innerHTML=`<main class="screen control-screen">${header('管控',false)}<section class="control-content" id="teacher-tab-panel" role="tabpanel">${noClasses?'':'<p class="control-home-note">七年级(2)班 · 0 名学生</p>'}<section class="control-summary"><h2>${title}</h2><p>${copy}</p><p>当前暂无可管控学生。</p><div class="control-actions"><button class="control-primary" onclick="refreshControlAvailability()">刷新</button><button class="control-secondary" onclick="switchTeacherTab('mine')">查看我的账号</button></div><p id="control-empty-feedback" class="control-hint" role="status"></p></section></section>${teacherTabBar()}</main>`;syncReview();return true;
+    }
+    function refreshControlAvailability(){renderControl();const feedback=document.getElementById('control-empty-feedback');if(feedback)feedback.textContent='已刷新，暂未发现更新。请联系学校管理员。'}
     function openControlTab(){teacherTab='control';controlView='entry';renderControl()}
     function teacherDesk(){
       if(teacherTab==='control'){renderControl();return}
@@ -458,7 +475,7 @@
     function leaveControlCenter(){controlView='entry';controlBatch=false;controlSelected.clear();renderControl()}
     function openControlModule(module){controlModule=module;controlView='module';controlBatch=false;controlSelected.clear();controlFilter='all';controlQuery='';renderControl()}
     function openHomeworkScope(){controlModule='homework';controlOverlay('设置智阅作业权限','<p class="control-scope">'+selectedTeacherClass+'</p><button class="control-scope-choice" onclick="openControlEditor(\'all\')"><b>全班学生</b><span>'+controlStudents().length+'名学生一起设置 ›</span></button><button class="control-scope-choice" onclick="openControlStudents(\'homework\')"><b>指定学生</b><span>选择一名或多名学生 ›</span></button>','')}
-    function renderControl(){
+    function renderControl(){if(renderControlAvailability())return;
       const students=controlStudents(),count=students.length;
       if(controlView==='home')controlView='entry';
       if(controlView==='entry'){
@@ -594,7 +611,7 @@
       const canConfigure=controlModule!=='borrowing'||schoolBorrowingEnabled;
        app.innerHTML='<main class="screen control-screen admin-module-screen">'+top+'<section class="control-content">'+adminBreadcrumb()+actions+(canConfigure?'<div class="admin-scope-summary"><b>'+(adminBatchMode?'选择'+(adminLevel==='school'?'年级':'班级'):(adminLevel==='school'?'按年级查看':'按班级查看'))+'</b>'+(adminBatchMode?'<span>'+currentStudents.length+'名学生</span>':'<button onclick="startAdminBatch()">设置</button>')+'</div><div class="admin-level-list">'+adminScopeRows()+'</div>':'<div class="control-empty">开启全校借用管控后，可按年级、班级或学生设置借用规则</div>')+'</section>'+(canConfigure&&adminBatchMode?adminBatchBar():'')+'<div id="control-overlay"></div><div id="control-toast"></div></main>';syncReview()
     }
-    function renderControl(){
+    function renderControl(){if(renderControlAvailability())return;
       if(controlDemoRole==='admin'){renderAdminControl();return}
       const students=controlStudents(),count=students.length;
       if(controlView==='home')controlView='entry';
@@ -755,9 +772,10 @@ app.innerHTML='<main class="screen control-screen">'+top+'<section class="contro
     function verify(){const input=document.getElementById('code'),error=document.getElementById('error');enteredCode=input.value.trim();if(!enteredCode){error.textContent='请输入学生编号';return}if(!/^\d{6,20}$/.test(enteredCode)){error.textContent='学生编号应为 6–20 位数字';return}go('confirm')}
     function clearError(){document.getElementById('error').textContent=''}
     function syncReview(){document.querySelectorAll('[data-stage]').forEach(b=>b.classList.toggle('active',b.dataset.stage===stage));document.body.classList.toggle('teacher-review-mode',['teacherLaunch','teacherLogin','teacherPhone','teacherBind','teacherDesk','teacherSecurity'].includes(stage));document.querySelectorAll('[data-teacher-flow]').forEach(b=>b.classList.toggle('active',b.dataset.teacherFlow===teacherFlow));const steps=document.getElementById('teacher-review-steps'),branches=document.getElementById('teacher-review-branches'),action=document.getElementById('teacher-review-action'),detail=document.getElementById('teacher-review-detail');if(!detail)return;const flowSteps=teacherFlowSteps[teacherFlow]||[];steps.innerHTML=flowSteps.map((label,i)=>`<li class="${i===teacherFlowStep?'current':i<teacherFlowStep?'done':''}">${i+1}. ${label}</li>`).join('');branches.innerHTML=currentTeacherBranchOptions().map(([key,label])=>`<button class="${teacherBranch===key?'active':''}" onclick="setTeacherBranch('${key}')">${label}</button>`).join('')||'<p class="review-hint">此节点无可切换的异常</p>';action.innerHTML=stage==='teacherLaunch'?`<button class="review-next" onclick="advanceTeacherSystemStep()">${teacherFlow==='expired'&&teacherFlowStep===2?'查看恢复结果':'推进系统判断'} →</button>`:stage==='teacherPhone'||stage==='teacherBind'?'<p class="review-hint">请在手机页面操作，流程会自动前进。</p>':'';detail.innerHTML=teacherFlow?`<strong>当前流程</strong>${teacherFlowTitles[teacherFlow]}<br><br><strong>当前页面</strong>${{teacherLaunch:'启动与会话校验',teacherLogin:'快捷登录',teacherPhone:'教师账号登录',teacherBind:'微信绑定',teacherDesk:'教师工作台',teacherSecurity:'账号与安全'}[stage]||'身份选择'}${teacherBranch!=='normal'?`<br><br><strong>当前异常</strong>${teacherBranchMessages[teacherBranch]}`:''}`:'选择一条流程，从第一步开始演示。'}
+    if(['school','homeroom','subject'].includes(params.get('workView'))){controlWorkView=params.get('workView');controlDemoRole=controlWorkView==='school'?'admin':'teacher';}
     document.querySelectorAll('[data-stage]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.stage)));document.querySelectorAll('[data-teacher-flow]').forEach(b=>b.addEventListener('click',()=>startTeacherFlow(b.dataset.teacherFlow)));restoreDemoTeacherOnLaunch();({home,auth,code,confirm,pending,approved,teacherLaunch,teacherLogin,teacherPhone:teacherPhoneLogin,teacherBind,teacherDesk,teacherSecurity}[stage]||home)();
   </script>
   <script src="control-rules.js"></script>
-  <script src="control-parity.js?v=20261019-state-actions"></script>
+  <script src="control-parity.js?v=20261019-control-empty-route"></script>
 </body>
 </html>

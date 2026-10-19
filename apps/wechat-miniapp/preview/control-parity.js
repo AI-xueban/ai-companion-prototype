@@ -175,6 +175,7 @@
     shell('借用管控', content, 'leaveControlCenter()', `<div class="parity-borrow-floating">${button('＋ 新增规则', 'parity.newBorrowRule()', false, !schoolBorrowingEnabled)}</div>`, 'parity-school-borrow');
   }
   function renderControl() {
+    if (typeof renderControlAvailability === 'function' && renderControlAvailability()) return;
     schoolControlClasses.forEach(className => controlData[className].forEach(s => s.schedules = R.prune(s.schedules)));
     if (controlView === 'entry' || controlView === 'home') return renderEntry();
     if (controlView === 'ruleEditor') return renderEditor();
