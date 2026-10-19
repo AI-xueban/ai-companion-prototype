@@ -6,6 +6,7 @@ export interface TeacherPortalUser {
   id: string;
   name: string;
   account?: string;
+  phone?: string;
   role: TeacherPortalRole;
   roleLabel: string;
   schoolId: string;
@@ -20,7 +21,7 @@ export interface TeacherPortalUser {
 export const DEMO_TEACHER_ACCOUNTS: Array<TeacherPortalUser & { account: string; password: string }> = [
   { id: 'teacher-01', account: '13800000000', password: '12345678', name: '张雨薇', role: 'teacher', roleLabel: '教师', schoolId: 'luohu-lab', schoolName: '罗湖实验学校', classIds: ['c1'], teachingAssignments: [{ classId: 'c1', subjects: ['数学'] }], homeroomClassIds: [], subject: '数学' },
   { id: 'head-01', account: '13800000001', password: '12345678', name: '李老师', role: 'class-teacher', roleLabel: '班主任', schoolId: 'luohu-lab', schoolName: '罗湖实验学校', classIds: ['c1'], teachingAssignments: [{ classId: 'c1', subjects: ['语文'] }], homeroomClassIds: ['c1'], subject: '语文' },
-  { id: 'school-admin-01', account: 'admin@luohu.edu', password: '12345678', name: '学校管理员', role: 'school-admin', roleLabel: '学校管理员', schoolId: 'luohu-lab', schoolName: '罗湖实验学校', classIds: ['c1', 'c2', 'c3'], teachingAssignments: [{ classId: 'c1', subjects: ['数学'] }, { classId: 'c2', subjects: ['语文', '英语'] }, { classId: 'c3', subjects: ['物理'] }], homeroomClassIds: ['c2'] },
+  { id: 'school-admin-01', account: 'admin@luohu.edu', phone: '13800000002', password: '12345678', name: '学校管理员', role: 'school-admin', roleLabel: '学校管理员', schoolId: 'luohu-lab', schoolName: '罗湖实验学校', classIds: ['c1', 'c2', 'c3'], teachingAssignments: [{ classId: 'c1', subjects: ['数学'] }, { classId: 'c2', subjects: ['语文', '英语'] }, { classId: 'c3', subjects: ['物理'] }], homeroomClassIds: ['c2'] },
   { id: 'legacy-demo', account: 'demo@turing.com', password: '12345678', name: '李老师', role: 'class-teacher', roleLabel: '班主任', schoolId: 'luohu-lab', schoolName: '罗湖实验学校', classIds: ['c1'], teachingAssignments: [{ classId: 'c1', subjects: ['语文'] }], homeroomClassIds: ['c1'], subject: '语文' },
 ];
 

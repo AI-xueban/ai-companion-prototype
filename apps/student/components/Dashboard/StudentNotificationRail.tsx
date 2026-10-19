@@ -38,7 +38,7 @@ const GROUP_CONFIG: Record<StudentNotificationGroup, {
 
 export function StudentNotificationRail({ isOpen, items, onClose, onAction }: StudentNotificationRailProps) {
   const unreadCount = items.filter(
-    (item) => (item.isUnread && Boolean(item.action)) || item.isPersistentRisk,
+    (item) => item.isUnread || item.isPersistentRisk,
   ).length;
   const pinnedItems = items.filter((item) => item.priority === 'pinned');
   const regularItems = items.filter((item) => item.priority !== 'pinned');
@@ -148,7 +148,7 @@ function NotificationRow({
         <span className="flex items-center gap-2">
           <span className="min-w-0 flex-1 break-words text-[12px] font-bold leading-[1.35] text-slate-700">{item.title}</span>
           <span className="shrink-0 text-[10px] font-medium text-slate-400">{item.timeLabel}</span>
-          {item.isUnread && isActionable && (
+          {item.isUnread && (
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" aria-label="未读" />
           )}
         </span>

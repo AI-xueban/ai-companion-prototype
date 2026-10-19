@@ -37,7 +37,7 @@ export const TeacherLogin: React.FC<TeacherLoginProps> = ({ onLogin, initialRole
       setLoading(false);
       if (matched) {
         localStorage.setItem('mockTeacherToken', 'true');
-        onLogin({ id: matched.id, name: matched.name, account: matched.account, role: matched.role, roleLabel: matched.roleLabel, schoolId: matched.schoolId, schoolName: matched.schoolName, classIds: matched.classIds, teachingAssignments: matched.teachingAssignments, homeroomClassIds: matched.homeroomClassIds, subject: matched.subject });
+        onLogin({ id: matched.id, name: matched.name, account: matched.account, phone: matched.phone, role: matched.role, roleLabel: matched.roleLabel, schoolId: matched.schoolId, schoolName: matched.schoolName, classIds: matched.classIds, teachingAssignments: matched.teachingAssignments, homeroomClassIds: matched.homeroomClassIds, subject: matched.subject });
       } else {
         setError('账号、密码或登录角色不匹配，请使用页面下方的演示账号');
       }
