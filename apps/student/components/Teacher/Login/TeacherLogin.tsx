@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { Hexagon } from 'lucide-react';
 import { DEMO_TEACHER_ACCOUNTS, TeacherPortalUser, TeacherPortalRole } from '../data/teacherAccess';
 
+export type SchoolAdminEntry = 'board' | 'workbench';
+
 interface TeacherLoginProps {
-  onLogin: (user: TeacherPortalUser) => void;
+  onLogin: (user: TeacherPortalUser, entry: SchoolAdminEntry) => void;
   initialRole?: TeacherPortalRole;
   onBack?: () => void;
 }
@@ -14,6 +16,7 @@ export const TeacherLogin: React.FC<TeacherLoginProps> = ({ onLogin, initialRole
   const [role, setRole] = useState<TeacherPortalRole>(initialRole);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [verifiedAdmin, setVerifiedAdmin] = useState<TeacherPortalUser | null>(null);
   const [isResetOpen, setIsResetOpen] = useState(false);
   const [resetStep, setResetStep] = useState<1 | 2>(1);
   const [resetAccount, setResetAccount] = useState('13800000000');
@@ -36,8 +39,9 @@ export const TeacherLogin: React.FC<TeacherLoginProps> = ({ onLogin, initialRole
     setTimeout(() => {
       setLoading(false);
       if (matched) {
-        localStorage.setItem('mockTeacherToken', 'true');
-        onLogin({ id: matched.id, name: matched.name, account: matched.account, role: matched.role, roleLabel: matched.roleLabel, schoolId: matched.schoolId, schoolName: matched.schoolName, classIds: matched.classIds, teachingAssignments: matched.teachingAssignments, homeroomClassIds: matched.homeroomClassIds, subject: matched.subject });
+        const user = { id: matched.id, name: matched.name, account: matched.account, role: matched.role, roleLabel: matched.roleLabel, schoolId: matched.schoolId, schoolName: matched.schoolName, classIds: matched.classIds, teachingAssignments: matched.teachingAssignments, homeroomClassIds: matched.homeroomClassIds, subject: matched.subject };
+        if (matched.role === 'school-admin') setVerifiedAdmin(user);
+        else { localStorage.setItem('mockTeacherToken', 'true'); onLogin(user, 'workbench'); }
       } else {
         setError('账号、密码或登录角色不匹配，请使用页面下方的演示账号');
       }
@@ -105,6 +109,7 @@ export const TeacherLogin: React.FC<TeacherLoginProps> = ({ onLogin, initialRole
 
   return (
     <div className="min-h-screen w-screen bg-[#F8F9FC] flex items-center justify-center">
+      {verifiedAdmin ? <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-8 shadow-lg"><div className="flex items-center gap-3"><div className="flex size-10 items-center justify-center rounded-xl bg-indigo-600 text-lg font-black text-white">学</div><div><p className="text-xs font-bold text-slate-400">{verifiedAdmin.schoolName}</p><h1 className="text-xl font-black text-slate-900">选择本次进入方式</h1></div></div><p className="mt-4 text-sm text-slate-500">每次登录均需选择；进入管理工作台需管理员权限。</p><div className="mt-6 grid grid-cols-2 gap-4"><button type="button" onClick={() => { localStorage.setItem('mockTeacherToken', 'true'); onLogin(verifiedAdmin, 'board'); }} className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5 text-left hover:border-indigo-500 hover:bg-indigo-100"><strong className="block text-base text-indigo-900">全校数据看板 →</strong><span className="mt-2 block text-xs leading-5 text-indigo-700">查看全校学情和设备使用，不进行管理操作</span></button><button type="button" onClick={() => { localStorage.setItem('mockTeacherToken', 'true'); onLogin(verifiedAdmin, 'workbench'); }} className="rounded-2xl border border-slate-200 p-5 text-left hover:border-indigo-500 hover:bg-slate-50"><strong className="block text-base text-slate-900">学校管理工作台 →</strong><span className="mt-2 block text-xs leading-5 text-slate-500">保留原有学校、班级与设备管理页面</span></button></div><button type="button" onClick={() => { setVerifiedAdmin(null); setPassword(''); }} className="mt-5 text-xs font-bold text-slate-500 hover:text-slate-900">← 返回登录</button></div> :
       <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl shadow-lg p-8 space-y-6">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-slate-900 rounded-lg flex items-center justify-center text-white">
@@ -123,7 +128,7 @@ export const TeacherLogin: React.FC<TeacherLoginProps> = ({ onLogin, initialRole
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-500">登录入口（兼任职责登录后可切换）</label>
-            <select value={role} onChange={(event) => { const nextRole = event.target.value as TeacherPortalRole; setRole(nextRole); setAccount(DEMO_TEACHER_ACCOUNTS.find((item) => item.role === nextRole)?.account ?? ''); }} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm">
+            <select value={role} onChange={(event) => { const nextRole = event.target.value as TeacherPortalRole; setRole(nextRole); setVerifiedAdmin(null); setAccount(DEMO_TEACHER_ACCOUNTS.find((item) => item.role === nextRole)?.account ?? ''); }} className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm">
               <option value="teacher">教师</option><option value="class-teacher">班主任</option><option value="school-admin">学校管理员</option>
             </select>
           </div>
@@ -133,7 +138,7 @@ export const TeacherLogin: React.FC<TeacherLoginProps> = ({ onLogin, initialRole
               value={account}
               onChange={(e) => setAccount(e.target.value)}
               className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100"
-              placeholder="工号或手机号或邮箱"
+              placeholder="请输入登录手机号"
             />
           </div>
           <div className="space-y-1">
@@ -181,7 +186,7 @@ export const TeacherLogin: React.FC<TeacherLoginProps> = ({ onLogin, initialRole
             </button>
           )}
         </form>
-        <div className="rounded-xl bg-slate-50 p-3 text-[11px] leading-5 text-slate-500">学校管理员可查看独立的全校学情与全校设备使用页面；兼任任课教师或班主任时，还可在「我的班级」四个入口内切换职责范围。演示密码均为 12345678：教师 13800000000；班主任 13800000001；学校管理员 admin@luohu.edu。</div>
+        <div className="rounded-xl bg-slate-50 p-3 text-[11px] leading-5 text-slate-500">学校管理员登录后可选择全校数据看板或学校管理工作台。演示密码均为 12345678：教师 13800000000；班主任 13800000001；学校管理员 admin@luohu.edu。</div>
 
         {isResetOpen && (
           <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
@@ -269,7 +274,7 @@ export const TeacherLogin: React.FC<TeacherLoginProps> = ({ onLogin, initialRole
             </div>
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Building2, Download, Plus, Search, Upload, X } from 'lucide-react';
-import { PORTAL_CLASSES, TEACHER_ROLE_OPTIONS, TEACHER_SUBJECT_OPTIONS, TeacherPortalUser } from './data/teacherAccess';
+import { PORTAL_CLASSES, TEACHER_SUBJECT_OPTIONS, TeacherPortalUser } from './data/teacherAccess';
 import { AccountImportDialog } from './AccountImportDialog';
 import { ImportKind, ImportPerson } from './accountImport';
 import { ManagementExportDialog } from './ManagementExportDialog';
@@ -8,7 +8,8 @@ import { ExportSheet } from './managementExport';
 
 type View = 'school' | 'classes' | 'teachers' | 'students' | 'deleted-students';
 type ChangeRecord = { action: string; operator: string; time: string; changes: { field: string; before: string; after: string }[] };
-type Person = { name: string; account: string; className: string; role?: string; staffNumber?: string; subject?: string; homeroomClassName?: string; phoneVerificationStatus?: string; status?: string; operator: string; operatedAt: string; createdAt?: string; history?: ChangeRecord[] };
+type AccessGrant = 'teaching-view' | 'homeroom-work' | 'school-analytics' | 'school-management';
+type Person = { name: string; account: string; className: string; subject?: string; homeroomClassName?: string; gradeLeaderGrades?: string; researchGroupSubjects?: string; professionalTitle?: string; accessGrants?: AccessGrant[]; phoneVerificationStatus?: string; status?: string; operator: string; operatedAt: string; createdAt?: string; history?: ChangeRecord[] };
 type DeletedStudent = { student: Person; deletedAt: string; deletedBy: string; source: '单独删除' | '删除班级' };
 type ManagedClass = (typeof PORTAL_CLASSES)[number] & { classCode: string; homeroomTeacher: string; studentCount: number; sort: number; note: string; operator: string; operatedAt: string };
 
@@ -18,6 +19,19 @@ const SYSTEM_OPERATION_TIME = '2026-10-08 09:00';
 const STUDENT_REGISTRY_KEY = 'ai-companion:teacher-student-registry:v1';
 const SCHOOL_MANAGEMENT_KEY = 'ai-companion:teacher-school-management:v1';
 const GRADE_LABELS = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+const ACCESS_OPTIONS: { code: AccessGrant; label: string; scope: string }[] = [
+  { code: 'teaching-view', label: '任教学情查看', scope: '已绑定的任教班级与学科' },
+  { code: 'homeroom-work', label: '班主任工作', scope: '已绑定的班主任班级' },
+  { code: 'school-analytics', label: '全校学情查看', scope: '本校只读' },
+  { code: 'school-management', label: '学校账号管理', scope: '本校账号与班级' },
+];
+const splitValues = (value?: string) => (value ?? '').split('、').filter((item) => item && item !== '未分配');
+const teacherPositions = (person: Person) => [
+  ...splitValues(person.homeroomClassName).map((item) => `${item}班主任`),
+  ...splitValues(person.gradeLeaderGrades).map((item) => `${GRADE_LABELS[Number(item)] || item}年级组长`),
+  ...splitValues(person.researchGroupSubjects).map((item) => `${item}教研组长`),
+].join('、') || '普通教师';
+const grantSummary = (person: Person) => (person.accessGrants ?? []).map((code) => ACCESS_OPTIONS.find((item) => item.code === code)?.label ?? code).join('、') || '未授权';
 const classDisplayName = (value: string, grade: number) => `${GRADE_LABELS[grade]}年级${value.trim().replace(/^[一二三四五六七八九1-9]年级/, '')}`;
 const INITIAL_STUDENTS: Person[] = [
   { name: '李明', account: '9080005', className: '七年级(2)班', operator: SYSTEM_OPERATOR, operatedAt: SYSTEM_OPERATION_TIME, createdAt: '2026-09-23 16:59:22' },
@@ -36,7 +50,15 @@ const readStudentRegistry = (schoolName: string): { active: Person[]; deleted: D
 const readSchoolManagement = (schoolName: string): { classes?: ManagedClass[]; teachers?: Person[] } => {
   try {
     const saved = JSON.parse(localStorage.getItem(SCHOOL_MANAGEMENT_KEY) || 'null');
-    if (saved?.schoolName === schoolName && Array.isArray(saved.classes) && Array.isArray(saved.teachers)) return saved;
+    if (saved?.schoolName === schoolName && Array.isArray(saved.classes) && Array.isArray(saved.teachers)) return {
+      classes: saved.classes,
+      teachers: saved.teachers.map((teacher: Person & { staffNumber?: string; role?: string }) => {
+        const current = { ...teacher };
+        delete current.staffNumber;
+        delete current.role;
+        return current;
+      }),
+    };
   } catch { /* Invalid demo data falls back to the initial roster. */ }
   return {};
 };
@@ -64,8 +86,8 @@ export const SchoolAdminManagement: React.FC<{ initialView: View; currentUser: T
     operatedAt: SYSTEM_OPERATION_TIME,
   })));
   const [teachers, setTeachers] = useState<Person[]>(initialManagement.teachers ?? [
-    { name: '张雨薇', account: '13800000000', className: '七年级(2)班', role: '教师', subject: '数学', phoneVerificationStatus: '未验证', status: '正常', operator: SYSTEM_OPERATOR, operatedAt: SYSTEM_OPERATION_TIME, createdAt: '2026-09-24 14:18:12' },
-    { name: '李老师', account: '13800000001', className: '七年级(2)班', role: '班主任', subject: '语文', homeroomClassName: '七年级(2)班', phoneVerificationStatus: '未验证', status: '正常', operator: SYSTEM_OPERATOR, operatedAt: SYSTEM_OPERATION_TIME, createdAt: '2026-09-23 21:20:09' },
+    { name: '张雨薇', account: '13800000000', className: '七年级(2)班', subject: '数学', professionalTitle: '一级教师', researchGroupSubjects: '数学', accessGrants: ['teaching-view'], phoneVerificationStatus: '未验证', status: '正常', operator: SYSTEM_OPERATOR, operatedAt: SYSTEM_OPERATION_TIME, createdAt: '2026-09-24 14:18:12' },
+    { name: '李老师', account: '13800000001', className: '七年级(2)班', subject: '语文', homeroomClassName: '七年级(2)班', gradeLeaderGrades: '7', accessGrants: ['teaching-view', 'homeroom-work'], phoneVerificationStatus: '未验证', status: '正常', operator: SYSTEM_OPERATOR, operatedAt: SYSTEM_OPERATION_TIME, createdAt: '2026-09-23 21:20:09' },
   ]);
   const [initialStudentRegistry] = useState(() => readStudentRegistry(currentUser.schoolName));
   const [students, setStudents] = useState<Person[]>(initialStudentRegistry.active);
@@ -89,10 +111,13 @@ export const SchoolAdminManagement: React.FC<{ initialView: View; currentUser: T
   const [classSort, setClassSort] = useState('1');
   const [classNote, setClassNote] = useState('');
   const [loginPhone, setLoginPhone] = useState('');
-  const [staffNumber, setStaffNumber] = useState('');
   const [subject, setSubject] = useState('');
   const [homeroomClassName, setHomeroomClassName] = useState('未分配');
-  const [teacherRole, setTeacherRole] = useState('');
+  const [gradeLeaderGrades, setGradeLeaderGrades] = useState('');
+  const [researchGroupSubjects, setResearchGroupSubjects] = useState('');
+  const [professionalTitle, setProfessionalTitle] = useState('');
+  const [authorizing, setAuthorizing] = useState<Person | null>(null);
+  const [draftGrants, setDraftGrants] = useState<AccessGrant[]>([]);
   const [error, setError] = useState('');
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
   const [editingClass, setEditingClass] = useState<ManagedClass | null>(null);
@@ -110,19 +135,19 @@ export const SchoolAdminManagement: React.FC<{ initialView: View; currentUser: T
     setFilterGrade(''); setFilterClassId('');
     setHistoryPerson(null);
     setHomeroomTransfer(null);
-    setView(initialView); setSearch(''); setDeletedSearch(''); setModal(false); setImportKind(null); setExportOpen(false); setDetail(null); setAssignment(null); setDeleteTarget(null); setError('');
+    setView(initialView); setSearch(''); setDeletedSearch(''); setModal(false); setImportKind(null); setExportOpen(false); setDetail(null); setAssignment(null); setAuthorizing(null); setDeleteTarget(null); setError('');
   }, [initialView]);
   useEffect(() => {
-    if (!modal && !importKind && !exportOpen && !detail && !historyPerson && !assignment && !deleteTarget && !homeroomTransfer) return;
+    if (!modal && !importKind && !exportOpen && !detail && !historyPerson && !assignment && !authorizing && !deleteTarget && !homeroomTransfer) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         if (homeroomTransfer) { setHomeroomTransfer(null); return; }
-        setModal(false); setImportKind(null); setExportOpen(false); setDetail(null); setHistoryPerson(null); setAssignment(null); setDeleteTarget(null); setError('');
+        setModal(false); setImportKind(null); setExportOpen(false); setDetail(null); setHistoryPerson(null); setAssignment(null); setAuthorizing(null); setDeleteTarget(null); setError('');
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [modal, importKind, exportOpen, detail, historyPerson, assignment, deleteTarget, homeroomTransfer]);
+  }, [modal, importKind, exportOpen, detail, historyPerson, assignment, authorizing, deleteTarget, homeroomTransfer]);
 
   const titles: Record<View, string> = { school: '学校信息', classes: '班级管理', teachers: '教师账号', students: '学生账号', 'deleted-students': '已删除学生' };
   const people = view === 'teachers' ? teachers : students;
@@ -139,7 +164,7 @@ export const SchoolAdminManagement: React.FC<{ initialView: View; currentUser: T
   const filteredPeople = people.filter((person) => {
     const assignedClasses = classes.filter((item) => [...person.className.split('、'), ...(person.homeroomClassName ?? '').split('、')].includes(item.name));
     return matchesSearch(`${person.name} ${person.account} ${person.className} ${person.homeroomClassName ?? ''} ${person.subject ?? ''}`) && (
-      (!filterGrade && !filterClassId) || assignedClasses.some(matchesClassFilter)
+      (!filterGrade && !filterClassId) || assignedClasses.some(matchesClassFilter) || (view === 'teachers' && !!filterGrade && splitValues(person.gradeLeaderGrades).includes(filterGrade))
     );
   });
   const filteredDeletedStudents = deletedStudents.filter((entry) => {
@@ -166,16 +191,17 @@ export const SchoolAdminManagement: React.FC<{ initialView: View; currentUser: T
     const grades = new Map(classes.map((item) => [item.name, item.grade]));
     const rows = list.map((person, i) => {
       const gradeNames = [...new Set([...person.className.split('、'), ...(person.homeroomClassName ?? '').split('、')].map((name) => grades.get(name)).filter(Boolean))].sort((a, b) => a! - b!).map((grade) => `${grade}年级`).join('、');
-      return view === 'teachers' ? [i + 1, person.name, person.account, person.staffNumber ?? '', currentUser.schoolName, gradeNames, person.subject ?? '', person.role ?? '', person.className, person.homeroomClassName ?? '未分配', person.phoneVerificationStatus ?? '未验证', person.status ?? '正常', person.createdAt ?? '', person.operator, person.operatedAt] : [i + 1, person.name, person.account, currentUser.schoolName, gradeNames, person.className, person.status ?? '正常', person.createdAt ?? '', person.operator, person.operatedAt];
+      return view === 'teachers' ? [i + 1, person.name, person.account, currentUser.schoolName, gradeNames, person.subject ?? '', person.className, person.homeroomClassName ?? '未分配', teacherPositions(person), person.gradeLeaderGrades ?? '', person.researchGroupSubjects ?? '', person.professionalTitle ?? '', grantSummary(person), person.phoneVerificationStatus ?? '未验证', person.status ?? '正常', person.createdAt ?? '', person.operator, person.operatedAt] : [i + 1, person.name, person.account, currentUser.schoolName, gradeNames, person.className, person.status ?? '正常', person.createdAt ?? '', person.operator, person.operatedAt];
     });
-    return [{ name: exportTitle, headers: view === 'teachers' ? ['序号', '教师姓名', '登录手机号', '教师工号', '学校', '年级', '任教学科', '教师角色', '任教班级', '班主任班级', '手机号验证状态', '状态', '创建时间', '操作人', '操作时间'] : ['序号', '学生姓名', '学号', '学校', '年级', '所属班级', '状态', '创建时间', '操作人', '操作时间'], rows }, { name: '修改记录', headers: ['姓名', view === 'teachers' ? '登录手机号' : '学号', '操作类型', '变更字段', '修改前', '修改后', '操作人', '操作时间'], rows: list.flatMap((person) => (person.history ?? []).flatMap((record) => record.changes.map((change) => [person.name, person.account, record.action, change.field, change.before, change.after, record.operator, record.time]))) }];
+    return [{ name: exportTitle, headers: view === 'teachers' ? ['序号', '教师姓名', '登录手机号', '学校', '年级', '任教学科', '任教班级', '班主任班级', '校内任职', '年级组长年级', '教研组长学科', '专业技术职称', '系统授权摘要', '手机号验证状态', '状态', '创建时间', '操作人', '操作时间'] : ['序号', '学生姓名', '学号', '学校', '年级', '所属班级', '状态', '创建时间', '操作人', '操作时间'], rows }, { name: '修改记录', headers: ['姓名', view === 'teachers' ? '登录手机号' : '学号', '操作类型', '变更字段', '修改前', '修改后', '操作人', '操作时间'], rows: list.flatMap((person) => (person.history ?? []).flatMap((record) => record.changes.map((change) => [person.name, person.account, record.action, change.field, change.before, change.after, record.operator, record.time]))) }];
   };
   const operatorLabel = currentUser.name;
   const homeroomOwner = (className: string) => teachers.find((teacher) => teacher.homeroomClassName?.split('、').includes(className));
   const recordChange = (before: Person, patch: Partial<Person>, action: string): Person => {
     const after = { ...before, ...patch };
-    const fields: [keyof Person, string][] = [['name', '姓名'], ['account', '账号'], ['className', before.role ? '任教班级' : '所属班级'], ['homeroomClassName', '班主任班级'], ['staffNumber', '教师工号'], ['subject', '任教学科'], ['role', '教师角色'], ['phoneVerificationStatus', '手机号验证状态']];
-    const changes = fields.filter(([key]) => (before[key] ?? '') !== (after[key] ?? '')).map(([key, field]) => ({ field, before: String(before[key] || '未填写'), after: String(after[key] || '未填写') }));
+    const fields: [keyof Person, string][] = [['name', '姓名'], ['account', '账号'], ['className', before.subject !== undefined ? '任教班级' : '所属班级'], ['homeroomClassName', '班主任班级'], ['subject', '任教学科'], ['gradeLeaderGrades', '年级组长年级'], ['researchGroupSubjects', '教研组长学科'], ['professionalTitle', '专业技术职称'], ['accessGrants', '系统授权'], ['phoneVerificationStatus', '手机号验证状态']];
+    const display = (key: keyof Person, person: Person) => key === 'accessGrants' ? grantSummary(person) : String(person[key] || '未填写');
+    const changes = fields.filter(([key]) => JSON.stringify(before[key] ?? '') !== JSON.stringify(after[key] ?? '')).map(([key, field]) => ({ field, before: display(key, before), after: display(key, after) }));
     if (!changes.length) return before;
     return { ...after, operator: operatorLabel, operatedAt: formatOperationTime(), history: [{ action, operator: operatorLabel, time: formatCreatedAt(), changes }, ...(before.history ?? [])] };
   };
@@ -197,9 +223,7 @@ export const SchoolAdminManagement: React.FC<{ initialView: View; currentUser: T
       if (!subject) { setError('请选择任教学科'); return; }
       const occupiedClass = homeroomClassName.split('、').find((name) => teachers.some((teacher) => teacher.account !== editingPerson?.account && teacher.homeroomClassName?.split('、').includes(name)));
       if (occupiedClass) { setError(`${occupiedClass}已有班主任，请在班级绑定中更换班主任`); return; }
-      if (!teacherRole) { setError('请选择教师角色'); return; }
       if (editingPerson && (className !== editingPerson.className || homeroomClassName !== (editingPerson.homeroomClassName ?? '未分配'))) { setError('任教和班主任关系请在“班级绑定”中调整'); return; }
-      if (editingPerson && teacherRole !== '班主任' && editingPerson.homeroomClassName && editingPerson.homeroomClassName !== '未分配') { setError('请先在“班级绑定”中解绑班主任班级，再修改角色'); return; }
     }
     const operatedAt = formatOperationTime();
     const createdAt = formatCreatedAt();
@@ -217,7 +241,7 @@ export const SchoolAdminManagement: React.FC<{ initialView: View; currentUser: T
     if (editingPerson) {
       const updatePerson = (item: Person) => item.account === editingPerson.account ? recordChange(item, {
         name: name.trim(), className,
-        ...(view === 'teachers' ? { account: loginPhone.trim(), staffNumber: staffNumber.trim(), subject, homeroomClassName, role: teacherRole,
+        ...(view === 'teachers' ? { account: loginPhone.trim(), subject, homeroomClassName, gradeLeaderGrades, researchGroupSubjects, professionalTitle: professionalTitle.trim(),
           phoneVerificationStatus: loginPhone.trim() === editingPerson.account ? item.phoneVerificationStatus : '未验证' } : {}),
       }, '编辑资料') : item;
       if (view === 'teachers') setTeachers((items) => items.map(updatePerson));
@@ -226,7 +250,7 @@ export const SchoolAdminManagement: React.FC<{ initialView: View; currentUser: T
     }
     if (view === 'classes' && classes.some((item) => item.name === classDisplayName(name, Number(grade)))) { setError('班级名称已存在'); return; }
     if (view === 'classes') setClasses((items) => [...items, { id: `class-${Date.now()}`, name: classDisplayName(name, Number(grade)), grade: Number(grade), alertCount: 0, classCode: `LH-${grade}${String(Math.max(0, ...items.map((item) => item.sort)) + 1).padStart(2, '0')}`, homeroomTeacher: '-', studentCount: 0, sort: Math.max(0, ...items.map((item) => item.sort)) + 1, note: '-', operator: operatorLabel, operatedAt }]);
-    if (view === 'teachers') setTeachers((items) => [...items, { name: name.trim(), account: loginPhone.trim(), className, role: teacherRole, staffNumber: staffNumber.trim(), subject, homeroomClassName: teacherRole === '班主任' ? homeroomClassName : '未分配', phoneVerificationStatus: '未验证', status: '正常', operator: operatorLabel, operatedAt, createdAt }]);
+    if (view === 'teachers') setTeachers((items) => [...items, { name: name.trim(), account: loginPhone.trim(), className, subject, homeroomClassName, gradeLeaderGrades, researchGroupSubjects, professionalTitle: professionalTitle.trim(), accessGrants: [], phoneVerificationStatus: '未验证', status: '正常', operator: operatorLabel, operatedAt, createdAt }]);
     if (view === 'students') {
       const used = new Set([...students.map((item) => item.account), ...deletedStudents.map((entry) => entry.student.account)]);
       let sequence = Date.now();
@@ -244,10 +268,9 @@ export const SchoolAdminManagement: React.FC<{ initialView: View; currentUser: T
     setEditingClass(null);
     setName('');
     setLoginPhone('');
-    setStaffNumber('');
     setSubject('');
     setHomeroomClassName('未分配');
-    setTeacherRole('');
+    setGradeLeaderGrades(''); setResearchGroupSubjects(''); setProfessionalTitle('');
     setClassName(classes[0]?.name ?? '未分配');
     setError('');
     setModal(true);
@@ -262,7 +285,7 @@ export const SchoolAdminManagement: React.FC<{ initialView: View; currentUser: T
         account = `S${nextStudentNumber++}`;
         studentAccounts.add(account);
       }
-      return { ...person, account, status: '正常', ...(importKind === 'teachers' ? { phoneVerificationStatus: '未验证' } : {}), operator: operatorLabel, operatedAt: formatOperationTime(), createdAt: formatCreatedAt() };
+      return { ...person, account, status: '正常', ...(importKind === 'teachers' ? { phoneVerificationStatus: '未验证', accessGrants: [] } : {}), operator: operatorLabel, operatedAt: formatOperationTime(), createdAt: formatCreatedAt() };
     });
     if (importKind === 'classes') {
       setClasses((items) => {
@@ -281,13 +304,20 @@ export const SchoolAdminManagement: React.FC<{ initialView: View; currentUser: T
     if (action === '修改记录') { setHistoryPerson(person); return; }
     if (action === '删除') { setDeleteTarget(person); return; }
     if (action === '班级') { setAssignment(person); setNotice(''); setBindingGrade(''); return; }
+    if (action === '授权') { setAuthorizing(person); setDraftGrants(person.accessGrants ?? []); return; }
     openModal(false); setEditingPerson(person);
-    setName(person.name); setLoginPhone(person.account); setStaffNumber(person.staffNumber ?? '');
-    setSubject(person.subject ?? (person.role === '数学教师' ? '数学' : person.role === '班主任' ? '语文' : ''));
-    setTeacherRole(person.role === '数学教师' || person.role === '普通教师' ? '教师' : person.role ?? '教师'); setClassName(person.className); setHomeroomClassName(person.homeroomClassName ?? '未分配');
+    setName(person.name); setLoginPhone(person.account);
+    setSubject(person.subject ?? '');
+    setGradeLeaderGrades(person.gradeLeaderGrades ?? ''); setResearchGroupSubjects(person.researchGroupSubjects ?? ''); setProfessionalTitle(person.professionalTitle ?? '');
+    setClassName(person.className); setHomeroomClassName(person.homeroomClassName ?? '未分配');
   };
   const editClass = (item: ManagedClass) => {
     openModal(false); setEditingClass(item); setName(item.name); setGrade(String(item.grade)); setClassSort(String(item.sort)); setClassNote(item.note === '-' ? '' : item.note);
+  };
+  const saveAuthorization = () => {
+    if (!authorizing) return;
+    setTeachers((items) => items.map((person) => person.account === authorizing.account ? recordChange(person, { accessGrants: draftGrants }, '调整系统授权') : person));
+    setAuthorizing(null); setNotice('系统授权已单独保存；演示名单授权不改变真实登录权限');
   };
   const bindingTeacher = assignment ? teachers.find((person) => person.account === assignment.account) : null;
   const bindingClasses = classes.filter((item) => !bindingGrade || String(item.grade) === bindingGrade);
@@ -416,7 +446,7 @@ export const SchoolAdminManagement: React.FC<{ initialView: View; currentUser: T
         <div className="overflow-x-auto">
           {view === 'classes' ? <table className="w-full text-sm"><thead className="bg-slate-50 text-slate-500"><tr>{['序号', '班级名称', '班级编码', '所属学校', '所属年级', '班主任', '学生人数', '排序', '备注', '操作人', '操作时间', '操作'].map((header) => <th key={header} className="px-4 py-3 text-left whitespace-nowrap">{header}</th>)}</tr></thead><tbody>{filteredClasses.map((item, index) => <tr key={item.id} className="border-t border-slate-100"><td className="px-4 py-4">{index + 1}</td><td className="px-4 py-4 font-medium whitespace-nowrap">{item.name}</td><td className="px-4 py-4">{item.classCode}</td><td className="px-4 py-4 whitespace-nowrap">{currentUser.schoolName}</td><td className="px-4 py-4">{item.grade}年级</td><td className="px-4 py-4">{teachers.filter((person) => (person.homeroomClassName ?? '').split('、').includes(item.name)).map((person) => person.name).join('、') || '-'}</td><td className="px-4 py-4">{students.filter((person) => person.className === item.name).length}</td><td className="px-4 py-4">{item.sort}</td><td className="px-4 py-4">{item.note || '-'}</td><td className="px-4 py-4 text-slate-600 whitespace-nowrap">{item.operator}</td><td className="px-4 py-4 text-slate-600 whitespace-nowrap">{item.operatedAt}</td><td className="px-4 py-4 whitespace-nowrap"><button type="button" onClick={() => editClass(item)} className="mr-3 text-blue-600 hover:text-blue-700">编辑</button><button type="button" onClick={() => { setError(''); setDeleteTarget(item); }} className="text-red-500 hover:text-red-600">删除</button></td></tr>)}</tbody></table>
             : view === 'deleted-students' ? <table className="w-full min-w-[1050px] text-sm"><thead className="bg-slate-50 text-slate-500"><tr>{['序号', '学生姓名', '学号', '原班级', '删除时间', '删除操作人', '删除来源', '操作'].map((header) => <th key={header} className="px-5 py-3 text-left whitespace-nowrap">{header}</th>)}</tr></thead><tbody>{filteredDeletedStudents.map((entry, index) => <tr key={entry.student.account} className="border-t border-slate-100"><td className="px-5 py-4">{index + 1}</td><td className="px-5 py-4 font-medium">{entry.student.name}</td><td className="px-5 py-4">{entry.student.account}</td><td className="px-5 py-4">{entry.student.className}</td><td className="px-5 py-4">{entry.deletedAt}</td><td className="px-5 py-4">{entry.deletedBy}</td><td className="px-5 py-4">{entry.source}</td><td className="px-5 py-4 whitespace-nowrap"><button type="button" onClick={() => { setError(''); setHistoryPerson(entry.student); }} className="mr-3 text-blue-600 hover:text-blue-700">查看历史</button><button type="button" onClick={() => restoreStudent(entry)} className="text-blue-600 hover:text-blue-700">恢复</button></td></tr>)}</tbody></table>
-            : <table className={view === 'teachers' ? 'w-full min-w-[1400px] text-sm' : 'w-full text-sm'}><thead className="bg-slate-50 text-slate-500"><tr>{['序号', view === 'teachers' ? '教师姓名' : '学生姓名', view === 'teachers' ? '登录名（手机号）' : '学号', '学校', ...(view === 'teachers' ? ['任教班级', '班主任班级', '任教学科', '教师角色', '手机号验证状态'] : ['班级', '创建时间']), '操作人', '操作时间', '状态', '操作'].map((header) => <th key={header} className="px-5 py-3 text-left">{header}</th>)}</tr></thead><tbody>{filteredPeople.map((person, index) => <tr key={`${person.account}-${index}`} className="border-t border-slate-100"><td className="px-5 py-4">{index + 1}</td><td className="px-5 py-4 font-medium">{person.name}</td><td className="px-5 py-4">{person.account}</td><td className="px-5 py-4">{currentUser.schoolName}</td><td className="px-5 py-4">{person.className}</td>{view === 'teachers' ? <><td className="px-5 py-4">{person.homeroomClassName || '未分配'}</td><td className="px-5 py-4">{person.subject || '未设置'}</td><td className="px-5 py-4">{person.role}</td><td className="px-5 py-4"><span className="rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-500">{person.phoneVerificationStatus}</span></td></> : <td className="px-5 py-4">{person.createdAt}</td>}<td className="px-5 py-4 text-slate-600">{person.operator}</td><td className="px-5 py-4 text-slate-600">{person.operatedAt}</td><td className="px-5 py-4"><span className="rounded bg-green-50 px-2 py-1 text-xs text-green-700">{person.status ?? '正常'}</span></td><td className="px-5 py-4 whitespace-nowrap">{(view === 'teachers' ? ['查看', '编辑', '班级', '删除'] : ['修改记录', '编辑', '删除']).map((action) => <button key={action} type="button" onClick={() => personAction(action, person)} className={`mr-2 last:mr-0 ${action === '删除' ? 'text-red-500 hover:text-red-600' : 'text-blue-600 hover:text-blue-700'}`}>{action}</button>)}</td></tr>)}</tbody></table>}
+            : <table className={view === 'teachers' ? 'w-full min-w-[1700px] text-sm' : 'w-full text-sm'}><thead className="bg-slate-50 text-slate-500"><tr>{['序号', view === 'teachers' ? '教师姓名' : '学生姓名', view === 'teachers' ? '登录名（手机号）' : '学号', '学校', ...(view === 'teachers' ? ['任教班级', '班主任班级', '任教学科', '校内任职', '专业技术职称', '系统授权', '手机号验证状态'] : ['班级', '创建时间']), '操作人', '操作时间', '状态', '操作'].map((header) => <th key={header} className="px-5 py-3 text-left">{header}</th>)}</tr></thead><tbody>{filteredPeople.map((person, index) => <tr key={`${person.account}-${index}`} className="border-t border-slate-100"><td className="px-5 py-4">{index + 1}</td><td className="px-5 py-4 font-medium">{person.name}</td><td className="px-5 py-4">{person.account}</td><td className="px-5 py-4">{currentUser.schoolName}</td><td className="px-5 py-4">{person.className}</td>{view === 'teachers' ? <><td className="px-5 py-4">{person.homeroomClassName || '未分配'}</td><td className="px-5 py-4">{person.subject || '未设置'}</td><td className="px-5 py-4">{teacherPositions(person)}</td><td className="px-5 py-4">{person.professionalTitle || '未填写'}</td><td className="px-5 py-4">{grantSummary(person)}</td><td className="px-5 py-4"><span className="rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-500">{person.phoneVerificationStatus}</span></td></> : <td className="px-5 py-4">{person.createdAt}</td>}<td className="px-5 py-4 text-slate-600">{person.operator}</td><td className="px-5 py-4 text-slate-600">{person.operatedAt}</td><td className="px-5 py-4"><span className="rounded bg-green-50 px-2 py-1 text-xs text-green-700">{person.status ?? '正常'}</span></td><td className="px-5 py-4 whitespace-nowrap">{(view === 'teachers' ? ['查看', '编辑', '班级', '授权', '删除'] : ['修改记录', '编辑', '删除']).map((action) => <button key={action} type="button" onClick={() => personAction(action, person)} className={`mr-2 last:mr-0 ${action === '删除' ? 'text-red-500 hover:text-red-600' : 'text-blue-600 hover:text-blue-700'}`}>{action}</button>)}</td></tr>)}</tbody></table>}
         </div>
         {error && view === 'deleted-students' && <p role="alert" className="border-t border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>}
         {(view === 'classes' ? filteredClasses.length === 0 : view === 'deleted-students' ? filteredDeletedStudents.length === 0 : filteredPeople.length === 0) && <div className="p-12 text-center text-sm text-slate-400">{view === 'deleted-students' ? deletedStudents.length ? '暂无匹配的删除记录' : '暂无已删除学生' : '暂无匹配数据'}</div>}
@@ -439,11 +469,12 @@ export const SchoolAdminManagement: React.FC<{ initialView: View; currentUser: T
           <label className="grid items-center gap-2 text-sm sm:grid-cols-[140px_1fr]"><span>学校</span><input value={currentUser.schoolName} readOnly className="w-full rounded-lg border bg-slate-100 px-3 py-2 text-slate-500"/></label>
           <label className="grid items-center gap-2 text-sm sm:grid-cols-[140px_1fr]"><span><span className="text-red-500">* </span>登录名（手机号）</span><input value={loginPhone} onChange={(event) => setLoginPhone(event.target.value)} type="tel" inputMode="numeric" maxLength={11} autoComplete="off" aria-required="true" placeholder="请输入11位手机号作为登录名" className="w-full rounded-lg border px-3 py-2"/></label>
           <label className="grid items-center gap-2 text-sm sm:grid-cols-[140px_1fr]"><span><span className="text-red-500">* </span>教师姓名</span><input value={name} onChange={(event) => setName(event.target.value)} aria-required="true" placeholder="请输入教师姓名" className="w-full rounded-lg border px-3 py-2"/></label>
-          <label className="grid items-center gap-2 text-sm sm:grid-cols-[140px_1fr]"><span>教师工号</span><input value={staffNumber} onChange={(event) => setStaffNumber(event.target.value)} placeholder="请输入教师工号（选填）" className="w-full rounded-lg border px-3 py-2"/></label>
           <div className="grid items-start gap-2 text-sm sm:grid-cols-[140px_1fr]"><span className="pt-2"><span className="text-red-500">* </span>任教学科</span><fieldset aria-label="任教学科" className="rounded-lg border p-3"><legend className="sr-only">任教学科（可多选）</legend><div className="grid grid-cols-3 gap-3">{TEACHER_SUBJECT_OPTIONS.map((item) => <label key={item} className="flex items-center gap-2"><input type="checkbox" checked={subject.split('、').includes(item)} onChange={(event) => setSubject((current) => (event.target.checked ? [...current.split('、').filter(Boolean), item] : current.split('、').filter((value) => value !== item)).join('、'))}/>{item}</label>)}</div><p className="mt-3 text-xs text-slate-400">可选择多门任教学科</p></fieldset></div>
-          <label className="grid items-center gap-2 text-sm sm:grid-cols-[140px_1fr]"><span><span className="text-red-500">* </span>教师角色</span><select value={teacherRole} onChange={(event) => { setTeacherRole(event.target.value); if (!editingPerson && event.target.value !== '班主任') setHomeroomClassName('未分配'); }} aria-required="true" className="w-full rounded-lg border px-3 py-2"><option value="" disabled>请选择教师角色</option>{TEACHER_ROLE_OPTIONS.map((item) => <option key={item}>{item}</option>)}</select></label>
+          <div className="grid items-start gap-2 text-sm sm:grid-cols-[140px_1fr]"><span className="pt-2">校内任职</span><div className="space-y-3 rounded-lg border p-3"><p className="text-xs text-slate-500">班主任由下方班级任命形成；无额外任职时显示“普通教师”。任职不自动授予系统权限。</p><fieldset><legend className="mb-2 text-xs font-medium">年级组长（可多选）</legend><div className="flex flex-wrap gap-3">{[1,2,3,4,5,6,7,8,9].map((item) => <label key={item} className="flex items-center gap-1"><input type="checkbox" checked={splitValues(gradeLeaderGrades).includes(String(item))} onChange={(event) => setGradeLeaderGrades((current) => (event.target.checked ? [...splitValues(current), String(item)] : splitValues(current).filter((value) => value !== String(item))).join('、'))}/>{GRADE_LABELS[item]}年级</label>)}</div></fieldset><fieldset><legend className="mb-2 text-xs font-medium">教研组长（按学科，可多选）</legend><div className="grid grid-cols-3 gap-2">{TEACHER_SUBJECT_OPTIONS.map((item) => <label key={item} className="flex items-center gap-1"><input type="checkbox" checked={splitValues(researchGroupSubjects).includes(item)} onChange={(event) => setResearchGroupSubjects((current) => (event.target.checked ? [...splitValues(current), item] : splitValues(current).filter((value) => value !== item)).join('、'))}/>{item}</label>)}</div></fieldset></div></div>
+          <label className="grid items-center gap-2 text-sm sm:grid-cols-[140px_1fr]"><span>专业技术职称</span><input value={professionalTitle} onChange={(event) => setProfessionalTitle(event.target.value)} placeholder="如一级教师（选填）" className="w-full rounded-lg border px-3 py-2"/></label>
           <label className="grid items-center gap-2 text-sm sm:grid-cols-[140px_1fr]"><span>任教班级</span><select value={className} disabled={!!editingPerson} onChange={(event) => setClassName(event.target.value)} className="w-full rounded-lg border px-3 py-2 disabled:bg-slate-100">{className.includes('、') && <option>{className}</option>}{classes.map((item) => <option key={item.id}>{item.name}</option>)}<option value="未分配">未分配（尽量不要选择）</option></select></label>
-          {(!!editingPerson || teacherRole === '班主任') && <label className="grid items-center gap-2 text-sm sm:grid-cols-[140px_1fr]"><span>班主任班级</span><select value={homeroomClassName} disabled={!!editingPerson} onChange={(event) => setHomeroomClassName(event.target.value)} className="w-full rounded-lg border px-3 py-2 disabled:bg-slate-100">{homeroomClassName.includes('、') && <option>{homeroomClassName}</option>}{classes.map((item) => { const owner = homeroomOwner(item.name); const occupied = !!owner && owner.account !== editingPerson?.account; return <option key={item.id} value={item.name} disabled={occupied}>{item.name}{occupied ? '（班主任：' + owner.name + '）' : ''}</option>; })}<option value="未分配">未分配</option></select><span className="text-xs text-slate-400 sm:col-start-2">{editingPerson ? '编辑账号资料时不调整班级关系，请在列表“班级”中绑定或解绑。' : '每班仅限一位班主任，已有班主任的班级请在“班级绑定”中更换。'}</span></label>}
+          <label className="grid items-center gap-2 text-sm sm:grid-cols-[140px_1fr]"><span>班主任班级</span><select value={homeroomClassName} disabled={!!editingPerson} onChange={(event) => setHomeroomClassName(event.target.value)} className="w-full rounded-lg border px-3 py-2 disabled:bg-slate-100">{homeroomClassName.includes('、') && <option>{homeroomClassName}</option>}{classes.map((item) => { const owner = homeroomOwner(item.name); const occupied = !!owner && owner.account !== editingPerson?.account; return <option key={item.id} value={item.name} disabled={occupied}>{item.name}{occupied ? '（班主任：' + owner.name + '）' : ''}</option>; })}<option value="未分配">未分配</option></select><span className="text-xs text-slate-400 sm:col-start-2">{editingPerson ? '编辑账号资料时不调整班级关系，请在列表“班级”中绑定或解绑。' : '选择班级即记录班主任任职；每班仅限一位班主任。'}</span></label>
+          <p className="text-xs text-slate-500 sm:pl-[148px]">系统授权在教师列表的“授权”中单独维护；保存任职不会开通查看数据的权限。</p>
         </> : <>
           <label className="block text-sm">学校<input value={currentUser.schoolName} readOnly className="mt-1 w-full rounded-lg border bg-slate-100 px-3 py-2 text-slate-500"/></label>
           <label className="block text-sm">学生姓名<input value={name} onChange={(event) => setName(event.target.value)} placeholder="请输入姓名" className="mt-1 w-full rounded-lg border px-3 py-2"/></label>
@@ -456,9 +487,10 @@ export const SchoolAdminManagement: React.FC<{ initialView: View; currentUser: T
     </section></div>}
     {detail && overlay(view === 'teachers' ? '教师详情' : '学生详情', <dl className="grid grid-cols-[120px_1fr] gap-x-4 gap-y-4 text-sm">{[
       ['学校', currentUser.schoolName], [view === 'teachers' ? '教师姓名' : '学生姓名', detail.name], [view === 'teachers' ? '登录名（手机号）' : '学号', detail.account],
-      ...(view === 'teachers' ? [['教师工号', detail.staffNumber || '未填写'], ['任教学科', detail.subject || (detail.role === '数学教师' ? '数学' : detail.role === '班主任' ? '语文' : '未设置')], ['教师角色', detail.role || '教师'], ['手机号验证状态', detail.phoneVerificationStatus || '未验证']] : []),
+      ...(view === 'teachers' ? [['任教学科', detail.subject || '未设置'], ['校内任职', teacherPositions(detail)], ['专业技术职称', detail.professionalTitle || '未填写'], ['系统授权', grantSummary(detail)], ['手机号验证状态', detail.phoneVerificationStatus || '未验证']] : []),
       [view === 'teachers' ? '任教班级' : '所属班级', detail.className || '未分配'], ...(view === 'teachers' ? [['班主任班级', detail.homeroomClassName || '未分配']] : []), ['状态', detail.status || '正常'], ['创建时间', detail.createdAt || '-'], ['操作人', detail.operator], ['操作时间', detail.operatedAt],
     ].map(([label, value]) => <React.Fragment key={label}><dt className="text-slate-500">{label}</dt><dd className="break-words">{value}</dd></React.Fragment>)}</dl>, <><button className="rounded-lg border px-4 py-2 text-sm" onClick={() => { setHistoryPerson(detail); setDetail(null); }}>修改记录</button><button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white" onClick={() => { personAction('编辑', detail); setDetail(null); }}>编辑资料</button></>, () => setDetail(null))}
+    {authorizing && overlay('系统授权', <div className="space-y-4 text-sm"><div className="rounded-lg bg-slate-50 p-3">{authorizing.name} · {authorizing.account}</div><p className="text-slate-500">授权独立于校内任职和专业技术职称。任职变化不会自动勾选或取消授权；正式权限仍由服务端校验。</p><div className="space-y-2">{ACCESS_OPTIONS.map((item) => <label key={item.code} className="flex items-start gap-3 rounded-lg border p-3"><input type="checkbox" className="mt-1" checked={draftGrants.includes(item.code)} onChange={(event) => setDraftGrants((current) => event.target.checked ? [...current, item.code] : current.filter((code) => code !== item.code))}/><span><strong className="block">{item.label}</strong><span className="text-xs text-slate-500">范围：{item.scope}</span></span></label>)}</div>{draftGrants.includes('homeroom-work') && !splitValues(authorizing.homeroomClassName).length && <p className="text-amber-700">当前没有班主任班级，该授权暂无可用数据范围。</p>}{draftGrants.includes('teaching-view') && !splitValues(authorizing.className).length && <p className="text-amber-700">当前没有任教班级，该授权暂无可用数据范围。</p>}<p className="text-xs text-slate-400">此处仅保存演示名单中的授权记录，不改变真实登录账号或服务端权限。</p></div>, <><button className="rounded-lg border px-4 py-2 text-sm" onClick={() => setAuthorizing(null)}>取消</button><button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white" onClick={saveAuthorization}>保存授权</button></>, () => setAuthorizing(null))}
     {historyPerson && overlay(historyPerson.status === '已删除' ? '学生历史记录' : '修改记录', <div className="space-y-4"><div className="rounded-lg bg-slate-50 px-4 py-3 text-sm font-medium">{historyPerson.name} · {historyPerson.account}</div>{historyPerson.history?.length ? <div className="space-y-4">{historyPerson.history.map((record, index) => <section key={index} className="rounded-lg border border-slate-200 p-4"><div className="flex flex-wrap items-center justify-between gap-2 text-sm"><span className="font-bold text-slate-700">{record.action}</span><span className="text-xs text-slate-400">{record.time}</span></div><p className="mt-2 text-xs text-slate-500">操作人：{record.operator}</p><table className="mt-3 w-full table-fixed text-left text-sm"><thead className="bg-slate-50 text-xs text-slate-500"><tr><th className="w-1/4 p-2">修改项</th><th className="p-2">修改前</th><th className="p-2">修改后</th></tr></thead><tbody>{record.changes.map((change) => <tr key={change.field} className="border-t border-slate-100"><td className="p-2 align-top">{change.field}</td><td className="break-words p-2 align-top text-slate-500">{change.before}</td><td className="break-words p-2 align-top text-blue-700">{change.after}</td></tr>)}</tbody></table></section>)}</div> : <div className="py-10 text-center"><p className="text-sm text-slate-500">暂无修改记录</p><p className="mt-2 text-xs text-slate-400">修改姓名、所属班级等资料后，会在这里记录修改前后的内容。</p></div>}</div>, null, () => setHistoryPerson(null))}
     {assignment && !homeroomTransfer && overlay('班级绑定', <div className="space-y-4"><div className="rounded-lg bg-slate-50 p-3 text-sm">{assignment.name} · {assignment.account}</div><p className="text-sm text-slate-500">任教可绑定多位教师，每班仅限一位班主任。已有班主任时需确认更换。</p><div className="flex items-center gap-3"><label className="flex items-center gap-2 text-sm text-slate-600">年级<select aria-label="绑定班级年级筛选" value={bindingGrade} onChange={(event) => { setBindingGrade(event.target.value);  }} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-700"><option value="">全部年级</option>{[1,2,3,4,5,6,7,8,9].map((item) => <option key={item} value={item}>{item}年级</option>)}</select></label><span className="text-xs text-slate-400">共{bindingClasses.length}个班级</span></div><div className="space-y-2">{bindingClasses.map((item) => {
       return <section key={item.id} className="rounded-lg border border-slate-200 p-3 text-sm"><h3 className="mb-3 font-medium">{item.name}</h3><div className="space-y-2">{(['teaching', 'homeroom'] as const).map((kind) => {
