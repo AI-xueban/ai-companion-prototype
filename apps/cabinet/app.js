@@ -65,15 +65,14 @@
   const toastMetaLabel1 = document.getElementById("toastMetaLabel1");
   const toastMetaLabel2 = document.getElementById("toastMetaLabel2");
   const toastCountdown = document.getElementById("toastCountdown");
-  const simulateScan = document.getElementById("simulateScan");
   const simulateScanFail = document.getElementById("simulateScanFail");
-  const simulateFaceSuccess = document.getElementById("simulateFaceSuccess");
-  const simulateFirstEnroll = document.getElementById("simulateFirstEnroll");
   const simulateFaceFail = document.getElementById("simulateFaceFail");
   const simulateEnrollFail = document.getElementById("simulateEnrollFail");
   const simulateNotCharging = document.getElementById("simulateNotCharging");
   const simulateDoorOpen = document.getElementById("simulateDoorOpen");
-  const simulateReturn = document.getElementById("simulateReturn");
+  const simulateBorrowControl = document.getElementById("simulateBorrowControl");
+  const borrowControlModal = document.getElementById("borrowControlModal");
+  const borrowControlAcknowledge = document.getElementById("borrowControlAcknowledge");
   const scanFailTip = document.getElementById("scanFailTip");
   const returnSlotNum = document.getElementById("returnSlotNum");
   const borrowConfirmModal = document.getElementById("borrowConfirmModal");
@@ -110,10 +109,11 @@
   let registrationLocked = false;
   let authenticatedStudentId = "";
   let enrollmentMode = "replace";
+  let borrowControlTimer = null;
   const faceProfiles = new Map();
   const faceEnrollmentLogs = [];
   const DEMO_NAV_SELECTOR =
-    "#simulateScan, #simulateScanFail, #simulateFaceSuccess, #simulateFirstEnroll, #simulateFaceFail, #simulateEnrollFail, #simulateNotCharging, #simulateDoorOpen, #simulateReturn";
+    "#simulateBorrowControl, #simulateScanFail, #simulateFaceFail, #simulateEnrollFail, #simulateNotCharging, #simulateDoorOpen";
 
   function fitScreen() {
     const stage = document.querySelector(".stage");
@@ -314,6 +314,19 @@
 
   function closeBorrowConfirm() {
     borrowConfirmModal.hidden = true;
+  }
+
+  function closeBorrowControl() {
+    clearTimeout(borrowControlTimer);
+    borrowControlTimer = null;
+    borrowControlModal.hidden = true;
+  }
+
+  function openBorrowControl() {
+    clearTimeout(borrowControlTimer);
+    showPage("home");
+    borrowControlModal.hidden = false;
+    borrowControlTimer = window.setTimeout(closeBorrowControl, 60 * 1000);
   }
 
   function openReturnConfirm() {
@@ -796,10 +809,12 @@
     if (e.target === successToast) closeSuccessToast();
   });
 
-  simulateScan.addEventListener("click", (e) => {
+  simulateBorrowControl.addEventListener("click", (e) => {
     e.stopPropagation();
-    openReturnFlow();
+    openBorrowControl();
   });
+
+  borrowControlAcknowledge.addEventListener("click", closeBorrowControl);
 
   document.querySelector(".scan-guide-card").addEventListener("click", (e) => {
     e.stopPropagation();
@@ -810,18 +825,6 @@
     e.stopPropagation();
     showPage("store", { keepScanFail: true });
     scanFailTip.hidden = false;
-  });
-
-  simulateFaceSuccess.addEventListener("click", (e) => {
-    if (registrationLocked) return;
-    e.stopPropagation();
-    showPage("pickup");
-    showFaceSuccess();
-  });
-
-  simulateFirstEnroll.addEventListener("click", (e) => {
-    e.stopPropagation();
-    openRegistration();
   });
 
   simulateFaceFail.addEventListener("click", (e) => {
@@ -877,13 +880,6 @@
     e.stopPropagation();
     ensureReturnScene();
     returnCheckState = "door_open";
-    applyReturnCheck();
-  });
-
-  simulateReturn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    ensureReturnScene();
-    returnCheckState = "pass";
     applyReturnCheck();
   });
 

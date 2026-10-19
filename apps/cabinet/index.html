@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20261016-14" />
+  <link rel="stylesheet" href="styles.css?v=20261016-15" />
 </head>
 <body>
   <aside class="studio-bar">
@@ -22,18 +22,12 @@
     </div>
     <nav class="studio-nav" id="pageNav">
       <button type="button" class="nav-btn is-active" data-page="home">首页</button>
-      <button type="button" class="nav-btn" data-page="store">存设备·扫码</button>
-      <button type="button" class="nav-btn" data-page="pickup">取设备·扫脸</button>
-      <button type="button" class="nav-btn" data-page="devices">设备列表</button>
-      <button type="button" class="nav-btn nav-demo" id="simulateScan">模拟扫码成功</button>
+      <button type="button" class="nav-btn nav-demo nav-demo-important" id="simulateBorrowControl">借用管控</button>
       <button type="button" class="nav-btn nav-demo" id="simulateScanFail">模拟扫码失败</button>
-      <button type="button" class="nav-btn nav-demo" id="simulateFaceSuccess">模拟扫脸成功</button>
-      <button type="button" class="nav-btn nav-demo" id="simulateFirstEnroll">人脸注册</button>
       <button type="button" class="nav-btn nav-demo" id="simulateFaceFail">模拟人脸未匹配</button>
       <button type="button" class="nav-btn nav-demo" id="simulateEnrollFail">模拟录入失败</button>
       <button type="button" class="nav-btn nav-demo" id="simulateNotCharging">模拟未充电</button>
       <button type="button" class="nav-btn nav-demo" id="simulateDoorOpen">模拟门没关</button>
-      <button type="button" class="nav-btn nav-demo" id="simulateReturn">模拟归还成功</button>
     </nav>
     <p class="studio-hint">画布会按窗口自动等比缩小，完整显示在当前屏幕内；设计稿仍为 1080×1920。</p>
   </aside>
@@ -310,6 +304,20 @@
           </div>
         </div>
 
+        <!-- 当前时段不可借用 -->
+        <div class="confirm-mask borrow-control-mask" id="borrowControlModal" hidden>
+          <div class="confirm-card borrow-control-card" role="dialog" aria-modal="true" aria-labelledby="borrowControlTitle">
+            <div class="borrow-control-icon" aria-hidden="true">
+              <span class="borrow-control-clock"></span>
+            </div>
+            <h3 id="borrowControlTitle">暂时无法借用</h3>
+            <p class="borrow-control-message">现在还不能借用哦，请在<br /><strong>周一到周五 08:10–12:10、14:00–16:30</strong><br />时间内再来借吧</p>
+            <div class="confirm-actions borrow-control-actions">
+              <button type="button" class="confirm-ok" id="borrowControlAcknowledge">我知道了</button>
+            </div>
+          </div>
+        </div>
+
         <!-- 取用确认 -->
         <div class="confirm-mask" id="borrowConfirmModal" hidden>
           <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="borrowConfirmTitle">
@@ -365,6 +373,6 @@
     </div>
   </main>
 
-  <script src="app.js?v=20261016-14"></script>
+  <script src="app.js?v=20261016-15"></script>
 </body>
 </html>
