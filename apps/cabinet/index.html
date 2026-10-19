@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20261013-3" />
+  <link rel="stylesheet" href="styles.css?v=20261016-15" />
 </head>
 <body>
   <aside class="studio-bar">
@@ -22,18 +22,12 @@
     </div>
     <nav class="studio-nav" id="pageNav">
       <button type="button" class="nav-btn is-active" data-page="home">首页</button>
-      <button type="button" class="nav-btn" data-page="store">存设备·扫码</button>
-      <button type="button" class="nav-btn" data-page="pickup">取设备·扫脸</button>
-      <button type="button" class="nav-btn" data-page="devices">设备列表</button>
-      <button type="button" class="nav-btn nav-demo" id="simulateScan">模拟扫码成功</button>
+      <button type="button" class="nav-btn nav-demo nav-demo-important" id="simulateBorrowControl">借用管控</button>
       <button type="button" class="nav-btn nav-demo" id="simulateScanFail">模拟扫码失败</button>
-      <button type="button" class="nav-btn nav-demo" id="simulateFaceSuccess">模拟扫脸成功</button>
-      <button type="button" class="nav-btn nav-demo" id="simulateFirstEnroll">人脸注册</button>
       <button type="button" class="nav-btn nav-demo" id="simulateFaceFail">模拟人脸未匹配</button>
       <button type="button" class="nav-btn nav-demo" id="simulateEnrollFail">模拟录入失败</button>
       <button type="button" class="nav-btn nav-demo" id="simulateNotCharging">模拟未充电</button>
       <button type="button" class="nav-btn nav-demo" id="simulateDoorOpen">模拟门没关</button>
-      <button type="button" class="nav-btn nav-demo" id="simulateReturn">模拟归还成功</button>
     </nav>
     <p class="studio-hint">画布会按窗口自动等比缩小，完整显示在当前屏幕内；设计稿仍为 1080×1920。</p>
   </aside>
@@ -145,8 +139,8 @@
               <div class="face-smile" aria-hidden="true"><span></span></div>
               <p class="face-status" id="faceStatus">正在识别</p>
               <p class="face-desc" id="faceDesc">请正对屏幕，保持面部处于识别框内</p>
-              <button type="button" class="primary-btn face-retry" id="faceRetry" hidden>重新扫脸</button>
-              <button type="button" class="text-btn face-top-back" id="backToLoginChoice" aria-label="返回编号密码登录页">〈 返回</button>
+              <div class="face-login-actions"><button type="button" class="primary-btn" id="faceStart">开始人脸识别</button><button type="button" class="primary-btn face-retry" id="faceRetry" hidden>重新识别</button><button type="button" class="text-btn" id="faceToPassword">使用编号密码登录</button><button type="button" class="text-btn face-login-back" id="backToLoginChoice" aria-label="返回首页">← 返回首页</button></div>
+
             </div>
 
             <div class="password-login" id="passwordLogin" hidden>
@@ -183,7 +177,7 @@
               <button type="submit" class="primary-btn login-submit">登录</button>
               </form>
               <button type="button" class="back-btn" id="passwordToFace">人脸识别</button>
-              <button type="button" class="text-btn face-back" id="faceBack">返回</button>
+              <button type="button" class="text-btn face-back" id="faceBack">← 返回首页</button>
             </div>
 
             <div class="face-enroll" id="faceEnroll" hidden>
@@ -287,6 +281,17 @@
           </div>
         </div>
 
+        <div class="enrollment-toast" id="enrollmentToast" role="status" aria-live="polite" hidden><span>✓</span><p>录入成功，可开启人脸识别</p></div>
+        <div class="confirm-mask" id="enrollmentFailureModal" hidden>
+          <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="enrollmentFailureTitle">
+            <h3 id="enrollmentFailureTitle">录入失败</h3>
+            <p>人脸未录入成功，请重新录入或返回首页</p>
+            <div class="confirm-actions">
+              <button type="button" class="confirm-cancel" id="enrollmentFailureHome">返回首页</button>
+              <button type="button" class="confirm-ok" id="enrollmentFailureRetry">重新录入</button>
+            </div>
+          </div>
+        </div>
         <!-- 人脸识别成功后确认身份 -->
         <div class="confirm-mask" id="faceConfirmModal" hidden>
           <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="faceConfirmTitle">
@@ -295,6 +300,20 @@
             <div class="confirm-actions">
               <button type="button" class="confirm-cancel" id="faceConfirmRetry">取消</button>
               <button type="button" class="confirm-ok" id="faceConfirmLogin">确认登录</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 当前时段不可借用 -->
+        <div class="confirm-mask borrow-control-mask" id="borrowControlModal" hidden>
+          <div class="confirm-card borrow-control-card" role="dialog" aria-modal="true" aria-labelledby="borrowControlTitle">
+            <div class="borrow-control-icon" aria-hidden="true">
+              <span class="borrow-control-clock"></span>
+            </div>
+            <h3 id="borrowControlTitle">暂时无法借用</h3>
+            <p class="borrow-control-message">现在还不能借用哦，请在<br /><strong>周一到周五 08:10–12:10、14:00–16:30</strong><br />时间内再来借吧</p>
+            <div class="confirm-actions borrow-control-actions">
+              <button type="button" class="confirm-ok" id="borrowControlAcknowledge">我知道了</button>
             </div>
           </div>
         </div>
@@ -354,6 +373,6 @@
     </div>
   </main>
 
-  <script src="app.js?v=20261013-3"></script>
+  <script src="app.js?v=20261016-15"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 import { hasRole } from "../../../permissions/access";
-import { clearSession, getProfile } from "../../../stores/session";
-import { getDemoTeacherWechatBinding, unbindDemoTeacherWechat } from "../../../services/auth";
+import { clearSession, getSession } from "../../../stores/session";
+import { getDemoTeacherWechatBinding, setDemoTeacherManualLogout, unbindDemoTeacherWechat } from "../../../services/auth";
 
 const CLASSES = [
   { id: "class-g5-2", name: "五年级 2 班", subject: "数学", students: 42, isHeadTeacher: true },
@@ -20,8 +20,10 @@ Page({
   },
 
   onLoad() {
-    const profile = getProfile();
-    if (!hasRole(profile, "teacher")) {
+    // 进入教师页时同时检查角色和会话有效期，不能只依赖本地保存的角色。
+    const session = getSession();
+    const profile = session?.profile;
+    if (!hasRole(profile, "teacher") || !session?.expiresAt || session.expiresAt <= Date.now()) {
       wx.reLaunch({ url: "/pages/auth/login/index" });
       return;
     }
@@ -61,6 +63,7 @@ Page({
   },
 
   logout() {
+    setDemoTeacherManualLogout(true);
     clearSession();
     wx.reLaunch({ url: "/pages/auth/login/index" });
   },
