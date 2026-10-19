@@ -73,7 +73,13 @@
         <button data-parent-scenario="returning" onclick="startParentScenario('returning')">再次进入<small>微信快捷登录</small></button>
         <button data-parent-scenario="twoChildren" onclick="startParentScenario('twoChildren')">两个孩子<small>切换学情与作业</small></button>
         <button data-parent-scenario="otherDevice" onclick="startParentScenario('otherDevice')">同一微信在另一设备登录<small>新设备进入 · 原设备退出</small></button>
-        <button data-parent-scenario="second" onclick="startParentScenario('second')">第二位家长申请<small>申请 · 邀请方确认</small></button>
+        <button data-parent-scenario="second" onclick="startParentScenario('second')">第二位家长申请<small>免扫码 · 主管理家长审核</small></button>
+        <button data-parent-scenario="third" onclick="startParentScenario('third')">第三位家长申请<small>由首位家长审核</small></button>
+        <button data-parent-scenario="fourth" onclick="startParentScenario('fourth')">第四位家长申请<small>由主管理家长审核</small></button>
+        <button data-parent-scenario="fifth" onclick="startParentScenario('fifth')">第五位家长申请<small>由主管理家长审核</small></button>
+        <button data-parent-scenario="sixth" onclick="startParentScenario('sixth')">第六位家长申请<small>最后一个绑定名额</small></button>
+        <button data-parent-scenario="familyManage" onclick="startParentScenario('familyManage')">家长管理<small>邀请 · 审核 · 解除绑定</small></button>
+        <button data-parent-scenario="ordinary" onclick="startParentScenario('ordinary')">普通家长权限<small>查看名单 · 自己解绑</small></button>
         <button data-parent-scenario="wrong" onclick="startParentScenario('wrong')">解绑孩子<small>进入账号 · 管理关联</small></button>
       </div>
       <details class="parent-review-more"><summary>账号找回流程</summary><div class="parent-review-flows"><button data-parent-scenario="lostWechat" onclick="startParentScenario('lostWechat')">原微信丢失</button><button data-parent-scenario="lostPhone" onclick="startParentScenario('lostPhone')">手机号丢失</button><button data-parent-scenario="bothLost" onclick="startParentScenario('bothLost')">两者都丢失</button></div></details>
@@ -208,7 +214,7 @@
     function startParentScenario(name){parentPrototype.scenario(name)}
     function restartTeacherScenario(){startTeacherFlow(teacherScenario||'first')}
     function clearDemoCacheAndRestart(){['ai_companion_demo_parent_v2',teacherDemoSessionKey,teacherManualLogoutKey,'ai_companion_demo_teacher_wechat_binding'].forEach(key=>localStorage.removeItem(key));if(stage==='parent')parentPrototype.restart();else restartTeacherScenario()}
-    document.querySelectorAll('[data-teacher-flow]').forEach(b=>b.addEventListener('click',()=>startTeacherFlow(b.dataset.teacherFlow)));if(['auth','code','confirm','pending','approved'].includes(stage))stage='parent';restoreDemoTeacherOnLaunch();if(stage==='teacherLaunch'&&!teacherScenario)startTeacherFlow('first');else ({home,parent:parentPrototype.render,teacherLaunch,teacherLogin,teacherPhone:teacherPhoneLogin,teacherBind,teacherDeviceConfirm,teacherDeviceKicked,teacherDesk,teacherSecurity}[stage]||home)();
+    document.querySelectorAll('[data-teacher-flow]').forEach(b=>b.addEventListener('click',()=>startTeacherFlow(b.dataset.teacherFlow)));if(['auth','code','confirm','pending','approved'].includes(stage))stage='parent';restoreDemoTeacherOnLaunch();if(stage==='teacherLaunch'&&!teacherScenario)startTeacherFlow('first');else if(stage==='parent'){if(params.get('scenario'))parentPrototype.scenario(params.get('scenario'));else parentPrototype.start();}else ({home,parent:parentPrototype.render,teacherLaunch,teacherLogin,teacherPhone:teacherPhoneLogin,teacherBind,teacherDeviceConfirm,teacherDeviceKicked,teacherDesk,teacherSecurity}[stage]||home)();
   </script>
 </body>
 </html>
