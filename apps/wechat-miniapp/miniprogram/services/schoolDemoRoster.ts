@@ -1,6 +1,16 @@
 // 与平板端 2026-10-12 的校级演示名册保持相同的班级、学生 ID 和人数。
 export const SCHOOL_NAME = '罗湖实验学校';
 export const REPORT_END = '2026-10-12';
+export interface TeachingAssignment { subject: string; classIds: string[] }
+export function getDemoTeachingAssignments(teacherId: string): TeachingAssignment[] {
+  if (teacherId === 'teacher-demo-001') return [{ subject: '数学', classIds: ['c1', 'c2'] }, { subject: '英语', classIds: ['c1', 'c2'] }];
+  if (teacherId === 'other-teacher-demo') return [{ subject: '语文', classIds: ['c1'] }];
+  return [];
+}
+export function formatHomeworkTitle(subject: string, kind: 'homework' | 'checkin' = 'homework', at: Date = new Date()): string {
+  const date = new Date(at.getTime() + 8 * 60 * 60 * 1000);
+  return `${date.getUTCMonth() + 1}月${date.getUTCDate()}日（周${'日一二三四五六'[date.getUTCDay()]}）${subject}${kind === 'checkin' ? '打卡' : '任务'}`;
+}
 
 export const DEMO_CLASSES = [
   { id: 'c1', name: '七年级(2)班', grade: 7, count: 30, used7: 18, learned7: 15, used30: 26, learned30: 23, subjects7: { 数学: 12, 语文: 10, 英语: 8 }, subjects30: { 数学: 21, 语文: 18, 英语: 15 } },

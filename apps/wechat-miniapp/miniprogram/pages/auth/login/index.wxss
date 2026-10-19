@@ -45,3 +45,7 @@
 .teacher-bind-title { color: #6680a1; font-size: 25rpx; }
 .teacher-bind-account { margin-top: 8rpx; color: #173866; font-size: 36rpx; font-weight: 700; }
 .teacher-bind-copy { margin-top: 30rpx; color: #365273; font-size: 27rpx; line-height: 1.7; }
+
+.teacher-agreement-row{display:flex;align-items:center;justify-content:center;gap:2rpx;margin-top:22rpx;white-space:nowrap;font-size:20rpx;color:#8397aa}.teacher-agreement-row label{display:flex;align-items:center}.teacher-agreement-row checkbox{transform:scale(.6);width:34rpx;margin-right:6rpx}.teacher-agreement-row>text{color:#3788ca}.teacher-agreement-mask{position:fixed;inset:0;z-index:120;background:#f6fbff;padding:40rpx 36rpx calc(30rpx + env(safe-area-inset-bottom));box-sizing:border-box}.teacher-agreement-detail{height:100%;display:flex;flex-direction:column}.teacher-agreement-heading{display:flex;justify-content:space-between;color:#244766;font-size:32rpx;font-weight:600}.teacher-agreement-heading>text+text{color:#3788ca;font-size:26rpx;font-weight:400}.teacher-agreement-body{flex:1;min-height:0;margin:28rpx 0;height:0;color:#5c7389;font-size:26rpx;line-height:1.8}.teacher-agreement-subtitle{font-size:28rpx;font-weight:600;color:#345875;margin-top:22rpx}.teacher-agreement-paragraph{margin:14rpx 0 38rpx}
+
+.guardian-agreement-row>text{color:#dc7473}

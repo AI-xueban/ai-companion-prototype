@@ -26,17 +26,17 @@ window.workbenchPrototype = (() => {
   const focusPanel = (eyebrow, title, content) => `<section class="wb-focus"><div class="wb-focus-heading"><span>${eyebrow}</span><h2>${title}</h2></div><div class="wb-focus-list">${content || '<div class="lp-empty">当前范围暂无记录。</div>'}</div></section>`;
   const row = (label, value, detail = '') => `<div class="lp-row"><span>${esc(label)}${detail ? `<small>${esc(detail)}</small>` : ''}</span><strong>${esc(value)}</strong></div>`;
   const header = (domain, title, showControls = true) => {
-    const role = granted.length > 1 ? `<details class="wb-role-menu"><summary aria-label="切换工作身份，当前${names[state.view]}">${names[state.view]}<span class="wb-chevron" aria-hidden="true"></span></summary><div class="wb-role-menu-list">${[['school','学校管理员'],['homeroom','班主任'],['subject','任课老师']].filter(([id]) => granted.includes(id) && id !== state.view).map(([id,label]) => `<button class="wb-role-option" type="button" onclick="workbenchPrototype.view('${id}')">${label}<span>›</span></button>`).join('')}</div></details>` : '';
+    const role = granted.length > 1 ? `<details class="wb-role-menu"><summary aria-label="切换工作身份，当前${names[state.view]}">${names[state.view]}<span class="wb-chevron" aria-hidden="true"></span></summary><div class="wb-role-menu-list"><small>切换到</small>${[['school','学校管理员'],['homeroom','班主任'],['subject','任课老师']].filter(([id]) => granted.includes(id) && id !== state.view).map(([id,label]) => `<button class="wb-role-option" type="button" onclick="workbenchPrototype.view('${id}')">${label}<span>›</span></button>`).join('')}</div></details>` : '';
     const designation = granted.includes('homeroom') ? '班主任' : granted.includes('subject') ? '任课老师' : '学校管理员';
     const grades = state.view === 'school' ? `<div class="wb-filter-row"><span class="wb-filter-label">年级</span><div class="wb-filter-options">${[['all','全校'],['7','七年级'],['8','八年级']].map(([id,label]) => chip(label, `grade('${id}')`, state.grade === id)).join('')}</div></div>` : '';
     const classChoices = state.view === 'school' ? chip('全部班级', "class('all')", state.classId === 'all') : '';
     const classRow = state.view === 'homeroom' ? '' : `<div class="wb-filter-row"><span class="wb-filter-label">班级</span><div class="wb-filter-options wb-class-options">${classChoices}${classes().map(item => chip(item.name, `class('${item.id}')`, state.classId === item.id)).join('')}</div></div>`;
     const period = domain === 'learning' ? `<div class="wb-period">${chip('近 7 天', "period('7d')", state.period === '7d')}${chip('近 30 天', "period('30d')", state.period === '30d')}</div>` : '';
-    const selectedScope = state.view === 'school' ? state.classId === 'all' ? state.grade === 'all' ? '全校' : state.grade + '年级' : scopeName() : state.view === 'homeroom' ? '七年级(2)班' : `${scopeName()} · 数学`;
-    const scopeFilter = grades || classRow ? `<details class="wb-scope-details"><summary aria-label="调整查看范围，当前${esc(selectedScope)}"><strong>${esc(selectedScope)}</strong><span class="wb-chevron" aria-hidden="true"></span></summary><div class="wb-scope-options">${grades}${classRow}</div></details>` : `<div class="wb-scope-static"><strong>${esc(selectedScope)}</strong></div>`;
+    const selectedScope = state.view === 'school' ? state.classId === 'all' ? state.grade === 'all' ? '全校' : state.grade + '年级' : scopeName() : state.view === 'homeroom' ? '七年级(2)班' : domain === 'homework' ? scopeName() : `${scopeName()} · 数学`;
+    const scopeFilter = grades || classRow ? `<details class="wb-scope-details"><summary aria-label="调整查看范围，当前${esc(selectedScope)}"><span class="wb-scope-key">范围</span><strong>${esc(selectedScope)}</strong><span class="wb-chevron" aria-hidden="true"></span></summary><div class="wb-scope-options">${grades}${classRow}</div></details>` : `<div class="wb-scope-static"><span class="wb-scope-key">范围</span><strong>${esc(selectedScope)}</strong></div>`;
     const detailTitle = title === '学情' || title === '作业与打卡' ? '' : `<h1>${title}</h1>`;
-    const overviewHeader = domain === 'learning' ? `<div class="lp-hero teacher wb-hero"><div class="wb-heading"><div class="wb-greeting"><strong>Hi，陈老师</strong><small>${roster.SCHOOL_NAME} · ${designation}</small>${detailTitle}</div>${role}</div></div>` : '';
-    const controls = domain === 'homework' ? showControls ? `<div class="wb-condition-row wb-homework-toolbar">${scopeFilter}<div class="wb-homework-identity">${role}</div></div>` : '' : `<div class="wb-condition-row">${scopeFilter}${period}</div>`;
+    const overviewHeader = domain === 'learning' && !state.studentId ? `<div class="lp-hero teacher wb-hero"><div class="wb-heading"><div class="wb-greeting"><strong>Hi，陈老师</strong><small>${roster.SCHOOL_NAME} · ${designation}</small>${detailTitle}</div>${role}</div></div>` : '';
+    const controls = domain === 'homework' ? showControls ? `<div class="wb-condition-row wb-homework-toolbar">${scopeFilter}<div class="wb-homework-identity">${state.view === 'school' ? '<span>只读</span>' : ''}${role}</div></div>` : '' : state.studentId ? '' : `<div class="wb-condition-row">${scopeFilter}${period}</div>`;
     return `<div class="lp-page wb-page${domain === 'homework' ? ' wb-homework-page' : ''}">${overviewHeader}${controls}`;
   };
   const timeline = data => panel('学习轨迹', learning.timelineRows(data).slice(0, 20).map(item => `<button class="lp-evidence-entry" onclick="workbenchPrototype.activity('${item.id}')"><div><strong>${esc(item.subject)} · ${esc(item.feature)}</strong><b>${item.minutes} 分钟 ›</b></div><small>${item.date} ${item.start} · ${esc(item.title)} · ${item.status}</small></button>`).join(''));
@@ -58,7 +58,7 @@ window.workbenchPrototype = (() => {
     if (state.studentId) {
       const student = roster.getDemoStudent(state.studentId);
       const detail = report(state.studentId), summary = learning.getStudentLearning(detail, state.studentId);
-      body = `<button class="lp-back" onclick="workbenchPrototype.student('')">‹ 返回${title}</button><div class="lp-title"><h3>${esc(student.name)} · ${esc(student.className)}</h3></div><div class="lp-summary">${stat(summary.minutes, '学习分钟')}${stat(summary.days, '学习天数')}${stat(summary.firstCount, '首次作答')}</div>${timeline(detail)}`;
+      body = `<p class="hp-muted">${esc(student.className)}</p><div class="lp-summary">${stat(summary.minutes, '学习分钟')}${stat(summary.days, '学习天数')}${stat(summary.firstCount, '首次作答')}</div>${timeline(detail)}`;
     } else {
       const tabs = [['overview','概览'],['students','学生'],['questions','题目']];
       body = `<div class="lp-tabs">${tabs.map(([id,label]) => `<button class="${state.tab === id ? 'active' : ''}" onclick="workbenchPrototype.tab('${id}')">${label}</button>`).join('')}</div>`;
@@ -80,7 +80,7 @@ window.workbenchPrototype = (() => {
     return `${header('learning',state.studentId ? `${esc(roster.getDemoStudent(state.studentId)?.name)}的学习记录` : '学情')}${body}${evidenceOverlay(result)}</div>`;
   };
   const renderHomework = () => {
-    window.homeworkPrototype?.setScope({ view: state.view, grade: state.grade, classId: state.classId, classIds: classIds(), teacherId: 'teacher-demo-001' });
+    window.homeworkPrototype?.setScope({ view: state.view, grade: state.grade, classId: state.classId, classIds: classIds(), teacherId: 'teacher-demo-001', teachingAssignments: roster.getDemoTeachingAssignments('teacher-demo-001') });
     return `${header('homework','作业与打卡',window.homeworkPrototype?.getTeacherMode?.() === 'list')}${window.homeworkPrototype?.renderTeacher() || ''}</div>`;
   };
   const refresh = () => { if (typeof teacherDesk === 'function') teacherDesk(); };
@@ -97,6 +97,8 @@ window.workbenchPrototype = (() => {
     });
   }
   return { renderLearning, renderHomework, getScope: () => ({ ...state, classIds: classIds() }), getGrantedViews: () => [...granted],
+    getLearningNavigation() { return { title: state.studentId ? `${roster.getDemoStudent(state.studentId)?.name || '学生'}的学习记录` : '学情', back: Boolean(state.studentId) }; },
+    navigateLearningHome() { state.tab='overview'; state.studentId=''; state.knowledge=''; state.questionId=''; state.activityId=''; refresh(); },
     demoIdentity(value) { const choices={all:['school','homeroom','subject'],school:['school'],homeroom:['homeroom'],subject:['subject']};if(!choices[value])return;granted=choices[value];state.view=granted[0];state.grade='all';state.classId=state.view==='school'?'all':'c1';state.studentId='';state.questionId='';state.activityId='';window.homeworkPrototype?.toTeacherListWithoutRefresh?.();if(typeof stage!=='undefined'&&stage==='teacherDesk'){teacherTab='learning';refresh();} },
     view(value) { if (!granted.includes(value)) return; state.view=value; state.grade='all'; state.classId=value==='school'?'all':'c1'; state.studentId=''; state.knowledge=''; state.questionId=''; state.activityId=''; window.homeworkPrototype?.toTeacherListWithoutRefresh?.(); refresh(); },
     grade(value) { if (state.view!=='school'||!['all','7','8'].includes(value))return; state.grade=value; state.classId='all'; state.studentId=''; state.questionId=''; state.activityId=''; refresh(); },

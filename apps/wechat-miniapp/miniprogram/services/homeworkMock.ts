@@ -1,12 +1,13 @@
-import { DEMO_CLASSES, DEMO_STUDENTS, GUARDIAN_STUDENT_ID } from './schoolDemoRoster';
+import { DEMO_CLASSES, DEMO_STUDENTS, GUARDIAN_STUDENT_ID, DEMO_GUARDIAN_CHILD_IDS, formatHomeworkTitle } from './schoolDemoRoster';
 export { DEMO_CLASSES, DEMO_STUDENTS, GUARDIAN_STUDENT_ID } from './schoolDemoRoster';
 
 export type HomeworkKind = 'homework' | 'checkin';
-export type SubmitType = 'photo' | 'video' | 'audio' | 'none';
+export type SubmitType = 'file' | 'photo' | 'video' | 'audio' | 'none';
 export type GradeState = 'confirmed' | 'review' | 'unreadable' | 'no-answer';
 
 export interface HomeworkItem { id: string; title: string; instruction: string; submitType: SubmitType; required: boolean }
-export interface HomeworkTask { id: string; title: string; description: string; materialPhoto?: string; kind: HomeworkKind; classIds: string[]; targetStudentIds: string[] | null; targetSnapshotIds?: string[]; schoolId?: string; subject?: string; items: HomeworkItem[]; deadline: string; submitDeadline: string; parentVisible: boolean; publishedAt: string; publishedBy?: string; seriesId?: string; cycleId?: string; cycleCount?: number }
+export interface HomeworkAttachment { id: string; name: string; type: 'image' | 'video' | 'file'; path: string; size: number; source: string }
+export interface HomeworkTask { id: string; title: string; description: string; materialPhoto?: string; attachments?: HomeworkAttachment[]; kind: HomeworkKind; classIds: string[]; targetStudentIds: string[] | null; targetSnapshotIds?: string[]; schoolId?: string; subject?: string; items: HomeworkItem[]; deadline: string; submitDeadline: string; parentVisible: boolean; publishedAt: string; publishedBy?: string; seriesId?: string; cycleId?: string; cycleCount?: number }
 export interface HomeworkStudent { id: string; name: string; classId: string }
 export interface GradeQuestion { id: string; questionVersion?: number; label: string; answer: string; answerVersion?: number; studentAnswer?: string; correct: boolean; state: GradeState; reviewedAt?: string; reviewHistory?: { at: string; before: GradeState; after: GradeState; correct: boolean; reason: string; reviewerId: string }[] }
 export interface ItemSubmission { studentId: string; taskId: string; itemId: string; submittedAt: string; late?: boolean; operatorId?: string; operatorName?: string; mediaLabel: string; mediaPath?: string; isMock?: boolean; version?: number; questions: GradeQuestion[] }
@@ -19,12 +20,12 @@ const latestSubmissions = (rows: ItemSubmission[]) => [...rows].sort((a, b) => (
   return latest;
 }, new Map<string, ItemSubmission>());
 const currentRows = (rows: ItemSubmission[]) => [...latestSubmissions(rows).values()];
-export const SUBMIT_LABEL: Record<SubmitType, string> = { photo: '图片', video: '视频', audio: '录音', none: '无需线上提交' };
-export const FILE_LIMITS = { photo: { bytes: 20 * 1024 * 1024, label: '20MB' }, video: { bytes: 200 * 1024 * 1024, label: '200MB', seconds: 5 * 60 }, audio: { bytes: 50 * 1024 * 1024, label: '50MB', seconds: 10 * 60 } } as const;
+export const SUBMIT_LABEL: Record<SubmitType, string> = { file: '文件', photo: '图片', video: '视频', audio: '录音', none: '线下完成' };
+export const FILE_LIMITS = { file: { bytes: 50 * 1024 * 1024, label: '50MB' }, photo: { bytes: 20 * 1024 * 1024, label: '20MB' }, video: { bytes: 200 * 1024 * 1024, label: '200MB', seconds: 5 * 60 }, audio: { bytes: 50 * 1024 * 1024, label: '50MB', seconds: 10 * 60 } } as const;
 const addDays = (value: string, days: number) => { const date = new Date(value.replace(' ', 'T')); date.setDate(date.getDate() + days); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`; };
 
 const seededTasks: HomeworkTask[] = [
-  { id: 'task-demo-1', title: '数学周末练习', description: '完成纸质练习第 3 页，录制一道题的讲解，并确认线下朗读。', kind: 'homework', schoolId: 'luohu-demo', subject: '数学', classIds: ['c1', 'c2'], targetStudentIds: null, deadline: '2026-10-20 20:00', submitDeadline: '2026-10-27 20:00', parentVisible: false, publishedAt: '2026-10-18 09:00', publishedBy: 'teacher-demo-001', items: [{ id: 'item-photo', title: '练习题拍照', instruction: '拍摄清晰完整的答题页', submitType: 'photo', required: true }, { id: 'item-video', title: '讲解视频', instruction: '讲解你选择的一道题', submitType: 'video', required: true }, { id: 'item-offline', title: '线下朗读', instruction: '完成后由家长确认', submitType: 'none', required: true }] },
+  { id: 'task-demo-1', title: '数学周末练习', description: '完成纸质练习第 3 页，录制一道题的讲解，并确认线下朗读。', kind: 'homework', schoolId: 'luohu-demo', subject: '数学', classIds: ['c1', 'c2'], targetStudentIds: null, deadline: '2026-10-11 20:00', submitDeadline: '2026-10-18 20:00', parentVisible: false, publishedAt: '2026-10-09 09:00', publishedBy: 'teacher-demo-001', items: [{ id: 'item-photo', title: '练习题拍照', instruction: '拍摄清晰完整的答题页', submitType: 'photo', required: true }, { id: 'item-video', title: '讲解视频', instruction: '讲解你选择的一道题', submitType: 'video', required: true }, { id: 'item-offline', title: '线下朗读', instruction: '完成后由家长确认', submitType: 'none', required: true }] },
   ...[1, 2, 3].map(day => ({ id: day === 1 ? 'task-demo-2' : `task-demo-2-cycle-${day}`, title: day === 1 ? '每日阅读打卡' : `每日阅读打卡 · 第${day}期`, description: '阅读 20 分钟，记录今天读的内容。', kind: 'checkin' as const, schoolId: 'luohu-demo', subject: '语文', seriesId: 'task-demo-2', cycleId: `cycle-${day}`, cycleCount: 3, classIds: ['c1'], targetStudentIds: null, deadline: `2026-10-${18 + day} 21:00`, submitDeadline: `2026-10-${25 + day} 21:00`, parentVisible: false, publishedAt: '2026-10-18 08:00', publishedBy: 'other-teacher-demo', items: [{ id: 'item-checkin', title: '阅读记录', instruction: '拍下阅读记录页', submitType: 'photo' as const, required: true }] })),
 ];
 
@@ -46,10 +47,43 @@ function seedStore(): Store {
     if (student.id === GUARDIAN_STUDENT_ID || index % 6 === 0) return;
     task.items.forEach((item, itemIndex) => {
       if (index % 5 === 0 && itemIndex > 0) return;
-      submissions.push({ studentId: student.id, taskId: task.id, itemId: item.id, submittedAt: `2026-10-18 ${String(14 + index % 5).padStart(2, '0')}:${String(index * 7 % 60).padStart(2, '0')}`, operatorId: `guardian-demo-${String(index % 3 + 1).padStart(3, '0')}`, operatorName: ['王女士', '李先生', '张女士'][index % 3], mediaLabel: item.submitType === 'none' ? '家长确认已完成' : `演示${SUBMIT_LABEL[item.submitType]}提交`, mediaPath: item.submitType === 'photo' ? '/assets/homework-demo-paper.png' : '', isMock: true, questions: item.submitType === 'photo' && task.kind === 'homework' ? mockExternalGrade(task.id, item.id, student.id) : [] });
+      submissions.push({ studentId: student.id, taskId: task.id, itemId: item.id, submittedAt: `${task.id === 'task-demo-1' ? '2026-10-10' : '2026-10-18'} ${String(14 + index % 5).padStart(2, '0')}:${String(index * 7 % 60).padStart(2, '0')}`, operatorId: `guardian-demo-${String(index % 3 + 1).padStart(3, '0')}`, operatorName: ['王女士', '李先生', '张女士'][index % 3], mediaLabel: item.submitType === 'none' ? '家长确认已完成' : `演示${SUBMIT_LABEL[item.submitType]}提交`, mediaPath: item.submitType === 'photo' ? '/assets/homework-demo-paper.png' : '', isMock: true, questions: item.submitType === 'photo' && task.kind === 'homework' ? mockExternalGrade(task.id, item.id, student.id) : [] });
     });
   }));
   return { tasks: seededTasks, submissions };
+}
+
+function ensureTeacherHistoryDemo(store: Store): boolean {
+  let changed = false;
+  const day = (delta: number) => { const date = new Date(); date.setDate(date.getDate() + delta); return formatDay(date) + ' 20:00'; };
+  function formatDay(date: Date) { return date.getFullYear() + '-' + String(date.getMonth()+1).padStart(2,'0') + '-' + String(date.getDate()).padStart(2,'0'); }
+  for (const completed of [true, false]) {
+    const id = completed ? 'teacher-history-completed' : 'teacher-history-pending';
+    if (store.tasks.some(task => task.id === id)) continue;
+    const task: HomeworkTask = { id, subject:'数学', kind:'homework', title:completed ? '数学口算练习' : '数学应用题练习', description:'完成练习后由家长确认。', publishedAt:day(-6), deadline:day(completed ? -4 : -1), submitDeadline:day(completed ? -2 : 6), classIds:['c1','c2'], targetStudentIds:null, targetSnapshotIds:DEMO_STUDENTS.filter(row => ['c1','c2'].includes(row.classId)).map(row => row.id), schoolId:'luohu-demo', parentVisible:false, publishedBy:'teacher-demo-001', items:[{id:id+'-item',title:'完成练习',instruction:'完成后由家长确认',submitType:'none',required:true}] };
+    store.tasks.push(task);
+    if (completed) targetStudents(task).forEach(student => store.submissions.push({taskId:id,itemId:task.items[0].id,studentId:student.id,submittedAt:day(-5),operatorId:'guardian-demo-001',operatorName:'王女士',mediaLabel:'家长确认已完成',isMock:true,questions:[]}));
+    changed = true;
+  }
+  return changed;
+}
+
+function ensureGuardianStatusDemo(store: Store): boolean {
+  let changed = false;
+  const date = new Date();
+  const now = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0') + ' 18:00';
+  const specs: Array<[string, string, string, HomeworkKind, string]> = [["pending-math","有理数计算练习","数学","homework","pending"],["pending-read","课外阅读打卡","语文","checkin","pending"],["completed-english","英语词汇巩固","英语","homework","completed"],["completed-read","朗读背诵打卡","语文","checkin","completed"],["ended-math","数学基础巩固","数学","homework","ended"],["ended-english","英语听力打卡","英语","checkin","ended"]];
+  for (const [suffix, title, subject, kind, status] of specs) {
+    const id = 'guardian-demo-status-v1-' + suffix;
+    if (store.tasks.some(task => task.id === id)) continue;
+    const childIds = [...DEMO_GUARDIAN_CHILD_IDS];
+    const past = status !== 'pending';
+    const itemId = id + '-item';
+    store.tasks.push({ id, title, subject, kind, schoolId: 'luohu-demo', classIds: ['c1', 'c2'], targetStudentIds: childIds, targetSnapshotIds: childIds, publishedAt: addDays(now, -5), publishedBy: 'teacher-demo-001', parentVisible: false, deadline: addDays(now, past ? -3 : 2), submitDeadline: addDays(now, past ? -1 : 9), description: status === 'completed' ? '完成线下学习后由家长确认，当前为已完成演示记录。' : status === 'ended' ? '本期任务已结束，可查看完成要求与历史进度。' : '完成老师安排的学习内容，并上传学习记录。', items: [{ id: itemId, title: status === 'completed' ? '线下学习确认' : '学习记录', instruction: status === 'completed' ? '由家长确认孩子已完成本次学习。' : '拍摄清晰的学习记录后提交。', submitType: status === 'completed' ? 'none' : 'photo', required: true }] });
+    if (status === 'completed') for (const studentId of childIds) store.submissions.push({ taskId: id, itemId, studentId, submittedAt: addDays(now, -4), operatorId: 'guardian-demo-001', operatorName: '演示家长', mediaLabel: '家长确认已完成', isMock: true, version: 1, questions: [] });
+    changed = true;
+  }
+  return changed;
 }
 
 function readStore(): Store {
@@ -58,6 +92,12 @@ function readStore(): Store {
     const classId = (id: string) => id === 'class-g5-2' ? 'c1' : id === 'class-g5-3' ? 'c2' : id;
     const studentId = (id: string) => id.replace(/^class-g5-2-(\d+)$/, (_, number: string) => `c1-s${number.padStart(2, '0')}`).replace(/^class-g5-3-(\d+)$/, (_, number: string) => `c2-s${number.padStart(2, '0')}`);
     let changed = false;
+    const historicalDemo = stored.tasks.find(task => task.id === 'task-demo-1');
+    if (historicalDemo && historicalDemo.deadline === '2026-10-20 20:00') {
+      historicalDemo.publishedAt = '2026-10-09 09:00'; historicalDemo.deadline = '2026-10-11 20:00'; historicalDemo.submitDeadline = '2026-10-18 20:00';
+      stored.submissions.filter(row => row.taskId === historicalDemo.id && row.isMock && row.submittedAt.startsWith('2026-10-18')).forEach(row => { row.submittedAt = row.submittedAt.replace('2026-10-18', '2026-10-10'); });
+      changed = true;
+    }
     stored.tasks.forEach(task => {
       if (task.parentVisible) { task.parentVisible = false; changed = true; }
       const classes = task.classIds.map(classId);
@@ -85,10 +125,14 @@ function readStore(): Store {
       const first = stored.tasks.find(task => task.id === 'task-demo-2');
       if (first && first.cycleCount !== 3) { first.cycleCount = 3; changed = true; }
     }
+    if (ensureGuardianStatusDemo(stored)) changed = true;
+    if (ensureTeacherHistoryDemo(stored)) changed = true;
     if (changed) saveStore(stored);
     return stored;
   }
   const seed = seedStore();
+  ensureGuardianStatusDemo(seed);
+  ensureTeacherHistoryDemo(seed);
   wx.setStorageSync(STORAGE_KEY, seed);
   return seed;
 }
@@ -120,6 +164,7 @@ export function listSharedSubmissions(task: HomeworkTask, studentId: string) {
 export function publishHomework(input: Omit<HomeworkTask, 'id' | 'publishedAt'>): HomeworkTask {
   const store = readStore();
   const now = new Date();
+  const generatedTitle = formatHomeworkTitle(input.subject || '', input.kind, now);
   const publishedAt = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   const seriesId = `task-${Date.now()}`;
   const count = input.kind === 'checkin' ? Math.max(1, Math.min(30, input.cycleCount || 1)) : 1;
@@ -128,7 +173,7 @@ export function publishHomework(input: Omit<HomeworkTask, 'id' | 'publishedAt'>)
     deadline.setDate(deadline.getDate() + index);
     const due = `${deadline.getFullYear()}-${String(deadline.getMonth() + 1).padStart(2, '0')}-${String(deadline.getDate()).padStart(2, '0')} ${String(deadline.getHours()).padStart(2, '0')}:${String(deadline.getMinutes()).padStart(2, '0')}`;
     const submitDeadline = addDays(input.submitDeadline, index);
-    return { ...input, parentVisible: false, id: count === 1 ? seriesId : `${seriesId}-cycle-${index + 1}`, seriesId, cycleId: input.kind === 'checkin' ? `cycle-${index + 1}` : undefined, title: count === 1 ? input.title : `${input.title} · 第${index + 1}期`, targetSnapshotIds: DEMO_STUDENTS.filter(student => input.classIds.includes(student.classId) && (!input.targetStudentIds || input.targetStudentIds.includes(student.id))).map(student => student.id), schoolId: input.schoolId || 'luohu-demo', deadline: due, submitDeadline, publishedAt };
+    return { ...input, parentVisible: false, id: count === 1 ? seriesId : `${seriesId}-cycle-${index + 1}`, seriesId, cycleId: input.kind === 'checkin' ? `cycle-${index + 1}` : undefined, title: count === 1 ? generatedTitle : `${generatedTitle} · 第${index + 1}期`, targetSnapshotIds: DEMO_STUDENTS.filter(student => input.classIds.includes(student.classId) && (!input.targetStudentIds || input.targetStudentIds.includes(student.id))).map(student => student.id), schoolId: input.schoolId || 'luohu-demo', deadline: due, submitDeadline, publishedAt };
   });
   store.tasks.unshift(...tasks);
   saveStore(store);

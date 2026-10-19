@@ -1,7 +1,7 @@
+<page-navigation title="{{title || '每日进度'}}" back="{{true}}" home="{{true}}" home-label="回到作业首页" bind:back="back" bind:home="returnToModuleHome" />
 <view class="series-page">
   <view wx:if="{{hasSeries}}">
     <view class="series-overview">
-      <view class="series-title">{{title}}</view>
       <view class="series-meta">{{meta}}</view>
       <view wx:if="{{description}}" class="series-description">{{description}}</view>
       <view class="series-total"><text>累计完成</text><view><text class="series-total-num">{{completed}} / {{target}}</text><text>人次</text></view></view>
@@ -14,5 +14,5 @@
       <view class="series-meter"><view style="width:{{item.rate}}%"></view></view>
     </view>
   </view>
-  <view wx:else class="series-empty"><view>当前范围暂无可查看的每日记录</view><view class="series-back" bindtap="back">返回任务列表</view></view>
+  <view wx:else class="series-empty"><view>当前范围暂无可查看的每日记录</view></view>
 </view>

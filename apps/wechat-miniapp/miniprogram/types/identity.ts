@@ -9,6 +9,7 @@ export interface SessionProfile {
   roles: UserRole[];
   displayName: string;
   professionalTitles?: string[];
+  teachingAssignments?: Array<{ subject: string; classIds: string[] }>;
   activeStudentId?: string;
   linkedStudentIds?: string[];
   activeClassId?: string;

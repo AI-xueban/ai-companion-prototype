@@ -36,3 +36,14 @@
 .learning-child-trigger,.learning-child-option.active,.learning-detail-head,.learning-business-nav view.active{color:#df6749}
 .learning-expand,.learning-homework{background:#fff1e9;color:#dc6a4d}
 .learning-question{background:#fff8f5}
+
+.learning-child-line{min-height:50rpx;padding-bottom:24rpx;margin-bottom:16rpx;border-bottom:1rpx solid #f2e8e3}.learning-child-identity{font-size:30rpx;font-weight:700;color:#193349}.learning-child-class{margin-top:6rpx;font-size:22rpx;font-weight:400;color:#657789}
+
+.learning-child-option{display:flex;align-items:center;justify-content:space-between;gap:24rpx}.learning-option-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.learning-option-meta{display:flex;align-items:center;gap:16rpx;flex:none;white-space:nowrap;font-size:22rpx}.learning-option-check{width:24rpx;text-align:right}
+
+.learning-child-identity{display:flex;align-items:center;gap:12rpx;min-width:0;white-space:nowrap;font-size:28rpx}.learning-child-identity>view:first-child{flex:none}.learning-child-class{margin-top:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.learning-child-trigger{flex:none;white-space:nowrap}
+
+.learning-child-modal-mask{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:44rpx;background:rgba(23,44,70,.4)}.learning-child-modal{box-sizing:border-box;width:100%;max-width:680rpx;padding:32rpx;border-radius:32rpx;background:#fff}.learning-child-modal-head{display:flex;align-items:center;justify-content:space-between;font-size:32rpx;font-weight:700;color:#193349}.learning-child-modal-head>view{padding:0 10rpx;color:#8393a1;font-size:46rpx;font-weight:400}.learning-child-modal .learning-child-menu{margin-top:24rpx;max-height:45vh;overflow:auto;box-shadow:none;border:1rpx solid #f2e8e3;background:#fffaf7}.learning-child-modal-cancel{margin-top:24rpx;padding:20rpx;border-radius:18rpx;background:#fff4ef;color:#dc6a4d;text-align:center;font-size:26rpx}
+
+
+.learning-inline-periods{display:flex;gap:8rpx;padding:8rpx;border-radius:22rpx;background:#fff4ef}.learning-inline-periods button{flex:1;min-width:0;margin:0;padding:16rpx 8rpx;border:0;border-radius:16rpx;background:transparent;color:#657789;font-size:24rpx;line-height:1.5}.learning-inline-periods button::after{border:0}.learning-inline-periods button.active{background:#fff;color:#dc6a4d;font-weight:700}
