@@ -2,19 +2,22 @@ import { bindDemoTeacherWechat, createDemoLoginResult, createDemoTeacherPassword
 import { homePathFor } from "../../../permissions/access";
 import { getSession, saveSession } from "../../../stores/session";
 import type { UserRole } from "../../../types/identity";
+import { DEMO_GUARDIAN_CHILD_IDS, getDemoStudent } from "../../../services/schoolDemoRoster";
 
 type LoginStage = "role" | "guardian-bind" | "teacher-login" | "teacher-bind";
 type TeacherLoginMode = "sms" | "password";
 
-const CHILDREN = [
-  { id: "student-1001", name: "林小满", initial: "林", meta: "五年级 2 班" },
-  { id: "student-1002", name: "林小川", initial: "林", meta: "二年级 1 班" },
-];
+const CHILDREN = DEMO_GUARDIAN_CHILD_IDS.map(id => {
+  const student = getDemoStudent(id)!;
+  return { id, name: student.name, initial: student.name.slice(0, 1), meta: student.className };
+});
+let teacherCodeCountdownUntil = 0;
+let teacherCodeTimer: ReturnType<typeof setInterval> | null = null;
 
 Page({
   data: {
     stage: "role" as LoginStage,
-    selectedChildId: "student-1001",
+    selectedChildId: DEMO_GUARDIAN_CHILD_IDS[0],
     children: CHILDREN,
     agreed: false,
     isSubmitting: false,
@@ -22,6 +25,7 @@ Page({
     teacherLoginMode: "sms" as TeacherLoginMode,
     teacherCode: "",
     teacherCodeSent: false,
+    teacherCodeCountdown: 0,
     teacherPassword: "",
   },
 
@@ -54,12 +58,35 @@ Page({
     }
   },
 
+  onUnload() {
+    if (teacherCodeTimer) clearInterval(teacherCodeTimer);
+    teacherCodeTimer = null;
+    teacherCodeCountdownUntil = 0;
+  },
+
+  updateTeacherCodeCountdown() {
+    const remaining = Math.max(0, Math.ceil((teacherCodeCountdownUntil - Date.now()) / 1000));
+    this.setData({ teacherCodeCountdown: remaining });
+    if (!remaining && teacherCodeTimer) {
+      clearInterval(teacherCodeTimer);
+      teacherCodeTimer = null;
+    }
+  },
+
+  resetTeacherCodeCountdown() {
+    teacherCodeCountdownUntil = 0;
+    if (teacherCodeTimer) clearInterval(teacherCodeTimer);
+    teacherCodeTimer = null;
+    this.setData({ teacherCodeCountdown: 0 });
+  },
+
   selectRole(event: WechatMiniprogram.BaseEvent) {
     const role = event.currentTarget.dataset.role as UserRole;
     this.setData({ stage: role === "guardian" ? "guardian-bind" : "teacher-login" });
   },
 
   backToRole() {
+    this.resetTeacherCodeCountdown();
     this.setData({ stage: "role", isSubmitting: false, teacherCode: "", teacherCodeSent: false, teacherPassword: "" });
   },
 
@@ -72,13 +99,14 @@ Page({
   },
 
   changeTeacherPhone(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    if (event.detail.value.trim() !== this.data.teacherPhone) this.resetTeacherCodeCountdown();
     this.setData({ teacherPhone: event.detail.value.trim(), teacherCodeSent: false, teacherCode: "", teacherPassword: "" });
   },
 
   switchTeacherLoginMode(event: WechatMiniprogram.BaseEvent) {
     const mode = event.currentTarget.dataset.mode as TeacherLoginMode;
     if (mode !== "sms" && mode !== "password") return;
-    this.setData({ teacherLoginMode: mode, teacherCode: "", teacherCodeSent: false, teacherPassword: "" });
+    this.setData({ teacherLoginMode: mode, teacherPassword: "" });
   },
 
   changeTeacherCode(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
@@ -90,6 +118,7 @@ Page({
   },
 
   requestTeacherCode() {
+    if (this.data.teacherCodeCountdown > 0) return;
     if (!/^1\d{10}$/.test(this.data.teacherPhone)) {
       wx.showToast({ title: "请输入有效的 11 位手机号", icon: "none" });
       return;
@@ -98,7 +127,11 @@ Page({
       wx.showToast({ title: "未找到该手机号对应的教师账号", icon: "none" });
       return;
     }
+    teacherCodeCountdownUntil = Date.now() + 60000;
     this.setData({ teacherCodeSent: true });
+    this.updateTeacherCodeCountdown();
+    if (teacherCodeTimer) clearInterval(teacherCodeTimer);
+    teacherCodeTimer = setInterval(() => this.updateTeacherCodeCountdown(), 1000);
     wx.showToast({ title: "演示验证码：123456", icon: "none" });
   },
 

@@ -1,5 +1,5 @@
 {
-  "description": "AI 学伴微信小程序",
+  "description": "通晤纪AI伴学微信小程序",
   "miniprogramRoot": "miniprogram/",
   "compileType": "miniprogram",
   "libVersion": "3.7.10",

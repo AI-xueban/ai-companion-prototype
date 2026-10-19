@@ -1,0 +1,141 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
+
+const handlers = {};
+const memory = new Map();
+const root = { innerHTML: '', addEventListener(name, fn) { handlers[name] = fn; }, querySelector() { return { value: '2026-10-19T10:00' }; } };
+const context = vm.createContext({
+  document: { getElementById: () => root },
+  window: {},
+  localStorage: { getItem: key => memory.get(key) || null, setItem: (key, value) => memory.set(key, value) },
+  Date, Math, JSON, Number, String, Boolean, Map, Set, URL, structuredClone
+});
+vm.runInContext(readFileSync(new URL('./homework-flow-lab.js', import.meta.url), 'utf8'), context);
+const state = () => context.window.homeworkFlowLab.getState();
+const click = (action, dataset = {}) => handlers.click({ target: { closest: () => ({ dataset: { action, ...dataset } }) } });
+const change = (dataset, value, checked = false) => handlers.change({ target: { dataset, value, checked, id: dataset.id || '' } });
+
+assert.match(root.innerHTML, /待生效/);
+click('role', { role: 'school' });
+assert.match(root.innerHTML, /普通作业截止时完成/);
+assert.match(root.innerHTML, /1\/4/);
+click('metric', { value: 'current' });
+assert.match(root.innerHTML, /普通作业当前完成/);
+assert.match(root.innerHTML, /2\/4/);
+click('role', { role: 'parent' });
+assert.doesNotMatch(root.innerHTML, /下周口算打卡/);
+click('task', { id: 'hw-math' });
+click('parent-start', { item: 'math-photo' });
+assert.match(root.innerHTML, /上传中/);
+click('finish-upload');
+assert.match(root.innerHTML, /已接收待校验/);
+click('finish-validate');
+assert.equal(state().submissions.filter(row => row.studentId === 's1' && row.itemId === 'math-photo' && row.status === 'accepted').length, 1);
+click('parent-start', { item: 'math-photo' });
+assert.match(root.innerHTML, /原提交立即作废/);
+click('replace-confirm');
+assert.equal(state().submissions.find(row => row.studentId === 's1' && row.itemId === 'math-photo').invalidatedAt, state().clock);
+click('cancel-upload');
+assert.match(root.innerHTML, /待提交/);
+click('role', { role: 'teacher' });
+click('task', { id: 'future-checkin' });
+assert.match(root.innerHTML, /待生效/);
+click('start-now');
+assert.equal(state().tasks.find(row => row.id === 'future-checkin').startAt, state().clock);
+assert.ok(state().phases.some(row => row.taskId === 'future-checkin'));
+click('new');
+change({ draft: 'title' }, '新打卡');
+change({ draft: 'description' }, '每天完成练习');
+click('draft-kind', { value: 'checkin' });
+change({ item: '0', field: 'title' }, '练习照片');
+click('preview');
+assert.match(root.innerHTML, /发布前核对/);
+click('publish-branch', { value: 'network' });
+click('publish');
+assert.match(root.innerHTML, /网络不可用/);
+click('publish-branch', { value: 'normal' });
+click('publish');
+assert.ok(state().tasks.some(row => row.title === '新打卡'));
+
+context.window.homeworkFlowLab.reset();
+click('transfer');
+change({ id: 'demo-clock' }, '2026-10-19T10:00');
+const oldDaily = state().phases.find(row => row.id === 'daily-read:2026-10-18');
+const newDaily = state().phases.find(row => row.id === 'daily-read:2026-10-19');
+assert.ok(oldDaily && newDaily);
+assert.equal(oldDaily.targetIds.includes('s4'), false);
+assert.equal(newDaily.targetIds.includes('s4'), true);
+assert.equal(state().phases.filter(row => row.taskId === 'weekly-read').length, 2);
+click('role', { role: 'parent' });
+click('task', { id: 'daily-read' });
+click('phase', { id: 'daily-read:2026-10-16' });
+click('parent-start', { item: 'read-photo' });
+click('finish-upload');
+click('finish-validate');
+assert.ok(state().submissions.some(row => row.phaseId === 'daily-read:2026-10-16' && row.studentId === 's1'));
+change({ id: 'demo-clock' }, '2026-10-21T00:00');
+assert.match(root.innerHTML, /整项已结束，停止提交/);
+
+context.window.homeworkFlowLab.reset();
+click('task', { id: 'hw-math' });
+click('student', { id: 's2' });
+click('release');
+click('role', { role: 'parent' });
+change({ id: 'parent-student' }, 's2');
+click('task', { id: 'hw-math' });
+assert.match(root.innerHTML, /标准答案 3\/4/);
+assert.match(root.innerHTML, /我的知识点结果/);
+assert.match(root.innerHTML, /首次答对/);
+click('role', { role: 'teacher' });
+click('task', { id: 'hw-math' });
+click('student', { id: 's2' });
+change({ answer: 'sub-s2-photo:q1' }, '2/4');
+click('save-grade', { sub: 'sub-s2-photo', q: 'q1' });
+assert.equal(state().submissions.find(row => row.id === 'sub-s2-photo').grades[0].firstCorrect, true);
+click('role', { role: 'parent' });
+click('task', { id: 'hw-math' });
+assert.match(root.innerHTML, /结果待更新/);
+
+context.window.homeworkFlowLab.reset();
+change({ id: 'demo-clock' }, '2026-10-18T11:59');
+click('role', { role: 'parent' });
+click('task', { id: 'hw-math' });
+click('parent-start', { item: 'math-photo' });
+click('finish-upload');
+change({ id: 'demo-clock' }, '2026-10-18T12:10');
+click('finish-validate');
+assert.equal(state().submissions.find(row => row.studentId === 's1' && row.itemId === 'math-photo').submittedAt, '2026-10-18T11:59');
+
+context.window.homeworkFlowLab.reset();
+change({ id: 'demo-clock' }, '2026-10-19T23:59');
+click('role', { role: 'parent' });
+click('task', { id: 'future-checkin' });
+click('parent-start', { item: 'oral-photo' });
+change({ id: 'demo-clock' }, '2026-10-20T00:00');
+click('finish-upload');
+assert.match(root.innerHTML, /未能在可提交时间内完整到达/);
+assert.equal(state().submissions.some(row => row.studentId === 's1' && row.itemId === 'oral-photo'), false);
+
+context.window.homeworkFlowLab.reset();
+click('role', { role: 'parent' });
+click('task', { id: 'hw-math' });
+change({ id: 'submit-branch' }, 'wrong-type');
+click('parent-start', { item: 'math-photo' });
+click('finish-upload');
+click('finish-validate');
+assert.equal(state().submissions.find(row => row.studentId === 's1' && row.itemId === 'math-photo').status, 'failed');
+assert.match(root.innerHTML, /媒体类型不符/);
+change({ id: 'submit-branch' }, 'grade-error');
+click('parent-start', { item: 'math-photo' });
+click('finish-upload');
+click('finish-validate');
+const serviceError = state().submissions.find(row => row.studentId === 's1' && row.itemId === 'math-photo' && row.status === 'accepted');
+assert.ok(serviceError.grades.every(row => row.state === 'error'));
+click('role', { role: 'teacher' });
+click('task', { id: 'hw-math' });
+click('student', { id: 's1' });
+click('retry-grade', { sub: serviceError.id, q: 'q1' });
+assert.equal(state().submissions.find(row => row.id === serviceError.id).grades[0].state, 'review');
+
+console.log('homework-flow-lab: completion metrics, staged upload, replacement, phase roster, backfill, grading refresh and exception branches passed');

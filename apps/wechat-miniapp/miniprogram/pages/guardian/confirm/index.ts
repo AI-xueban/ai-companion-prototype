@@ -1,7 +1,7 @@
 const DEMO_STUDENT = {
-  name: "林小满",
+  name: "李涵",
   school: "罗湖实验学校",
-  className: "五年级 2 班"
+  className: "七年级(2)班"
 };
 
 Page({
