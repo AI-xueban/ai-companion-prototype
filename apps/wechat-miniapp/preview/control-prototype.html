@@ -758,6 +758,6 @@ app.innerHTML='<main class="screen control-screen">'+top+'<section class="contro
     document.querySelectorAll('[data-stage]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.stage)));document.querySelectorAll('[data-teacher-flow]').forEach(b=>b.addEventListener('click',()=>startTeacherFlow(b.dataset.teacherFlow)));restoreDemoTeacherOnLaunch();({home,auth,code,confirm,pending,approved,teacherLaunch,teacherLogin,teacherPhone:teacherPhoneLogin,teacherBind,teacherDesk,teacherSecurity}[stage]||home)();
   </script>
   <script src="control-rules.js"></script>
-  <script src="control-parity.js"></script>
+  <script src="control-parity.js?v=20261019-state-actions"></script>
 </body>
 </html>
