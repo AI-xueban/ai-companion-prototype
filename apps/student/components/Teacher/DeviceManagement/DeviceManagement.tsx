@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import type { TeacherPortalUser } from '../data/teacherAccess';
+import { SCHOOL_DEVICE_RECORDS } from '../data/schoolDeviceDemo';
 import baseCss from '../../../../admin/prototype/assets/css/style.css?raw';
 import templateCss from '../../../../admin/prototype/assets/css/layout-templates.css?raw';
 import deviceCss from '../../../../admin/prototype/assets/css/device.css?raw';
@@ -47,19 +48,12 @@ export const DeviceManagement:React.FC<{initialView:View;currentUser:TeacherPort
       d.cabinets=kept.map(c=>({...c,schoolId:window.__teacherSchool.id,schoolName:window.__teacherSchool.name}));
       d.tablets=(d.tablets||[]).filter(t=>ids.has(t.cabinetId));
       d.usageRecords=(d.usageRecords||[]).filter(r=>ids.has(r.cabinetBorrow)||ids.has(r.cabinetReturn));
-      const todayUsageRecords=Array.from({length:20},(_,offset)=>{
-        const n=offset+1,returned=n<=15,borrowed=n>=16&&n<=18;
-        const studentNo=n<=16?n:(n<=18?n-16:n);
-        const cabinetId='CAB-00'+Math.min(3,Math.floor((n-1)/8)+1);
-        const hour=8+Math.floor((n-1)/2),minute=(n%2)*15,pad=value=>String(value).padStart(2,'0');
-        const tabletNo=((n-1)%20)+1;
-        const base={id:'UR-20261010'+String(n).padStart(3,'0'),tabletId:'TAB-'+String(tabletNo).padStart(3,'0'),sn:'SN20260301'+String(tabletNo).padStart(3,'0'),studentId:'2024010'+String(studentNo).padStart(3,'0'),studentName:['王晨','李欣','张宇','陈曦','刘畅','赵宁','周悦','吴桐','徐嘉','孙浩','马琳','朱凯','胡雨','郭航','何静','高远','黄蕾','林峰','唐婧','许辰'][n-1],grade:['七年级1班','七年级2班','八年级1班','八年级2班'][n%4],loginMethod:n%3===0?'编号密码':'人脸识别',cabinetBorrow:cabinetId,slotBorrow:((n-1)%8)+1,borrowAt:'2026-10-10 '+pad(hour)+':'+pad(minute)+':00',beforeCondition:{aiResult:'normal'},overdue:false};
-        if(returned)return {...base,status:'returned',returnAt:'2026-10-10 '+pad(hour+1)+':'+pad((minute+12)%60)+':00',cabinetReturn:cabinetId,slotReturn:base.slotBorrow,returnInspection:{aiResult:'normal'}};
-        if(borrowed)return {...base,status:'borrowed',returnAt:null,cabinetReturn:null,slotReturn:null};
-        return {...base,status:'cancelled',cancelReason:'charger_connected',cancelledAt:'2026-10-10 '+pad(hour)+':'+pad(minute+3)+':00',cabinetReturn:cabinetId,slotReturn:base.slotBorrow};
-      });
+      const todayUsageRecords=${JSON.stringify(SCHOOL_DEVICE_RECORDS)};
       const todayUsageIds=new Set(todayUsageRecords.map(item=>item.id));
-      d.usageRecords=[...todayUsageRecords,...d.usageRecords.filter(item=>!todayUsageIds.has(item.id))];
+      d.usageRecords=[...todayUsageRecords,...d.usageRecords.filter(item=>{
+        const date=(item.borrowAt||'').slice(0,10);
+        return !todayUsageIds.has(item.id)&&(date<'2026-09-13'||date>'2026-10-12');
+      })];
       d.deviceAlerts=(d.deviceAlerts||[]).filter(a=>ids.has(a.cabinetId));
       const octoberAlerts=[
         {id:'ALT-202610-001',tabletId:'TAB-001',sn:'SN20260301001',cabinetId:'CAB-001',slotNo:3,type:'damage',severity:'high',title:'外观损坏',message:'外观对比发现损坏',status:'pending',createdAt:'2026-10-10 16:42:18'},
