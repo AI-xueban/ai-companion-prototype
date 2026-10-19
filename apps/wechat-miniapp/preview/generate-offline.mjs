@@ -18,13 +18,13 @@ const index = await readFile(join(root, 'index.html'), 'utf8');
 let offline = index.replace("let stage=params.get('page')||'home'", "let stage=params.get('page')||'teacherDesk'");
 if (offline === index) throw new Error('无法定位预览首页的默认页面设置');
 for (const name of ['parent-prototype.css', 'homework-prototype.css', 'learning-prototype.css']) {
-  const marker = `<link rel="stylesheet" href="${name}" />`;
-  if (!offline.includes(marker)) throw new Error(`无法定位样式文件：${name}`);
+  const marker = offline.match(new RegExp(`<link rel="stylesheet" href="${name.replaceAll(".", "\\.")}(?:\\?[^"]*)?"\\s*/>`))?.[0];
+  if (!marker || !offline.includes(marker)) throw new Error(`无法定位样式文件：${name}`);
   offline = offline.replace(marker, `<style data-offline-source="${name}">\n${await readFile(join(root, name), 'utf8')}\n</style>`);
 }
 for (const name of ['learning-data.js', 'learning-prototype.js', 'workbench-prototype.js', 'homework-prototype.js', 'parent-prototype.js']) {
-  const marker = `<script src="${name}"></script>`;
-  if (!offline.includes(marker)) throw new Error(`无法定位脚本文件：${name}`);
+  const marker = offline.match(new RegExp(`<script src="${name.replaceAll(".", "\\.")}(?:\\?[^"]*)?"></script>`))?.[0];
+  if (!marker || !offline.includes(marker)) throw new Error(`无法定位脚本文件：${name}`);
   const source = (await readFile(join(root, name), 'utf8')).replace(/<\/script/gi, '<\\/script');
   offline = offline.replace(marker, `<script data-offline-source="${name}">\n${source}\n</script>`);
 }
