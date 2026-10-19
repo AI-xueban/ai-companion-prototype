@@ -69,7 +69,7 @@ window.parentPrototype = (() => {
     save();render();return true;
   }
   const exceptionHints={
-    loginFailed:'立即显示登录失败提示，可恢复后重新登录。', foreign:'直接查看无法识别二维码的页面。', invalid:'直接查看二维码失效和重新扫码入口。', disabled:'预览学生账号不可用的拦截结果。', deleted:'预览学生账号不可用的拦截结果。',
+    loginFailed:'立即显示登录失败提示，可恢复后重新登录。', foreign:'直接查看无法识别二维码的页面。', invalid:'直接查看二维码失效和重新扫码入口。', disabled:'账号暂时停用，联系学校恢复后可重试。', deleted:'原账号已删除，请联系学校重新获取绑定码。',
     alreadyLinked:'直接查看已有家长绑定的提示与学校核实入口。',cameraDenied:'查看权限提示，也可继续从相册选择。',scanNetwork:'查看识别失败提示；恢复后可重新识别。',firstBindRace:'预览另一位家长先绑定后，本次操作的拦截结果。',
     codeExpired:'直接显示验证码错误或过期。',phoneConflict:'直接显示号码冲突，不修改当前账号。',smsLimited:'直接显示短信发送频繁提示。',submitNetwork:'显示提交失败；恢复后保留表单继续提交。',
     expiredInvite:'直接查看邀请已过期的结果。',revokedInvite:'直接查看邀请已撤回的结果。',full:'直接查看绑定人数已满的结果。',slotTaken:'保留审核页，点击同意可查看最后名额已被占的结果。',
@@ -271,7 +271,7 @@ window.parentPrototype = (() => {
     wechatGuide() { return `${hero('更换登录微信', '请在要使用的新微信中打开通晤纪AI伴学小程序。')}${card('用原手机号找回', `在新微信中使用原已验证手机号 ${mask(state.verifiedPhone)} 接收验证码，找到原家长账号后确认改绑。孩子关联会保留，原微信将失去快捷登录资格。`)}<div class="parent-info">微信账号不能在小程序内直接切换。请先在微信中切换账号，或使用登录了新微信的设备。</div>${notice()}${actions(button('返回“我的”', 'home', 'secondary'))}`; },
     newWechat() { return `${hero('确认使用新微信', '手机号验证成功，已找到你的原家长账号。')}${card('原账号与孩子关联将保留', '确认后，这个微信将用于快捷登录；原微信会失去该账号的快捷登录资格。')}${actions(button('确认关联当前微信', 'replaceWechat'), button('取消', 'entry', 'secondary'))}`; },
     blocked() { return `${hero('暂时无法找回账号', '原微信和已验证的手机号都无法使用时，不能在小程序中自助接管原账号。')}${card('联系服务人员处理', '准备可供核验的资料，由后台按异常流程处理。学生二维码不能用于找回原家长账号。')}${actions(button('申请学校协助核实','schoolAssist'),button('返回登录入口', 'entry', 'secondary'))}`; },
-    cardError() { const foreign = state.card === 'foreign'; const invalid = state.card === 'invalid'; const title = foreign ? '无法识别这个二维码' : invalid ? '二维码无法使用' : '暂无法关联孩子'; const detail = foreign ? '这不是通晤纪AI伴学的学生二维码。请扫描学校发给家庭的二维码。' : invalid ? '二维码可能已作废，请联系学校重新获取。' : '这位学生的账号当前无法关联，请联系学校确认。'; return `${hero(title, detail)}${actions(button('重新扫码', 'retryScan'), button('返回', 'cancelScan', 'secondary'))}`; }
+    cardError() { const foreign = state.card === 'foreign'; const invalid = state.card === 'invalid'; const disabled=state.card==='disabled', deleted=state.card==='deleted'; const title = foreign ? '无法识别这个二维码' : invalid ? '二维码无法使用' : disabled ? '学生账号已禁用' : deleted ? '学生账号已删除' : '暂无法关联孩子'; const detail = foreign ? '这不是通晤纪AI伴学的学生二维码。请扫描学校发给家庭的二维码。' : invalid ? '二维码可能已作废，请联系学校重新获取。' : disabled ? '该学生账号暂时停用，当前无法绑定。请联系学校恢复账号后重试。' : deleted ? '该学生账号已删除，原绑定二维码已无法使用。请联系学校核实学生资料并重新获取绑定码。' : '这位学生的账号当前无法关联，请联系学校确认。'; return `${hero(title, detail)}${actions(button('重新扫码', 'retryScan'), button('返回', 'cancelScan', 'secondary'))}`; }
   };
   const flowNames = { first: '首位家长绑定', returning: '已绑定家长再次进入', duplicateScan:'已绑定家长重复扫码', twoChildren: '两个孩子的学情与作业', otherDevice: '同一微信在另一设备登录', second: '第二位家长申请', third:'第三位家长申请', fourth:'第四位家长申请', fifth:'第五位家长申请', sixth:'第六位家长申请', seventh:'第七位家长申请（人数已满）', familyManage:'主管理家长管理', ordinary:'普通家长权限', wrong: '解除孩子关联', lostWechat: '原微信丢失后找回', lostPhone: '原手机号丢失后更换', bothLost: '微信和手机号均丢失' };
   const flowSteps = {

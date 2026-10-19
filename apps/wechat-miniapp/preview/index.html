@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>通晤纪AI伴学 · 小程序演示</title>
-  <link rel="stylesheet" href="parent-prototype.css?v=20261019-bound-copy-clean" />
+  <link rel="stylesheet" href="parent-prototype.css?v=20261019-student-status-copy" />
   <link rel="stylesheet" href="homework-prototype.css" />
   <link rel="stylesheet" href="learning-prototype.css" />
   <style>
@@ -443,7 +443,7 @@
   <script src="learning-prototype.js"></script>
   <script src="workbench-prototype.js"></script>
   <script src="homework-prototype.js"></script>
-  <script src="parent-prototype.js?v=20261019-bound-copy-clean"></script>
+  <script src="parent-prototype.js?v=20261019-student-status-copy"></script>
   <script>
     const student={name:'李涵',initial:'李',school:'罗湖实验学校',className:'七年级(2)班',code:'1001055'};
     const params=new URLSearchParams(location.search);let stage=params.get('page')||'home';let enteredCode=student.code;const app=document.getElementById('app');if(params.get('review')==='1')document.body.classList.add('review-mode');const previous={auth:'home',code:'auth',confirm:'code',pending:'confirm',approved:'pending',teacherLaunch:'home',teacherLogin:'home',teacherPhone:'teacherLogin',teacherBind:'teacherPhone',teacherDesk:'teacherLogin',teacherSecurity:'teacherDesk'};let teacherCodeSent=false;let teacherLoginMode='sms';let teacherPhoneDraft='';let teacherPhoneFromWechat=false;let teacherFirstSmsVerified=false;let teacherOtherDeviceConfirmed=false;let teacherOriginalDeviceKicked=false;let selectedTeacherClass='七年级(2)班';let demoTeacherWechatBound=localStorage.getItem('ai_companion_demo_teacher_wechat_binding')==='teacher-demo-001';let teacherSecurityNotice='';let teacherFlow='';let teacherFlowStep=0;let teacherBranch='normal';let teacherFlowOutcome='';let teacherReplacePending=false;let teacherPhoneSheetOpen=false;let teacherQuickNotice='';const teacherDemoSessionKey='ai_companion_demo_teacher_session';const teacherManualLogoutKey='ai_companion_demo_teacher_manual_logout';
