@@ -262,3 +262,12 @@ console.log('Passed: page anomalies, first-binding races, school assistance, sta
  const d=create();d.p.scenario('first');d.p.action('scanResult');d.p.action('confirm');d.p.setAgreement(true);d.p.exception('firstBindRace');d.p.action('skipPhone');assert.equal(d.state().view,'needInvite');assert.equal(d.state().families[0].members.length,1);assert.equal(d.state().bound,false);
 }
 console.log('Passed: optional phone on first binding and invitations, empty phone across reload, verified later binding and race protection on skip.');
+
+{
+ const d=create();d.p.scenario('first');d.p.action('scanResult');d.p.back();assert.equal(d.state().view,'scan');d.p.toggleExceptionMenu(true);assert.match(d.html(),/role="dialog"[^>]*aria-label="异常演示"/);d.p.back();assert.equal(d.state().exceptionMenuOpen,false);assert.equal(d.state().view,'scan');
+ d.p.exception('invalid');assert.equal(d.state().view,'cardError');assert.match(d.html(),/恢复正常/);d.p.exception('alreadyLinked');assert.equal(d.state().view,'needInvite');assert.equal(d.state().families[0].members.length,1);d.p.exception('foreign');assert.equal(d.state().view,'cardError');assert.equal(d.state().families[0].members.length,0,'Switching must remove the previous injected binding');d.p.exception('normal');assert.equal(d.state().view,'scan');assert.equal(d.state().families[0].members.length,0);assert.doesNotMatch(d.html(),/class="parent-demo-restore"/);
+}
+{
+ const d=create();d.p.scenario('first');d.p.action('scanResult');d.p.action('confirm');d.p.input('phone','13800138000');d.p.exception('smsLimited');d.p.exception('submitNetwork');d.p.exception('normal');assert.equal(d.state().phoneDraft,'13800138000');assert.equal(d.state().view,'phone');
+}
+console.log('Passed: exception sheet close/back, immediate QR results, isolated switching, one-click restoration and preserved phone draft.');
