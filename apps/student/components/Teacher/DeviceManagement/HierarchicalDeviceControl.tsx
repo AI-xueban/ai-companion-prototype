@@ -51,6 +51,7 @@ import {
 } from "./ControlConfigurationColumns";
 import { DeviceControlLayer } from "./DeviceControlLayer";
 import { DurationRuleEditor } from "./DurationRuleEditor";
+import { ControlDifferenceDrawer } from "./ControlDifferenceDrawer";
 import "./DeviceControl.css";
 
 const tabs = [
@@ -163,12 +164,17 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
   const controls = tab === "duration" ? durationControls : borrowControls;
   const setControls = tab === "duration" ? setDurationControls : setBorrowControls;
   const [selected, setSelected] = useState<string[]>([]);
+  const [batchMode, setBatchMode] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [overview, setOverview] = useState<{
+    label: string;
+    ids: string[];
+  } | null>(null);
+  const [differenceOverview, setDifferenceOverview] = useState<{
     label: string;
     ids: string[];
   } | null>(null);
@@ -212,6 +218,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
   const rowType = classId ? "学生" : grade ? "班级" : "年级";
   const resetList = () => {
     setSelected([]);
+    setBatchMode(false);
     setSearch("");
     setFilter("all");
     setPage(1);
@@ -302,9 +309,9 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
         explanations = entries.filter((s) => s.explanation).length;
       return {
         main: mixed(ids)
-          ? "权限存在差异"
+          ? "学生规则有差异"
           : entries[0]?.answer || entries[0]?.explanation
-            ? "权限一致"
+            ? "学生规则一致"
             : "答案、详解均不允许",
         sub: `答案允许 ${answers} 人 · 详解允许 ${explanations} 人`,
         active: answers + explanations > 0,
@@ -376,7 +383,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
   const withSelected = (action: () => void) => {
     if (!selectedRows.length) {
       setMessage({
-        text: `请先选择所要操作的${rowType}`,
+        text: `请选择要操作的${rowType}`,
         tone: "notice",
       });
       return;
@@ -384,22 +391,31 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
     setMessage(null);
     action();
   };
+  const runBatchAction = (action: () => void) => {
+    if (!batchMode) {
+      setBatchMode(true);
+      setSelected([]);
+      setMessage({ text: `请选择要操作的${rowType}`, tone: "notice" });
+      return;
+    }
+    withSelected(action);
+  };
   const selectedObjectNames = selectedRows.map((row) =>
     row.student && row.subtitle
       ? `${row.label}（${row.subtitle}）`
       : row.label,
   );
   const targetIds = selectedRows.flatMap((r) => r.ids);
-  const booleanTargetValues = targetIds.map((id) =>
-    tab === "world" ? controls[id].world : controls[id].locked,
-  );
-  const availableBooleanActions = !selectedRows.length
-    ? [true, false]
-    : booleanTargetValues.every(Boolean)
+  const booleanActionsFor = (ids: string[]) => {
+    const targetValues = ids.map((id) =>
+      tab === "world" ? controls[id].world : controls[id].locked,
+    );
+    return targetValues.every(Boolean)
       ? [false]
-      : booleanTargetValues.every((value) => !value)
+      : targetValues.every((value) => !value)
         ? [true]
         : [true, false];
+  };
   const targetLabel = selected.length
     ? classId
       ? `已选 ${selected.length} 名学生`
@@ -441,6 +457,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
     setControls(effectiveNext);
     setOperationRecords((records) => limitHistoryByModule([{ id: `record-${Date.now()}`, module: tab, title: actionTitle, scope: ids.length === deviceControlStudents.length ? "全校" : `${ids.length} 名学生`, time: at, operator: operatorLabel, before, after, ids: [...ids], snapshot }, ...records]));
     setSelected([]);
+    setBatchMode(false);
     setMessage({ text: `设置已生效，影响 ${ids.length} 名学生`, tone: "success" });
   };
   const openEditor = (
@@ -974,22 +991,22 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
                 <h3 className="font-bold text-slate-900">{rowType}列表</h3>
                 <p className="mt-1 text-xs text-slate-500">
                   {classId
-                      ? "点击学生查看详情，可单独修改。"
-                      : `点击${rowType}名称进入下一级，勾选后可批量设置。`}
+                      ? "可在操作列单独设置学生，或使用批量操作。"
+                      : `点击${rowType}名称进入下一级，可在操作列单独设置或使用批量操作。`}
                 </p>
               </div>
               <div className="dc-actions">
                 {tab === "duration" ? (
                   <>
-                    <button type="button" className={primary} onClick={() => withSelected(() => openDurationEditor(targetIds, targetLabel))}>新增使用时长规则</button>
-                    <button type="button" className={button} onClick={() => withSelected(() => deleteDurationRules(targetIds, targetLabel))}>恢复默认规则</button>
+                    <button type="button" className={primary} onClick={() => runBatchAction(() => openDurationEditor(targetIds, targetLabel))}>批量设置使用时长</button>
+                    <button type="button" className={button} onClick={() => runBatchAction(() => deleteDurationRules(targetIds, targetLabel))}>批量恢复默认规则</button>
                   </>
                 ) : tab === "homework" ? (
                   <>
                     <button
                       type="button"
                       onClick={() =>
-                        withSelected(() => openEditor(
+                        runBatchAction(() => openEditor(
                           targetIds,
                           targetLabel,
                           undefined,
@@ -999,34 +1016,34 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
                       }
                       className={primary}
                     >
-                      设置权限
+                      批量设置权限
                     </button>
                     <button
                       type="button"
-                      onClick={() => withSelected(restoreHomework)}
+                      onClick={() => runBatchAction(restoreHomework)}
                       className={button}
                     >
-                      恢复默认
+                      批量恢复默认
                     </button>
                   </>
                 ) : (
                   <>
-                    {availableBooleanActions.map((value) => (
+                    {[true, false].map((value) => (
                       <button
                         type="button"
                         key={String(value)}
                         onClick={() =>
-                          withSelected(() => requestBoolean(targetIds, targetLabel, value))
+                          runBatchAction(() => requestBoolean(targetIds, targetLabel, value))
                         }
                         className={value ? primary : button}
                       >
                         {tab === "world"
                           ? value
-                            ? "开放权限"
-                            : "关闭权限"
+                            ? "批量开放权限"
+                            : "批量关闭权限"
                           : value
-                            ? "锁屏"
-                            : "解除锁屏"}
+                            ? "批量锁屏"
+                            : "批量解除锁屏"}
                       </button>
                     ))}
                   </>
@@ -1067,13 +1084,13 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
                   <option value="all">全部状态</option>
                   {!classId && (
                     <>
-                      <option value="same">{tab === "duration" ? "学生规则一致" : "配置一致"}</option>
-                      <option value="mixed">{tab === "duration" ? "学生规则有差异" : "配置存在差异"}</option>
+                      <option value="same">学生规则一致</option>
+                      <option value="mixed">学生规则有差异</option>
                     </>
                   )}
                   <option value="active">
                     {tab === "duration"
-                      ? "使用时长受管控"
+                      ? "有生效规则"
                       : isScheduleTab
                       ? "已设置借用规则"
                       : tab === "homework"
@@ -1084,7 +1101,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
                   </option>
                   <option value="inactive">
                     {tab === "duration"
-                      ? "不限制使用时长"
+                      ? "无生效规则"
                       : isScheduleTab
                       ? "未设置借用规则"
                       : tab === "homework"
@@ -1105,23 +1122,30 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
                 )}
               </div>
               <span className="text-xs text-slate-500">
-                {selected.length
-                  ? `操作范围：${targetLabel} · ${targetIds.length} 人`
-                  : `请先选择${rowType}`}
+                {batchMode
+                  ? selected.length
+                    ? `操作范围：${targetLabel} · ${targetIds.length} 人`
+                    : `请选择要操作的${rowType}`
+                  : `可在操作列单独设置${rowType}`}
               </span>
             </div>
-            {selected.length > 0 && (
+            {batchMode && (
               <div className="dc-selection-bar flex items-center justify-between gap-3">
                 <span>
-                  已选 {selected.length} {classId ? "名学生" : `个${rowType}`}
-                  ，影响 {targetIds.length} 名学生
+                  {selected.length
+                    ? `已选 ${selected.length} ${classId ? "名学生" : `个${rowType}`}，影响 ${targetIds.length} 名学生`
+                    : `请选择要操作的${rowType}`}
                 </span>
                 <button
                   type="button"
-                  onClick={() => setSelected([])}
+                  onClick={() => {
+                    setSelected([]);
+                    setBatchMode(false);
+                    setMessage(null);
+                  }}
                   className="shrink-0 font-bold"
                 >
-                  取消选择
+                  退出批量操作
                 </button>
               </div>
             )}
@@ -1133,27 +1157,29 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
               <table className="dc-data-table text-left">
                 <thead className="bg-slate-50 text-slate-500">
                   <tr>
-                    <th className="w-12 px-5 py-3">
-                      <input
-                        type="checkbox"
-                        aria-label={`选择本页${rowType}`}
-                        checked={checkedAll}
-                        onChange={() =>
-                          setSelected(
-                            checkedAll
-                              ? selected.filter(
-                                  (id) => !pageRows.some((r) => r.id === id),
-                                )
-                              : [
-                                  ...new Set([
-                                    ...selected,
-                                    ...pageRows.map((r) => r.id),
-                                  ]),
-                                ],
-                          )
-                        }
-                      />
-                    </th>
+                    {batchMode && (
+                      <th className="w-12 px-5 py-3">
+                        <input
+                          type="checkbox"
+                          aria-label={`选择本页${rowType}`}
+                          checked={checkedAll}
+                          onChange={() =>
+                            setSelected(
+                              checkedAll
+                                ? selected.filter(
+                                    (id) => !pageRows.some((r) => r.id === id),
+                                  )
+                                : [
+                                    ...new Set([
+                                      ...selected,
+                                      ...pageRows.map((r) => r.id),
+                                    ]),
+                                  ],
+                            )
+                          }
+                        />
+                      </th>
+                    )}
                     <th className="w-16 py-3 font-medium">序号</th>
                     <th className="min-w-32 py-3 font-medium">
                       {rowType}
@@ -1176,20 +1202,22 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
                       data-selected={selected.includes(row.id)}
                       className="border-t border-slate-100"
                     >
-                      <td className="px-5 py-4 align-top">
-                        <input
-                          type="checkbox"
-                          aria-label={`选择${row.label}`}
-                          checked={selected.includes(row.id)}
-                          onChange={() =>
-                            setSelected(
-                              selected.includes(row.id)
-                                ? selected.filter((id) => id !== row.id)
-                                : [...selected, row.id],
-                            )
-                          }
-                        />
-                      </td>
+                      {batchMode && (
+                        <td className="px-5 py-4 align-top">
+                          <input
+                            type="checkbox"
+                            aria-label={`选择${row.label}`}
+                            checked={selected.includes(row.id)}
+                            onChange={() =>
+                              setSelected(
+                                selected.includes(row.id)
+                                  ? selected.filter((id) => id !== row.id)
+                                  : [...selected, row.id],
+                              )
+                            }
+                          />
+                        </td>
+                      )}
                       <td className="py-4 align-top text-slate-400">
                         {(currentPage - 1) * pageSize + index + 1}
                       </td>
@@ -1223,6 +1251,37 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
                       />
                       <td className="dc-row-actions sticky right-0 px-5 py-4 align-top">
                         <div className="flex flex-col items-start gap-3">
+                          {tab === "duration" && (
+                            <button type="button" className="dc-link whitespace-nowrap" onClick={() => openDurationEditor(row.ids, row.label)}>
+                              设置使用时长
+                            </button>
+                          )}
+                          {tab === "homework" && (
+                            <button type="button" className="dc-link whitespace-nowrap" onClick={() => openEditor(row.ids, row.label, undefined, undefined, [row.label])}>
+                              设置权限
+                            </button>
+                          )}
+                          {(tab === "world" || tab === "lock") && booleanActionsFor(row.ids).map((value) => (
+                            <button
+                              type="button"
+                              key={String(value)}
+                              className="dc-link whitespace-nowrap"
+                              onClick={() => requestBoolean(row.ids, row.label, value)}
+                            >
+                              {tab === "world"
+                                ? value ? "开放权限" : "关闭权限"
+                                : value ? "锁屏" : "解除锁屏"}
+                            </button>
+                          ))}
+                          {!row.student && mixed(row.ids) && (
+                            <button
+                              type="button"
+                              className="dc-link whitespace-nowrap"
+                              onClick={() => setDifferenceOverview({ label: row.label, ids: row.ids })}
+                            >
+                              查看差异
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() =>
@@ -1233,7 +1292,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
                             className="dc-link flex items-center gap-1 whitespace-nowrap"
                           >
                             {row.student
-                              ? "查看并设置"
+                              ? "查看详情"
                               : grade
                                 ? "查看学生"
                                 : "查看班级"}
@@ -1247,7 +1306,8 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
                     <tr>
                       <td
                         colSpan={
-                          4 +
+                          3 +
+                          (batchMode ? 1 : 0) +
                           configurationColumnCount({
                             module: tab,
                             student: !!classId,
@@ -1383,6 +1443,16 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
           controls={controls}
           mode={borrowMode}
           onClose={() => setOverview(null)}
+        />
+      )}
+      {differenceOverview && tab !== "borrowing" && (
+        <ControlDifferenceDrawer
+          label={differenceOverview.label}
+          ids={differenceOverview.ids}
+          module={tab}
+          controls={controls}
+          defaultDurationRule={defaultDuration}
+          onClose={() => setDifferenceOverview(null)}
         />
       )}
       {editor && (
