@@ -1,0 +1,199 @@
+/* 管控沿用教师工作台的浅蓝底、白色内容和蓝色操作。 */
+.control-screen {
+  --accent: #168fe0;
+  --control-ink: #193349;
+  --control-muted: #6c8395;
+  --control-line: #e2ebf1;
+  background: #f5fbff;
+  color: var(--control-ink);
+}
+.control-screen .wx-nav h2 { color: var(--control-ink); }
+.control-screen > .control-workbench-tools { padding: 10px 17px 12px; background: #f5fbff; border-color: #e5edf3; }
+.control-screen .control-entry { padding: 14px 17px 24px; background: #f5fbff; }
+.control-screen .control-content { padding: 12px 17px 24px; background: #f5fbff; }
+.control-screen .borrow-editor-content { padding: 14px 17px 24px; background: #f5fbff; }
+.control-screen .control-entry-lock,
+.control-screen .admin-school-toggle,
+.control-screen .control-module-panel,
+.control-screen .admin-module-actions,
+.control-screen .control-student-detail-card,
+.control-screen .borrow-editor-card {
+  margin: 0 0 12px;
+  padding: 18px;
+  border: 1px solid var(--control-line);
+  border-radius: 17px;
+  background: #fff;
+  box-shadow: 0 5px 16px #1933490b;
+}
+.control-screen .control-entry-lock-head h3,
+.control-screen .admin-school-toggle h3,
+.control-screen .control-module-panel h3,
+.control-screen .admin-module-actions h3 { color: var(--control-ink); font-size: 16px; line-height: 1.5; }
+.control-screen .control-entry-lock-head p,
+.control-screen .admin-school-toggle p,
+.control-screen .control-module-panel > p,
+.control-screen .admin-module-actions p { margin: 6px 0 0; color: var(--control-muted); font-size: 12px; line-height: 1.6; }
+.control-screen .control-entry-lock-head button,
+.control-screen .admin-school-toggle-top .admin-detail-link { min-height: 32px; padding: 0; color: #087fc5; font-size: 12px; white-space: nowrap; }
+.control-screen .control-entry-subtitle { margin: 20px 2px 10px; color: var(--control-ink); font-size: 16px; font-weight: 700; }
+.control-screen .control-entry-list { gap: 10px; }
+.control-screen .control-entry-card { gap: 12px; padding: 16px; border-color: var(--control-line); border-radius: 17px; box-shadow: 0 5px 16px #1933490b; }
+.control-screen .control-entry-icon { width: 38px; height: 38px; border-radius: 11px; background: #e5f5ff; color: #087fc5; }
+.control-screen .control-entry-icon svg { width: 21px; height: 21px; }
+.control-screen .control-entry-card h3 { color: var(--control-ink); font-size: 15px; }
+.control-screen .control-entry-card p { margin-top: 5px; color: var(--control-muted); font-size: 12px; }
+.control-screen .control-entry-action { color: #91a6b7; }
+.control-screen .control-primary,
+.control-screen .borrow-editor-actions .control-primary {
+  min-height: 44px;
+  padding: 11px 13px;
+  border: 1px solid #168fe0;
+  border-radius: 11px;
+  background: #168fe0;
+  color: #fff;
+  box-shadow: none;
+  font-size: 14px;
+  font-weight: 700;
+}
+.control-screen .control-secondary { min-height: 44px; padding: 11px 13px; border: 1px solid #dcebf2; border-radius: 11px; background: #edf8ff; color: #087fc5; box-shadow: none; font-size: 14px; font-weight: 700; }
+.control-screen .control-primary:disabled,
+.control-screen .control-secondary:disabled { border-color: #e7eef4; background: #f2f6f9; color: #a4b3bf; opacity: 1; box-shadow: none; }
+.control-screen .control-actions { gap: 9px; margin-top: 15px; }
+.control-screen .teacher-tabbar button[aria-selected=true] { background: #e5f5ff; color: #087fc5; }
+.control-screen .control-current-class b { color: #537891; font-size: 12px; }
+.control-screen .admin-scope-path { margin-bottom: 12px; border: 1px solid #e1edf4; border-radius: 10px; background: #edf8ff; color: var(--control-muted); }
+.control-screen .admin-scope-path b { color: var(--control-ink); font-size: 12px; }
+.control-screen .admin-scope-summary { margin: 16px 2px 10px; }
+.control-screen .admin-scope-summary b,
+.control-screen .borrow-list-head b,
+.control-screen .flat-control-head b { color: var(--control-ink); font-size: 15px; }
+.control-screen .admin-scope-summary button,
+.control-screen .borrow-list-head button,
+.control-screen .flat-control-head button,
+.control-screen .control-detail-head button { min-height: 34px; padding: 7px 12px; border: 1px solid #dcebf2; border-radius: 9px; background: #e5f5ff; color: #087fc5; font-size: 12px; font-weight: 700; }
+.control-screen .admin-level-list { border-color: var(--control-line); border-radius: 17px; }
+.control-screen .admin-level-link { min-height: 70px; padding: 15px 16px; }
+.control-screen .admin-level-copy b { color: var(--control-ink); font-size: 14px; }
+.control-screen .admin-level-copy small { color: var(--control-muted); font-size: 11px; }
+.control-screen .borrow-student-list,
+.control-screen .flat-control-list { margin: 8px -17px 0; }
+.control-screen .borrow-list-toolbar,
+.control-screen .flat-control-toolbar { top: -12px; padding: 6px 17px 0; border-color: var(--control-line); background: #f5fbff; }
+.control-screen .borrow-list-search,
+.control-screen .borrow-status-filter { height: 40px; border-color: #dcebf2; border-radius: 10px; background: #fff; color: #537891; }
+.control-screen .borrow-list-search input { color: var(--control-ink); font-size: 12px; }
+.control-screen .borrow-list-search input::placeholder { color: #91a6b7; }
+.control-screen .borrow-status-filter { font-size: 11px; }
+.control-screen .borrow-student-row { padding: 14px 17px; border-color: #edf2f6; }
+.control-screen .borrow-student-main b { color: var(--control-ink); font-size: 14px; }
+.control-screen .borrow-student-rule { color: var(--control-muted); font-size: 12px; line-height: 1.6; }
+.control-screen .borrow-student-rule.unset { color: #91a6b7; }
+.control-screen .control-detail-row { min-height: 66px; border-color: #edf2f6; }
+.control-screen .control-detail-name { color: var(--control-ink); font-size: 13px; }
+.control-screen .homework-permission-toggle { color: #537891; font-size: 11px; }
+.control-screen .permission-mini-switch[aria-checked=true] { background: #168fe0; }
+.control-screen .control-student-context { padding: 13px 17px; border-color: var(--control-line); background: #f0f9ff; color: var(--control-ink); }
+.control-screen.control-student-screen .control-content { padding: 0 17px 8px; background: #fff; }
+.control-screen .control-student-row { min-height: 70px; border-color: #edf2f6; }
+.control-screen .control-student-row.selected { background: #f0f9ff; }
+.control-screen .control-row-name { color: var(--control-ink); font-size: 14px; }
+.control-screen .control-student-row.selected .control-check { border-color: #168fe0; background: #168fe0; }
+.control-screen input[type=checkbox] { accent-color: #168fe0; }
+.control-screen .control-batchbar,
+.control-screen .admin-batchbar,
+.control-screen .borrow-editor-actions { padding-left: 17px; padding-right: 17px; border-color: var(--control-line); background: #fff; box-shadow: 0 -4px 16px #19334905; }
+.control-screen .control-batchbar .control-cancel-action { border-color: #dcebf2; background: #fff; color: #537891; }
+.control-screen .control-sheet { color: var(--control-ink); border-radius: 20px 20px 0 0; }
+.control-screen .control-sheet-head h3 { color: var(--control-ink); font-size: 18px; font-weight: 700; }
+.control-screen .control-scope,
+.control-screen .control-confirm-copy,
+.control-screen .control-form-note { color: var(--control-muted); }
+.control-screen .control-form-title,
+.control-screen .control-number-row label { color: #537891; font-size: 12px; }
+.control-screen .control-segment { padding: 4px; border-radius: 11px; background: #e9f6ff; }
+.control-screen .control-segment button[aria-pressed=true],
+.control-screen .control-weekdays button[aria-pressed=true],
+.control-screen .control-choice button[aria-pressed=true] { border-color: #b9dfee; background: #e5f5ff; color: #087fc5; box-shadow: none; }
+.control-screen .control-period-row input,
+.control-screen .control-time-row input,
+.control-screen .control-date-row input,
+.control-screen .control-number-row input { min-height: 41px; border-color: #dce8ef; border-radius: 9px; background: #f9fcfe; color: #29455e; }
+.control-screen .control-add-period { border-color: #a4cede; background: #f5fbff; color: #087fc5; border-radius: 11px; }
+.control-screen .control-student-detail-name h3 { color: var(--control-ink); font-size: 18px; }
+.control-screen button:focus-visible,
+.control-screen input:focus-visible,
+.control-screen select:focus-visible { outline: 2px solid #168fe0; outline-offset: 2px; }
+@media (hover:hover) and (pointer:fine) {
+  .control-screen .control-primary:not(:disabled):hover { border-color: #087fc5; background: #087fc5; }
+  .control-screen .control-secondary:not(:disabled):hover { border-color: #b9dfee; background: #e5f5ff; }
+  .control-screen .control-entry-card:hover,
+  .control-screen .admin-school-toggle:hover { border-color: #b9d9ea; background: #fbfdff; }
+}
+.parity-context { margin: 0 0 12px; color: #537891; font-size: 12px; font-weight: 600; }
+.parity-note { color: #6c8395; font-size: 12px; line-height: 1.7; }
+.parity-operation { display: block; margin-top: 6px; color: #8196a8; font-size: 10px; font-weight: 400; line-height: 1.6; }
+.parity-student-list { margin: 0 -17px; padding: 0 17px; background: #fff; }
+.parity-student-row { display: flex; align-items: center; gap: 10px; min-height: 78px; padding: 13px 0; border-bottom: 1px solid #edf2f6; }
+.parity-student-main { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 4px; padding: 0; border: 0; background: transparent; color: #193349; text-align: left; cursor: pointer; }
+.parity-student-main > b { font-size: 14px; }
+.parity-student-main > small { color: #8196a8; font-size: 10px; }
+.parity-student-main > span { color: #6c8395; font-size: 12px; line-height: 1.7; }
+.parity-student-row .homework-inline-permissions { flex: 0 0 auto; gap: 8px; }
+.parity-student-row:has(.homework-inline-permissions) { flex-wrap: wrap; }
+.parity-student-row:has(.homework-inline-permissions) .parity-student-main { min-width: 120px; }
+.parity-scope-actions { display: flex; align-items: flex-end; flex-direction: column; gap: 6px; padding-right: 14px; }
+.parity-scope-actions > button:not(.control-inline-toggle), .parity-rule-actions button { border: 0; background: transparent; color: #087fc5; font-size: 12px; cursor: pointer; }
+.parity-rule { margin: 12px 0; padding: 14px; border: 1px solid #e2ebf1; border-radius: 12px; background: #fff; color: #193349; font-size: 12px; line-height: 1.7; }
+.parity-rule p { color: #6c8395; overflow-wrap: anywhere; }
+.parity-rule-actions { display: flex; justify-content: flex-end; gap: 16px; margin-top: 10px; }
+.parity-rule-actions .parity-danger { color: #c6535d; }
+.control-screen .parity-rule-icon { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border-radius: 10px; }
+.control-screen .parity-rule-icon:active { background: #edf8ff; }
+.control-screen .parity-rule-icon:disabled { color: #a4b3bf; cursor: default; }
+.parity-school-borrow { position: relative; }
+.control-screen.parity-school-borrow .control-content { padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px)); }
+.parity-borrow-floating { position: absolute; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); z-index: 10; }
+.control-screen .parity-borrow-floating .control-primary { width: auto; min-width: 148px; min-height: 48px; padding: 12px 24px; border-radius: 26px; box-shadow: 0 6px 20px #168fe039; white-space: nowrap; }
+.parity-borrow-type-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.parity-borrow-section { margin-top: 18px; padding-top: 18px; border-top: 1px solid #e2ebf1; }
+.parity-borrow-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.parity-borrow-heading h3 { margin: 0; font-size: 16px; color: #193349; }
+.control-screen .parity-borrow-heading button { width: auto; min-height: 34px; padding: 6px 12px; font-size: 12px; }
+.parity-borrow-empty { margin: 12px 0; padding: 20px 12px; text-align: center; color: #8196a8; font-size: 12px; background: #fff; border-radius: 12px; }
+.parity-radio-row { display: flex; flex-wrap: wrap; gap: 16px; margin: 18px 0; color: #537891; font-size: 12px; }
+.parity-radio-row label, .parity-permission label { display: flex; align-items: center; gap: 6px; }
+.parity-borrow-choice { min-width: 0; margin: 20px 0 0; padding: 0; border: 0; }
+.parity-borrow-choice legend { margin-bottom: 10px; }
+.parity-borrow-option { position: relative; display: block; margin-top: 10px; cursor: pointer; }
+.parity-borrow-option input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.parity-borrow-option-body { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 72px; padding: 13px 14px; border: 1px solid #e2ebf1; border-radius: 12px; background: #fff; }
+.parity-borrow-option-body b { display: block; font-size: 14px; font-weight: 600; color: #193349; }
+.parity-borrow-option-body small { display: block; margin-top: 5px; font-size: 12px; line-height: 1.5; color: #8196a8; }
+.parity-borrow-option-body i { flex: 0 0 22px; height: 22px; border: 1px solid #cbd7e0; border-radius: 50%; color: transparent; font-size: 13px; font-style: normal; text-align: center; line-height: 20px; }
+.parity-borrow-option input:checked + .parity-borrow-option-body { background: #eff8ff; border-color: #168fe0; }
+.parity-borrow-option input:checked + .parity-borrow-option-body b { color: #087fc5; }
+.parity-borrow-option input:checked + .parity-borrow-option-body i { background: #168fe0; border-color: #168fe0; color: #fff; }
+.parity-borrow-option input:focus-visible + .parity-borrow-option-body { outline: 2px solid #168fe0; outline-offset: 3px; }
+.control-screen input[type=radio] { accent-color: #168fe0; }
+.parity-permission { display: flex; gap: 24px; margin: 18px 0; padding: 14px; border: 1px solid #e2ebf1; border-radius: 10px; color: #537891; font-size: 13px; }
+.parity-permission legend { color: #193349; font-size: 13px; font-weight: 700; }
+.parity-apply-scope { margin: 20px 0 10px; padding: 14px; border: 1px solid #dcebf2; border-radius: 12px; background: #f5fbff; }
+.parity-apply-scope legend { padding: 0 4px; color: #193349; font-size: 13px; font-weight: 700; }
+.parity-apply-scope > label { display: block; margin: 10px 0; color: #193349; font-size: 12px; cursor: pointer; }
+.parity-apply-scope input { margin-right: 7px; }
+.parity-apply-scope small { display: block; margin: 5px 0 0 23px; color: #6c8395; font-size: 11px; line-height: 1.6; }
+.parity-preview { margin: 12px 0; padding: 12px; border: 1px solid #e2ebf1; border-radius: 10px; color: #537891; font-size: 12px; line-height: 1.7; }
+.parity-preview summary, .parity-rule summary { cursor: pointer; color: #193349; font-weight: 700; }
+.parity-batchbar { flex-wrap: wrap; }
+.parity-batchbar .admin-batch-actions { flex: 1; }
+.parity-batchbar .admin-batch-actions button { min-height: 40px; padding: 7px; font-size: 12px; white-space: nowrap; }
+.parity-affected { width: 100%; text-align: right; color: #8196a8; font-size: 10px; }
+.parity-editor-actions { display: flex; gap: 10px; }
+.control-screen .control-period-row { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) 40px; }
+.control-screen .control-period-remove { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 44px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #df5762; cursor: pointer; }
+.control-screen .control-period-remove:active { background: #fff0f1; }
+.control-screen .control-period-remove:focus-visible { outline: 2px solid #168fe0; outline-offset: 2px; }
+.control-screen .parity-delete-confirm { background: #e34d59; color: #fff; }
+.control-screen .parity-editor-actions .control-secondary { width: 32%; }
+.control-screen .parity-editor-actions .control-primary { flex: 1; width: auto; }
+.control-screen .parity-batchbar .admin-batch-actions button:disabled { opacity: 1; color: #a4b3bf; background: #f2f6f9; border-color: #e7eef4; }
