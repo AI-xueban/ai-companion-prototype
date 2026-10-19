@@ -2,7 +2,7 @@
 window.workbenchPrototype = (() => {
   const learning = window.learningData, roster = window.schoolDemoRoster;
   const state = { view: 'school', grade: 'all', classId: 'all', period: '7d', tab: 'overview', studentId: '', knowledge: '', questionId: '', activityId: '', rankingBy: 'people' };
-  let granted = ['school', 'homeroom'];
+  let granted = ['school', 'homeroom', 'subject'];
   const names = { school: '学校管理员', homeroom: '班主任', subject: '任课老师' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const classes = () => state.view === 'school' ? roster.DEMO_CLASSES.filter(row => state.grade === 'all' || row.grade === Number(state.grade)) : state.view === 'homeroom' ? roster.DEMO_CLASSES.filter(row => row.id === 'c1') : roster.DEMO_CLASSES.filter(row => row.id === 'c1' || row.id === 'c2');
@@ -27,7 +27,7 @@ window.workbenchPrototype = (() => {
   const row = (label, value, detail = '') => `<div class="lp-row"><span>${esc(label)}${detail ? `<small>${esc(detail)}</small>` : ''}</span><strong>${esc(value)}</strong></div>`;
   const header = (domain, title, showControls = true) => {
     const role = granted.length > 1 ? `<details class="wb-role-menu"><summary aria-label="切换工作身份，当前${names[state.view]}">${names[state.view]}<span class="wb-chevron" aria-hidden="true"></span></summary><div class="wb-role-menu-list"><small>切换到</small>${[['school','学校管理员'],['homeroom','班主任'],['subject','任课老师']].filter(([id]) => granted.includes(id) && id !== state.view).map(([id,label]) => `<button class="wb-role-option" type="button" onclick="workbenchPrototype.view('${id}')">${label}<span>›</span></button>`).join('')}</div></details>` : '';
-    const designation = granted.includes('homeroom') ? '班主任' : granted.includes('subject') ? '任课老师' : '学校管理员';
+    const designation = names[state.view];
     const grades = state.view === 'school' ? `<div class="wb-filter-row"><span class="wb-filter-label">年级</span><div class="wb-filter-options">${[['all','全校'],['7','七年级'],['8','八年级']].map(([id,label]) => chip(label, `grade('${id}')`, state.grade === id)).join('')}</div></div>` : '';
     const classChoices = state.view === 'school' ? chip('全部班级', "class('all')", state.classId === 'all') : '';
     const classRow = state.view === 'homeroom' ? '' : `<div class="wb-filter-row"><span class="wb-filter-label">班级</span><div class="wb-filter-options wb-class-options">${classChoices}${classes().map(item => chip(item.name, `class('${item.id}')`, state.classId === item.id)).join('')}</div></div>`;

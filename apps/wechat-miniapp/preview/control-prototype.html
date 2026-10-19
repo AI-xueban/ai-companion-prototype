@@ -427,7 +427,9 @@
     function teacherTabBar(){const tabs=[['learning','学情','M4 19V11M10 19V5M16 19v-9M3 21h18'],['homework','作业','M5 3h14v18H5z M8 8h8 M8 12h8 M8 16h5'],['control','管控','M12 3l8 3v6c0 5-8 9-8 9s-8-4-8-9V6z M9 12l2 2 4-4'],['mine','我的','M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M4 21v-2a8 8 0 0 1 16 0v2']];return '<nav class="teacher-tabbar" role="tablist" aria-label="教师端导航">'+tabs.map(([id,label,path])=>`<button role="tab" aria-selected="${teacherTab===id}" aria-controls="teacher-tab-panel" onclick="${id==='control'?'openControlTab()':`switchTeacherTab('${id}')`}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${path}"/></svg><span>${label}</span></button>`).join('')+'</nav>'}
     function teacherWorkbenchUrl(tab){
       const target=new URL('index.html',location.href);target.searchParams.set('page','teacherDesk');target.searchParams.set('tab',tab);
-      for(const key of ['availability','identity','classId'])if(params.has(key))target.searchParams.set(key,params.get(key));
+      if(params.has('availability'))target.searchParams.set('availability',params.get('availability'));
+      target.searchParams.set('classId',controlWorkView==='school'?'all':params.get('classId')==='c2'&&controlWorkView==='subject'?'c2':'c1');
+      target.searchParams.set('identity','all');
       target.searchParams.set('workView',controlWorkView);if(params.get('review')==='1')target.searchParams.set('review','1');return target;
     }
     function switchTeacherTab(tab){if(tab!=='control'){location.assign(teacherWorkbenchUrl(tab).href);return}teacherTab=tab;teacherDesk()}
