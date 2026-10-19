@@ -56,7 +56,7 @@ export const StudentControlDetail: React.FC<{
   };
   const effectiveDurationRules = weekdayNames.reduce<Array<{ text: string; days: number[] }>>((groups, _, day) => {
     const rule = control.durationRules.find((item) => item.weekdays.includes(day)) ?? (defaultDurationEnabled ? defaultDurationRule : undefined);
-    const text = rule ? durationRuleText(rule) : "不限制使用时长";
+    const text = rule ? durationRuleText(rule) : "连续 60 分钟 · 休息 15 分钟 · 每日累计 180 分钟 · 不限可用时段";
     const group = groups.find((item) => item.text === text);
     if (group) group.days.push(day);
     else groups.push({ text, days: [day] });

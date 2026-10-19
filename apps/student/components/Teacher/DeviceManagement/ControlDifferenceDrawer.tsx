@@ -44,7 +44,7 @@ const ruleSummary = (
     ];
   }
   if (module === "world") {
-    return [control.world ? "允许进入万象视界" : "禁止进入万象视界"];
+    return [control.world ? "已开放万象视界权限" : "已关闭万象视界权限"];
   }
   return [control.locked ? "已锁屏" : "未锁屏"];
 };
