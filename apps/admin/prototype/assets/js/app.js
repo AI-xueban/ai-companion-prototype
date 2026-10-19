@@ -22,6 +22,7 @@ function navigate(route, params) {
 }
 
 function renderApp(route, params) {
+  if (typeof window.companyResetWorkbenchDirty === 'function') window.companyResetWorkbenchDirty();
   renderSiderMenu(route);
   renderBreadcrumb(route);
   renderTabs(route, params);

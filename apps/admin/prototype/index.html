@@ -7,9 +7,12 @@
   <link rel="stylesheet" href="assets/css/style.css">
   <link rel="stylesheet" href="assets/css/layout-templates.css">
   <link rel="stylesheet" href="assets/css/device.css">
+  <link rel="stylesheet" href="assets/css/company-dashboard.css">
 
 </head>
 <body>
+  <div id="auth-root"></div>
+  <div id="dashboard-root" hidden></div>
   <div class="layout">
     <aside class="sider" id="sider">
       <div class="sider-logo">AI学伴管理后台</div>
@@ -19,6 +22,7 @@
       <header class="header">
         <button class="header-trigger" id="menu-toggle" aria-label="菜单">☰</button>
         <div class="header-breadcrumb" id="breadcrumb"></div>
+        <button type="button" class="company-workbench-switch" id="workbench-switch">切换至数据看板</button>
         <div class="header-user">
           <span class="user-avatar">超</span>
           <span>超管</span>
@@ -44,6 +48,7 @@
   </div>
   <button class="req-float-btn" id="req-float-btn" type="button" aria-label="打开需求说明">?</button>
   <div class="toast-container" id="toast-container"></div>
+  <div id="mode-verify-root"></div>
   <div class="modal-overlay" id="modal-overlay" hidden>
     <div class="modal modal-xl" id="modal">
       <div class="modal-header">
@@ -79,6 +84,7 @@
   <script src="assets/js/restore-device-modal.js"></script>
   <script src="assets/js/carousel-config.js?v=20260805d"></script>
   <script src="assets/js/pages.js?v=20260828a"></script>
+  <script src="assets/js/company-dashboard.js"></script>
   <script src="assets/js/app.js"></script>
 </body>
 </html>
