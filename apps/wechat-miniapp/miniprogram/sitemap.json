@@ -1,4 +1,4 @@
 {
-  "desc": "AI学伴小程序页面索引配置",
+  "desc": "通晤纪AI伴学小程序页面索引配置",
   "rules": [{ "action": "allow", "page": "*" }]
 }

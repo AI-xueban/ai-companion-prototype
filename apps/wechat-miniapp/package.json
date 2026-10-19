@@ -2,7 +2,7 @@
   "name": "ai-companion-wechat-miniapp",
   "private": true,
   "version": "0.1.0",
-  "description": "AI 学伴学生、家长与教师微信小程序",
+  "description": "通晤纪AI伴学学生、家长与教师微信小程序",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "preview": "node preview/server.mjs"
