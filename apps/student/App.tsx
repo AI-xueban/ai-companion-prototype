@@ -20,6 +20,8 @@ import { isKgMicroLessonTask, KG_SCOPE_SECTION_PRACTICE } from './utils/kgMicroL
 import { AssessmentFlow } from './components/Assessment/AssessmentFlow';
 import { CoinStoreModal } from './components/Store/CoinStoreModal';
 import { DemoControls } from './components/Demo/DemoControls'; 
+import { DeviceLockDemo, type DemoLockType } from './components/Demo/DeviceLockDemo';
+import { createWorldLockNotification, type StudentNotification } from './data/studentNotifications';
 import { EssayLabContainer } from './components/EssayLab/EssayLabContainer';  
 import { LumiSpace } from './components/LumiSpace/LumiSpace';
 import { generateDailyPlan, setMockPersona, getUserGrowthData, completeMockAssessment, setMockNewbieCalibrated, resetMockStateForDemo } from './services/geminiService';
@@ -135,6 +137,9 @@ const App: React.FC = () => {
   // --- Global Mode State ---
   const [appMode, setAppMode] = useState<'student' | 'teacher'>('student');
   const [teacherEntryRole, setTeacherEntryRole] = useState<TeacherPortalRole>('teacher');
+  const [demoLockScreen, setDemoLockScreen] = useState<DemoLockType | null>(null);
+  const [worldLocked, setWorldLocked] = useState(false);
+  const [worldLockNotifications, setWorldLockNotifications] = useState<StudentNotification[]>([]);
 
   // --- Global Journey State ---
   const [journeyPhase, setJourneyPhase] = useState<UserJourneyPhase>('dashboard');
@@ -434,6 +439,8 @@ const App: React.FC = () => {
   };
 
   const handleResetDemoData = () => {
+      setWorldLocked(false);
+      setWorldLockNotifications([]);
       resetDemoPersistentState();
       resetMockStateForDemo();
       setDonationStageDemoStatus('募集中');
@@ -821,6 +828,16 @@ const App: React.FC = () => {
       onResetDemoData={handleResetDemoData}
       onDemoLeagueSparse={handleDemoLeagueSparse}
       onDemoAchievement={handleDemoAchievement}
+      onDemoLockScreen={(type) => {
+        setAppMode('student');
+        setDemoLockScreen(type);
+      }}
+      worldLocked={worldLocked}
+      onDemoWorldLockToggle={() => {
+        const nextLocked = !worldLocked;
+        setWorldLocked(nextLocked);
+        setWorldLockNotifications((current) => [createWorldLockNotification(nextLocked), ...current]);
+      }}
     />
   ) : null;
 
@@ -961,7 +978,7 @@ const App: React.FC = () => {
                     {activeTab === 'today' ? (
                         <div className="flex-1 relative overflow-hidden">
                             <DashboardImmersive 
-                                showMoreAppsEntry={!rewardAccount && !isDailyConquerActive && !isCharityPageOpen && !isTextbooksPageOpen && !isSettingsOpen && !isStoreOpen && !isReportOpen && !isMoodModalOpen && !isEssayLabOpen && !showQuestionBankModal && !isSelfPracticeOpen && !isLessonPracticeOpen && !isSyncStudyPickerOpen && !isSyncStudySubjectOpen && !showOnboardingOverlay && !showWelcomeGift}
+                                showMoreAppsEntry={!demoLockScreen && !rewardAccount && !isDailyConquerActive && !isCharityPageOpen && !isTextbooksPageOpen && !isSettingsOpen && !isStoreOpen && !isReportOpen && !isMoodModalOpen && !isEssayLabOpen && !showQuestionBankModal && !isSelfPracticeOpen && !isLessonPracticeOpen && !isSyncStudyPickerOpen && !isSyncStudySubjectOpen && !showOnboardingOverlay && !showWelcomeGift}
                                 key={`immersive-${currentUserPersona}-${newbieLeagueOpenSignal}-${dataVersion}`}
                                 userName={userName}
                                 userLevel={personaProgress.level}
@@ -991,6 +1008,8 @@ const App: React.FC = () => {
                                 onTutorLayerOpenChange={setIsTutorLayerOpen}
                                 onNotificationLayerOpenChange={setIsNotificationLayerOpen}
                                 onDiscoveryFullPageOpenChange={setIsDiscoveryFullPageOpen}
+                                worldLocked={worldLocked}
+                                worldLockNotifications={worldLockNotifications}
                                 onOpenHomeTool={handleOpenHomeTool}
                                 onGoStudy={() => {
                                     if (isJuniorGrade(userGrade, schoolSystem)) {
@@ -1121,7 +1140,7 @@ const App: React.FC = () => {
                     </div>
                     )}
                     <AnimatePresence initial={false}>
-                        {!rewardAccount && !isDailyConquerActive && !isMistakeVaultDetailOpen && !isSyncSectionPageOpen && !(activeTab === 'subject' && mapMode === 'sync' && personalizedScreen !== 'main') && !isCharityPageOpen && !isTextbooksPageOpen && !isCameraFlowOpen && !isTutorLayerOpen && !isNotificationLayerOpen && !isDiscoveryFullPageOpen && !isSettingsOpen && !isStoreOpen && !isReportOpen && !isMoodModalOpen && !isEssayLabOpen && !showQuestionBankModal && !isSelfPracticeOpen && !isLessonPracticeOpen && !isSyncStudyPickerOpen && !isSyncStudySubjectOpen && !isLumiChromeHidden && (
+                        {!demoLockScreen && !rewardAccount && !isDailyConquerActive && !isMistakeVaultDetailOpen && !isSyncSectionPageOpen && !(activeTab === 'subject' && mapMode === 'sync' && personalizedScreen !== 'main') && !isCharityPageOpen && !isTextbooksPageOpen && !isCameraFlowOpen && !isTutorLayerOpen && !isNotificationLayerOpen && !isDiscoveryFullPageOpen && !isSettingsOpen && !isStoreOpen && !isReportOpen && !isMoodModalOpen && !isEssayLabOpen && !showQuestionBankModal && !isSelfPracticeOpen && !isLessonPracticeOpen && !isSyncStudyPickerOpen && !isSyncStudySubjectOpen && !isLumiChromeHidden && (
                             <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
                         )}
                     </AnimatePresence>
@@ -1410,6 +1429,13 @@ const App: React.FC = () => {
           achievement={achievementOverlay}
           onClaim={handleAchievementClaim}
         />
+
+        {demoLockScreen && (
+          <DeviceLockDemo
+            type={demoLockScreen}
+            onExit={() => setDemoLockScreen(null)}
+          />
+        )}
 
         <QuestionBankModal
             isOpen={showQuestionBankModal}

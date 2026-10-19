@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, User, Baby, X, ChevronRight, LayoutDashboard, RotateCcw, CheckCircle2, Trophy, Users, Sparkles } from 'lucide-react';
+import { Settings, User, Baby, X, ChevronRight, LayoutDashboard, RotateCcw, CheckCircle2, Trophy, Users, Sparkles, LockKeyhole } from 'lucide-react';
 import { UserPersona } from '../../types';
 import type { DonationStageStatus } from '../../data/charityStage';
 import type { TeacherPortalRole } from '../Teacher/data/teacherAccess';
+import type { DemoLockType } from './DeviceLockDemo';
 
 interface DemoControlsProps {
     onSwitchPersona: (type: UserPersona, calibrated?: boolean, grade?: string) => void;
@@ -21,6 +22,9 @@ interface DemoControlsProps {
     onResetDemoData?: () => void;
     onDemoLeagueSparse?: () => void;
     onDemoAchievement?: (achievementId: string) => void;
+    onDemoLockScreen?: (type: DemoLockType) => void;
+    worldLocked?: boolean;
+    onDemoWorldLockToggle?: () => void;
 }
 
 export const DemoControls: React.FC<DemoControlsProps> = ({ 
@@ -38,6 +42,9 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
     onResetDemoData,
     onDemoLeagueSparse,
     onDemoAchievement,
+    onDemoLockScreen,
+    worldLocked = false,
+    onDemoWorldLockToggle,
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [resetComplete, setResetComplete] = useState(false);
@@ -174,6 +181,33 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
                                 </div>
                                 <ChevronRight size={14} className="text-gray-600 group-hover:text-white" />
                             </button>
+                        </div>
+
+                        <div className="space-y-3 border-t border-white/10 pt-2">
+                            <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                                <LockKeyhole size={11} className="text-violet-300" />
+                                学生端锁屏演示
+                            </p>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => { onDemoWorldLockToggle?.(); setIsOpen(false); }}
+                                    aria-pressed={worldLocked}
+                                    className="flex min-h-20 flex-col items-center justify-center rounded-xl border border-sky-300/20 bg-sky-400/10 px-2 text-center transition-colors hover:bg-sky-400/20"
+                                >
+                                    <Sparkles size={20} className="text-sky-300" />
+                                    <span className="mt-2 text-[11px] font-bold text-white">万象视界锁屏</span>
+                                    <span className="mt-1 text-[10px] text-sky-200">{worldLocked ? '已锁定 · 点击解锁' : '未锁定 · 点击锁定'}</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => { onDemoLockScreen?.('teacher'); setIsOpen(false); }}
+                                    className="flex min-h-20 flex-col items-center justify-center rounded-xl border border-violet-300/20 bg-violet-400/10 px-2 text-center transition-colors hover:bg-violet-400/20"
+                                >
+                                    <LockKeyhole size={20} className="text-violet-300" />
+                                    <span className="mt-2 text-[11px] font-bold text-white">教师端手动锁屏</span>
+                                </button>
+                            </div>
                         </div>
 
                         <div className="space-y-3 pt-2 border-t border-white/10">
