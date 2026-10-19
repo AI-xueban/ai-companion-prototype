@@ -124,8 +124,19 @@ button {
   background: rgba(59, 130, 246, 0.08);
 }
 
-#simulateScan {
+#simulateBorrowControl {
   margin-top: 8px;
+}
+
+.nav-demo-important {
+  border-style: solid;
+  border-color: rgba(245, 158, 11, 0.55);
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.nav-demo-important:hover {
+  background: rgba(245, 158, 11, 0.18);
 }
 
 .nav-demo:hover {
@@ -2033,6 +2044,90 @@ button {
 .confirm-cancel:active,
 .confirm-ok:active {
   transform: scale(0.98);
+}
+
+/* —— 借用管控 —— */
+.borrow-control-mask {
+  place-items: center;
+  padding: 48px;
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: blur(8px);
+}
+
+.borrow-control-card {
+  width: min(820px, 100%);
+  padding: 56px 56px 48px;
+  border-color: #fed7aa;
+  box-shadow: 0 30px 80px rgba(180, 83, 9, 0.2);
+}
+
+.borrow-control-icon {
+  width: 132px;
+  height: 132px;
+  margin: 0 auto 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff7ed;
+  border: 2px solid #fdba74;
+}
+
+.borrow-control-clock {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border: 7px solid #f59e0b;
+  border-radius: 50%;
+}
+
+.borrow-control-clock::before,
+.borrow-control-clock::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 7px;
+  border-radius: 999px;
+  background: #f59e0b;
+  transform-origin: 50% 0;
+}
+
+.borrow-control-clock::before {
+  height: 23px;
+  transform: translate(-50%, 0) rotate(180deg);
+}
+
+.borrow-control-clock::after {
+  height: 19px;
+  transform: translate(-50%, 0) rotate(125deg);
+}
+
+.borrow-control-card h3 {
+  margin-bottom: 22px;
+}
+
+.confirm-card > .borrow-control-message {
+  font-size: 30px;
+  line-height: 1.75;
+  color: #475569;
+}
+
+.borrow-control-message strong {
+  display: inline-block;
+  margin: 12px 0;
+  color: #c2410c;
+  font-size: 34px;
+  line-height: 1.5;
+}
+
+.borrow-control-actions {
+  grid-template-columns: 1fr;
+  margin-top: 40px;
+}
+
+.borrow-control-actions .confirm-ok {
+  height: 88px;
+  background: linear-gradient(180deg, #60a5fa 0%, #2563eb 100%);
 }
 
 /* —— 取出成功弹窗 —— */
