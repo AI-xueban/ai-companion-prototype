@@ -1,0 +1,34 @@
+.parent-hw-page{min-height:100vh;padding:0 28rpx 70rpx;background:#f7f8fa;color:#263443;font-size:26rpx}.parent-hw-head{margin:0 -28rpx;padding:45rpx 28rpx 38rpx;background:linear-gradient(145deg,#eaf5ff,#fff)}.parent-hw-eyebrow{color:#6f95b1;font-size:23rpx}.parent-hw-title{margin-top:15rpx;font-size:43rpx;font-weight:700}.parent-hw-desc{margin-top:12rpx;color:#7a8d9b;font-size:24rpx;line-height:1.6}.parent-hw-section{margin:32rpx 0 18rpx;font-size:30rpx;font-weight:700}.parent-hw-card{margin-top:17rpx;padding:27rpx;border-radius:22rpx;background:#fff;box-shadow:0 8rpx 28rpx rgba(34,71,99,.04)}.parent-hw-row{display:flex;justify-content:space-between;align-items:center;gap:18rpx}.parent-hw-name{font-size:29rpx;font-weight:700}.parent-hw-badge{flex:none;padding:7rpx 15rpx;border-radius:50rpx;background:#eaf4fc;color:#4c8ab1;font-size:21rpx}.parent-hw-muted{margin-top:14rpx;color:#8a99a5;font-size:23rpx;line-height:1.5}.parent-hw-progress{margin-top:22rpx;padding-top:20rpx;border-top:1rpx solid #edf0f4;color:#788995}.done{color:#31a58a;font-weight:700}.todo{color:#458fc1;font-weight:700}.parent-hw-back{margin:24rpx 0;color:#4e8fb9}.parent-hw-submitted{margin-top:18rpx;color:#32a084;font-size:23rpx}.parent-hw-button{height:77rpx;line-height:77rpx;margin-top:22rpx;border:0;border-radius:13rpx;background:#e9f5fd;color:#408bb8;font-size:25rpx;font-weight:700}.parent-hw-button::after{border:0}.parent-hw-note{padding:22rpx 4rpx;color:#9ba7b0;font-size:21rpx;line-height:1.6}
+.parent-hw-material{display:block;width:100%;margin-top:18rpx;border-radius:12rpx}
+.parent-hw-summary{margin-top:16rpx;color:#435f74;font-size:24rpx;line-height:1.6}.parent-hw-pending{margin-top:22rpx;padding:20rpx;border:1rpx solid #cce3ef;border-radius:15rpx;background:#f3faff}.parent-hw-pending .parent-hw-button{background:#4c9ac2;color:#fff}.parent-hw-cancel{padding:18rpx;text-align:center;color:#5a7f97}.parent-hw-share-toggle{margin:30rpx 0 14rpx;padding:23rpx;border-radius:14rpx;background:#eaf4fa;color:#367da3;font-weight:700}.parent-hw-card audio,.parent-hw-pending audio{display:block;width:100%;margin-top:18rpx}
+.parent-hw-child-line{display:flex;align-items:center;justify-content:space-between;gap:10rpx}.parent-hw-child-trigger{flex:none;color:#287fa8;font-size:22rpx;font-weight:700}.parent-hw-child-menu{margin-top:12rpx;padding:6rpx;border-radius:15rpx;background:#fff;box-shadow:0 8rpx 24rpx rgba(35,59,85,.09)}.parent-hw-child-option{padding:17rpx 14rpx;color:#526c83;font-size:23rpx}.parent-hw-child-option+.parent-hw-child-option{border-top:1rpx solid #edf1f5}.parent-hw-child-option.active{color:#287fa8;font-weight:700}
+
+.parent-hw-page{padding-bottom:calc(160rpx + env(safe-area-inset-bottom))}
+.parent-hw-business-nav{position:fixed;left:0;right:0;bottom:0;z-index:8;display:flex;align-items:center;height:90rpx;padding:0 28rpx env(safe-area-inset-bottom);background:#fff;box-shadow:0 -5rpx 22rpx rgba(34,71,99,.08)}
+.parent-hw-business-nav view{flex:1;text-align:center;color:#7c92a5;font-size:26rpx;line-height:90rpx}
+.parent-hw-business-nav view.active{color:#287fa8;font-weight:700}
+.parent-hw-empty{padding:32rpx 26rpx;border-radius:18rpx;background:#fff;color:#8396a6;line-height:1.6}
+.parent-hw-completed-head{display:flex;justify-content:space-between;margin-top:34rpx;padding:22rpx 4rpx;color:#405b70;font-size:27rpx;font-weight:700}.parent-hw-completed-head text{color:#4c8ab1;font-size:23rpx}.parent-hw-done-card{box-shadow:none;background:#fdfefe}
+.parent-hw-badge.overdue{background:#fff0eb;color:#b75d3c}.parent-hw-badge.soon{background:#fff5db;color:#9a6c19}.parent-hw-badge.partial{background:#ecf3ff;color:#4b74a8}.parent-hw-badge.done{background:#e6f7f0;color:#278a6d}
+.parent-hw-deadline-note{margin-top:12rpx;color:#54718a;font-size:23rpx;line-height:1.5}.parent-hw-disclosure,.parent-hw-replace-note{margin-top:18rpx;padding:20rpx 22rpx;border-radius:15rpx;background:#fff4e8;color:#8b5b24;font-size:23rpx;line-height:1.55}.parent-hw-private-note{margin:18rpx 2rpx;color:#7890a1;font-size:22rpx}
+.parent-hw-head{padding-top:28rpx;padding-bottom:28rpx;background:linear-gradient(135deg,#fff0ec,#fffaf7)}
+.parent-hw-card.parent-hw-overdue{border-left:7rpx solid #e17d65;padding-left:23rpx}
+.parent-hw-card.parent-hw-soon{border-left:7rpx solid #e0ad47;padding-left:23rpx}
+.parent-hw-card.parent-hw-partial{border-left:7rpx solid #759bd0;padding-left:23rpx}
+.parent-hw-completed-head{border-top:1rpx solid #dfe7eb}
+.parent-hw-head-compact{padding-top:22rpx;padding-bottom:22rpx;background:#fff7f5}
+.parent-hw-head-compact .parent-hw-eyebrow{font-size:23rpx}
+.parent-hw-head-compact+.parent-hw-section{margin-top:22rpx}
+
+/* 家长作业与学习报告共用珊瑚橙重点色。 */
+.parent-hw-page{background:#fff;color:#193349}
+.parent-hw-head,.parent-hw-head-compact{background:#fff7f3;border-bottom:1rpx solid #f2e8e3}
+.parent-hw-eyebrow,.parent-hw-muted{color:#657789}
+.parent-hw-badge{background:#fff1e9;color:#dc6a4d}
+.parent-hw-badge.partial{background:#fff1e9;color:#dc6a4d}
+.parent-hw-button,.parent-hw-share-toggle{background:#fff1e9;color:#dc6a4d}
+.parent-hw-pending{border-color:#ffd8c9;background:#fff8f5}
+.parent-hw-pending .parent-hw-button{background:#ef795a;color:#fff}
+.parent-hw-child-trigger,.parent-hw-child-option.active,.parent-hw-business-nav view.active,.parent-hw-completed-head text,.parent-hw-back,.parent-hw-cancel,.todo{color:#dc6a4d}
+.parent-hw-done-card{background:#fffdfb}
+.parent-hw-error{margin:18rpx 0;padding:22rpx;border:1rpx solid #ffd1c6;border-radius:16rpx;background:#fff4f0;color:#9f4937}.parent-hw-error-action{margin-top:14rpx;color:#dc6a4d;font-weight:700}.parent-hw-demo-entry{margin:10rpx 0 16rpx;color:#9a7b6f;font-size:21rpx;text-align:right}.parent-hw-demo-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10rpx;margin-bottom:18rpx}.parent-hw-demo-grid view{padding:16rpx;border-radius:12rpx;background:#fff4ef;color:#b85e47;text-align:center;font-size:22rpx}

@@ -1,17 +1,19 @@
 {
   "pages": [
     "pages/auth/login/index",
-    "pages/guardian/home/index"
+    "pages/guardian/home/index",
+    "pages/guardian/homework/index",
+    "pages/guardian/learning/index"
   ],
   "subpackages": [
     {
       "root": "pages/teacher",
       "name": "teacher",
-      "pages": ["home/index"]
+      "pages": ["home/index", "homework/index", "homework-series/index", "learning/index"]
     }
   ],
   "window": {
-    "navigationBarTitleText": "AI学伴",
+    "navigationBarTitleText": "通晤纪AI伴学",
     "navigationBarBackgroundColor": "#FFFFFF",
     "navigationBarTextStyle": "black",
     "backgroundColor": "#F6F8FC"

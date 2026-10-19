@@ -1,43 +1,18 @@
 <view class="page">
   <view wx:if="{{securityOpen}}" class="security-page">
-    <view class="security-back" bindtap="closeSecurity">‹ 返回教师工作台</view>
-    <view class="security-title">账号与安全</view>
-    <view class="security-card">
-      <view class="security-row"><view>登录账号</view><view>138****8000</view></view>
-      <view class="security-row"><view>微信绑定状态</view><view>{{wechatBound ? '已绑定' : '未绑定'}}</view></view>
-    </view>
-    <view wx:if="{{wechatBound}}" class="security-card security-unbind">
-      <view class="security-heading">解绑当前微信</view>
-      <view class="security-copy">解绑后需使用教师账号登录。为确认是你本人操作，请再次输入登录密码。</view>
-      <input class="security-input" password="true" placeholder="请输入登录密码完成二次验证" value="{{reauthPassword}}" bindinput="changeReauthPassword" />
-      <button class="security-button" bindtap="confirmUnbind">验证并解绑</button>
-      <view class="security-demo">原型演示密码：Demo@123456；正式解绑须由后端二次验证。</view>
-    </view>
+    <view class="security-back" bindtap="closeSecurity">‹ 返回工作台</view><view class="security-title">账号与安全</view>
+    <view class="security-card"><view class="security-row"><view>登录账号</view><view>138****8000</view></view><view class="security-row"><view>微信绑定状态</view><view>{{wechatBound ? '已绑定' : '未绑定'}}</view></view></view>
+    <view wx:if="{{wechatBound}}" class="security-card security-unbind"><view class="security-heading">解绑当前微信</view><view class="security-copy">解绑后需重新登录。请输入密码确认本人操作。</view><input class="security-input" password="true" placeholder="登录密码" value="{{reauthPassword}}" bindinput="changeReauthPassword" /><button class="security-button" bindtap="confirmUnbind">验证并解绑</button><view class="security-demo">演示密码：123456；正式验证由服务端完成。</view></view>
   </view>
   <view wx:else>
-  <view class="hero">
-    <view class="top-row"><view class="school">{{schoolName}}</view><view class="top-actions"><view class="security-link" bindtap="openSecurity">账号与安全</view><view class="logout" bindtap="logout">退出</view></view></view>
-    <view class="greeting">{{teacherName}}，你好</view>
-    <view class="hero-subtitle">选择任教班级，查看对应学科的教学工作。</view>
-  </view>
-
-  <view class="section-title">我的任教班级</view>
-  <view class="class-list">
-    <view wx:for="{{classes}}" wx:key="id" class="class-card {{selectedClassId === item.id ? 'selected' : ''}}" data-id="{{item.id}}" bindtap="selectClass">
-      <view><view class="class-name">{{item.name}}</view><view class="class-meta">{{item.subject}} · {{item.students}} 名学生</view></view>
-      <view wx:if="{{item.isHeadTeacher}}" class="role-tag">班主任</view>
-    </view>
-  </view>
-
-  <view class="section-title">{{selectedClass.name}} · {{selectedClass.subject}}</view>
-  <view class="module-grid">
-    <view class="module" data-name="班级学情" bindtap="openModule"><view class="module-icon">学</view><view class="module-name">班级学情</view><view class="module-desc">学习概况与趋势</view></view>
-    <view class="module" data-name="学生学情" bindtap="openModule"><view class="module-icon">生</view><view class="module-name">学生学情</view><view class="module-desc">查看班内学生</view></view>
-    <view class="module" data-name="错题分析" bindtap="openModule"><view class="module-icon">题</view><view class="module-name">错题分析</view><view class="module-desc">定位共性问题</view></view>
-    <view class="module" data-name="学习时长" bindtap="openModule"><view class="module-icon">时</view><view class="module-name">学习时长</view><view class="module-desc">查看学习投入</view></view>
-    <view class="module" data-name="作业" bindtap="openModule"><view class="module-icon">作</view><view class="module-name">作业</view><view class="module-desc">查看与发布作业</view></view>
-    <view class="module" data-name="答案管控" bindtap="openModule"><view class="module-icon">控</view><view class="module-name">答案管控</view><view class="module-desc">设置答案开放</view></view>
-  </view>
-  <view class="demo-note">原型演示数据。正式系统由服务端按教师、班级、学科和学期校验每次请求。</view>
+    <view class="hero"><view class="top-row"><view class="school">{{schoolName}}</view><view class="top-actions"><view class="security-link" bindtap="openSecurity">账号与安全</view><view class="logout" bindtap="logout">退出</view></view></view><view class="greeting">{{headline}}</view><view class="hero-subtitle">{{teacherName}} · {{scopeLabel}}</view></view>
+    <view wx:if="{{views.length > 1}}"><view class="section-title">工作视角</view><view class="work-view-list"><view wx:for="{{views}}" wx:key="id" class="work-view {{item.selected ? 'active' : ''}}" data-view="{{item.id}}" bindtap="changeView">{{item.label}}</view></view></view>
+    <view class="section-title">数据范围</view>
+    <view wx:if="{{scope.view === 'school'}}" class="work-view-list"><view class="work-view {{scope.grade === 'all' ? 'active' : ''}}" data-grade="all" bindtap="changeGrade">全校</view><view class="work-view {{scope.grade === 7 ? 'active' : ''}}" data-grade="7" bindtap="changeGrade">七年级</view><view class="work-view {{scope.grade === 8 ? 'active' : ''}}" data-grade="8" bindtap="changeGrade">八年级</view></view>
+    <scroll-view scroll-x="true" class="class-scroll"><view class="work-view-list"><view wx:if="{{scope.view === 'school'}}" class="work-view {{scope.classId === 'all' ? 'active' : ''}}" data-id="all" bindtap="changeClass">全部班级</view><view wx:for="{{classes}}" wx:key="id" class="work-view {{item.selected ? 'active' : ''}}" data-id="{{item.id}}" bindtap="changeClass">{{item.name}}</view></view></scroll-view>
+    <view class="work-view-list work-period"><view class="work-view {{scope.period === '7d' ? 'active' : ''}}" data-period="7d" bindtap="changePeriod">近 7 天</view><view class="work-view {{scope.period === '30d' ? 'active' : ''}}" data-period="30d" bindtap="changePeriod">近 30 天</view></view>
+    <view class="work-summary"><view><text>{{learned}}</text>学习人数 / {{enrolled}} 人</view><view><text>{{minutes}}</text>学习分钟</view><view><text>{{taskCount}}</text>范围内全部任务</view></view>
+    <view class="section-title">进入工作</view><view class="module-grid"><view class="module" bindtap="openLearning"><view class="module-icon">学</view><view class="module-name">{{scope.view === 'school' ? '学校学情' : scope.view === 'homeroom' ? '班级学情' : '学科学情'}}</view><view class="module-desc">概览、学生、题目与时长 ›</view></view><view class="module" bindtap="openHomework"><view class="module-icon">作</view><view class="module-name">作业与打卡</view><view class="module-desc">{{scope.view === 'school' ? '全校只读汇总与提交' : scope.view === 'homeroom' ? '本班完成与未交学生' : '自己布置的作业与逐题结果'}} ›</view></view><view wx:if="{{scope.view !== 'school'}}" class="module" bindtap="openControl"><view class="module-icon">控</view><view class="module-name">答案管控</view><view class="module-desc">设置答案开放 ›</view></view></view>
+    <view class="demo-note">固定演示数据。切换视角会重新限定班级、学科与作业权限；正式系统须由服务端逐次验证。</view>
   </view>
 </view>

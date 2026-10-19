@@ -1,0 +1,18 @@
+<view class="series-page">
+  <view wx:if="{{hasSeries}}">
+    <view class="series-overview">
+      <view class="series-title">{{title}}</view>
+      <view class="series-meta">{{meta}}</view>
+      <view wx:if="{{description}}" class="series-description">{{description}}</view>
+      <view class="series-total"><text>累计完成</text><view><text class="series-total-num">{{completed}} / {{target}}</text><text>人次</text></view></view>
+    </view>
+    <view class="series-section">逐日进度</view>
+    <view wx:for="{{phases}}" wx:key="id" class="series-day" data-id="{{item.id}}" bindtap="openPhase">
+      <view class="series-day-head"><view class="series-day-title">第{{item.phaseNo}}期 · {{item.date}}</view><view class="series-status">{{item.status}}</view></view>
+      <view class="series-deadline">截止 {{item.time}}</view>
+      <view class="series-day-bottom"><view>完成 {{item.completed}} / {{item.target}} 人</view><view class="series-link">{{item.rate}}% ›</view></view>
+      <view class="series-meter"><view style="width:{{item.rate}}%"></view></view>
+    </view>
+  </view>
+  <view wx:else class="series-empty"><view>当前范围暂无可查看的每日记录</view><view class="series-back" bindtap="back">返回任务列表</view></view>
+</view>
