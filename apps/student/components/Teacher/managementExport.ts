@@ -49,6 +49,11 @@ async function zip(files: { name: string; data: Uint8Array }[], isCancelled: () 
   return new Blob([...parts, ...directory, end], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 }
 
+export async function createZipArchive(files: { name: string; data: Uint8Array }[], isCancelled: () => boolean): Promise<Blob> {
+  const archive = await zip(files, isCancelled);
+  return new Blob([archive], { type: 'application/zip' });
+}
+
 export async function createManagementWorkbook(source: ExportSheet[], progress: (percent: number) => void, isCancelled: () => boolean): Promise<Blob> {
   const total = source.reduce((count, sheet) => count + sheet.rows.length, 0);
   if (total > EXPORT_LIMIT) throw new Error('超过单次 1 万条上限，请缩小筛选范围后下载');

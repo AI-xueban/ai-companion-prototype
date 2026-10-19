@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { 
-  User, 
   Mail, 
   Phone, 
   Shield, 
@@ -30,8 +29,7 @@ export const TeacherProfile: React.FC = () => {
 
   const teacherInfo = {
     name: '张雨薇',
-    role: '数学教研组长',
-    employeeId: 'T202308001',
+    position: '数学教研组长',
     email: 'zhangyuwei@turing-edu.com',
     phone: '138****8888',
     department: '初中数学组',
@@ -108,7 +106,7 @@ export const TeacherProfile: React.FC = () => {
                 <div>
                   <h1 className="text-2xl font-black text-slate-900">{teacherInfo.name}</h1>
                   <p className="text-slate-500 font-medium flex items-center gap-2 mt-1">
-                    <span className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-600 font-bold">{teacherInfo.role}</span>
+                    <span className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-600 font-bold">{teacherInfo.position}</span>
                     <span className="text-slate-300">|</span>
                     <span className="text-sm">{teacherInfo.department}</span>
                   </p>
@@ -124,10 +122,6 @@ export const TeacherProfile: React.FC = () => {
                 <div className="flex items-center gap-2 text-slate-500">
                   <Phone size={14} className="text-slate-400" />
                   <span className="text-sm font-medium">{teacherInfo.phone}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-500">
-                  <User size={14} className="text-slate-400" />
-                  <span className="text-sm font-medium">工号: {teacherInfo.employeeId}</span>
                 </div>
               </div>
             </div>
