@@ -404,15 +404,12 @@
     <section class="demo-pane" data-demo-pane="parent">
       <div class="review-label">完整流程</div>
       <div class="parent-review-flows">
-        <button data-parent-scenario="first" onclick="startParentScenario('first')">首次绑定<small>扫码 · 验证 · 查看学情</small></button>
+        <button data-parent-scenario="first" onclick="startParentScenario('first')">首次绑定<small>扫码 · 手机号可跳过 · 查看学情</small></button>
         <button data-parent-scenario="returning" onclick="startParentScenario('returning')">再次进入<small>微信快捷登录</small></button>
+        <button data-parent-scenario="duplicateScan" onclick="startParentScenario('duplicateScan')">已绑定家长重复扫码<small>异常演示 · 同一个孩子无需重复绑定</small></button>
         <button data-parent-scenario="twoChildren" onclick="startParentScenario('twoChildren')">两个孩子<small>切换学情与作业</small></button>
         <button data-parent-scenario="otherDevice" onclick="startParentScenario('otherDevice')">同一微信在另一设备登录<small>新设备进入 · 原设备退出</small></button>
         <button data-parent-scenario="second" onclick="startParentScenario('second')">第二位家长申请<small>免扫码 · 主管理家长审核</small></button>
-        <button data-parent-scenario="third" onclick="startParentScenario('third')">第三位家长申请<small>由首位家长审核</small></button>
-        <button data-parent-scenario="fourth" onclick="startParentScenario('fourth')">第四位家长申请<small>由主管理家长审核</small></button>
-        <button data-parent-scenario="fifth" onclick="startParentScenario('fifth')">第五位家长申请<small>由主管理家长审核</small></button>
-        <button data-parent-scenario="sixth" onclick="startParentScenario('sixth')">第六位家长申请<small>最后一个绑定名额</small></button>
         <button data-parent-scenario="seventh" onclick="startParentScenario('seventh')">第七位家长申请<small>异常演示 · 绑定人数已满</small></button>
         <button data-parent-scenario="familyManage" onclick="startParentScenario('familyManage')">家长管理<small>邀请 · 审核 · 解除绑定</small></button>
         <button data-parent-scenario="ordinary" onclick="startParentScenario('ordinary')">普通家长权限<small>查看名单 · 自己解绑</small></button>
