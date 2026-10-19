@@ -1,1 +1,4 @@
-.title { font-size: 48rpx; font-weight: 700; }
+.page-desc { margin-bottom: 8rpx; }
+.guardian-child-options{display:flex;gap:12rpx;margin:0 0 16rpx}.guardian-child-option{padding:12rpx 25rpx;border-radius:30rpx;background:#eef3f8;color:#637e96;font-size:24rpx}.guardian-child-option.active{background:#287fa8;color:#fff;font-weight:700}
+.guardian-child-option.active{background:#ef795a}
+.page .cell-arrow{color:#dc6a4d}

@@ -1,5 +1,6 @@
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { Menu, X } from 'lucide-react';
 import { TeacherSidebar } from './Layout/TeacherSidebar';
 import { TeacherHeader } from './Layout/TeacherHeader';
 import { SchoolLearningDashboard } from './Dashboard/SchoolLearningDashboard';
@@ -18,6 +19,7 @@ import { messages } from './data/mockTeacherData';
 import { DEMO_TEACHER_ACCOUNTS, TeacherPortalRole, TeacherPortalUser } from './data/teacherAccess';
 import { SchoolAdminManagement } from './SchoolAdminManagement';
 import { DeviceManagement } from './DeviceManagement/DeviceManagement';
+import { SchoolDeviceControl } from './DeviceManagement/SchoolDeviceControl';
 
 interface TeacherAppProps {
     onSwitchBack: () => void;
@@ -26,6 +28,13 @@ interface TeacherAppProps {
 
 export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRole = 'teacher' }) => {
   const [activePage, setActivePage] = useState('dashboard');
+  const [deviceNavOpen, setDeviceNavOpen] = useState(false);
+  useEffect(() => {
+    if (!deviceNavOpen) return;
+    const handleKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setDeviceNavOpen(false); };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [deviceNavOpen]);
   const [deviceMenuPage, setDeviceMenuPage] = useState<string | null>(null);
   const [loggedIn, setLoggedIn] = useState(false);
   const [teacherUser, setTeacherUser] = useState<TeacherPortalUser | null>(null);
@@ -97,7 +106,7 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRol
   const canOpenPage = (page: string) => {
     if (!teacherUser) return false;
     if (['dashboard', 'analytics', 'profiles', 'incentives'].includes(page) && !teacherUser.homeroomClassIds.length && !teacherUser.teachingAssignments.length) return false;
-    return allowedPages[teacherUser.role].includes(page);
+    return (page === 'school-device-control' && teacherUser.role === 'school-admin') || allowedPages[teacherUser.role].includes(page);
   };
   const navigate = (page: string) => {
     if (canOpenPage(page)) {
@@ -131,6 +140,8 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRol
               }} onStudents={filter => { setSchoolPopulation(filter); setSchoolPanel('profiles'); }} onClass={classId => {
                 setSchoolScope(scope => ({ ...scope, classId, subject: 'all' })); setSchoolFeature('all'); setReportDemoState('normal'); setSchoolPanel('class');
               }} />;
+          case 'school-device-control':
+              return teacherUser.role === 'school-admin' ? <SchoolDeviceControl currentUser={teacherUser} /> : null;
           case 'school-device-usage':
               return <div className="flex h-full flex-col"><div className="shrink-0 border-b border-slate-200 bg-white px-6 py-5 lg:px-8"><h1 className="text-2xl font-black text-slate-900">全校设备使用</h1><p className="mt-1 text-sm text-slate-500">{teacherUser.schoolName} · 查看平板借用、归还及异常记录；设备借用不等于学伴应用内学习。</p><div className="mt-4 flex gap-2">{([['overview','设备使用概览'],['usage','借还使用明细']] as const).map(([id,label]) => <button key={id} type="button" aria-pressed={schoolDeviceTab === id} onClick={() => setSchoolDeviceTab(id)} className={`rounded-lg px-3 py-2 text-xs font-bold ${schoolDeviceTab === id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>{label}</button>)}</div></div><div className="min-h-0 flex-1"><DeviceManagement initialView={schoolDeviceTab} currentUser={teacherUser} /></div></div>;
           case 'dashboard':
@@ -203,12 +214,14 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRol
   }
 
   return (
-    <div className="flex h-screen w-screen bg-[#F8F9FC] text-gray-900 overflow-hidden font-sans">
+    <div className={`flex h-screen w-screen bg-[#F8F9FC] text-gray-900 overflow-hidden font-sans ${activePage === 'school-device-control' ? 'dc-shell' : ''}`} data-nav-open={deviceNavOpen}>
+      {activePage === 'school-device-control' && deviceNavOpen && <button type="button" className="dc-nav-backdrop" aria-label="关闭导航菜单" onClick={() => setDeviceNavOpen(false)} />}
+      {activePage === 'school-device-control' && deviceNavOpen && <button type="button" className="dc-nav-close" aria-label="收起导航菜单" onClick={() => setDeviceNavOpen(false)}><X size={18} /></button>}
       
       {/* 1. Sidebar (Fixed Left) */}
       <TeacherSidebar 
         activePage={deviceMenuPage ?? activePage}
-        onNavigate={navigate}
+        onNavigate={page => { navigate(page); setDeviceNavOpen(false); }}
         onLogout={handleLogout}
         onSwitchToBoard={teacherUser.role === 'school-admin' ? () => { setBoardPasswordOpen(true); setBoardPassword(''); setBoardPasswordError(''); } : undefined}
         user={teacherUser}
@@ -216,6 +229,7 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRol
 
       {/* 2. Main Content Area (Flex Right) */}
       <div className="flex-1 flex flex-col min-w-0">
+        {activePage === 'school-device-control' && <div className="dc-mobile-bar"><button type="button" aria-label="打开导航菜单" aria-controls="teacher-sidebar" aria-expanded={deviceNavOpen} onClick={() => setDeviceNavOpen(open => !open)}><Menu size={17} />菜单</button><span>学校管理</span></div>}
 
         {/* Header（个人中心和消息页隐藏班级切换条） */}
         {activePage !== 'profile' && activePage !== 'inbox' && (
@@ -225,7 +239,7 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRol
             user={teacherUser}
             currentClassId={currentClassId}
             onClassChange={setCurrentClassId}
-            showClassSelector={!isReportPage && !isSchoolReport && !['school-device-usage', 'device-overview', 'cabinet', 'tablet', 'device-usage', 'device-alert', 'face-library'].includes(activePage)}
+            showClassSelector={!isReportPage && !isSchoolReport && !['school-device-control', 'school-device-usage', 'device-overview', 'cabinet', 'tablet', 'device-usage', 'device-alert', 'face-library'].includes(activePage)}
             showMessages={!isReportPage && !isSchoolReport}
           />
         )}

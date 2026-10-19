@@ -33,6 +33,9 @@ jobs:
       - name: Install admin dependencies
         run: npm --prefix apps/admin install
 
+      - name: Install miniapp preview dependencies
+        run: npm --prefix apps/wechat-miniapp ci
+
       - name: Build student prototype
         run: npm --prefix apps/student run build -- --base=/ai-companion-prototype/
         env:
@@ -44,6 +47,9 @@ jobs:
       - name: Build cabinet prototype
         run: npm --prefix apps/cabinet run build
 
+      - name: Generate miniapp preview data
+        run: node apps/wechat-miniapp/preview/generate-offline.mjs
+
       - name: Combine websites
         run: |
           mkdir -p apps/student/dist/admin
@@ -51,6 +57,9 @@ jobs:
           mkdir -p apps/student/dist/cabinet
           cp apps/cabinet/index.html apps/cabinet/styles.css apps/cabinet/app.js apps/student/dist/cabinet/
           cp -R apps/cabinet/assets apps/student/dist/cabinet/assets
+          mkdir -p apps/student/dist/miniapp/miniprogram/assets
+          cp -R apps/wechat-miniapp/preview/. apps/student/dist/miniapp/
+          cp apps/wechat-miniapp/miniprogram/assets/homework-demo-paper.png apps/student/dist/miniapp/miniprogram/assets/
 
       - name: Upload website files
         uses: actions/upload-pages-artifact@v3

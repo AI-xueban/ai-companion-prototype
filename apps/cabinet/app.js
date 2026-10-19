@@ -41,6 +41,9 @@
   let enrollmentTimer = null;
   const faceStatus = document.getElementById("faceStatus");
   const faceDesc = document.getElementById("faceDesc");
+  let recognitionTimer = null;
+  const faceStart = document.getElementById("faceStart");
+  const faceToPassword = document.getElementById("faceToPassword");
   const faceRetry = document.getElementById("faceRetry");
   const faceConfirmModal = document.getElementById("faceConfirmModal");
   const recognizedStudentId = document.getElementById("recognizedStudentId");
@@ -62,15 +65,14 @@
   const toastMetaLabel1 = document.getElementById("toastMetaLabel1");
   const toastMetaLabel2 = document.getElementById("toastMetaLabel2");
   const toastCountdown = document.getElementById("toastCountdown");
-  const simulateScan = document.getElementById("simulateScan");
   const simulateScanFail = document.getElementById("simulateScanFail");
-  const simulateFaceSuccess = document.getElementById("simulateFaceSuccess");
-  const simulateFirstEnroll = document.getElementById("simulateFirstEnroll");
   const simulateFaceFail = document.getElementById("simulateFaceFail");
   const simulateEnrollFail = document.getElementById("simulateEnrollFail");
   const simulateNotCharging = document.getElementById("simulateNotCharging");
   const simulateDoorOpen = document.getElementById("simulateDoorOpen");
-  const simulateReturn = document.getElementById("simulateReturn");
+  const simulateBorrowControl = document.getElementById("simulateBorrowControl");
+  const borrowControlModal = document.getElementById("borrowControlModal");
+  const borrowControlAcknowledge = document.getElementById("borrowControlAcknowledge");
   const scanFailTip = document.getElementById("scanFailTip");
   const returnSlotNum = document.getElementById("returnSlotNum");
   const borrowConfirmModal = document.getElementById("borrowConfirmModal");
@@ -107,10 +109,11 @@
   let registrationLocked = false;
   let authenticatedStudentId = "";
   let enrollmentMode = "replace";
+  let borrowControlTimer = null;
   const faceProfiles = new Map();
   const faceEnrollmentLogs = [];
   const DEMO_NAV_SELECTOR =
-    "#simulateScan, #simulateScanFail, #simulateFaceSuccess, #simulateFirstEnroll, #simulateFaceFail, #simulateEnrollFail, #simulateNotCharging, #simulateDoorOpen, #simulateReturn";
+    "#simulateBorrowControl, #simulateScanFail, #simulateFaceFail, #simulateEnrollFail, #simulateNotCharging, #simulateDoorOpen";
 
   function fitScreen() {
     const stage = document.querySelector(".stage");
@@ -150,7 +153,7 @@
 
     if (name === "pickup") {
       mustEnrollAfterPassword = false;
-      showPasswordLogin();
+      resetFaceLogin();
       hideKeypad();
     } else {
       hideKeypad();
@@ -175,6 +178,10 @@
   }
 
   function resetFaceLogin() {
+    faceLogin.classList.remove("is-processing");
+    clearTimeout(recognitionTimer);
+    faceStart.hidden = false;
+    faceToPassword.hidden = false;
     faceConfirmModal.hidden = true;
     pickupPage.querySelector('[data-goto="home"]').hidden = false;
     faceBack.hidden = false;
@@ -184,9 +191,9 @@
     faceLogin.hidden = false;
     passwordLogin.hidden = true;
     faceEnroll.hidden = true;
-    faceStatus.textContent = "正在识别";
+    faceStatus.textContent = "人脸识别登录";
     faceStatus.className = "face-status is-recognizing";
-    faceDesc.textContent = "请正对屏幕，保持面部处于识别框内";
+    faceDesc.textContent = "请本人站到屏幕前，点击开始人脸识别";
     faceRetry.hidden = true;
     loginTip.hidden = true;
     studentId.value = "";
@@ -194,6 +201,7 @@
   }
 
   function showFaceSuccess() {
+    faceLogin.classList.remove("is-processing");
     faceLogin.hidden = false;
     passwordLogin.hidden = true;
     faceEnroll.hidden = true;
@@ -206,18 +214,24 @@
   }
 
   function showFaceFail(mode = enrollmentMode) {
+    faceLogin.classList.remove("is-processing");
+    clearTimeout(recognitionTimer);
+    faceStart.hidden = true;
+    faceToPassword.hidden = false;
     mustEnrollAfterPassword = false;
     enrollmentMode = mode;
     faceLogin.hidden = false;
     passwordLogin.hidden = true;
     faceEnroll.hidden = true;
-    faceStatus.textContent = "人脸库未找到匹配";
+    faceStatus.textContent = "未找到匹配人脸";
     faceStatus.className = "face-status is-failed";
-    faceDesc.textContent = "请重试，尚未注册人脸可返回首页进行人脸注册";
+    faceDesc.textContent = "请重新识别，或使用编号密码登录";
     faceRetry.hidden = false;
   }
 
   function showPasswordLogin() {
+    faceLogin.classList.remove("is-processing");
+    clearTimeout(recognitionTimer);
     document.getElementById("passwordToFace").hidden = mustEnrollAfterPassword;
     faceLogin.hidden = true;
     passwordLogin.hidden = false;
@@ -264,16 +278,16 @@
       operation: enrollmentMode === "first" ? "首次录入" : "覆盖原有人脸",
     });
 
-    enrollStatus.textContent = "录入成功";
-    enrollStatus.className = "face-status is-success";
-    enrollDesc.textContent = `人脸已绑定至编号 ${authenticatedStudentId}，即将返回首页`;
     faceEnrollStart.hidden = true;
+    const enrollmentToast = document.getElementById("enrollmentToast");
+    enrollmentToast.hidden = false;
     enrollmentTimer = window.setTimeout(() => {
+      enrollmentToast.hidden = true;
       registrationLocked = false;
       authenticatedStudentId = "";
       mustEnrollAfterPassword = false;
-      showPage("home");
-    }, 700);
+      showPage("pickup");
+    }, 1500);
   }
 
   function prepareOriginalSlotData() {
@@ -300,6 +314,19 @@
 
   function closeBorrowConfirm() {
     borrowConfirmModal.hidden = true;
+  }
+
+  function closeBorrowControl() {
+    clearTimeout(borrowControlTimer);
+    borrowControlTimer = null;
+    borrowControlModal.hidden = true;
+  }
+
+  function openBorrowControl() {
+    clearTimeout(borrowControlTimer);
+    showPage("home");
+    borrowControlModal.hidden = false;
+    borrowControlTimer = window.setTimeout(closeBorrowControl, 60 * 1000);
   }
 
   function openReturnConfirm() {
@@ -674,17 +701,29 @@
     faceBack.hidden = true;
   }
   document.getElementById("faceRegister").addEventListener("click", openRegistration);
-  document.getElementById("backToLoginChoice").addEventListener("click", showPasswordLogin);
+  document.getElementById("backToLoginChoice").addEventListener("click", () => showPage("home"));
   faceBack.addEventListener("click", () => showPage("home"));
   document.getElementById("passwordToFace").addEventListener("click", () => {
     hideKeypad();
     resetFaceLogin();
   });
-  faceRetry.addEventListener("click", resetFaceLogin);
+  function startRecognition() {
+    faceLogin.classList.add("is-processing");
+    clearTimeout(recognitionTimer);
+    faceStart.hidden = true;
+    faceToPassword.hidden = true;
+    faceRetry.hidden = true;
+    faceStatus.textContent = "正在识别";
+    faceDesc.textContent = "请将面部置于正方形框内，并确保框内只有本人";
+    recognitionTimer = window.setTimeout(showFaceSuccess, 1000);
+  }
+  faceStart.addEventListener("click", startRecognition);
+  faceToPassword.addEventListener("click", showPasswordLogin);
+  faceRetry.addEventListener("click", startRecognition);
   faceConfirmRetry.addEventListener("click", () => {
     faceConfirmModal.hidden = true;
     authenticatedStudentId = "";
-    showPasswordLogin();
+    resetFaceLogin();
   });
   faceConfirmLogin.addEventListener("click", () => {
     authenticatedStudentId = recognizedStudentId.textContent;
@@ -770,10 +809,12 @@
     if (e.target === successToast) closeSuccessToast();
   });
 
-  simulateScan.addEventListener("click", (e) => {
+  simulateBorrowControl.addEventListener("click", (e) => {
     e.stopPropagation();
-    openReturnFlow();
+    openBorrowControl();
   });
+
+  borrowControlAcknowledge.addEventListener("click", closeBorrowControl);
 
   document.querySelector(".scan-guide-card").addEventListener("click", (e) => {
     e.stopPropagation();
@@ -784,18 +825,6 @@
     e.stopPropagation();
     showPage("store", { keepScanFail: true });
     scanFailTip.hidden = false;
-  });
-
-  simulateFaceSuccess.addEventListener("click", (e) => {
-    if (registrationLocked) return;
-    e.stopPropagation();
-    showPage("pickup");
-    showFaceSuccess();
-  });
-
-  simulateFirstEnroll.addEventListener("click", (e) => {
-    e.stopPropagation();
-    openRegistration();
   });
 
   simulateFaceFail.addEventListener("click", (e) => {
@@ -811,22 +840,35 @@
   });
 
   function previewEnrollmentFailure(mode) {
-    if (!registrationLocked || faceEnrollStart.hidden) return;
     clearTimeout(enrollmentTimer);
-    const verifiedId = authenticatedStudentId || "20260001";
+    document.getElementById("enrollmentToast").hidden = true;
+    const verifiedId = authenticatedStudentId || "2026001";
+    registrationLocked = false;
+    showPage("pickup");
     mustEnrollAfterPassword = true;
     enrollmentMode = mode;
     authenticatedStudentId = verifiedId;
+    registrationLocked = true;
     showFaceEnrollment();
     faceEnrollStart.textContent = "重新录入";
-    enrollFailureAction.hidden = true;
-    enrollFailureAction.textContent = "使用已验证账号登录";
-    enrollStatus.textContent = "录入失败";
-    enrollStatus.className = "face-status is-failed";
-    enrollDesc.textContent = "本次人脸未保存，请重新录入";
-    enrollNotice.textContent = "请正对屏幕，开始录入后不可退出";
+    enrollStatus.textContent = "录入人脸";
+    enrollDesc.textContent = "";
+    document.getElementById("enrollmentFailureModal").hidden = false;
   }
 
+  document.getElementById("enrollmentFailureRetry").addEventListener("click", () => {
+    document.getElementById("enrollmentFailureModal").hidden = true;
+    showFaceEnrollment();
+    faceEnrollStart.click();
+  });
+  document.getElementById("enrollmentFailureHome").addEventListener("click", () => {
+    document.getElementById("enrollmentFailureModal").hidden = true;
+    clearTimeout(enrollmentTimer);
+    registrationLocked = false;
+    authenticatedStudentId = "";
+    mustEnrollAfterPassword = false;
+    showPage("home");
+  });
   simulateNotCharging.addEventListener("click", (e) => {
     e.stopPropagation();
     ensureReturnScene();
@@ -838,13 +880,6 @@
     e.stopPropagation();
     ensureReturnScene();
     returnCheckState = "door_open";
-    applyReturnCheck();
-  });
-
-  simulateReturn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    ensureReturnScene();
-    returnCheckState = "pass";
     applyReturnCheck();
   });
 

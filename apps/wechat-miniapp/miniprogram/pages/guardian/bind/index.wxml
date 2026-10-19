@@ -1,0 +1,16 @@
+<view class="page">
+  <view class="page-head">
+    <view class="page-title">输入学生编号</view>
+    <view class="page-desc">学生编号是提交绑定申请的必填凭证，学校、班级和姓名不能单独查找学生。</view>
+  </view>
+  <view class="section-label">学生信息</view>
+  <view class="cell-list">
+    <view class="cell">
+      <view class="cell-title">学生编号</view>
+      <input class="form-input" type="number" maxlength="20" placeholder="请输入" placeholder-class="form-input-placeholder" value="{{studentCode}}" bindinput="handleCodeInput" />
+    </view>
+    <view wx:if="{{errorMessage}}" class="form-error">{{errorMessage}}</view>
+  </view>
+  <view class="page-note">编号校验通过后，仅展示学生的基础身份信息供你确认。</view>
+  <view class="page-actions"><button class="primary-button" loading="{{submitting}}" bindtap="handleNext">下一步</button></view>
+</view>

@@ -14,7 +14,7 @@ import { LEAGUE_TIER_CONFIGS } from '../../services/geminiService';
 import userAvatar from '@/assets/girl_v0.1-head.png';
 import { applyStageDonation, getStageStudentLabel, isCharityCampaignRunning, useDonationStage, validateStageDonation } from '../../data/charityStage';
 import { isJuniorGrade, type UiSchoolSystem } from '../../data/juniorDemoCatalog';
-import { STUDENT_NOTIFICATION_DEMO } from '../../data/studentNotifications';
+import { STUDENT_NOTIFICATION_DEMO, type StudentNotification } from '../../data/studentNotifications';
 import { THIRD_PARTY_APPS, type ThirdPartyApp } from '../../data/thirdPartyApps';
 
 import { AITutorLayer } from './AITutorLayer';
@@ -378,6 +378,8 @@ interface DashboardImmersiveProps {
   onNotificationLayerOpenChange?: (open: boolean) => void;
   /** 万象视界全屏页打开时，由页面壳隐藏底部 Tab。 */
   onDiscoveryFullPageOpenChange?: (open: boolean) => void;
+  worldLocked?: boolean;
+  worldLockNotifications?: StudentNotification[];
   onOpenHomeTool?: (tool: HomeRailTool) => void;
   onGoStudy?: () => void;
 }
@@ -409,6 +411,8 @@ export const DashboardImmersive: React.FC<DashboardImmersiveProps> = ({
   onTutorLayerOpenChange,
   onNotificationLayerOpenChange,
   onDiscoveryFullPageOpenChange,
+  worldLocked = false,
+  worldLockNotifications = [],
   onOpenHomeTool,
   onGoStudy,
 }) => {
@@ -420,6 +424,8 @@ export const DashboardImmersive: React.FC<DashboardImmersiveProps> = ({
   const isJuniorStudent = isJuniorGrade(userGrade || '', schoolSystem as UiSchoolSystem);
   const homeRightEntries = isJuniorStudent ? JUNIOR_HOME_RAIL : ELEMENTARY_HOME_RAIL;
   const [activePanel, setActivePanel] = useState<'tasks' | 'league' | 'stats' | 'tutor' | 'discovery_full' | null>(null);
+  const [worldLockDialogOpen, setWorldLockDialogOpen] = useState(false);
+  const [worldLockToast, setWorldLockToast] = useState(false);
   const [isThirdPartyOpen, setIsThirdPartyOpen] = useState(false);
   const [readingArticleId, setReadingArticleId] = useState<string | null>(null);
   const [readerHideNav, setReaderHideNav] = useState(false);
@@ -443,6 +449,17 @@ export const DashboardImmersive: React.FC<DashboardImmersiveProps> = ({
     onDiscoveryFullPageOpenChange?.(activePanel === 'discovery_full');
     return () => onDiscoveryFullPageOpenChange?.(false);
   }, [activePanel, onDiscoveryFullPageOpenChange]);
+
+  useEffect(() => {
+    if (worldLocked && (activePanel === 'discovery_full' || readingArticleId)) setWorldLockDialogOpen(true);
+    if (!worldLocked) setWorldLockDialogOpen(false);
+  }, [worldLocked, activePanel, readingArticleId]);
+
+  useEffect(() => {
+    if (!worldLockToast) return;
+    const timer = window.setTimeout(() => setWorldLockToast(false), 2500);
+    return () => window.clearTimeout(timer);
+  }, [worldLockToast]);
 
   const handleCharityDonate = () => {
     const stageCheck = validateStageDonation(charityInput);
@@ -470,7 +487,8 @@ export const DashboardImmersive: React.FC<DashboardImmersiveProps> = ({
     onNotificationLayerOpenChange?.(isMessageOpen);
     return () => onNotificationLayerOpenChange?.(false);
   }, [isMessageOpen, onNotificationLayerOpenChange]);
-  const messageAttentionCount = STUDENT_NOTIFICATION_DEMO.filter(
+  const notifications = [...worldLockNotifications, ...STUDENT_NOTIFICATION_DEMO];
+  const messageAttentionCount = notifications.filter(
     (item) => item.isUnread || item.isPersistentRisk,
   ).length;
   const handleMessageToggle = useCallback(() => {
@@ -1381,7 +1399,7 @@ export const DashboardImmersive: React.FC<DashboardImmersiveProps> = ({
 
         <button
           type="button"
-          onClick={() => togglePanel('discovery_full')}
+          onClick={() => worldLocked ? setWorldLockToast(true) : togglePanel('discovery_full')}
           aria-label="打开万象视界"
           aria-pressed={activePanel === 'discovery_full'}
           className={`group flex items-center gap-3 rounded-2xl border bg-white px-3 py-2.5 ring-1 transition-all duration-300 active:scale-[0.97] ${
@@ -1435,7 +1453,7 @@ export const DashboardImmersive: React.FC<DashboardImmersiveProps> = ({
 
       <StudentNotificationRail
         isOpen={isMessageOpen}
-        items={STUDENT_NOTIFICATION_DEMO}
+        items={notifications}
         onClose={() => setIsMessageOpen(false)}
         onAction={(action) => {
           setIsMessageOpen(false);
@@ -2312,6 +2330,28 @@ export const DashboardImmersive: React.FC<DashboardImmersiveProps> = ({
           document.getElementById('app-viewport') ||
           document.getElementById('modal-root') ||
           document.body
+      )}
+
+      {worldLockToast && !worldLockDialogOpen && (
+        <div role="status" className="pointer-events-none absolute inset-x-0 top-24 z-[520] flex justify-center px-4">
+          <div className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-xl">万象视界已被老师锁定，暂时无法进入</div>
+        </div>
+      )}
+      {worldLockDialogOpen && (
+        <div className="absolute inset-0 z-[550] flex items-center justify-center bg-slate-900/60 p-6">
+          <div role="alertdialog" aria-modal="true" aria-labelledby="world-lock-dialog-title" aria-describedby="world-lock-dialog-description" className="w-full max-w-md rounded-2xl bg-white p-7 text-center text-slate-800 shadow-2xl">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100 text-amber-600"><Lock size={27} /></span>
+            <h2 id="world-lock-dialog-title" className="mt-4 text-xl font-bold">万象视界已被老师锁定</h2>
+            <p id="world-lock-dialog-description" className="mt-2 text-sm leading-6 text-slate-600">现在无法继续浏览万象视界，请等待老师解锁。</p>
+            <button type="button" className="mt-6 w-full rounded-xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white" onClick={() => {
+              setWorldLockDialogOpen(false);
+              setReadingArticleId(null);
+              setFromVideoFeed(false);
+              resumeVideoFeedRef.current = null;
+              setActivePanel(null);
+            }}>我知道了</button>
+          </div>
+        </div>
       )}
 
     </div>

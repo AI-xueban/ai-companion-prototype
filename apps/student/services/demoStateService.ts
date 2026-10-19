@@ -19,6 +19,8 @@ const LOCAL_STORAGE_KEYS = new Set([
   'ai-companion:printed-files:v1',
   'ai-companion:teacher-student-registry:v1',
   'ai-companion:teacher-school-management:v1',
+  'ai-companion-device-controls-v2',
+  'ai-companion-device-control-history-v2',
 ]);
 
 const LOCAL_STORAGE_PREFIXES = [

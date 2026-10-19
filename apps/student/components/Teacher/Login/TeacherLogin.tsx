@@ -39,7 +39,7 @@ export const TeacherLogin: React.FC<TeacherLoginProps> = ({ onLogin, initialRole
     setTimeout(() => {
       setLoading(false);
       if (matched) {
-        const user = { id: matched.id, name: matched.name, account: matched.account, role: matched.role, roleLabel: matched.roleLabel, schoolId: matched.schoolId, schoolName: matched.schoolName, classIds: matched.classIds, teachingAssignments: matched.teachingAssignments, homeroomClassIds: matched.homeroomClassIds, subject: matched.subject };
+        const user = { id: matched.id, name: matched.name, account: matched.account, phone: matched.phone, role: matched.role, roleLabel: matched.roleLabel, schoolId: matched.schoolId, schoolName: matched.schoolName, classIds: matched.classIds, teachingAssignments: matched.teachingAssignments, homeroomClassIds: matched.homeroomClassIds, subject: matched.subject };
         if (matched.role === 'school-admin') setVerifiedAdmin(user);
         else { localStorage.setItem('mockTeacherToken', 'true'); onLogin(user, 'workbench'); }
       } else {
