@@ -228,7 +228,7 @@ console.log('Passed: 6-person capacity, direct transfer, sole guardian promotion
 
 // Page-level anomalies must preserve identity, application status and access boundaries.
 {
- const d=create();d.p.scenario('first');d.p.action('scanResult');d.p.exception('firstBindRace');d.p.action('confirm');assert.equal(d.state().view,'needInvite');assert.equal(d.state().families[0].members.length,1);assert.notEqual(d.state().families[0].primaryId,'owner');assert.equal(d.state().bound,false);assert.doesNotMatch(d.html(),/136\*\*\*\*6000/);
+ const d=create();d.p.scenario('first');d.p.action('scanResult');d.p.exception('firstBindRace');d.p.action('confirm');assert.equal(d.state().view,'needInvite');assert.equal(d.state().families[0].members.length,1);assert.notEqual(d.state().families[0].primaryId,'owner');assert.equal(d.state().bound,false);assert.match(d.html(),/李先生 · 爸爸/);assert.match(d.html(),/138\*\*\*\*8000/);assert.doesNotMatch(d.html(),/13800138000/);
  d.p.action('schoolAssist');d.p.action('submitAssistance');assert.equal(d.state().view,'schoolAssist');d.p.familyInput('assistName','王女士');d.p.familyInput('assistPhone','13900139000');d.p.familyInput('assistDescription','我是孩子的妈妈，不认识已绑定的家长。');const original=d.state().families;d.p.action('submitAssistance');assert.equal(d.state().view,'assistancePending');assert.deepEqual(d.state().families,original);assert.equal(d.state().bound,false);assert.equal(create(d.storage).state().assistance.status,'pending');
 }
 {
@@ -271,3 +271,5 @@ console.log('Passed: optional phone on first binding and invitations, empty phon
  const d=create();d.p.scenario('first');d.p.action('scanResult');d.p.action('confirm');d.p.input('phone','13800138000');d.p.exception('smsLimited');d.p.exception('submitNetwork');d.p.exception('normal');assert.equal(d.state().phoneDraft,'13800138000');assert.equal(d.state().view,'phone');
 }
 console.log('Passed: exception sheet close/back, immediate QR results, isolated switching, one-click restoration and preserved phone draft.');
+
+{const d=create();d.p.scenario('second');d.p.action('scanResult');assert.equal(d.state().view,'needInvite');assert.match(d.html(),/已绑定的主管理家长/);assert.match(d.html(),/李先生 · 爸爸/);assert.match(d.html(),/138\*\*\*\*8000/);assert.doesNotMatch(d.html(),/13800138000/);assert.equal(d.state().bound,false);d.p.action('schoolAssist');assert.equal(d.state().view,'schoolAssist');}console.log('Passed: existing manager identity, relationship and masked phone visible without granting access.');
