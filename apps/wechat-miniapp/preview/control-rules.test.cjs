@@ -222,3 +222,48 @@ test('借用管控上下展示两类规则，悬浮新增选择类型，编辑�
   assert.match(dialog.body, /chooseBorrowType\('dates'\)/);
   assert.match(dialog.actions, /取消/);
 });
+
+test('锁屏和万象视界批量操作只展示所选状态可切换的动作', () => {
+  const fs = require('node:fs'), vm = require('node:vm');
+  const locked = student(1), unlocked = student(2);
+  locked.locked = true;
+  locked.world = true;
+  unlocked.locked = false;
+  unlocked.world = false;
+  const context = {
+    controlRules: R, closeControlOverlay() {}, addEventListener() {}, setInterval() {},
+    schoolControlClasses: ['A'], controlClasses: ['A'], selectedTeacherClass: 'A',
+    controlData: { A: [locked, unlocked] }, controlStudents() { return context.controlData.A; },
+    controlDemoRole: 'teacher', controlWorkView: 'homeroom', controlModule: 'lock', controlView: 'students',
+    controlLabels: { lock: '平板锁屏', world: '万象视界' }, controlQuery: '', controlFilter: 'all',
+    controlSelected: new Set(), adminSelectedScopes: new Set(), adminBulkRefs: [], adminLevel: 'class', adminBatchMode: false,
+    schoolBorrowingEnabled: true, stage: 'other', app: { innerHTML: '' },
+    header(title) { return '<span></span><h2>' + title + '</h2>'; }, syncReview() {},
+    localStorage: { getItem() { return null; }, setItem() {} },
+  };
+  context.window = context;
+  vm.runInNewContext(fs.readFileSync(require.resolve('./control-parity.js'), 'utf8'), context);
+
+  const renderActions = (module, ids) => {
+    context.controlModule = module;
+    context.controlSelected.clear();
+    ids.forEach(id => context.controlSelected.add(id));
+    context.renderControl();
+    return context.app.innerHTML;
+  };
+  for (const [module, offLabel, onLabel] of [['lock', '解锁', '锁屏'], ['world', '关闭', '开放']]) {
+    const activeOnly = renderActions(module, [1]);
+    assert.match(activeOnly, /parity\.selectedBoolean\(false\)/);
+    assert.doesNotMatch(activeOnly, /parity\.selectedBoolean\(true\)/);
+    assert.match(activeOnly, new RegExp('>' + offLabel + '<'));
+
+    const inactiveOnly = renderActions(module, [2]);
+    assert.doesNotMatch(inactiveOnly, /parity\.selectedBoolean\(false\)/);
+    assert.match(inactiveOnly, /parity\.selectedBoolean\(true\)/);
+    assert.match(inactiveOnly, new RegExp('>' + onLabel + '<'));
+
+    const mixed = renderActions(module, [1, 2]);
+    assert.match(mixed, /parity\.selectedBoolean\(false\)/);
+    assert.match(mixed, /parity\.selectedBoolean\(true\)/);
+  }
+});

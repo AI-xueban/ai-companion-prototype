@@ -114,9 +114,12 @@
   }
   function selectionFooter(admin = false) {
     const refs = admin ? adminSelectionRefs() : targetRefs('selected'), selected = admin ? adminSelectedScopes.size : controlSelected.size;
-    const actions = controlModule === 'lock' || controlModule === 'world'
-      ? button(controlModule === 'lock' ? '解锁' : '关闭', 'parity.selectedBoolean(false)', true, !selected) + button(controlModule === 'lock' ? '锁屏' : '开放', 'parity.selectedBoolean(true)', false, !selected)
-      : button(controlModule === 'duration' ? '恢复默认' : controlModule === 'homework' ? '恢复默认' : '删除规则', 'parity.selectedReset()', true, !selected) + button(controlModule === 'borrowing' ? '设置规则' : controlModule === 'duration' ? '设置时长' : '设置权限', 'parity.selectedEdit()', false, !selected);
+    let actions;
+    if (controlModule === 'lock' || controlModule === 'world') {
+      const states = R.resolve(controlData, refs).map(({ student }) => controlModule === 'lock' ? student.locked : student.world);
+      actions = (states.some(Boolean) ? button(controlModule === 'lock' ? '解锁' : '关闭', 'parity.selectedBoolean(false)', true) : '')
+        + (states.some(value => !value) ? button(controlModule === 'lock' ? '锁屏' : '开放', 'parity.selectedBoolean(true)') : '');
+    } else actions = button(controlModule === 'duration' ? '恢复默认' : controlModule === 'homework' ? '恢复默认' : '删除规则', 'parity.selectedReset()', true, !selected) + button(controlModule === 'borrowing' ? '设置规则' : controlModule === 'duration' ? '设置时长' : '设置权限', 'parity.selectedEdit()', false, !selected);
     const visible = admin ? visibleScopeKeys() : filteredControlStudents().map(s => s.id), set = admin ? adminSelectedScopes : controlSelected;
     return `<footer class="admin-batchbar parity-batchbar"><label class="control-footer-select"><input type="checkbox" aria-label="全选" ${visible.length && visible.every(key => set.has(key)) ? 'checked' : ''} onchange="parity.selectAll(this.checked)"><span>全选</span><small>${selected}/${visible.length}</small></label><div class="admin-batch-actions">${button('取消', 'parity.cancelSelection()', true)}${actions}</div><small class="parity-affected">本次已选 ${refs.length} 名学生</small></footer>`;
   }
