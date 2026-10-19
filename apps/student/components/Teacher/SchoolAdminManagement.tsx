@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { Building2, Download, Plus, Search, Upload, X } from 'lucide-react';
+import { Building2, Download, Plus, QrCode, Search, Upload, X } from 'lucide-react';
 import { PORTAL_CLASSES, TEACHER_SUBJECT_OPTIONS, TeacherPortalUser } from './data/teacherAccess';
 import { AccountImportDialog } from './AccountImportDialog';
 import { ImportKind, ImportPerson } from './accountImport';
 import { ManagementExportDialog } from './ManagementExportDialog';
 import { ExportSheet } from './managementExport';
+import { GuardianQrDialog } from './GuardianQrDialog';
+import { createGuardianToken, GuardianBatch } from './guardianQr';
 
 type View = 'school' | 'classes' | 'teachers' | 'students' | 'deleted-students';
 type ChangeRecord = { action: string; operator: string; time: string; changes: { field: string; before: string; after: string }[] };
 type AccessGrant = 'teaching-view' | 'homeroom-work' | 'school-analytics' | 'school-management';
-type Person = { name: string; account: string; className: string; subject?: string; homeroomClassName?: string; gradeLeaderGrades?: string; researchGroupSubjects?: string; professionalTitle?: string; accessGrants?: AccessGrant[]; phoneVerificationStatus?: string; status?: string; operator: string; operatedAt: string; createdAt?: string; history?: ChangeRecord[] };
+type Person = { name: string; account: string; className: string; guardianToken?: string; subject?: string; homeroomClassName?: string; gradeLeaderGrades?: string; researchGroupSubjects?: string; professionalTitle?: string; accessGrants?: AccessGrant[]; phoneVerificationStatus?: string; status?: string; operator: string; operatedAt: string; createdAt?: string; history?: ChangeRecord[] };
 type DeletedStudent = { student: Person; deletedAt: string; deletedBy: string; source: '单独删除' | '删除班级' };
 type ManagedClass = (typeof PORTAL_CLASSES)[number] & { classCode: string; homeroomTeacher: string; studentCount: number; sort: number; note: string; operator: string; operatedAt: string };
 
@@ -38,14 +40,14 @@ const INITIAL_STUDENTS: Person[] = [
   { name: '张小花', account: '9080004', className: '七年级(2)班', operator: SYSTEM_OPERATOR, operatedAt: SYSTEM_OPERATION_TIME, createdAt: '2026-09-23 16:59:19' },
 ];
 
-const readStudentRegistry = (schoolName: string): { active: Person[]; deleted: DeletedStudent[] } => {
+const readStudentRegistry = (schoolName: string): { active: Person[]; deleted: DeletedStudent[]; batches: GuardianBatch[] } => {
   try {
     const saved = JSON.parse(localStorage.getItem(STUDENT_REGISTRY_KEY) || 'null');
     if (saved?.schoolName === schoolName && Array.isArray(saved.active) && Array.isArray(saved.deleted)) {
-      return { active: saved.active, deleted: saved.deleted };
+      return { active: saved.active, deleted: saved.deleted, batches: Array.isArray(saved.batches) ? saved.batches : [] };
     }
   } catch { /* Invalid demo data falls back to the initial roster. */ }
-  return { active: INITIAL_STUDENTS, deleted: [] };
+  return { active: INITIAL_STUDENTS, deleted: [], batches: [] };
 };
 const readSchoolManagement = (schoolName: string): { classes?: ManagedClass[]; teachers?: Person[] } => {
   try {
@@ -92,13 +94,15 @@ export const SchoolAdminManagement: React.FC<{ initialView: View; currentUser: T
   const [initialStudentRegistry] = useState(() => readStudentRegistry(currentUser.schoolName));
   const [students, setStudents] = useState<Person[]>(initialStudentRegistry.active);
   const [deletedStudents, setDeletedStudents] = useState<DeletedStudent[]>(initialStudentRegistry.deleted);
+  const [batches, setBatches] = useState<GuardianBatch[]>(initialStudentRegistry.batches);
+  const [qrDialog, setQrDialog] = useState<{ mode: 'single'; account: string } | { mode: 'bulk'; scope?: 'all' | 'batch'; batchId?: string } | null>(null);
   useEffect(() => {
     localStorage.setItem(SCHOOL_MANAGEMENT_KEY, JSON.stringify({ schoolName: currentUser.schoolName, classes, teachers }));
   }, [currentUser.schoolName, classes, teachers]);
   const [deletedSearch, setDeletedSearch] = useState('');
   useEffect(() => {
-    localStorage.setItem(STUDENT_REGISTRY_KEY, JSON.stringify({ schoolName: currentUser.schoolName, active: students, deleted: deletedStudents }));
-  }, [currentUser.schoolName, students, deletedStudents]);
+    localStorage.setItem(STUDENT_REGISTRY_KEY, JSON.stringify({ schoolName: currentUser.schoolName, active: students, deleted: deletedStudents, batches }));
+  }, [currentUser.schoolName, students, deletedStudents, batches]);
   const [search, setSearch] = useState('');
   const [filterGrade, setFilterGrade] = useState('');
   const [filterClassId, setFilterClassId] = useState('');
@@ -135,19 +139,19 @@ export const SchoolAdminManagement: React.FC<{ initialView: View; currentUser: T
     setFilterGrade(''); setFilterClassId('');
     setHistoryPerson(null);
     setHomeroomTransfer(null);
-    setView(initialView); setSearch(''); setDeletedSearch(''); setModal(false); setImportKind(null); setExportOpen(false); setDetail(null); setAssignment(null); setAuthorizing(null); setDeleteTarget(null); setError('');
+    setView(initialView); setSearch(''); setDeletedSearch(''); setModal(false); setImportKind(null); setExportOpen(false); setQrDialog(null); setDetail(null); setAssignment(null); setAuthorizing(null); setDeleteTarget(null); setError('');
   }, [initialView]);
   useEffect(() => {
-    if (!modal && !importKind && !exportOpen && !detail && !historyPerson && !assignment && !authorizing && !deleteTarget && !homeroomTransfer) return;
+    if (!modal && !importKind && !exportOpen && !qrDialog && !detail && !historyPerson && !assignment && !authorizing && !deleteTarget && !homeroomTransfer) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         if (homeroomTransfer) { setHomeroomTransfer(null); return; }
-        setModal(false); setImportKind(null); setExportOpen(false); setDetail(null); setHistoryPerson(null); setAssignment(null); setAuthorizing(null); setDeleteTarget(null); setError('');
+        setModal(false); setImportKind(null); setExportOpen(false); setQrDialog(null); setDetail(null); setHistoryPerson(null); setAssignment(null); setAuthorizing(null); setDeleteTarget(null); setError('');
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [modal, importKind, exportOpen, detail, historyPerson, assignment, authorizing, deleteTarget, homeroomTransfer]);
+  }, [modal, importKind, exportOpen, qrDialog, detail, historyPerson, assignment, authorizing, deleteTarget, homeroomTransfer]);
 
   const titles: Record<View, string> = { school: '学校信息', classes: '班级管理', teachers: '教师账号', students: '学生账号', 'deleted-students': '已删除学生' };
   const people = view === 'teachers' ? teachers : students;
@@ -255,7 +259,10 @@ export const SchoolAdminManagement: React.FC<{ initialView: View; currentUser: T
       const used = new Set([...students.map((item) => item.account), ...deletedStudents.map((entry) => entry.student.account)]);
       let sequence = Date.now();
       while (used.has(`S${sequence}`)) sequence++;
-      setStudents((items) => [...items, { name: name.trim(), account: `S${sequence}`, className, operator: operatorLabel, operatedAt, createdAt }]);
+      const account = `S${sequence}`;
+      setStudents((items) => [...items, { name: name.trim(), account, className, guardianToken: createGuardianToken(), operator: operatorLabel, operatedAt, createdAt }]);
+      setBatches((items) => [{ id: `manual-${account}`, accounts: [account], createdAt, method: '手动新增', operator: operatorLabel }, ...items]);
+      setQrDialog({ mode: 'single', account });
     }
     setName('');
     setUndo(null); setNotice('添加成功');
@@ -285,7 +292,7 @@ export const SchoolAdminManagement: React.FC<{ initialView: View; currentUser: T
         account = `S${nextStudentNumber++}`;
         studentAccounts.add(account);
       }
-      return { ...person, account, status: '正常', ...(importKind === 'teachers' ? { phoneVerificationStatus: '未验证', accessGrants: [] } : {}), operator: operatorLabel, operatedAt: formatOperationTime(), createdAt: formatCreatedAt() };
+      return { ...person, account, status: '正常', ...(importKind === 'teachers' ? { phoneVerificationStatus: '未验证', accessGrants: [] } : {}), ...(importKind === 'students' ? { guardianToken: createGuardianToken() } : {}), operator: operatorLabel, operatedAt: formatOperationTime(), createdAt: formatCreatedAt() };
     });
     if (importKind === 'classes') {
       setClasses((items) => {
@@ -293,13 +300,19 @@ export const SchoolAdminManagement: React.FC<{ initialView: View; currentUser: T
         return [...items, ...people.map((item, index) => ({ id: `class-${Date.now()}-${index}`, name: item.name, grade: item.grade!, alertCount: 0, classCode: `LH-${item.grade}${String(Math.max(0, ...items.map((existing) => existing.sort)) + index + 1).padStart(2, '0')}`, homeroomTeacher: '-', studentCount: 0, sort: item.sort ?? ++nextSort, note: item.note || '-', operator: operatorLabel, operatedAt: formatOperationTime() }))];
       });
     } else if (importKind === 'teachers') setTeachers((items) => [...items, ...imported]);
-    else setStudents((items) => [...items, ...imported]);
+    else {
+      setStudents((items) => [...items, ...imported]);
+      const batchId = `import-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      setBatches((items) => [{ id: batchId, accounts: imported.map((item) => item.account), createdAt: formatCreatedAt(), method: '批量导入', operator: operatorLabel }, ...items]);
+      setQrDialog({ mode: 'bulk', scope: 'batch', batchId });
+    }
     setSearch(''); setFilterGrade(''); setFilterClassId('');
     setUndo(null); setNotice(`成功导入 ${imported.length} ${importKind === 'classes' ? '个班级' : importKind === 'teachers' ? '位教师' : '位学生'}`); setImportKind(null);
   };
 
   const personAction = (action: string, person: Person) => {
     setError('');
+    if (action === '家长绑定码') { setQrDialog({ mode: 'single', account: person.account }); return; }
     if (action === '查看') { setDetail(person); return; }
     if (action === '修改记录') { setHistoryPerson(person); return; }
     if (action === '删除') { setDeleteTarget(person); return; }
@@ -424,6 +437,7 @@ export const SchoolAdminManagement: React.FC<{ initialView: View; currentUser: T
             <h1 className="mt-2 text-2xl font-bold">{titles[view]}</h1>
           </div>
           {(view === 'classes' || view === 'teachers' || view === 'students') && <div className="flex flex-wrap justify-end gap-2"><button onClick={() => setExportOpen(true)} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 hover:border-blue-300"><Download size={16}/>下载{exportTitle}</button>
+            {view === 'students' && <button onClick={() => setQrDialog({ mode: 'bulk' })} className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700 hover:bg-blue-100"><QrCode size={16}/>下载家长绑定码</button>}
             {(view === 'classes' || view === 'teachers' || view === 'students') && <button onClick={() => openModal(true)} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 hover:border-blue-300"><Upload size={16}/>批量导入</button>}
             {(view === 'classes' || view === 'teachers' || view === 'students') && <button onClick={() => openModal(false)} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white"><Plus size={16}/>{view === 'classes' ? '添加班级' : view === 'teachers' ? '新增教师' : '新增学生'}</button>}
           </div>}
@@ -431,6 +445,7 @@ export const SchoolAdminManagement: React.FC<{ initialView: View; currentUser: T
         {(view === 'students' || view === 'deleted-students') && <div className="mt-4 flex gap-6 border-b border-slate-200"><button type="button" aria-current={view === 'students' ? 'page' : undefined} onClick={() => { setView('students'); setError(''); }} className={`border-b-2 px-1 pb-2 text-sm font-semibold ${view === 'students' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>在校学生</button><button type="button" aria-current={view === 'deleted-students' ? 'page' : undefined} onClick={() => { setView('deleted-students'); setDeletedSearch(''); setFilterGrade(''); setFilterClassId(''); setError(''); }} className={`border-b-2 px-1 pb-2 text-sm font-semibold ${view === 'deleted-students' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>已删除学生 <span className="ml-1 text-xs text-slate-400">{deletedStudents.length}</span></button></div>}
       </div>
 
+      {view === 'students' && batches[0] && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm"><p className="text-blue-900">最近录入：{batches[0].createdAt} · {batches[0].method} {batches[0].accounts.length} 位学生</p><button onClick={() => setQrDialog({ mode: 'bulk', scope: 'batch', batchId: batches[0].id })} className="font-semibold text-blue-700 hover:underline">查看本次绑定码</button></div>}
       {view === 'school' ? <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-center gap-3 border-b border-slate-100 pb-5"><div className="rounded-xl bg-blue-50 p-3 text-blue-600"><Building2/></div><div><h2 className="text-lg font-bold">{currentUser.schoolName}</h2></div><span className="ml-auto rounded-full bg-green-50 px-3 py-1 text-xs text-green-700">正常</span></div>
         <div className="grid gap-5 pt-5 sm:grid-cols-2">{[['学校编码', SCHOOL.code], ['省市区', SCHOOL.district], ['学校地址', SCHOOL.address], ['联系电话', SCHOOL.phone]].map(([label, value]) => <div key={label}><div className="text-xs text-slate-400">{label}</div><div className="mt-1 text-sm font-medium">{value}</div></div>)}</div>
@@ -446,7 +461,7 @@ export const SchoolAdminManagement: React.FC<{ initialView: View; currentUser: T
         <div className="overflow-x-auto">
           {view === 'classes' ? <table className="w-full text-sm"><thead className="bg-slate-50 text-slate-500"><tr>{['序号', '班级名称', '班级编码', '所属学校', '所属年级', '班主任', '学生人数', '排序', '备注', '操作人', '操作时间', '操作'].map((header) => <th key={header} className="px-4 py-3 text-left whitespace-nowrap">{header}</th>)}</tr></thead><tbody>{filteredClasses.map((item, index) => <tr key={item.id} className="border-t border-slate-100"><td className="px-4 py-4">{index + 1}</td><td className="px-4 py-4 font-medium whitespace-nowrap">{item.name}</td><td className="px-4 py-4">{item.classCode}</td><td className="px-4 py-4 whitespace-nowrap">{currentUser.schoolName}</td><td className="px-4 py-4">{item.grade}年级</td><td className="px-4 py-4">{teachers.filter((person) => (person.homeroomClassName ?? '').split('、').includes(item.name)).map((person) => person.name).join('、') || '-'}</td><td className="px-4 py-4">{students.filter((person) => person.className === item.name).length}</td><td className="px-4 py-4">{item.sort}</td><td className="px-4 py-4">{item.note || '-'}</td><td className="px-4 py-4 text-slate-600 whitespace-nowrap">{item.operator}</td><td className="px-4 py-4 text-slate-600 whitespace-nowrap">{item.operatedAt}</td><td className="px-4 py-4 whitespace-nowrap"><button type="button" onClick={() => editClass(item)} className="mr-3 text-blue-600 hover:text-blue-700">编辑</button><button type="button" onClick={() => { setError(''); setDeleteTarget(item); }} className="text-red-500 hover:text-red-600">删除</button></td></tr>)}</tbody></table>
             : view === 'deleted-students' ? <table className="w-full min-w-[1050px] text-sm"><thead className="bg-slate-50 text-slate-500"><tr>{['序号', '学生姓名', '学号', '原班级', '删除时间', '删除操作人', '删除来源', '操作'].map((header) => <th key={header} className="px-5 py-3 text-left whitespace-nowrap">{header}</th>)}</tr></thead><tbody>{filteredDeletedStudents.map((entry, index) => <tr key={entry.student.account} className="border-t border-slate-100"><td className="px-5 py-4">{index + 1}</td><td className="px-5 py-4 font-medium">{entry.student.name}</td><td className="px-5 py-4">{entry.student.account}</td><td className="px-5 py-4">{entry.student.className}</td><td className="px-5 py-4">{entry.deletedAt}</td><td className="px-5 py-4">{entry.deletedBy}</td><td className="px-5 py-4">{entry.source}</td><td className="px-5 py-4 whitespace-nowrap"><button type="button" onClick={() => { setError(''); setHistoryPerson(entry.student); }} className="mr-3 text-blue-600 hover:text-blue-700">查看历史</button><button type="button" onClick={() => restoreStudent(entry)} className="text-blue-600 hover:text-blue-700">恢复</button></td></tr>)}</tbody></table>
-            : <table className={view === 'teachers' ? 'w-full min-w-[1700px] text-sm' : 'w-full text-sm'}><thead className="bg-slate-50 text-slate-500"><tr>{['序号', view === 'teachers' ? '教师姓名' : '学生姓名', view === 'teachers' ? '登录名（手机号）' : '学号', '学校', ...(view === 'teachers' ? ['任教班级', '班主任班级', '任教学科', '校内任职', '专业技术职称', '系统授权', '手机号验证状态'] : ['班级', '创建时间']), '操作人', '操作时间', '状态', '操作'].map((header) => <th key={header} className="px-5 py-3 text-left">{header}</th>)}</tr></thead><tbody>{filteredPeople.map((person, index) => <tr key={`${person.account}-${index}`} className="border-t border-slate-100"><td className="px-5 py-4">{index + 1}</td><td className="px-5 py-4 font-medium">{person.name}</td><td className="px-5 py-4">{person.account}</td><td className="px-5 py-4">{currentUser.schoolName}</td><td className="px-5 py-4">{person.className}</td>{view === 'teachers' ? <><td className="px-5 py-4">{person.homeroomClassName || '未分配'}</td><td className="px-5 py-4">{person.subject || '未设置'}</td><td className="px-5 py-4">{teacherPositions(person)}</td><td className="px-5 py-4">{person.professionalTitle || '未填写'}</td><td className="px-5 py-4">{grantSummary(person)}</td><td className="px-5 py-4"><span className="rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-500">{person.phoneVerificationStatus}</span></td></> : <td className="px-5 py-4">{person.createdAt}</td>}<td className="px-5 py-4 text-slate-600">{person.operator}</td><td className="px-5 py-4 text-slate-600">{person.operatedAt}</td><td className="px-5 py-4"><span className="rounded bg-green-50 px-2 py-1 text-xs text-green-700">{person.status ?? '正常'}</span></td><td className="px-5 py-4 whitespace-nowrap">{(view === 'teachers' ? ['查看', '编辑', '班级', '授权', '删除'] : ['修改记录', '编辑', '删除']).map((action) => <button key={action} type="button" onClick={() => personAction(action, person)} className={`mr-2 last:mr-0 ${action === '删除' ? 'text-red-500 hover:text-red-600' : 'text-blue-600 hover:text-blue-700'}`}>{action}</button>)}</td></tr>)}</tbody></table>}
+            : <table className={view === 'teachers' ? 'w-full min-w-[1700px] text-sm' : 'w-full text-sm'}><thead className="bg-slate-50 text-slate-500"><tr>{['序号', view === 'teachers' ? '教师姓名' : '学生姓名', view === 'teachers' ? '登录名（手机号）' : '学号', '学校', ...(view === 'teachers' ? ['任教班级', '班主任班级', '任教学科', '校内任职', '专业技术职称', '系统授权', '手机号验证状态'] : ['班级', '创建时间']), '操作人', '操作时间', '状态', '操作'].map((header) => <th key={header} className="px-5 py-3 text-left">{header}</th>)}</tr></thead><tbody>{filteredPeople.map((person, index) => <tr key={`${person.account}-${index}`} className="border-t border-slate-100"><td className="px-5 py-4">{index + 1}</td><td className="px-5 py-4 font-medium">{person.name}</td><td className="px-5 py-4">{person.account}</td><td className="px-5 py-4">{currentUser.schoolName}</td><td className="px-5 py-4">{person.className}</td>{view === 'teachers' ? <><td className="px-5 py-4">{person.homeroomClassName || '未分配'}</td><td className="px-5 py-4">{person.subject || '未设置'}</td><td className="px-5 py-4">{teacherPositions(person)}</td><td className="px-5 py-4">{person.professionalTitle || '未填写'}</td><td className="px-5 py-4">{grantSummary(person)}</td><td className="px-5 py-4"><span className="rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-500">{person.phoneVerificationStatus}</span></td></> : <td className="px-5 py-4">{person.createdAt}</td>}<td className="px-5 py-4 text-slate-600">{person.operator}</td><td className="px-5 py-4 text-slate-600">{person.operatedAt}</td><td className="px-5 py-4"><span className="rounded bg-green-50 px-2 py-1 text-xs text-green-700">{person.status ?? '正常'}</span></td><td className="px-5 py-4 whitespace-nowrap">{(view === 'teachers' ? ['查看', '编辑', '班级', '授权', '删除'] : ['家长绑定码', '修改记录', '编辑', '删除']).map((action) => <button key={action} type="button" onClick={() => personAction(action, person)} className={`mr-2 last:mr-0 ${action === '删除' ? 'text-red-500 hover:text-red-600' : 'text-blue-600 hover:text-blue-700'}`}>{action}</button>)}</td></tr>)}</tbody></table>}
         </div>
         {error && view === 'deleted-students' && <p role="alert" className="border-t border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>}
         {(view === 'classes' ? filteredClasses.length === 0 : view === 'deleted-students' ? filteredDeletedStudents.length === 0 : filteredPeople.length === 0) && <div className="p-12 text-center text-sm text-slate-400">{view === 'deleted-students' ? deletedStudents.length ? '暂无匹配的删除记录' : '暂无已删除学生' : '暂无匹配数据'}</div>}
@@ -456,6 +471,7 @@ export const SchoolAdminManagement: React.FC<{ initialView: View; currentUser: T
     {exportOpen && <ManagementExportDialog title={exportTitle} school={currentUser.schoolName} filterLabel={exportFilterLabel} getSheets={getExportSheets} onClose={() => setExportOpen(false)} onSuccess={(count) => { setExportOpen(false); setNotice(`已生成${exportTitle}，共 ${count} 条`); setUndo(null); }}/ >}
 
     {importKind && <AccountImportDialog kind={importKind} school={currentUser.schoolName} classes={classes} existing={importKind === 'teachers' ? teachers : importKind === 'students' ? students : []} onClose={() => setImportKind(null)} onImport={importAccounts} onCreateClasses={() => { setImportKind(null); onNavigate('classes'); }}/>}
+    {qrDialog && <GuardianQrDialog key={qrDialog.mode === 'single' ? qrDialog.account : qrDialog.batchId ?? 'bulk'} school={currentUser.schoolName} students={students} classes={classes} batches={batches} initial={qrDialog} onClose={() => setQrDialog(null)} onGenerate={(account) => setStudents((items) => items.map((item) => item.account === account && !item.guardianToken ? { ...item, guardianToken: createGuardianToken(), operator: operatorLabel, operatedAt: formatOperationTime(), history: [{ action: '补生成家长绑定码', operator: operatorLabel, time: formatCreatedAt(), changes: [{ field: '家长绑定码', before: '未生成', after: '已生成' }] }, ...(item.history ?? [])] } : item))} onRotate={(account) => setStudents((items) => items.map((item) => item.account === account ? { ...item, guardianToken: createGuardianToken(), operator: operatorLabel, operatedAt: formatOperationTime(), history: [{ action: '作废并补发家长绑定码', operator: operatorLabel, time: formatCreatedAt(), changes: [{ field: '家长绑定码', before: '旧码已作废', after: '新码已生成' }] }, ...(item.history ?? [])] } : item))}/>}
     {modal && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"><section role="dialog" aria-modal="true" aria-label={modalTitle} className={`max-h-[90vh] w-full overflow-y-auto rounded-xl bg-white p-6 shadow-2xl ${view === 'teachers' ? 'max-w-2xl' : 'max-w-lg'}`}>
       <div className="mb-5 flex items-center justify-between"><h2 className="text-lg font-bold">{modalTitle}</h2><button aria-label="关闭" onClick={closeModal}><X size={18}/></button></div>
       <div className="space-y-4">
