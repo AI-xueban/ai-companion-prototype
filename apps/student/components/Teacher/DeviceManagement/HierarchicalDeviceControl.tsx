@@ -257,9 +257,9 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
         ? `最后操作：${modified.by} · ${modified.at}`
         : "尚无操作记录";
       if (tab === "duration") return {
-        main: value.durationRules.length || defaultDurationEnabled ? "使用时长受管控" : "不限制使用时长",
-        sub: value.durationRules.length ? `${value.durationRules.length} 条规则生效` : defaultDurationEnabled ? "当前执行默认规则" : "当前无时长限制",
-        active: value.durationRules.length > 0 || defaultDurationEnabled,
+        main: value.durationRules.length ? "有单独规则" : "默认规则",
+        sub: value.durationRules.length ? `${value.durationRules.length} 条单独规则` : "当前执行全校默认规则",
+        active: value.durationRules.length > 0,
       };
       if (tab === "borrowing")
         return {
@@ -288,8 +288,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
     }
     if (tab === "duration") {
       const count = entries.filter((s) => s.durationRules.length).length;
-      const controlledCount = defaultDurationEnabled ? ids.length : count;
-      return { main: controlledCount === 0 ? "不限制使用时长" : mixed(ids) ? "学生规则有差异" : "学生规则一致", sub: `使用时长受管控 ${controlledCount} / ${ids.length} 人`, active: controlledCount > 0 };
+      return { main: mixed(ids) ? "学生规则有差异" : "学生规则一致", sub: `有单独规则 ${count} / ${ids.length} 人`, active: count > 0 };
     }
     if (tab === "borrowing") {
       const count = entries.filter((s) => s.schedules.length).length;
@@ -369,6 +368,10 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
       return false;
     if (filter === "mixed") return mixed(row.ids);
     if (filter === "same") return !mixed(row.ids);
+    if (tab === "duration" && filter === "active")
+      return row.ids.some((id) => controls[id].durationRules.length > 0);
+    if (tab === "duration" && filter === "inactive")
+      return row.ids.every((id) => controls[id].durationRules.length === 0);
     if (filter === "active") return status(row.ids).active;
     if (filter === "inactive") return !status(row.ids).active;
     return true;
@@ -743,7 +746,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
   ).length;
   const scopeStateLabel =
     tab === "world"
-      ? `${stateStudentCount} 名学生已开放，${currentStudents.length - stateStudentCount} 名学生已禁止`
+      ? `${stateStudentCount} 名学生已开放权限，${currentStudents.length - stateStudentCount} 名学生已关闭权限`
       : tab === "lock"
         ? `${stateStudentCount} 名学生已锁屏，${currentStudents.length - stateStudentCount} 名学生未锁屏`
         : tab === "duration"
@@ -1090,7 +1093,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
                   )}
                   <option value="active">
                     {tab === "duration"
-                      ? "有生效规则"
+                      ? "有单独规则"
                       : isScheduleTab
                       ? "已设置借用规则"
                       : tab === "homework"
@@ -1101,7 +1104,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
                   </option>
                   <option value="inactive">
                     {tab === "duration"
-                      ? "无生效规则"
+                      ? "默认规则"
                       : isScheduleTab
                       ? "未设置借用规则"
                       : tab === "homework"

@@ -22,12 +22,6 @@ jobs:
       - name: Download source code
         uses: actions/checkout@v4
 
-      - name: Download miniapp preview source
-        uses: actions/checkout@v4
-        with:
-          ref: tanjq-wechat-miniprogram
-          path: wechat-preview-source
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -40,7 +34,7 @@ jobs:
         run: npm --prefix apps/admin install
 
       - name: Install miniapp preview dependencies
-        run: npm --prefix wechat-preview-source/apps/wechat-miniapp ci
+        run: npm --prefix apps/wechat-miniapp ci
 
       - name: Build student prototype
         run: npm --prefix apps/student run build -- --base=/ai-companion-prototype/
@@ -54,7 +48,7 @@ jobs:
         run: npm --prefix apps/cabinet run build
 
       - name: Generate miniapp preview data
-        run: node wechat-preview-source/apps/wechat-miniapp/preview/generate-offline.mjs
+        run: node apps/wechat-miniapp/preview/generate-offline.mjs
 
       - name: Combine websites
         run: |
@@ -64,8 +58,8 @@ jobs:
           cp apps/cabinet/index.html apps/cabinet/styles.css apps/cabinet/app.js apps/student/dist/cabinet/
           cp -R apps/cabinet/assets apps/student/dist/cabinet/assets
           mkdir -p apps/student/dist/miniapp/miniprogram/assets
-          cp -R wechat-preview-source/apps/wechat-miniapp/preview/. apps/student/dist/miniapp/
-          cp wechat-preview-source/apps/wechat-miniapp/miniprogram/assets/homework-demo-paper.png apps/student/dist/miniapp/miniprogram/assets/
+          cp -R apps/wechat-miniapp/preview/. apps/student/dist/miniapp/
+          cp apps/wechat-miniapp/miniprogram/assets/homework-demo-paper.png apps/student/dist/miniapp/miniprogram/assets/
 
       - name: Upload website files
         uses: actions/upload-pages-artifact@v3

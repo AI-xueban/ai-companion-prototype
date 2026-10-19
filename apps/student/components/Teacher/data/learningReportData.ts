@@ -9,12 +9,13 @@ export interface ReportStudent { id: string; name: string; classId: string; clas
 export interface LearningRecord { id: string; studentId: string; classId: string; subject: string; feature: string; content: string; day: number; start: string; minutes: number; status: '已完成' | '学习中断'; questionIds: string[] }
 export interface LearningQuestion { id: string; subject: string; grade: number; unit: string; knowledge: string; stem: string; answer: string; wrong: string; scoring: string }
 export interface LearningAttempt { id: string; activityId: string; studentId: string; questionId: string; day: number; answer: string; correct: boolean; kind: '首次' | '订正' }
-interface UsageRecord { studentId: string; classId: string; subject: string; day: number }
+interface UsageRecord { studentId: string; classId: string; subject: string; day: number; feature?: string; eventId?: string }
+interface AiSolveRecord { id: string; activityId: string; studentId: string; classId: string; subject: string; day: number; problemId: string; askCount: number }
 
 export const REPORT_CLASSES = SCHOOL_LEARNING_DEMO['7d'];
 export const REPORT_STUDENTS: ReportStudent[] = REPORT_CLASSES.flatMap(row => getDemoRoster(row).map(student => ({ ...student, classId: row.id, className: row.name, grade: row.grade })));
 export const REPORT_END = '2026-10-12';
-export const REPORT_FEATURES = ['同步微课', '自主练习', '错题订正', 'AI讲题', '小晤学习问答'];
+export const REPORT_FEATURES = ['同步微课', '自主练习', '错题订正', 'AI解题'];
 export const REPORT_QUESTIONS: LearningQuestion[] = [
   { id: 'm7a', subject: '数学', grade: 7, unit: '有理数', knowledge: '有理数混合运算', stem: '计算：(-3) × [2 - (-4)]。', answer: '-18', wrong: '18', scoring: '系统判分' },
   { id: 'm7b', subject: '数学', grade: 7, unit: '有理数', knowledge: '有理数混合运算', stem: '计算：12 ÷ (-3) + 5。', answer: '1', wrong: '-9', scoring: '系统判分' },
@@ -33,6 +34,7 @@ export const REPORT_QUESTIONS: LearningQuestion[] = [
 const records: LearningRecord[] = [];
 const attempts: LearningAttempt[] = [];
 const usage: UsageRecord[] = [];
+const aiSolves: AiSolveRecord[] = [];
 // 固定日期的演示事实表；所有页面从同一批活动与作答计算，不独立填汇总数字。
 REPORT_CLASSES.forEach((row, classIndex) => {
   const recent = getDemoActivities(row, '7d');
@@ -44,9 +46,9 @@ REPORT_CLASSES.forEach((row, classIndex) => {
     const questions = REPORT_QUESTIONS.filter(q => q.grade === row.grade && q.subject === item.subject);
     const unit = questions[0]?.unit ?? item.subject;
     const make = (suffix: string, feature: string, dayOffset: number, minutes: number, questionIds: string[] = []) => {
-      const record: LearningRecord = { id: `${item.studentId}:${item.subject}:${suffix}`, studentId: item.studentId, classId: row.id, subject: item.subject, feature, content: `${unit} · ${feature === '同步微课' ? '内容讲解' : feature === '自主练习' ? '自选练习' : feature === '错题订正' ? '错题回练' : feature === 'AI讲题' ? '例题讲解' : '学习问答'}`, day: dayOffset, start: `${16 + index % 3}:${index % 2 ? '10' : '30'}`, minutes, status: index % 11 === 10 && feature === '同步微课' ? '学习中断' : '已完成', questionIds };
+      const record: LearningRecord = { id: `${item.studentId}:${item.subject}:${suffix}`, studentId: item.studentId, classId: row.id, subject: item.subject, feature, content: `${unit} · ${feature === '同步微课' ? '内容讲解' : feature === '自主练习' ? '自选练习' : feature === '错题订正' ? '错题回练' : '题目讲解'}`, day: dayOffset, start: `${16 + index % 3}:${index % 2 ? '10' : '30'}`, minutes, status: index % 11 === 10 && feature === '同步微课' ? '学习中断' : '已完成', questionIds };
       records.push(record);
-      usage.push({ studentId: item.studentId, classId: row.id, subject: item.subject, day: dayOffset });
+      usage.push({ studentId: item.studentId, classId: row.id, subject: item.subject, day: dayOffset, feature, eventId: record.id });
       return record;
     };
     make('video', '同步微课', day, 6 + index % 7);
@@ -66,8 +68,12 @@ REPORT_CLASSES.forEach((row, classIndex) => {
         });
       }
     }
-    if (index % 4 === 1) make('explain', 'AI讲题', day - 1, 5);
-    if (index % 7 === 0) make('ask', '小晤学习问答', day - 1, 3);
+    if (index % 4 === 1) {
+      const activity = make('solve', 'AI解题', day - 1, 5);
+      const requests = index % 3 === 0 ? 2 : 1;
+      for (let request = 0; request < requests; request++) aiSolves.push({ id: `${activity.id}:request:${request}`, activityId: activity.id, studentId: item.studentId, classId: row.id, subject: item.subject, day: activity.day, problemId: `${activity.id}:problem`, askCount: request === 0 ? 1 + index % 2 : 1 });
+    }
+    if (index % 7 === 0) for (let question = 0; question < 1 + index % 3; question++) usage.push({ studentId: item.studentId, classId: row.id, subject: '', day: day - 1, feature: '小晤问答', eventId: `${item.studentId}:${item.subject}:ask:${index}:${question}` });
   });
   getDemoRoster(monthRow).slice(0, monthRow.used).forEach((student, index) => usage.push({ studentId: student.id, classId: row.id, subject: '', day: index < row.used ? index % 7 : 10 + index % 18 }));
 });
@@ -81,6 +87,7 @@ records.forEach(record => {
 });
 export const LEARNING_RECORDS = records;
 export const LEARNING_ATTEMPTS = attempts;
+export const AI_SOLVE_RECORDS = aiSolves;
 export const reportDate = (day: number) => {
   const date = new Date(`${REPORT_END}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() - day);
@@ -116,12 +123,22 @@ export function queryReport(user: TeacherPortalUser, scope: ReportScope) {
   const operations = usage.filter(match);
   const activityIds = new Set(activities.map(item => item.id));
   const answers = attempts.filter(item => activityIds.has(item.activityId));
+  const solveRequests = aiSolves.filter(item => activityIds.has(item.activityId));
   const usedIds = new Set(operations.map(item => item.studentId));
   const learnedIds = new Set(activities.map(item => item.studentId));
   const minutes = activities.reduce((sum, item) => sum + item.minutes, 0);
-  return { classes, roster, activities, operations, answers, usedIds, learnedIds, minutes };
+  return { classes, roster, activities, operations, answers, solveRequests, usedIds, learnedIds, minutes };
 }
 export type ReportData = ReturnType<typeof queryReport>;
+export const featureUsage = (data: ReportData) => {
+  const events = [...new Map(data.operations.filter(item => item.feature && item.feature !== 'AI解题' && item.eventId).map(item => [item.eventId!, item])).values()];
+  const solves = [...new Map(data.solveRequests.map(item => [item.id, item])).values()];
+  const names = [...new Set([...events.map(item => item.feature!), ...(solves.length ? ['AI解题'] : [])])];
+  return names.map(name => {
+    const rows = name === 'AI解题' ? solves : events.filter(item => item.feature === name);
+    return { name, people: new Set(rows.map(item => item.studentId)).size, count: rows.length, problemCount: name === 'AI解题' ? new Set(solves.map(item => item.problemId)).size : 0, askCount: name === 'AI解题' ? solves.reduce((sum, item) => sum + item.askCount, 0) : 0 };
+  });
+};
 export const groupActivities = (data: ReportData, field: 'subject' | 'feature' | 'content') => [...new Set(data.activities.map(item => item[field]))].map(name => {
   const rows = data.activities.filter(item => item[field] === name);
   return { name, people: new Set(rows.map(item => item.studentId)).size, count: rows.length, minutes: rows.reduce((sum, item) => sum + item.minutes, 0) };

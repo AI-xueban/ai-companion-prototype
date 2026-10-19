@@ -30,7 +30,7 @@ const server = http.createServer(async (request, response) => {
         : null;
     const teacherArt = pathname === '/assets/teacher-login-illustration.png';
     const homeworkPaper = pathname === '/miniprogram/assets/homework-demo-paper.png';
-    const parentAsset = ['/parent-prototype.css', '/parent-prototype.js', '/homework-prototype.css', '/homework-prototype.js', '/homework-flow-lab.css', '/homework-flow-lab.js', '/homework-flow-lab.html', '/learning-prototype.css', '/learning-prototype.js', '/workbench-prototype.js'].includes(pathname) ? pathname.slice(1) : null;
+    const parentAsset = ['/parent-prototype.css', '/parent-prototype.js', '/homework-prototype.css', '/homework-prototype.js', '/homework-flow-lab.css', '/homework-flow-lab.js', '/homework-flow-lab.html', '/learning-prototype.css', '/learning-prototype.js', '/workbench-prototype.js', '/control-prototype.html', '/control-prototype.css', '/control-rules.js', '/control-parity.js'].includes(pathname) ? pathname.slice(1) : null;
     const file = homeworkPaper ? join(root, '..', 'miniprogram', 'assets', 'homework-demo-paper.png') : teacherArt ? join(root, '..', 'miniprogram', 'assets', 'teacher-login-illustration.png') : assetName ? join(root, 'assets', assetName) : parentAsset ? join(root, parentAsset) : join(root, 'index.html');
     const content = await readFile(file);
     const contentType = assetName || teacherArt || homeworkPaper ? 'image/png' : parentAsset?.endsWith('.css') ? 'text/css; charset=utf-8' : parentAsset?.endsWith('.js') ? 'text/javascript; charset=utf-8' : 'text/html; charset=utf-8';

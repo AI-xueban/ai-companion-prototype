@@ -1,10 +1,10 @@
-import { TEACHER_ROLE_OPTIONS, TEACHER_SUBJECT_OPTIONS } from './data/teacherAccess';
+import { TEACHER_SUBJECT_OPTIONS } from './data/teacherAccess';
 
 export type ImportKind = 'teachers' | 'students' | 'classes';
-export type ImportPerson = { name: string; account: string; className: string; subject?: string; role?: string; staffNumber?: string; homeroomClassName?: string; grade?: number; sort?: number; note?: string };
+export type ImportPerson = { name: string; account: string; className: string; subject?: string; homeroomClassName?: string; gradeLeaderGrades?: string; researchGroupSubjects?: string; professionalTitle?: string; grade?: number; sort?: number; note?: string };
 export type ImportRow = { row: number; values: string[]; errors: string[]; person: ImportPerson };
 export const IMPORT_HEADERS = {
-  teachers: ['登录手机号', '教师姓名', '教师工号', '任教学科', '教师角色', '任教班级', '班主任班级'],
+  teachers: ['登录手机号', '教师姓名', '任教学科', '任教班级', '班主任班级', '年级组长年级', '教研组长学科', '专业技术职称'],
   students: ['学生姓名', '所属班级'],
   classes: ['年级', '班级名称', '排序', '备注'],
 };
@@ -106,7 +106,7 @@ export function validateAccountRows(raw: { row: number; values: string[] }[], ki
   for (const row of raw) { const key = row.values[0] ?? ''; counts.set(key, [...(counts.get(key) ?? []), row.row]); }
   const owners = new Map<string, string[]>();
   for (const teacher of existing) for (const name of splitList(teacher.homeroomClassName ?? '')) owners.set(name, [...(owners.get(name) ?? []), `现有教师${teacher.name}`]);
-  if (kind === 'teachers') for (const row of raw) if (row.values[4] === '班主任') for (const name of splitList(row.values[6] ?? '').filter((v) => v !== '未分配')) owners.set(name, [...(owners.get(name) ?? []), `文件第${row.row}行`]);
+  if (kind === 'teachers') for (const row of raw) for (const name of splitList(row.values[4] ?? '').filter((v) => v !== '未分配')) owners.set(name, [...(owners.get(name) ?? []), `文件第${row.row}行`]);
   return raw.map(({ row, values }) => {
     const [account = '', name = ''] = values;
     const errors: string[] = [];
@@ -125,16 +125,18 @@ export function validateAccountRows(raw: { row: number; values: string[] }[], ki
     };
     let person: ImportPerson;
     if (kind === 'teachers') {
-      const [,, staffNumber = '', subject = '', role = '', teaching = '', homeroom = ''] = values;
+      const [,, subject = '', teaching = '', homeroom = '', gradeLeader = '', researchGroup = '', professionalTitle = ''] = values;
       const subjects = splitList(subject).map((item) => item === '道法' ? '道德与法治' : item);
       if (!subjects.length) errors.push('任教学科必填');
       for (const item of subjects) if (!TEACHER_SUBJECT_OPTIONS.includes(item)) errors.push(`任教学科不支持：${item}`);
-      if (!TEACHER_ROLE_OPTIONS.includes(role)) errors.push('教师角色须为教师、班主任或学校管理员');
       const className = checkClasses(teaching, '任教班级', true);
       const homeroomClassName = checkClasses(homeroom, '班主任班级', true);
-      if (role !== '班主任' && homeroomClassName !== '未分配') errors.push('仅班主任角色可填写班主任班级');
+      const gradeLeaderGrades = splitList(gradeLeader);
+      for (const item of gradeLeaderGrades) if (!/^[1-9]$/.test(item)) errors.push(`年级组长年级须填1至9：${item}`);
+      const researchGroupSubjects = splitList(researchGroup).map((item) => item === '道法' ? '道德与法治' : item);
+      for (const item of researchGroupSubjects) if (!TEACHER_SUBJECT_OPTIONS.includes(item)) errors.push(`教研组长学科不支持：${item}`);
       for (const item of splitList(homeroomClassName).filter((v) => v !== '未分配')) if ((owners.get(item)?.length ?? 0) > 1) errors.push(`${item}班主任冲突：${owners.get(item)!.join('、')}`);
-      person = { account, name, staffNumber, subject: [...new Set(subjects)].join('、'), role, className, homeroomClassName };
+      person = { account, name, subject: [...new Set(subjects)].join('、'), className, homeroomClassName, gradeLeaderGrades: gradeLeaderGrades.join('、'), researchGroupSubjects: [...new Set(researchGroupSubjects)].join('、'), professionalTitle };
     }
     return { row, values, errors, person };
   });
