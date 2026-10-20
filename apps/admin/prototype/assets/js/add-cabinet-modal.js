@@ -201,6 +201,7 @@ function saveCabinetFormModal() {
     boundPhone: boundPhone,
     manager: manager || '—',
     managerContact: managerContact || '—',
+    createdAt: now(),
   });
   saveData(data);
   closeAddCabinetModal();

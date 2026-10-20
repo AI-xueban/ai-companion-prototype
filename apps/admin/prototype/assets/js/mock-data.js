@@ -110,9 +110,9 @@ const DEFAULT_DATA = {
 
   /* 设备管理 · 学习平板借租柜 */
   cabinets: [
-    { id: 'CAB-001', name: '图书馆一楼借租柜', faceRegistrationCode: 'FACE-CAB-001', schoolId: 'school-001', schoolName: '深圳市南山实验学校', location: '图书馆 1F 大厅东侧', totalSlots: 24, usedSlots: 6, online: true, lastHeartbeat: '2026-06-08 14:32:05', boundPhone: '13800001001', manager: '李老师', managerContact: '13800138001' },
-    { id: 'CAB-002', name: '教学楼A座借租柜', faceRegistrationCode: 'FACE-CAB-002', schoolId: 'school-001', schoolName: '深圳市南山实验学校', location: '教学楼 A 座 3F 走廊', totalSlots: 16, usedSlots: 4, online: true, lastHeartbeat: '2026-06-08 14:31:58', boundPhone: '13800001002', manager: '王老师', managerContact: '13900139002' },
-    { id: 'CAB-003', name: '实验楼借租柜', faceRegistrationCode: 'FACE-CAB-003', schoolId: 'school-002', schoolName: '深圳市科技实验学校', location: '实验楼 2F 入口', totalSlots: 12, usedSlots: 3, online: false, lastHeartbeat: '2026-06-08 09:15:00', boundPhone: '13800001003', manager: '张老师', managerContact: '13700137003' },
+    { id: 'CAB-001', name: '图书馆一楼借租柜', faceRegistrationCode: 'FACE-CAB-001', schoolId: 'school-001', schoolName: '深圳市南山实验学校', location: '图书馆 1F 大厅东侧', totalSlots: 24, usedSlots: 6, online: true, lastHeartbeat: '2026-06-08 14:32:05', boundPhone: '13800001001', manager: '李老师', managerContact: '13800138001', createdAt: '2026-05-14 18:41:33' },
+    { id: 'CAB-002', name: '教学楼A座借租柜', faceRegistrationCode: 'FACE-CAB-002', schoolId: 'school-001', schoolName: '深圳市南山实验学校', location: '教学楼 A 座 3F 走廊', totalSlots: 16, usedSlots: 4, online: true, lastHeartbeat: '2026-06-08 14:31:58', boundPhone: '13800001002', manager: '王老师', managerContact: '13900139002', createdAt: '2026-05-14 14:53:49' },
+    { id: 'CAB-003', name: '实验楼借租柜', faceRegistrationCode: 'FACE-CAB-003', schoolId: 'school-002', schoolName: '深圳市科技实验学校', location: '实验楼 2F 入口', totalSlots: 12, usedSlots: 3, online: false, lastHeartbeat: '2026-06-08 09:15:00', boundPhone: '13800001003', manager: '张老师', managerContact: '13700137003', createdAt: '2026-05-14 14:52:51' },
   ],
   tablets: [
     /* CAB-001 · 格口状态样例柜：已绑定平板=已激活，损坏设备=异常（体现在设备状态），未绑定平板=未激活 */
@@ -814,6 +814,7 @@ function loadData() {
     if (saved) {
       const data = JSON.parse(saved);
       syncTabletOverdueFlags(data);
+      syncCabinetCreatedAt(data);
       syncTabletCreatedAt(data);
       syncDeviceAlerts(data);
       syncContentCovers(data);
@@ -826,6 +827,7 @@ function loadData() {
     }
   } catch (e) { /* ignore */ }
   const data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  syncCabinetCreatedAt(data);
   syncTabletCreatedAt(data);
   syncDeviceAlerts(data);
   return data;
@@ -837,6 +839,14 @@ function syncTabletCreatedAt(data) {
     const day = String(1 + Math.floor(index / 4)).padStart(2, '0');
     const minute = String((index % 4) * 12).padStart(2, '0');
     tablet.createdAt = `2026-03-${day} 09:${minute}:00`;
+  });
+}
+
+function syncCabinetCreatedAt(data) {
+  const defaultsById = Object.fromEntries((DEFAULT_DATA.cabinets || []).map(cabinet => [cabinet.id, cabinet]));
+  (data.cabinets || []).forEach((cabinet, index) => {
+    if (cabinet.createdAt) return;
+    cabinet.createdAt = defaultsById[cabinet.id]?.createdAt || `2026-05-${String(14 + index).padStart(2, '0')} 09:00:00`;
   });
 }
 

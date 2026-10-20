@@ -1116,7 +1116,7 @@ function renderCabinetPage() {
         <table class="data-table">
           <thead><tr>
             <th style="width:40px"><input type="checkbox" id="cabinet-select-all" onchange="toggleCabinetSelectAll(this.checked)" title="全选"></th>
-            <th>序号</th><th>柜机ID</th><th>柜机名称</th><th>人脸识别注册码</th><th>学校</th><th>安装位置</th><th>格口</th><th>在线状态</th><th>轮播素材</th><th>最近心跳</th><th>绑定手机号</th><th>操作</th>
+            <th>序号</th><th>柜机ID</th><th>柜机名称</th><th>人脸识别注册码</th><th>学校</th><th>安装位置</th><th>格口</th><th>在线状态</th><th>轮播素材</th><th>最近心跳</th><th>绑定手机号</th><th>负责人</th><th>联系方式</th><th>创建时间</th><th>操作</th>
           </tr></thead>
           <tbody>
             ${data.cabinets.map((c, i) => {
@@ -1136,6 +1136,9 @@ function renderCabinetPage() {
                 <td>${typeof renderCarouselThumbStrip === 'function' ? renderCarouselThumbStrip(items) : '—'}</td>
                 <td>${c.lastHeartbeat}</td>
                 <td>${esc(c.boundPhone || '—')}</td>
+                <td>${esc(c.manager || '—')}</td>
+                <td>${esc(c.managerContact || '—')}</td>
+                <td>${esc(c.createdAt || '—')}</td>
                 <td>
                   <button class="btn-link" onclick="openEditCabinetModal('${c.id}')">编辑</button>
                   <button class="btn-link" onclick="openTab('cabinet-carousel','配置轮播',{id:'${c.id}'})">配置轮播</button>
@@ -1193,7 +1196,8 @@ function renderCabinetDetailPage(params) {
         <div class="detail-item"><label>最近心跳</label><span>${cab.lastHeartbeat}</span></div>
         <div class="detail-item"><label>绑定手机号</label><span>${esc(cab.boundPhone || '—')}</span></div>
         <div class="detail-item"><label>负责人</label><span>${esc(cab.manager)}</span></div>
-        <div class="detail-item"><label>负责人联系方式</label><span>${esc(cab.managerContact || '—')}</span></div>
+        <div class="detail-item"><label>联系方式</label><span>${esc(cab.managerContact || '—')}</span></div>
+        <div class="detail-item"><label>创建时间</label><span>${esc(cab.createdAt || '—')}</span></div>
       </div>
       <div class="form-section-title">格口概览</div>
       <div class="toolbar" style="margin-bottom:12px">
