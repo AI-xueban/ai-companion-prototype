@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { Plus, Trash2, X } from "lucide-react";
 import {
   BorrowSchedule,
@@ -8,6 +8,7 @@ import {
 } from "../data/hierarchicalDeviceControl";
 import { DeviceControlLayer } from "./DeviceControlLayer";
 import { ControlValidationNotice } from "./ControlValidationNotice";
+import { ControlToast } from "./ControlToast";
 
 export type ControlEditorValue = {
   schedule?: BorrowSchedule;
@@ -33,7 +34,6 @@ export const StudentControlEditor: React.FC<{
   );
   const [error, setError] = useState("");
   const [restoreNotice, setRestoreNotice] = useState(0);
-  useEffect(() => { if (!restoreNotice) return; const timer = window.setTimeout(() => setRestoreNotice(0), 3000); return () => window.clearTimeout(timer); }, [restoreNotice]);
   const [applyScope, setApplyScope] = useState<"all" | "unmodified" | null>(null);
   const initial = useRef(JSON.stringify({ draft, answer, explanation, applyScope }));
   const dirty = initial.current !== JSON.stringify({ draft, answer, explanation, applyScope });
@@ -315,7 +315,7 @@ export const StudentControlEditor: React.FC<{
             )}
             {error && <ControlValidationNotice message={error} onClose={() => setError("")} />}
           </div>
-          {restoreNotice > 0 && <div role="status" className="dc-feedback" style={{ zIndex: 10200, background: "#0f172a", borderColor: "#0f172a", color: "#fff" }}>已恢复默认规则</div>}
+          {restoreNotice > 0 && <ControlToast key={restoreNotice} message="已恢复默认规则" tone="success" duration={3000} onClose={() => setRestoreNotice(0)} />}
       <footer className="flex justify-end gap-3 border-t p-5">
             {!draft && <button type="button" className="dc-btn mr-auto" onClick={() => { setAnswer(false); setExplanation(false); setError(""); setRestoreNotice((value) => value + 1); }}>恢复全校默认规则</button>}
             <button type="button" onClick={close} className="dc-btn">

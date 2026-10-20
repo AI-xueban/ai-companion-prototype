@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { Plus, Trash2, X } from "lucide-react";
 import {
   DurationRule,
@@ -6,6 +6,7 @@ import {
 } from "../data/hierarchicalDeviceControl";
 import { DeviceControlLayer } from "./DeviceControlLayer";
 import { ControlValidationNotice } from "./ControlValidationNotice";
+import { ControlToast } from "./ControlToast";
 
 type Props = {
   label: string;
@@ -23,7 +24,6 @@ export const DurationRuleEditor: React.FC<Props> = ({ label, count, selectedObje
   const [draft, setDraft] = useState<DurationRule>({ ...rule, weekdays: [...rule.weekdays], periods: rule.periods.map((period) => ({ ...period })) });
   const [error, setError] = useState("");
   const [restoreNotice, setRestoreNotice] = useState(0);
-  useEffect(() => { if (!restoreNotice) return; const timer = window.setTimeout(() => setRestoreNotice(0), 3000); return () => window.clearTimeout(timer); }, [restoreNotice]);
   const [applyScope, setApplyScope] = useState<"all" | "unmodified" | null>(null);
   const initial = useRef(JSON.stringify({ draft, applyScope }));
   const dirty = initial.current !== JSON.stringify({ draft, applyScope });
@@ -71,7 +71,7 @@ export const DurationRuleEditor: React.FC<Props> = ({ label, count, selectedObje
         {requireApplyScope && <fieldset className="rounded-lg bg-slate-50 p-4"><legend className="text-sm font-bold text-slate-800"><span className="text-red-500">*</span> 修改范围</legend><div className="mt-3 space-y-3"><label className="block cursor-pointer"><span className="flex items-start gap-3"><input type="radio" name="duration-apply-scope" checked={applyScope === "all"} onChange={() => { setApplyScope("all"); setError(""); }} className="mt-1" /><span><b className="block text-sm text-slate-900">{label === "全校" ? "全校修改" : "修改当前范围全部学生"}</b><span className="mt-1 block text-xs leading-5 text-slate-500">覆盖本次范围内全部学生，包括老师此前单独设置的学生。</span></span></span></label><label className="block cursor-pointer"><span className="flex items-start gap-3"><input type="radio" name="duration-apply-scope" checked={applyScope === "unmodified"} onChange={() => { setApplyScope("unmodified"); setError(""); }} className="mt-1" /><span><b className="block text-sm text-slate-900">跳过老师单独设置的学生</b><span className="mt-1 block text-xs leading-5 text-slate-500">保留老师已按班级或学生设置的规则。</span></span></span></label></div></fieldset>}
         {error && <ControlValidationNotice message={error} onClose={() => setError("")} />}
       </div>
-      {restoreNotice > 0 && <div role="status" className="dc-feedback" style={{ zIndex: 10200, background: "#0f172a", borderColor: "#0f172a", color: "#fff" }}>已恢复默认规则</div>}
+      {restoreNotice > 0 && <ControlToast key={restoreNotice} message="已恢复默认规则" tone="success" duration={3000} onClose={() => setRestoreNotice(0)} />}
       <footer className="flex justify-end gap-3 border-t p-5">{!isDefault && <button type="button" className="dc-btn mr-auto" onClick={() => { setDraft((current) => ({ ...current, ...defaultRule, id: current.id, weekdays: [0, 1, 2, 3, 4, 5, 6], useDefault: true, periods: defaultRule.periods.map((period) => ({ ...period })) })); setError(""); setRestoreNotice((value) => value + 1); }}>恢复全校默认规则</button>}<button type="button" className="dc-btn" onClick={close}>取消</button><button type="button" className="dc-btn-primary" onClick={submit}>保存</button></footer>
     </>}
   </DeviceControlLayer>;

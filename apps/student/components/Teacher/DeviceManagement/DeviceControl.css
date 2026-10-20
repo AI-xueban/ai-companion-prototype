@@ -470,7 +470,7 @@
   align-items: center;
   gap: 9px;
   max-width: calc(100vw - 36px);
-  padding: 12px 15px;
+  padding: 14px 18px;
   border: 1px solid #ccebdc;
   border-radius: 11px;
   background: #f4fcf8;
@@ -485,6 +485,21 @@
   background: #f5f7ff;
   color: #3730a3;
 }
+.dc-feedback[data-tone="success"] {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+}
+.dc-feedback[data-tone="info"] {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+.dc-feedback[data-tone="warning"] {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #b45309;
+}
 .dc-feedback > svg {
   flex-shrink: 0;
 }
@@ -494,10 +509,10 @@
   padding: 3px;
   margin-left: 8px;
   border-radius: 5px;
-  color: #5f8c75;
+  color: inherit;
 }
 .dc-feedback button:hover {
-  background: #e2f2e9;
+  background: #00000008;
 }
 .dc-feedback[data-tone="notice"] button {
   color: #6366a1;
