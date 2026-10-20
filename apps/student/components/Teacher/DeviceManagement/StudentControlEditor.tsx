@@ -31,6 +31,7 @@ export const StudentControlEditor: React.FC<{
   );
   const [error, setError] = useState("");
   const [applyScope, setApplyScope] = useState<"all" | "unmodified" | null>(null);
+  const showApplyScope = requireApplyScope && draft?.mode !== "dates";
   const update = (changes: Partial<BorrowSchedule>) => {
     setError("");
     setDraft((current) => (current ? { ...current, ...changes } : current));
@@ -43,15 +44,17 @@ export const StudentControlEditor: React.FC<{
         return;
       }
     }
-    if (requireApplyScope && !applyScope) {
+    if (showApplyScope && !applyScope) {
       setError("请选择本次修改范围");
       return;
     }
     setError("");
-    onSave(draft ? { schedule: draft, applyScope: applyScope ?? undefined } : { answer, explanation, applyScope: applyScope ?? undefined });
+    onSave(draft ? { schedule: draft, applyScope: draft.mode === "dates" ? "all" : applyScope ?? undefined } : { answer, explanation, applyScope: applyScope ?? undefined });
   };
   const inputClass =
     "rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm";
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   return (
     <DeviceControlLayer
       labelId="student-control-editor-title"
@@ -84,7 +87,7 @@ export const StudentControlEditor: React.FC<{
             <div className="dc-target">
               <p className="text-sm font-bold text-indigo-900">{targetLabel}</p>
               <p className="mt-1 text-xs text-indigo-700">
-                本次设置影响 {count} 名学生
+                {draft?.mode === "dates" ? `默认全校生效，影响 ${count} 名学生` : `本次设置影响 ${count} 名学生`}
               </p>
               {!!selectedObjects?.length && (
                 <ul className="dc-selected-objects" aria-label="本次设置对象列表">
@@ -125,6 +128,7 @@ export const StudentControlEditor: React.FC<{
                         <input
                           type="date"
                           aria-label="开始日期"
+                          min={today}
                           value={draft.startDate}
                           onChange={(e) =>
                             update({ startDate: e.target.value })
@@ -135,14 +139,14 @@ export const StudentControlEditor: React.FC<{
                         <input
                           type="date"
                           aria-label="结束日期"
-                          min={draft.startDate}
+                          min={draft.startDate && draft.startDate > today ? draft.startDate : today}
                           value={draft.endDate}
                           onChange={(e) => update({ endDate: e.target.value })}
                           className={inputClass}
                         />
                       </div>
                       <p className="mt-2 text-xs leading-5 text-slate-500">
-                        包含起止日期。到期或删除后，自动恢复每周借用规则。
+                        生效日期只能选择当天及之后，包含起止日期。到期后恢复每周规则；已失效规则仅支持删除。
                       </p>
                     </>
                   )}
@@ -288,7 +292,7 @@ export const StudentControlEditor: React.FC<{
                 ))}
               </div>
             )}
-            {requireApplyScope && (
+            {showApplyScope && (
               <fieldset className="rounded-lg bg-slate-50 p-4">
                 <legend className="text-sm font-bold text-slate-800"><span className="text-red-500">*</span> 修改范围</legend>
                 <div className="mt-3 space-y-3">
@@ -296,7 +300,7 @@ export const StudentControlEditor: React.FC<{
                     <span className="flex items-start gap-3"><input type="radio" name="apply-scope" checked={applyScope === "all"} onChange={() => { setApplyScope("all"); setError(""); }} className="mt-1" /><span><b className="block text-sm text-slate-900">{targetLabel === "全校" ? "全校修改" : "修改当前范围全部学生"}</b><span className="mt-1 block text-xs leading-5 text-slate-500">覆盖本次范围内全部学生，包括老师此前单独设置的学生。</span></span></span>
                   </label>
                   <label className="block cursor-pointer">
-                    <span className="flex items-start gap-3"><input type="radio" name="apply-scope" checked={applyScope === "unmodified"} onChange={() => { setApplyScope("unmodified"); setError(""); }} className="mt-1" /><span><b className="block text-sm text-slate-900">仅修改老师未单独设置的学生</b><span className="mt-1 block text-xs leading-5 text-slate-500">保留老师已按班级或学生设置的规则。</span></span></span>
+                    <span className="flex items-start gap-3"><input type="radio" name="apply-scope" checked={applyScope === "unmodified"} onChange={() => { setApplyScope("unmodified"); setError(""); }} className="mt-1" /><span><b className="block text-sm text-slate-900">跳过老师单独设置的学生</b><span className="mt-1 block text-xs leading-5 text-slate-500">保留老师已按班级或学生设置的规则。</span></span></span>
                   </label>
                 </div>
               </fieldset>
@@ -315,7 +319,7 @@ export const StudentControlEditor: React.FC<{
               取消
             </button>
             <button type="button" onClick={submit} className="dc-btn-primary">
-              保存并生效
+              {draft?.mode === "dates" ? "保存" : "保存并生效"}
             </button>
           </footer>
         </>

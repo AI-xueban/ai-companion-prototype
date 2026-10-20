@@ -104,7 +104,7 @@ export const ControlDifferenceDrawer: React.FC<{
                       </div>
                     </div>
                     <button type="button" onClick={() => setExpanded(open ? null : index)} className="dc-link flex items-center gap-1 whitespace-nowrap">
-                      {open ? "收起学生" : "查看学生"}
+                      {open ? "收起班级" : "查看班级"}
                       {open ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                     </button>
                   </div>
@@ -112,15 +112,14 @@ export const ControlDifferenceDrawer: React.FC<{
                     <div className="max-h-80 overflow-auto border-t border-slate-200">
                       <table className="dc-data-table text-left">
                         <thead className="sticky top-0 bg-white">
-                          <tr>{["编号", "姓名", "年级", "班级"].map((name) => <th key={name} className={heading}>{name}</th>)}</tr>
+                          <tr>{["年级", "班级", "执行该规则人数"].map((name) => <th key={name} className={heading}>{name}</th>)}</tr>
                         </thead>
                         <tbody>
-                          {students.map((student) => (
-                            <tr key={student.id} className="border-t border-slate-100">
-                              <td className={cell}>{student.number}</td>
-                              <td className={cell}>{student.name}</td>
-                              <td className={cell}>{student.grade}年级</td>
-                              <td className={cell}>{schoolDeviceClasses.find((item) => item.id === student.classId)?.name}</td>
+                          {schoolDeviceClasses.map((classItem) => ({ ...classItem, count: students.filter((student) => student.classId === classItem.id).length })).filter((classItem) => classItem.count > 0).map((classItem) => (
+                            <tr key={classItem.id} className="border-t border-slate-100">
+                              <td className={cell}>{classItem.grade}年级</td>
+                              <td className={cell}>{classItem.name}</td>
+                              <td className={cell}>{classItem.count} 人</td>
                             </tr>
                           ))}
                         </tbody>
