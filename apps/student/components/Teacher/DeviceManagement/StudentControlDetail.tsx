@@ -115,7 +115,7 @@ export const StudentControlDetail: React.FC<{
               <>
                 {!borrowingEnabled && (
                   <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
-                    全校借用管控已关闭，设备不能从柜机借出。
+                    全校柜机借用管控已关闭，设备不能从柜机借出。
                   </p>
                 )}
                 <div
