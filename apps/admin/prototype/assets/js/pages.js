@@ -1395,6 +1395,8 @@ function renderPage(route, params) {
     case 'device-usage-detail': return renderDeviceUsageDetailPage(params);
     case 'device-alert': return renderDeviceAlertPage(params);
     case 'face-library': return renderFaceLibraryPage();
+    case 'face-import-history': return renderFaceImportHistoryPage(params);
+    case 'face-import-detail': return renderFaceImportDetailPage(params);
     case 'face-login-record': return renderFaceLoginRecordPage();
     case 'mall': return renderMallPage(params);
     case 'third-party-apps':

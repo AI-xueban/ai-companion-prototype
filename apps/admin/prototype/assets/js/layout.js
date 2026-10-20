@@ -85,6 +85,8 @@ const ROUTE_META = {
   'third-party-apps': { title: '第三方应用', breadcrumb: ['第三方应用'] },
   'app-library': { title: '第三方应用', breadcrumb: ['第三方应用'] },
   'school-apps': { title: '学校应用', breadcrumb: ['第三方应用', '学校应用'] },
+  'face-import-history': { title: '导入历史', breadcrumb: ['用户管理','人脸信息管理','导入历史'] },
+  'face-import-detail': { title: '导入记录详情', breadcrumb: ['用户管理','人脸信息管理','导入历史','详情'] },
   'face-library': { title: '人脸信息管理', breadcrumb: ['用户管理', '人脸信息管理'] },
 };
 
@@ -100,6 +102,7 @@ function isMenuRouteActive(itemRoute, activeRoute) {
     'daily-word': ['word-edit'],
     'cabinet': ['cabinet-detail', 'cabinet-carousel', 'cabinet-carousel-batch'],
     'tablet': ['tablet-detail'],
+    'face-library': ['face-import-history', 'face-import-detail'],
     'device-usage': ['device-usage-detail'],
   };
   if (itemRoute === activeRoute) return true;
