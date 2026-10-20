@@ -11,14 +11,14 @@ const durationDayLabel = (days: number[]) => {
 };
 
 export const ControlConfigurationHeaders: React.FC<HeaderProps> = ({ module, student, mode }) => <>
-  {module === 'duration' ? <><th className={heading}>当前生效规则</th>{!student && <><th className={heading}>说明</th></>}</> : module === 'borrowing' ? <><th className={heading}>{mode === 'weekly' ? '适用星期' : '适用日期'}</th>{mode === 'dates' && <th className={heading}>借用方式</th>}<th className={heading}>借用时段</th>{!student && <><th className={heading}>覆盖人数</th><th className={heading}>说明</th></>}</> : module === 'homework' ? <><th className={heading}>查看答案</th><th className={heading}>查看详解</th></> : <th className={heading}>{module === 'world' ? '权限状态' : '锁屏状态'}</th>}
+  {module === 'duration' ? <><th className={heading}>当前生效规则</th>{!student && <><th className={heading}>说明</th></>}</> : module === 'borrowing' ? <><th className={heading}>{mode === 'weekly' ? '适用星期' : '适用日期'}</th>{mode === 'dates' && <th className={heading}>借用方式</th>}<th className={heading}>借用时段</th>{!student && <><th className={heading}>覆盖人数</th><th className={heading}>说明</th></>}</> : module === 'homework' ? <><th className={heading}>查看答案</th><th className={heading}>查看详解</th></> : <th className={heading}>{module === 'world' ? '使用状态' : student ? '锁屏状态' : '临时锁屏状态'}</th>}
   <th className={heading} title="当前范围内该模块最近一次操作的人员">最后操作人</th><th className={heading} title="当前范围内该模块最近一次操作的时间">操作时间</th>
 </>;
 
 export const ControlConfigurationCells: React.FC<HeaderProps & {
   ids: string[]; controls: Record<string, StudentControl>; onBorrowOverview: () => void;
-  defaultDurationEnabled?: boolean; defaultDurationRule?: DurationRule;
-}> = ({ module, student, mode, ids, controls, onBorrowOverview, defaultDurationEnabled = false, defaultDurationRule }) => {
+  defaultDurationEnabled?: boolean; defaultDurationRule?: DurationRule; temporaryLockState?: "已开启" | "未开启" | "部分开启";
+}> = ({ module, student, mode, ids, controls, onBorrowOverview, defaultDurationEnabled = false, defaultDurationRule, temporaryLockState = "未开启" }) => {
   const entries = ids.map(id => controls[id]);
   const modified = entries.reduce<StudentControl['updated'][ControlModule]>((latest, entry) => {
     const operation = entry.updated[module];
@@ -65,9 +65,13 @@ export const ControlConfigurationCells: React.FC<HeaderProps & {
       : count === 0 ? '全部不允许' : count === ids.length ? '全部允许' : '部分允许';
     return <td className={cell}><span className={`whitespace-nowrap font-medium ${count > 0 && count < ids.length ? 'text-amber-700' : count ? 'text-emerald-700' : 'text-slate-700'}`}>{state}</span>{!student && count > 0 && count < ids.length && <p className="mt-2 whitespace-nowrap text-xs text-slate-500">{count}/{ids.length} 人</p>}</td>;
   };
+  if (module === 'lock' && !student) return <>
+    <td className={cell}><span className={`whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-bold ${temporaryLockState === '部分开启' ? 'bg-amber-50 text-amber-700' : temporaryLockState === '已开启' ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-600'}`}>{temporaryLockState}</span></td>
+    {operationCells}
+  </>;
   const count = entries.filter(s => module === 'world' ? s.world : s.locked).length;
-  const word = module === 'world' ? '开放' : '锁屏';
-  const state = student ? count ? `已${word}` : module === 'world' ? '已关闭' : '未锁屏' : count === 0 ? module === 'world' ? '全部已关闭' : '全部未锁屏' : count === ids.length ? `全部已${word}` : `部分已${word}`;
+
+  const state = module === 'world' ? count === 0 ? '禁止使用' : count === ids.length ? '允许使用' : '部分学生允许使用' : student ? count ? '已锁屏' : '未锁屏' : count === 0 ? '全部未锁屏' : count === ids.length ? '全部已锁屏' : '部分已锁屏';
   return <>
     {module === 'homework' ? <>{permissionCell('answer')}{permissionCell('explanation')}</> : <td className={cell}><span className={`whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-bold ${count > 0 && count < ids.length ? 'bg-amber-50 text-amber-700' : module === 'lock' && count ? 'bg-red-50 text-red-600' : count ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>{state}</span></td>}
     {operationCells}

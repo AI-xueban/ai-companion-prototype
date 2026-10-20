@@ -5,7 +5,7 @@ export type DeviceStudent = { id: string; number: string; name: string; classId:
 export type BorrowSchedule = { id: string; mode: 'weekly' | 'dates'; weekdays: number[]; startDate: string; endDate: string; deny: boolean; periods: { start: string; end: string }[] };
 export type DurationRule = { id: string; weekdays: number[]; useDefault: boolean; continuousMinutes: number; restMinutes: number; dailyMinutes: number; periods: { start: string; end: string }[] };
 export const defaultDurationRule: Omit<DurationRule, 'id' | 'weekdays' | 'useDefault'> = { continuousMinutes: 60, restMinutes: 15, dailyMinutes: 180, periods: [] };
-export const newDurationRule = (): DurationRule => ({ id: `duration-${Date.now()}`, weekdays: [], useDefault: false, ...defaultDurationRule, periods: [] });
+export const newDurationRule = (): DurationRule => ({ id: `duration-${Date.now()}`, weekdays: [0, 1, 2, 3, 4, 5, 6], useDefault: true, ...defaultDurationRule, periods: [] });
 export const durationRuleText = (rule: DurationRule) => `${rule.useDefault ? '默认规则 · ' : ''}连续 ${rule.continuousMinutes} 分钟 · 休息 ${rule.restMinutes} 分钟 · 每日累计 ${rule.dailyMinutes} 分钟 · ${rule.periods.length ? rule.periods.map(p => `${p.start}–${p.end}`).join('、') : '不限可用时段'}`;
 export type StudentControl = { schedules: BorrowSchedule[]; durationRules: DurationRule[]; answer: boolean; explanation: boolean; world: boolean; locked: boolean; updated: Partial<Record<ControlModule, { by: string; at: string }>> };
 export const controlGrades = [...new Set(schoolDeviceClasses.map(c => c.grade))].sort((a, b) => a - b);

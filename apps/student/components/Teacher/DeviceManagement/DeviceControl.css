@@ -462,7 +462,8 @@
 .dc-feedback {
   pointer-events: none;
   position: fixed;
-  bottom: 25px;
+  top: max(24px, env(safe-area-inset-top));
+  bottom: auto;
   left: 50%;
   z-index: 10005;
   display: flex;
@@ -503,6 +504,17 @@
 }
 .dc-feedback[data-tone="notice"] button:hover {
   background: #e8edff;
+}
+.dc-feedback[data-tone="error"] {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+.dc-feedback[data-tone="error"] button {
+  color: #b91c1c;
+}
+.dc-feedback[data-tone="error"] button:hover {
+  background: #fee2e2;
 }
 .dc-overlay {
   position: fixed;
@@ -765,7 +777,7 @@
 @keyframes dc-feedback-in {
   from {
     opacity: 0;
-    transform: translate(-50%, 6px);
+    transform: translate(-50%, -8px);
   }
   to {
     opacity: 1;
@@ -1066,7 +1078,8 @@
     min-height: 44px;
   }
   .dc-feedback {
-    bottom: 98px;
+    top: max(16px, env(safe-area-inset-top));
+    bottom: auto;
     width: max-content;
   }
 }

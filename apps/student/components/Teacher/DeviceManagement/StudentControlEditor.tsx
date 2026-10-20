@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Plus, Trash2, X } from "lucide-react";
 import {
   BorrowSchedule,
@@ -7,6 +7,7 @@ import {
   weekdayNames,
 } from "../data/hierarchicalDeviceControl";
 import { DeviceControlLayer } from "./DeviceControlLayer";
+import { ControlValidationNotice } from "./ControlValidationNotice";
 
 export type ControlEditorValue = {
   schedule?: BorrowSchedule;
@@ -21,16 +22,21 @@ export const StudentControlEditor: React.FC<{
   schedule?: BorrowSchedule;
   homework?: Pick<StudentControl, "answer" | "explanation">;
   requireApplyScope?: boolean;
+  batchDefaults?: boolean;
   onClose: () => void;
   onSave: (value: ControlEditorValue) => void;
-}> = ({ targetLabel, count, selectedObjects, schedule, homework, requireApplyScope, onClose, onSave }) => {
+}> = ({ targetLabel, count, selectedObjects, schedule, homework, requireApplyScope, batchDefaults, onClose, onSave }) => {
   const [draft, setDraft] = useState(schedule);
   const [answer, setAnswer] = useState(homework?.answer ?? false);
   const [explanation, setExplanation] = useState(
     homework?.explanation ?? false,
   );
   const [error, setError] = useState("");
+  const [restoreNotice, setRestoreNotice] = useState(0);
+  useEffect(() => { if (!restoreNotice) return; const timer = window.setTimeout(() => setRestoreNotice(0), 3000); return () => window.clearTimeout(timer); }, [restoreNotice]);
   const [applyScope, setApplyScope] = useState<"all" | "unmodified" | null>(null);
+  const initial = useRef(JSON.stringify({ draft, answer, explanation, applyScope }));
+  const dirty = initial.current !== JSON.stringify({ draft, answer, explanation, applyScope });
   const showApplyScope = requireApplyScope && draft?.mode !== "dates";
   const update = (changes: Partial<BorrowSchedule>) => {
     setError("");
@@ -60,6 +66,7 @@ export const StudentControlEditor: React.FC<{
       labelId="student-control-editor-title"
       level={1}
       onClose={onClose}
+      unsavedChanges={dirty}
     >
       {(close) => (
         <>
@@ -84,6 +91,7 @@ export const StudentControlEditor: React.FC<{
             </button>
           </header>
           <div className="dc-panel-body space-y-6">
+            {!draft && <div className="text-sm leading-6 text-slate-500"><p>全校默认规则：不允许查看答案和详解。</p><p>可直接修改。点击“恢复全校默认规则”后，仍需点击“保存”才会生效。</p></div>}
             <div className="dc-target">
               <p className="text-sm font-bold text-indigo-900">{targetLabel}</p>
               <p className="mt-1 text-xs text-indigo-700">
@@ -305,21 +313,16 @@ export const StudentControlEditor: React.FC<{
                 </div>
               </fieldset>
             )}
-            {error && (
-              <p
-                role="alert"
-                className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600"
-              >
-                {error}
-              </p>
-            )}
+            {error && <ControlValidationNotice message={error} onClose={() => setError("")} />}
           </div>
-          <footer className="flex justify-end gap-3 border-t p-5">
+          {restoreNotice > 0 && <div role="status" className="dc-feedback" style={{ zIndex: 10200, background: "#0f172a", borderColor: "#0f172a", color: "#fff" }}>已恢复默认规则</div>}
+      <footer className="flex justify-end gap-3 border-t p-5">
+            {!draft && <button type="button" className="dc-btn mr-auto" onClick={() => { setAnswer(false); setExplanation(false); setError(""); setRestoreNotice((value) => value + 1); }}>恢复全校默认规则</button>}
             <button type="button" onClick={close} className="dc-btn">
               取消
             </button>
             <button type="button" onClick={submit} className="dc-btn-primary">
-              {draft?.mode === "dates" ? "保存" : "保存并生效"}
+              {!draft || draft.mode === "dates" ? "保存" : "保存并生效"}
             </button>
           </footer>
         </>
