@@ -110,9 +110,9 @@ const DEFAULT_DATA = {
 
   /* 设备管理 · 学习平板借租柜 */
   cabinets: [
-    { id: 'CAB-001', name: '图书馆一楼借租柜', schoolId: 'school-001', schoolName: '深圳市南山实验学校', location: '图书馆 1F 大厅东侧', totalSlots: 24, usedSlots: 6, online: true, lastHeartbeat: '2026-06-08 14:32:05', boundPhone: '13800001001', manager: '李老师', managerContact: '13800138001' },
-    { id: 'CAB-002', name: '教学楼A座借租柜', schoolId: 'school-001', schoolName: '深圳市南山实验学校', location: '教学楼 A 座 3F 走廊', totalSlots: 16, usedSlots: 4, online: true, lastHeartbeat: '2026-06-08 14:31:58', boundPhone: '13800001002', manager: '王老师', managerContact: '13900139002' },
-    { id: 'CAB-003', name: '实验楼借租柜', schoolId: 'school-002', schoolName: '深圳市科技实验学校', location: '实验楼 2F 入口', totalSlots: 12, usedSlots: 3, online: false, lastHeartbeat: '2026-06-08 09:15:00', boundPhone: '13800001003', manager: '张老师', managerContact: '13700137003' },
+    { id: 'CAB-001', name: '图书馆一楼借租柜', faceRegistrationCode: 'FACE-CAB-001', schoolId: 'school-001', schoolName: '深圳市南山实验学校', location: '图书馆 1F 大厅东侧', totalSlots: 24, usedSlots: 6, online: true, lastHeartbeat: '2026-06-08 14:32:05', boundPhone: '13800001001', manager: '李老师', managerContact: '13800138001' },
+    { id: 'CAB-002', name: '教学楼A座借租柜', faceRegistrationCode: 'FACE-CAB-002', schoolId: 'school-001', schoolName: '深圳市南山实验学校', location: '教学楼 A 座 3F 走廊', totalSlots: 16, usedSlots: 4, online: true, lastHeartbeat: '2026-06-08 14:31:58', boundPhone: '13800001002', manager: '王老师', managerContact: '13900139002' },
+    { id: 'CAB-003', name: '实验楼借租柜', faceRegistrationCode: 'FACE-CAB-003', schoolId: 'school-002', schoolName: '深圳市科技实验学校', location: '实验楼 2F 入口', totalSlots: 12, usedSlots: 3, online: false, lastHeartbeat: '2026-06-08 09:15:00', boundPhone: '13800001003', manager: '张老师', managerContact: '13700137003' },
   ],
   tablets: [
     /* CAB-001 · 格口状态样例柜：已绑定平板=已激活，损坏设备=异常（体现在设备状态），未绑定平板=未激活 */
@@ -447,10 +447,10 @@ const DEFAULT_DATA = {
     { id: 'ALT-009', tabletId: 'TAB-010', sn: 'SN20260301010', type: 'return_door_open', severity: 'medium', title: '归还异常', message: '未关门', status: 'pending', createdAt: '2026-06-08 12:05:00', workorderId: null },
     { id: 'ALT-010', tabletId: 'TAB-017', sn: 'SN20260301017', type: 'return_door_open', severity: 'medium', title: '归还异常', message: '未关门', status: 'pending', createdAt: '2026-06-08 11:15:00', workorderId: null },
     { id: 'ALT-011', tabletId: 'TAB-019', sn: 'SN20260301019', type: 'damage', severity: 'high', title: '外观损坏', message: '外观对比发现损坏', status: 'pending', createdAt: '2026-07-24 15:22:15', usageRecordId: 'UR-20260724005', workorderId: null },
-    { id: 'ALT-012', tabletId: 'TAB-010', sn: 'SN20260301010', slotNo: 4, type: 'manual_feedback', severity: 'medium', title: '人工问题反馈', message: '门关不上', status: 'pending', createdAt: '2026-07-24 13:20:00', workorderId: null },
+    { id: 'ALT-012', tabletId: 'TAB-010', sn: 'SN20260301010', slotNo: 4, type: 'manual_feedback', severity: 'medium', title: '人工问题反馈', message: '柜门无法关闭', status: 'pending', createdAt: '2026-07-24 13:20:00', workorderId: null },
     { id: 'ALT-013', tabletId: 'TAB-017', sn: 'SN20260301017', slotNo: 7, type: 'manual_feedback', severity: 'medium', title: '人工问题反馈', message: '充电线损坏', status: 'pending', createdAt: '2026-07-24 11:45:00', workorderId: null },
     { id: 'ALT-014', tabletId: 'TAB-005', sn: 'SN20260301005', slotNo: 5, type: 'manual_feedback', severity: 'medium', title: '人工问题反馈', message: '格口内有异物', status: 'resolved', createdAt: '2026-07-24 10:30:00', workorderId: null },
-    { id: 'ALT-015', tabletId: 'TAB-019', sn: 'SN20260301019', slotNo: 3, type: 'manual_feedback', severity: 'high', title: '人工问题反馈', message: '设备损坏', status: 'pending', createdAt: '2026-07-24 16:05:00', workorderId: null },
+    { id: 'ALT-015', tabletId: 'TAB-019', sn: 'SN20260301019', slotNo: 3, type: 'manual_feedback', severity: 'high', title: '人工问题反馈', message: '设备外观损坏', status: 'pending', createdAt: '2026-07-24 16:05:00', workorderId: null },
   ],
   workorders: [
     { id: 'WO-001', alertId: 'ALT-001', tabletId: 'TAB-005', sn: 'SN20260301005', type: 'damage_repair', title: '平板外观损坏检修', description: '归还入柜AI检测发现屏幕边缘擦伤，需现场核验并维修', status: 'in_progress', priority: 'high', assignee: '设备运维-刘工', createdAt: '2026-06-07 16:41:00', updatedAt: '2026-06-08 09:00:00' },
@@ -814,6 +814,8 @@ function loadData() {
     if (saved) {
       const data = JSON.parse(saved);
       syncTabletOverdueFlags(data);
+      syncTabletCreatedAt(data);
+      syncDeviceAlerts(data);
       syncContentCovers(data);
       syncSectionPublishedAt(data);
       syncChannelPublishedAt(data);
@@ -823,7 +825,42 @@ function loadData() {
       return data;
     }
   } catch (e) { /* ignore */ }
-  return JSON.parse(JSON.stringify(DEFAULT_DATA));
+  const data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  syncTabletCreatedAt(data);
+  syncDeviceAlerts(data);
+  return data;
+}
+
+function syncTabletCreatedAt(data) {
+  (data.tablets || []).forEach((tablet, index) => {
+    if (tablet.createdAt) return;
+    const day = String(1 + Math.floor(index / 4)).padStart(2, '0');
+    const minute = String((index % 4) * 12).padStart(2, '0');
+    tablet.createdAt = `2026-03-${day} 09:${minute}:00`;
+  });
+}
+
+function syncDeviceAlerts(data) {
+  const supportedTypes = new Set(['damage', 'overdue', 'return_door_open', 'return_not_charging', 'cabinet_offline', 'manual_feedback']);
+  const manualFeedbackAliases = {
+    '门关不上': '柜门无法关闭',
+    '设备损坏': '设备外观损坏',
+  };
+  data.deviceAlerts = (data.deviceAlerts || [])
+    .filter(alert => supportedTypes.has(alert.type))
+    .map(alert => {
+      const message = alert.type === 'manual_feedback'
+        ? (manualFeedbackAliases[alert.message] || alert.message)
+        : alert.message;
+      const description = alert.type === 'manual_feedback'
+        ? (manualFeedbackAliases[alert.description] || message || '—')
+        : (alert.description || message || '—');
+      return { ...alert, message, description };
+    });
+  if (!data.deviceAlerts.some(alert => alert.type === 'cabinet_offline')) {
+    const sample = (DEFAULT_DATA.deviceAlerts || []).find(alert => alert.type === 'cabinet_offline');
+    if (sample) data.deviceAlerts.push({ ...sample, description: sample.message || '—' });
+  }
 }
 
 function syncTabletOverdueFlags(data) {
