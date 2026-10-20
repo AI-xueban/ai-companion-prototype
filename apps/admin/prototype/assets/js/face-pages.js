@@ -4,32 +4,32 @@ const FACE_SCHOOLS = [
   { id: 'school-002', name: '深圳市科技实验学校' },
 ];
 const FACE_STUDENTS = [
-  { id: '2026001', schoolId: 'school-001', name: '张三', className: '一年级1班', photoFile: '2026001.jpg', updatedAt: '2026-09-20 10:12:00', recognitionSource: '上传照片' },
+  { id: '2026001', schoolId: 'school-001', name: '张三', className: '一年级1班', photoFile: '2026001.jpg', updatedAt: '2026-09-20 10:12:00', recognitionSource: '照片' },
   { id: '2026002', schoolId: 'school-001', name: '李四', className: '一年级1班', photoFile: '2026002.jpg', updatedAt: '2026-10-02 09:18:00', recognitionSource: '柜机视频' },
   { id: '2026003', schoolId: 'school-001', name: '王五（01）', className: '一年级1班', photoFile: null, updatedAt: '2026-10-03 16:40:00', recognitionSource: '柜机视频' },
   { id: '2026025', schoolId: 'school-001', name: '王五（02）', className: '一年级1班', photoFile: null, updatedAt: null, recognitionSource: null },
-  { id: '2026004', schoolId: 'school-001', name: '赵六', className: '一年级2班', photoFile: '2026004.jpg', updatedAt: '2026-09-18 15:22:00', recognitionSource: '上传照片' },
+  { id: '2026004', schoolId: 'school-001', name: '赵六', className: '一年级2班', photoFile: '2026004.jpg', updatedAt: '2026-09-18 15:22:00', recognitionSource: '照片' },
   { id: '2026026', schoolId: 'school-001', name: '赵六', className: '一年级2班', photoFile: null, updatedAt: null, recognitionSource: null },
   { id: '2026005', schoolId: 'school-001', name: '孙七', className: '一年级3班', photoFile: '2026005.jpg', updatedAt: '2026-10-04 14:08:00', recognitionSource: '柜机视频' },
   { id: '2026006', schoolId: 'school-001', name: '周八', className: '一年级3班', photoFile: null, updatedAt: null, recognitionSource: null },
-  { id: '2026007', schoolId: 'school-001', name: '吴九', className: '二年级1班', photoFile: '2026007.jpg', updatedAt: '2026-09-17 16:18:00', recognitionSource: '上传照片' },
+  { id: '2026007', schoolId: 'school-001', name: '吴九', className: '二年级1班', photoFile: '2026007.jpg', updatedAt: '2026-09-17 16:18:00', recognitionSource: '照片' },
   { id: '2026014', schoolId: 'school-001', name: '蒋一', className: '二年级1班', photoFile: null, updatedAt: null, recognitionSource: null },
-  { id: '2026015', schoolId: 'school-001', name: '沈二', className: '二年级2班', photoFile: '2026015.jpg', updatedAt: '2026-09-14 11:05:00', recognitionSource: '上传照片' },
+  { id: '2026015', schoolId: 'school-001', name: '沈二', className: '二年级2班', photoFile: '2026015.jpg', updatedAt: '2026-09-14 11:05:00', recognitionSource: '照片' },
   { id: '2026016', schoolId: 'school-001', name: '韩三', className: '二年级2班', photoFile: null, updatedAt: '2026-10-06 08:46:00', recognitionSource: '柜机视频' },
-  { id: '2026017', schoolId: 'school-001', name: '杨四', className: '二年级3班', photoFile: '2026017.jpg', updatedAt: '2026-09-12 13:26:00', recognitionSource: '上传照片' },
+  { id: '2026017', schoolId: 'school-001', name: '杨四', className: '二年级3班', photoFile: '2026017.jpg', updatedAt: '2026-09-12 13:26:00', recognitionSource: '照片' },
   { id: '2026018', schoolId: 'school-001', name: '朱五', className: '二年级3班', photoFile: null, updatedAt: null, recognitionSource: null },
   { id: '2026008', schoolId: 'school-002', name: '郑十', className: '二年级1班', photoFile: '2026008.jpg', updatedAt: '2026-10-01 15:42:00', recognitionSource: '柜机视频' },
-  { id: '2026009', schoolId: 'school-002', name: '钱一', className: '二年级2班', photoFile: '2026009.jpg', updatedAt: '2026-09-16 11:26:00', recognitionSource: '上传照片' },
+  { id: '2026009', schoolId: 'school-002', name: '钱一', className: '二年级2班', photoFile: '2026009.jpg', updatedAt: '2026-09-16 11:26:00', recognitionSource: '照片' },
   { id: '2026010', schoolId: 'school-002', name: '冯二', className: '二年级2班', photoFile: null, updatedAt: null, recognitionSource: null },
-  { id: '2026011', schoolId: 'school-002', name: '陈三', className: '二年级3班', photoFile: '2026011.jpg', updatedAt: '2026-09-15 16:44:00', recognitionSource: '上传照片' },
+  { id: '2026011', schoolId: 'school-002', name: '陈三', className: '二年级3班', photoFile: '2026011.jpg', updatedAt: '2026-09-15 16:44:00', recognitionSource: '照片' },
   { id: '2026012', schoolId: 'school-002', name: '褚四', className: '二年级3班', photoFile: '2026012.jpg', updatedAt: '2026-10-05 15:30:00', recognitionSource: '柜机视频' },
-  { id: '2026013', schoolId: 'school-002', name: '卫五', className: '三年级1班', photoFile: '2026013.jpg', updatedAt: '2026-09-15 14:12:00', recognitionSource: '上传照片' },
+  { id: '2026013', schoolId: 'school-002', name: '卫五', className: '三年级1班', photoFile: '2026013.jpg', updatedAt: '2026-09-15 14:12:00', recognitionSource: '照片' },
   { id: '2026019', schoolId: 'school-002', name: '秦六', className: '三年级1班', photoFile: null, updatedAt: null, recognitionSource: null },
   { id: '2026020', schoolId: 'school-002', name: '尤七', className: '三年级2班', photoFile: null, updatedAt: '2026-10-07 09:37:00', recognitionSource: '柜机视频' },
-  { id: '2026021', schoolId: 'school-002', name: '许八', className: '三年级2班', photoFile: '2026021.jpg', updatedAt: '2026-09-11 10:20:00', recognitionSource: '上传照片' },
+  { id: '2026021', schoolId: 'school-002', name: '许八', className: '三年级2班', photoFile: '2026021.jpg', updatedAt: '2026-09-11 10:20:00', recognitionSource: '照片' },
   { id: '2026022', schoolId: 'school-002', name: '何九', className: '三年级3班', photoFile: null, updatedAt: null, recognitionSource: null },
   { id: '2026023', schoolId: 'school-002', name: '吕十', className: '三年级3班', photoFile: '2026023.jpg', updatedAt: '2026-10-08 14:55:00', recognitionSource: '柜机视频' },
-  { id: '2026024', schoolId: 'school-002', name: '施一', className: '四年级1班', photoFile: '2026024.jpg', updatedAt: '2026-09-10 09:48:00', recognitionSource: '上传照片' },
+  { id: '2026024', schoolId: 'school-002', name: '施一', className: '四年级1班', photoFile: '2026024.jpg', updatedAt: '2026-09-10 09:48:00', recognitionSource: '照片' },
 ];
 
 const FACE_LOGIN_RECORDS = [
@@ -40,6 +40,63 @@ const FACE_LOGIN_RECORDS = [
 let faceCurrentPage = 1;
 let facePageSize = 10;
 let faceSelectedSchool = '';
+let faceFilters = { id: '', name: '', className: '', status: '' };
+FACE_STUDENTS.forEach((student, index) => {
+  student.syncStatus = student.recognitionSource ? ['同步成功', '同步中', '同步失败', '待同步'][index % 4] : '';
+  student.syncFailureReason = student.syncStatus === '同步失败' ? (student.id === '2026005' ? '未检测到有效人脸，请更换照片' : '柜机 A03 下发失败，请重试') : '';
+});
+function searchFaceStudents(reset = false) {
+  faceFilters = reset ? { id: '', name: '', className: '', status: '' } : {
+    id: document.getElementById('face-filter-id').value.trim(),
+    name: document.getElementById('face-filter-name').value.trim(),
+    className: document.getElementById('face-filter-class').value,
+    status: document.getElementById('face-filter-status').value
+  };
+  faceCurrentPage = 1;
+  navigate('face-library');
+}
+function refreshFaceSyncView() {
+  if (location.hash.startsWith('#face-library')) renderApp('face-library', currentParams);
+}let faceEditPhoto = null;
+function openFacePhotoEdit(id) {
+  const student = FACE_STUDENTS.find(item => item.id === id);
+  if (!student) return;
+  faceEditPhoto = null;
+  document.getElementById('modal-title').textContent = student.photoFile ? '修改照片' : '上传照片';
+  document.getElementById('modal-subtitle').style.display = 'none';
+  const photo = student.photoUrl ? '<img src="' + esc(student.photoUrl) + '" style="max-width:100%;height:220px;object-fit:contain">' : student.photoFile ? '<div class="face-photo-preview">' + esc(student.name.slice(0,1)) + '</div>' : '<p class="text-muted">暂无照片</p>';
+  document.getElementById('modal-body').innerHTML = '<p>' + esc(student.name) + '（' + esc(student.id) + '） · ' + esc(student.className) + '</p><div style="display:flex;gap:32px;align-items:start"><div style="flex:1;text-align:center"><p>当前照片</p>' + photo + '</div><div style="flex:1"><p>新照片</p><input type="file" accept="image/jpeg,image/png" onchange="selectFaceEditPhoto(this)"><div id="face-edit-preview" style="margin-top:16px"></div><p class="form-hint">支持 JPG、JPEG、PNG，单张不超过 5MB。保存后替换当前照片并重新同步。</p></div></div>';
+  document.getElementById('modal-footer').innerHTML = `<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-primary" id="face-edit-save">保存并同步</button>`;
+  document.getElementById('face-edit-save').onclick = () => saveFacePhotoEdit(id);
+  document.getElementById('modal-footer').style.display = '';
+  document.getElementById('modal').classList.remove('modal-sm');
+  document.getElementById('modal').classList.add('modal-xl');
+  document.getElementById('modal-overlay').hidden = false;
+}
+function selectFaceEditPhoto(input) {
+  const file = input.files[0];
+  faceEditPhoto = null;
+  if (!file) return;
+  if (!['image/jpeg','image/png'].includes(file.type) || file.size > 5*1024*1024) {
+    input.value = ''; toast('请选择不超过 5MB 的 JPG、JPEG 或 PNG 照片', 'warning'); return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    faceEditPhoto = { url: reader.result, extension: file.type === 'image/png' ? 'png' : 'jpg' };
+    document.getElementById('face-edit-preview').innerHTML = '<img src="' + reader.result + '" style="max-width:100%;height:220px;object-fit:contain">';
+  };
+  reader.readAsDataURL(file);
+}
+function saveFacePhotoEdit(id) {
+  if (!faceEditPhoto) return toast('请上传新照片', 'warning');
+  const student = FACE_STUDENTS.find(item => item.id === id);
+  student.photoFile = student.id + '.' + faceEditPhoto.extension;
+  student.photoUrl = faceEditPhoto.url;
+  student.recognitionSource = '照片';
+  student.updatedAt = new Date().toLocaleString('sv-SE');
+  student.syncStatus = '同步中';
+  closeModal(); navigate('face-library'); toast('照片已更新，正在同步', 'success');
+}
 
 
 function facePhotoHtml(student) {
@@ -130,30 +187,50 @@ function triggerFaceImportUpload() {
   document.getElementById('face-import-file-input')?.click();
 }
 
+let faceImportProgress = null;
+function renderFaceImportProgress() {
+  if (!faceImportProgress || faceImportProgress.schoolId !== faceSelectedSchool) return '';
+  const t = faceImportProgress;
+  return '<div style="padding:16px;margin:16px 0;background:#f0f5ff;border:1px solid #adc6ff;border-radius:8px"><strong>' + (t.running ? '照片导入中' : '照片导入完成') + '</strong> · ' + esc(t.fileName) + '<p style="margin:8px 0">共 ' + t.total + ' 张，导入成功 ' + t.done + ' 张，导入失败 ' + t.failed + ' 张，剩余 ' + (t.total-t.done-t.failed) + ' 张</p><progress value="' + (t.done+t.failed) + '" max="' + Math.max(1,t.total) + '" style="width:100%"></progress><p class="form-hint">照片导入成功后进入待同步队列，柜机同步结果在下方列表查看。</p></div>';
+}
 function runFaceImport(recordId) {
   const record = faceImportFiles.find(item => item.id === recordId);
   if (!record || record.uploadStatus !== 'success' || record.importStatus) return;
-  record.matches.forEach(match => {
-    const student = FACE_STUDENTS.find(item => item.id === match.studentId);
-    if (student) {
-      if (student.photoUrl) URL.revokeObjectURL(student.photoUrl);
-      student.photoUrl = URL.createObjectURL(match.blob);
-      student.photoFile = match.originalName;
-      student.updatedAt = new Date().toLocaleString('zh-CN', { hour12: false }).replaceAll('/', '-');
-      student.recognitionSource = '上传照片';
+  if (faceImportProgress?.running) return toast('已有照片导入任务，请等待完成', 'warning');
+  record.importStatus = 'processing';
+  faceImportProgress = { schoolId: faceSelectedSchool, fileName: record.fileName, total: record.matches.length + record.failures.length, failed: record.failures.length, done: 0, running: true };
+  refreshFaceImportList(); refreshFaceSyncView();
+  const next = () => {
+    const match = record.matches[faceImportProgress.done];
+    if (!match) {
+      faceImportProgress.running = false;
+      record.importStatus = record.failures.length ? 'partial' : 'success';
+      record.note = '成功导入 ' + faceImportProgress.done + ' 张，失败 ' + faceImportProgress.failed + ' 张';
+      refreshFaceImportList(); refreshFaceSyncView();
+      return;
     }
-  });
-  record.importStatus = record.failures.length ? 'partial' : 'success';
-  record.note = `成功导入并替换 ${record.matches.length} 张照片${record.failures.length ? `，失败 ${record.failures.length} 张` : ''}`;
-  toast(record.failures.length ? '部分照片导入成功' : '导入成功', record.failures.length ? 'warning' : 'success');
-  refreshFaceImportList();
-  renderApp('face-library', currentParams);
+    setTimeout(() => {
+      const student = FACE_STUDENTS.find(item => item.id === match.studentId);
+      if (student) {
+        if (student.photoUrl?.startsWith('blob:')) URL.revokeObjectURL(student.photoUrl);
+        student.photoUrl = URL.createObjectURL(match.blob);
+        student.photoFile = match.originalName;
+        student.updatedAt = new Date().toLocaleString('sv-SE');
+        student.recognitionSource = '照片';
+        student.syncStatus = '待同步';
+        student.syncFailureReason = '';
+      }
+      faceImportProgress.done++; refreshFaceSyncView(); next();
+    }, 600);
+  };
+  next();
 }
 
 function renderFaceImportRow(record) {
   if (record.uploadStatus === 'checking') return `<tr><td>${esc(record.fileName)}</td><td>校验中</td><td>${esc(record.note)}</td><td>--</td></tr>`;
   if (record.uploadStatus === 'fail') return `<tr><td>${esc(record.fileName)}</td><td><span class="import-result-fail">上传失败</span></td><td>${esc(record.note)}</td><td>--</td></tr>`;
   let actionCell = `<button class="btn-link" onclick="runFaceImport('${record.id}')">导入</button>`;
+  if (record.importStatus === 'processing') actionCell = '<span>导入中</span>';
   if (record.importStatus === 'success') actionCell = '<span class="import-action-success">导入成功</span>';
   if (record.importStatus === 'partial') actionCell = '<span class="status-tag warning">部分成功</span>';
   const detail = record.failures.length ? `<details><summary>${esc(record.note)}</summary><div class="form-hint" style="margin-top:6px">${record.failures.map(item => esc(item)).join('<br>')}</div></details>` : esc(record.note);
@@ -198,6 +275,7 @@ function switchFacePage(page) {
 
 function switchFaceSchool(schoolId) {
   faceSelectedSchool = schoolId;
+  faceFilters = { id: '', name: '', className: '', status: '' };
   faceCurrentPage = 1;
   navigate('face-library');
 }
@@ -211,15 +289,16 @@ function renderFaceLibraryPage() {
   }
   const schoolStudents = FACE_STUDENTS.filter(student => student.schoolId === faceSelectedSchool);
   const schoolClasses = [...new Set(schoolStudents.map(student => student.className))];
-  const totalPages = Math.max(1, Math.ceil(schoolStudents.length / facePageSize));
+  const filteredStudents = schoolStudents.filter(student => student.id.includes(faceFilters.id) && student.name.includes(faceFilters.name) && (!faceFilters.className || student.className === faceFilters.className) && (!faceFilters.status || student.syncStatus === faceFilters.status));
+  const totalPages = Math.max(1, Math.ceil(filteredStudents.length / facePageSize));
   faceCurrentPage = Math.min(faceCurrentPage, totalPages);
-  const pageStudents = schoolStudents.slice((faceCurrentPage - 1) * facePageSize, faceCurrentPage * facePageSize);
+  const pageStudents = filteredStudents.slice((faceCurrentPage - 1) * facePageSize, faceCurrentPage * facePageSize);
   return `<div class="page-card">
     <div class="page-card-header"><div><div class="page-card-title">学生人脸信息</div><p class="form-hint">查看当前学校柜机录入并同步的学生人脸信息。学生照片仅展示后台最近一次上传的照片，当前识别数据以当前识别来源为准。</p></div></div>
     ${schoolSelector}
-    <div class="filter-row"><label>学生编号 <input class="input" placeholder="请输入学生编号"></label><label>姓名 <input class="input" placeholder="请输入姓名"></label><label>班级 <select class="select"><option value="">全部班级</option>${schoolClasses.map(className => `<option value="${esc(className)}">${esc(className)}</option>`).join('')}</select></label><button class="btn btn-secondary">重置</button><button class="btn btn-primary">搜索</button></div>
-    <div class="page-card-actions" style="margin:16px 0"><button class="btn btn-primary" onclick="openFaceImportModal()">＋ 导入照片</button></div>
-    <table class="data-table"><thead><tr><th>学生编号</th><th>姓名</th><th>班级</th><th title="后台最近一次导入的照片；当前识别数据以当前识别来源为准">学生照片</th><th>当前识别来源</th><th>最近更新时间</th></tr></thead><tbody>${pageStudents.map(s => `<tr><td>${s.id}</td><td>${s.name}</td><td>${s.className}</td><td>${facePhotoHtml(s)}</td><td>${s.recognitionSource || '—'}</td><td>${s.updatedAt || '—'}</td></tr>`).join('')}</tbody></table>
+    <div class="filter-row"><label>学生编号 <input id="face-filter-id" class="input" placeholder="请输入学生编号" value="${esc(faceFilters.id)}"></label><label>姓名 <input id="face-filter-name" class="input" placeholder="请输入姓名" value="${esc(faceFilters.name)}"></label><label>班级 <select id="face-filter-class" class="select"><option value="">全部班级</option>${schoolClasses.map(c => `<option value="${esc(c)}" ${faceFilters.className === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label><label>同步状态 <select id="face-filter-status" class="select"><option value="">全部状态</option>${['同步中','同步成功','同步失败','待同步'].map(status => `<option ${faceFilters.status === status ? 'selected' : ''}>${status}</option>`).join('')}</select></label><button class="btn btn-secondary" onclick="searchFaceStudents(true)">重置</button><button class="btn btn-primary" onclick="searchFaceStudents()">搜索</button></div>
+    <div class="page-card-actions" style="margin:16px 0"><button class="btn btn-primary" onclick="openFaceImportModal()">＋ 导入照片</button></div>${renderFaceImportProgress()}
+    <table class="data-table"><thead><tr><th>学生编号</th><th>姓名</th><th>班级</th><th title="后台最近一次导入的照片；当前识别数据以当前识别来源为准">学生照片</th><th>当前识别来源</th><th>最近更新时间</th><th>同步状态</th><th>说明</th><th>操作</th></tr></thead><tbody>${pageStudents.map(s => `<tr><td>${s.id}</td><td>${s.name}</td><td>${s.className}</td><td>${facePhotoHtml(s)}</td><td>${s.recognitionSource || '—'}</td><td>${s.updatedAt || '—'}</td><td><span style="color:${({'同步中':'#1677ff','同步成功':'#389e0d','同步失败':'#cf1322','待同步':'#d48806'})[s.syncStatus] || '#999'}">${s.syncStatus || '—'}</span></td><td style="min-width:180px;max-width:240px">${esc(s.syncFailureReason || '—')}</td><td style="white-space:nowrap"><button class="btn-link" onclick="openFacePhotoEdit('${s.id}')">${s.photoFile ? '修改照片' : '上传照片'}</button></td></tr>`).join('')}</tbody></table>
     <div class="pagination pagination--with-size"><span class="page-btn ${faceCurrentPage === 1 ? 'disabled' : ''}" onclick="${faceCurrentPage === 1 ? '' : 'switchFacePage(' + (faceCurrentPage - 1) + ')'}">‹</span>${Array.from({length: totalPages}, (_, i) => `<span class="page-btn ${faceCurrentPage === i + 1 ? 'active' : ''}" onclick="switchFacePage(${i + 1})">${i + 1}</span>`).join('')}<span class="page-btn ${faceCurrentPage === totalPages ? 'disabled' : ''}" onclick="${faceCurrentPage === totalPages ? '' : 'switchFacePage(' + (faceCurrentPage + 1) + ')'}">›</span><span class="page-size-picker">每页 <select class="select page-size-select" aria-label="每页条数"><option selected>10 条</option><option>20 条</option><option>50 条</option></select></span><span class="page-jump">跳至 <input class="input sm" value="${faceCurrentPage}"> 页</span></div>
   </div>`;
 }
