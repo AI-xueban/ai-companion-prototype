@@ -75,17 +75,27 @@
     const sorted = [...value].sort((a, b) => a.start.localeCompare(b.start));
     return sorted.some((p, i) => i > 0 && p.start < sorted[i - 1].end) ? '时段之间不能重叠' : '';
   }
-  function validateBorrow(rule) {
+  function borrowStatus(rule, now = new Date()) {
+    if (rule.mode !== 'dates') return '';
+    const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    if (date < rule.startDate) return '待生效';
+    if (date > rule.endDate) return '已失效';
+    return '生效中';
+  }
+  function validateBorrow(rule, now = new Date()) {
     if (rule.mode === 'weekly' && !rule.weekdays.length) return '请至少选择一个星期';
     if (rule.mode === 'dates') {
       if (!rule.startDate || !rule.endDate || rule.startDate > rule.endDate) return '请选择正确的开始和结束日期';
-      if (rule.endDate < today()) return '结束日期不能早于今天';
+      const currentDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      if (rule.startDate < currentDate) return '生效日期只能选择今天及以后';
       if (rule.deny) return '';
     }
-    return validatePeriods(rule.periods);
+    const error = validatePeriods(rule.periods);
+    if (error) return error;
+    return '';
   }
   function signature(student, module) {
-    const value = module === 'borrowing' ? prune(student.schedules || []) : module === 'duration' ? student.durationRules || [] : module === 'homework' ? [student.answer, student.explanation] : student[module === 'lock' ? 'locked' : 'world'];
+    const value = module === 'borrowing' ? student.schedules || [] : module === 'duration' ? student.durationRules || [] : module === 'homework' ? [student.answer, student.explanation] : student[module === 'lock' ? 'locked' : 'world'];
     return JSON.stringify([value, student.updated?.[module]?.version || 0]);
   }
   const modified = (student, module) => Boolean(student.teacherModified?.[module]) && (module === 'borrowing' ? prune(student.schedules || []).length > 0 : module === 'duration' ? (student.durationRules || []).length > 0 : true);
@@ -123,7 +133,7 @@
     });
     return { data: next, count: rows.length };
   }
-  const api = { copy, today, defaultDuration, normalize, periods, prune, overlap, mergeBorrow, mergeDuration, effectiveBorrow, effectiveDuration, dayText, periodText, borrowText, durationText, durationGroups, validatePeriods, validateBorrow, signature, modified, resolve, prepare, deletionPreview, transaction };
+  const api = { copy, today, defaultDuration, normalize, periods, prune, overlap, mergeBorrow, mergeDuration, effectiveBorrow, effectiveDuration, dayText, periodText, borrowText, borrowStatus, durationText, durationGroups, validatePeriods, validateBorrow, signature, modified, resolve, prepare, deletionPreview, transaction };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.controlRules = api;
 })(typeof window !== 'undefined' ? window : globalThis);

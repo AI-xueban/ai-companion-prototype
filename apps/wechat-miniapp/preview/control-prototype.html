@@ -366,7 +366,7 @@
     .control-workbench-tools .lp-chip{min-height:34px}
     .control-entry .control-entry-intro{display:none}
   </style>
-  <link rel="stylesheet" href="control-prototype.css">
+  <link rel="stylesheet" href="control-prototype.css?v=20261019-borrow-status">
 </head>
 <body>
   <aside class="review"><h2>家长绑定 · 演示控制</h2><p>用于产品讲解，不属于用户界面。</p><button data-stage="home">首页</button><button data-stage="auth">1. 微信授权</button><button data-stage="code">2. 输入学生编号</button><button data-stage="confirm">3. 确认学生信息</button><button data-stage="pending">4. 等待学校审核</button><button data-stage="approved">5. 审核通过后</button><div class="data">演示数据：林小满 · 罗湖实验学校 · 五年级 2 班<br>学生编号：1001055（演示样例）</div></aside>
@@ -757,7 +757,7 @@ app.innerHTML='<main class="screen control-screen">'+top+'<section class="contro
     function syncReview(){document.querySelectorAll('[data-stage]').forEach(b=>b.classList.toggle('active',b.dataset.stage===stage));document.body.classList.toggle('teacher-review-mode',['teacherLaunch','teacherLogin','teacherPhone','teacherBind','teacherDesk','teacherSecurity'].includes(stage));document.querySelectorAll('[data-teacher-flow]').forEach(b=>b.classList.toggle('active',b.dataset.teacherFlow===teacherFlow));const steps=document.getElementById('teacher-review-steps'),branches=document.getElementById('teacher-review-branches'),action=document.getElementById('teacher-review-action'),detail=document.getElementById('teacher-review-detail');if(!detail)return;const flowSteps=teacherFlowSteps[teacherFlow]||[];steps.innerHTML=flowSteps.map((label,i)=>`<li class="${i===teacherFlowStep?'current':i<teacherFlowStep?'done':''}">${i+1}. ${label}</li>`).join('');branches.innerHTML=currentTeacherBranchOptions().map(([key,label])=>`<button class="${teacherBranch===key?'active':''}" onclick="setTeacherBranch('${key}')">${label}</button>`).join('')||'<p class="review-hint">此节点无可切换的异常</p>';action.innerHTML=stage==='teacherLaunch'?`<button class="review-next" onclick="advanceTeacherSystemStep()">${teacherFlow==='expired'&&teacherFlowStep===2?'查看恢复结果':'推进系统判断'} →</button>`:stage==='teacherPhone'||stage==='teacherBind'?'<p class="review-hint">请在手机页面操作，流程会自动前进。</p>':'';detail.innerHTML=teacherFlow?`<strong>当前流程</strong>${teacherFlowTitles[teacherFlow]}<br><br><strong>当前页面</strong>${{teacherLaunch:'启动与会话校验',teacherLogin:'快捷登录',teacherPhone:'教师账号登录',teacherBind:'微信绑定',teacherDesk:'教师工作台',teacherSecurity:'账号与安全'}[stage]||'身份选择'}${teacherBranch!=='normal'?`<br><br><strong>当前异常</strong>${teacherBranchMessages[teacherBranch]}`:''}`:'选择一条流程，从第一步开始演示。'}
     document.querySelectorAll('[data-stage]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.stage)));document.querySelectorAll('[data-teacher-flow]').forEach(b=>b.addEventListener('click',()=>startTeacherFlow(b.dataset.teacherFlow)));restoreDemoTeacherOnLaunch();({home,auth,code,confirm,pending,approved,teacherLaunch,teacherLogin,teacherPhone:teacherPhoneLogin,teacherBind,teacherDesk,teacherSecurity}[stage]||home)();
   </script>
-  <script src="control-rules.js"></script>
-  <script src="control-parity.js?v=20261019-state-actions"></script>
+  <script src="control-rules.js?v=20261019-date-only"></script>
+  <script src="control-parity.js?v=20261020-control-alignment"></script>
 </body>
 </html>

@@ -2,7 +2,7 @@
 (() => {
   const R = window.controlRules;
   const storageKey = 'teacher-control-prototype-v1';
-  const ui = { editor: null, pending: null, scopeQuery: '', scopeFilter: 'all', borrowMode: 'weekly' };
+  const ui = { editor: null, pending: null, borrowMode: 'weekly' };
   const legacyCloseOverlay = window.closeControlOverlay;
   window.closeControlOverlay = () => { ui.pending = null; legacyCloseOverlay(); };
   const stateLabels = () => controlModule === 'borrowing' ? ['已设置', '未设置'] : controlModule === 'duration' ? ['有单独规则', '默认规则'] : controlModule === 'homework' ? ['有开放权限', '均不允许'] : controlModule === 'world' ? ['有已开放学生', '全部已关闭'] : ['有已锁屏学生', '全部未锁屏'];
@@ -16,14 +16,39 @@
   const activeRefs = () => controlDemoRole === 'admin' ? adminLevel === 'school' ? allRefs() : adminLevel === 'grade' ? schoolControlClasses.filter(name => name.startsWith(adminSelectedGrade)).flatMap(className => controlData[className].map(s => ({ className, id: s.id }))) : classRefs() : classRefs();
   const scopeLabel = () => controlDemoRole !== 'admin' || adminLevel === 'class' ? selectedTeacherClass : adminLevel === 'grade' ? adminSelectedGrade : '全校';
   const needScope = (refs, module = controlModule) => controlDemoRole === 'admin' && refs.length > 1 && ['borrowing', 'duration', 'homework'].includes(module);
+  const schoolDateRule = item => controlDemoRole === 'admin' && (item.module || controlModule) === 'borrowing' && (item.rule?.mode || item.value?.mode) === 'dates';
+  const temporaryLockActive = (data = controlData) => Boolean(data.schoolSettings?.temporaryLock?.active);
+  const scopedLocks = (data = controlData) => data.schoolSettings?.temporaryLocks || {};
+  const refLocked = (ref, data = controlData) => temporaryLockActive(data) || Object.values(scopedLocks(data)).some(lock => lock.active && lock.refs.some(item => item.className === ref.className && item.id === ref.id));
+  const isLocked = student => Boolean(student.locked) || schoolControlClasses.some(className => controlData[className].includes(student) && refLocked({ className, id: student.id }));
+  const scopeLockKey = key => (schoolControlClasses.includes(key) ? 'class:' : 'grade:') + key;
+  const studentLockKey = ref => 'student:' + ref.className + ':' + ref.id;
+  const ownTemporaryLock = key => Boolean(scopedLocks()[key]?.active);
+  const selectionLockEntries = () => controlDemoRole === 'admin' ? [...adminSelectedScopes].map(key => ({ key: scopeLockKey(key), refs: scopeRefs(key) })) : currentSelectedRefs().map(ref => ({ key: studentLockKey(ref), refs: [ref] }));
+  const lockNotice = () => {
+    const refs = activeRefs();
+    return refs.some(ref => refLocked(ref)) ? `<p class="parity-note" role="status">学校管理员已开启${temporaryLockActive() ? '全校' : '年级或班级'}临时锁屏，覆盖范围内老师暂不可修改锁屏状态。解除后恢复原状态；仍有其他范围临时锁屏时继续锁屏。</p>` : '';
+  };
+  function lockToggle(module, on, action, label) {
+    const html = binaryToggleButton(module, on, action, label);
+    return module === 'lock' && controlDemoRole !== 'admin' && temporaryLockActive() ? html.replace('<button ', '<button disabled aria-disabled="true" ') : html;
+  }
   function assertPermission(refs, module) {
-    if (controlDemoRole === 'admin') return;
+    if (module === 'lock' && refs.some(ref => refLocked(ref, loadLatest()))) throw Error('临时锁屏期间不可修改锁屏状态，请等待学校管理员解除所选学生所在范围的临时锁屏');
+    if (controlDemoRole === 'admin') {
+      const rows = R.resolve(controlData, refs);
+      if (schoolControlClasses.some(className => {
+        const ids = new Set(rows.filter(row => row.ref.className === className).map(row => row.ref.id));
+        return ids.size > 0 && ids.size !== controlData[className].length;
+      })) throw Error('学校管理员仅支持全校、年级或班级操作');
+      return;
+    }
     const classes = controlWorkView === 'homeroom' ? [controlClasses[0]] : controlClasses;
     if (refs.some(ref => !classes.includes(ref.className)) || ['borrowing', 'duration'].includes(module) && controlWorkView !== 'homeroom') throw Error('当前身份没有该范围的管控权限');
   }
   const baseFor = (refs, module = controlModule) => Object.fromEntries(R.resolve(controlData, refs).map(({ ref, student }) => [ref.className + ':' + ref.id, R.signature(student, module)]));
   const card = (title, body) => `<section class="control-module-panel"><h3>${title}</h3>${body}</section>`;
-  const button = (text, action, secondary = false, disabled = false) => `<button type="button" class="control-${secondary ? 'secondary' : 'primary'}" onclick="${action}" ${disabled ? 'disabled' : ''}>${text}</button>`;
+  const button = (text, action, secondary = false, disabled = false) => `<button type="button" class="control-${secondary ? 'secondary' : 'primary'}" onclick="${action}" ${disabled || controlDemoRole !== 'admin' && controlModule === 'lock' && temporaryLockActive() && /selectedBoolean|confirmControl|scopeBoolean/.test(action) ? 'disabled' : ''}>${text}</button>`;
   function ruleIconButton(kind, action, disabled = false) {
     const label = kind === 'edit' ? '编辑规则' : '删除规则';
     const path = kind === 'edit' ? '<path d="m15 4 5 5M4 20l5-1L21 7a2.1 2.1 0 0 0-5-5L4 14z"/>' : '<path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/>';
@@ -31,7 +56,7 @@
   }
   const pageTop = (title, back) => header(title, false).replace('<span></span><h2', `<button class="wx-back" aria-label="返回上一页" onclick="${back}"><i></i></button><h2`);
   function shell(title, content, back = 'parity.back()', footer = '', classes = '') {
-    app.innerHTML = `<main class="screen control-screen ${classes}">${pageTop(title, back)}<section class="control-content">${content}</section>${footer}<div id="control-overlay"></div><div id="control-toast" role="status"></div></main>`;
+    app.innerHTML = `<main class="screen control-screen ${classes}">${pageTop(title, back)}<section class="control-content">${controlModule === 'lock' ? lockNotice() : ''}${content}</section>${footer}<div id="control-overlay"></div><div id="control-toast" role="status"></div></main>`;
     syncReview();
   }
   function loadLatest() {
@@ -47,7 +72,7 @@
   }
   // 为历史演示数据补齐规则 ID 和分模块操作信息，不清空用户已做的设置。
   schoolControlClasses.forEach(className => controlData[className].forEach(student => {
-    student.schedules = R.prune((student.schedules || []).map((rule, i) => R.normalize(rule, 'borrow-' + student.id + '-' + i)));
+    student.schedules = (student.schedules || []).map((rule, i) => R.normalize(rule, 'borrow-' + student.id + '-' + i));
     student.durationRules = (student.durationRules || []).map((rule, i) => R.normalize(rule, 'duration-' + student.id + '-' + i));
     // 旧版初始化样例没有操作记录；与基础规则相同的种子不是学生单独规则。
     const untouchedSeed = student.by === '学校管理员' && student.at === '今天 08:30';
@@ -62,10 +87,10 @@
   controlData.schoolSettings ||= { borrowingRules: R.copy(controlData[schoolControlClasses[0]][0]?.schedules || []) };
   try { persist(controlData); } catch { /* 后续保存会明确报告失败，保留当前会话数据。 */ }
   function summary(student, module = controlModule) {
-    if (module === 'borrowing') return student.schedules.length ? R.prune(student.schedules).map(R.borrowText) : ['未设置借用规则，没有有效规则时不能借用'];
+    if (module === 'borrowing') return student.schedules.length ? student.schedules.map(rule => R.borrowText(rule) + (rule.mode === 'dates' ? ' · ' + R.borrowStatus(rule) : '')) : ['未设置借用规则，没有有效规则时不能借用'];
     if (module === 'duration') return R.durationGroups(student);
     if (module === 'homework') return [`答案${student.answer ? '允许' : '不允许'} · 详解${student.explanation ? '允许' : '不允许'}`];
-    return [module === 'world' ? student.world ? '万象视界已开放' : '万象视界已关闭' : student.locked ? '平板已锁屏' : '平板未锁屏'];
+    return [module === 'world' ? student.world ? '万象视界已开放' : '万象视界已关闭' : isLocked(student) ? '平板已锁屏' : '平板未锁屏'];
   }
   function configurationKey(student, module = controlModule) {
     return JSON.stringify(module === 'duration' ? R.durationGroups(student) : module === 'borrowing' ? R.prune(student.schedules).map(rule => { const { id, ...value } = rule; return value; }).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))) : summary(student, module));
@@ -83,17 +108,36 @@
     const update = student.updated?.[controlModule];
     return `<small class="parity-operation">最近操作：${update ? `${esc(update.by)}${update.phone ? ' · ' + esc(update.phone) : ''} · ${esc(update.at)}` : '—'}</small>`;
   }
+  function scopeModifiedInfo(students) {
+    const latest = students.reduce((current, student) => {
+      const update = student.updated?.[controlModule];
+      if (!update) return current;
+      const time = student.operatedAt?.[controlModule] || Date.parse(update.at) || 0;
+      return !current || time > current.time ? { update, time } : current;
+    }, null);
+    return modifiedInfo({ updated: latest ? { [controlModule]: latest.update } : {} });
+  }
+  function recordTemporaryLock(data, refs) {
+    const time = Date.now(), operator = actor(), at = new Date(time).toLocaleString('zh-CN', { hour12: false });
+    R.resolve(data, refs).forEach(({ student }) => {
+      student.updated = { ...student.updated, lock: { ...operator, at, version: (student.updated?.lock?.version || 0) + 1 } };
+      student.operatedAt = { ...student.operatedAt, lock: time };
+    });
+  }
   function defaultCard() {
-    if (controlModule === 'borrowing') return card('借用规则说明', '<p>每周固定与指定日期规则可同时设置。指定日期内按指定日期规则执行；到期或删除后恢复每周规则，没有有效规则时不能借用。</p>');
-    if (controlModule === 'duration') return card('学校默认使用时长规则', `<p>${R.durationText(R.defaultDuration)}</p><p>没有单独规则的日期执行默认规则；未添加可用时段时全天可用，仍受时长限制。</p>`);
+    if (controlModule === 'borrowing') return card('借用规则说明', '<p>指定日期规则优先，到期或删除后恢复每周规则。没有有效规则时不能借用。</p>');
+    if (controlModule === 'duration') return card('学校默认使用时长规则', `<p>${R.durationText(R.defaultDuration)}</p><p>未单独设置的日期按默认规则执行。不设时段，全天可用，仍受时长限制。</p>`);
     if (controlModule === 'homework') return card('学生权限', '<p>默认所有学生不能查看答案和详解。</p>');
-    const students = R.resolve(controlData, activeRefs()).map(row => row.student), count = students.filter(s => controlModule === 'world' ? s.world : s.locked).length;
+    const students = R.resolve(controlData, activeRefs()).map(row => row.student), count = students.filter(s => controlModule === 'world' ? s.world : isLocked(s)).length;
     return card(scopeLabel() + '当前状态', `<p>${count}人${controlModule === 'world' ? '已开放' : '已锁屏'} · ${students.length - count}人${controlModule === 'world' ? '已关闭' : '未锁屏'}</p>`);
   }
   function renderEntry() {
-    const admin = controlDemoRole === 'admin', students = admin ? adminAllStudents() : controlStudents(), locked = students.filter(s => s.locked).length;
+    const admin = controlDemoRole === 'admin', students = admin ? adminAllStudents() : controlStudents(), locked = students.filter(s => isLocked(s)).length;
     const lockScope = admin ? '全校' : '全班', lockAction = admin ? "adminBatchAction('lock'," : "controlModule='lock';confirmControl('all',";
-    const lockCard = `<section class="control-entry-lock"><div class="control-entry-lock-head"><div><h3>${admin ? '全校' : ''}平板锁屏</h3><p>${locked}人已锁屏 · ${students.length - locked}人未锁屏</p></div><button onclick="${admin ? "enterAdminModule('lock')" : "openControlModule('lock')"}">查看详情 ›</button></div><div class="control-actions">${button(lockScope + '解锁', lockAction + 'false)', true, !locked)}${button(lockScope + '锁屏', lockAction + 'true)', false, locked === students.length)}</div></section>`;
+    const temporary = admin ? temporaryLockActive() : classRefs().some(ref => refLocked(ref));
+    const lockActions = admin ? button(temporary ? '解除临时锁屏' : '一键临时锁屏', 'parity.toggleTemporaryLock()', temporary) : temporary ? button('全校临时锁屏中', '', true, true) : button(lockScope + '解锁', lockAction + 'false)', true, !locked) + button(lockScope + '锁屏', lockAction + 'true)', false, locked === students.length);
+    const lockDescription = admin ? '<p class="parity-note">临时锁屏期间，老师无法修改。解除后恢复原状态，其他临时锁屏仍有效。</p>' : lockNotice();
+    const lockCard = `<section class="control-entry-lock"><div class="control-entry-lock-head"><div><h3>${admin ? '全校' : ''}平板锁屏</h3><p>${locked}人已锁屏 · ${students.length - locked}人未锁屏</p></div><button onclick="${admin ? "enterAdminModule('lock')" : "openControlModule('lock')"}">查看详情 ›</button></div>${lockDescription}<div class="control-actions">${lockActions}</div></section>`;
     const borrowCard = admin ? `<section class="admin-school-toggle" onclick="enterAdminModule('borrowing')"><div class="admin-school-toggle-top"><div><div class="admin-school-toggle-head"><h3>全校借用管控</h3><span class="admin-state ${schoolBorrowingEnabled ? '' : 'off'}">${schoolBorrowingEnabled ? '已开启' : '已关闭'}</span></div><p>${schoolBorrowingEnabled ? '学生仅可在有效规则时段内借用' : '全校学生均不能借用，已有规则保留'}</p></div><span class="admin-detail-link">查看详情 ›</span></div><div class="control-actions">${button((schoolBorrowingEnabled ? '关闭' : '开启') + '全校借用管控', 'event.stopPropagation();toggleSchoolBorrowing()', schoolBorrowingEnabled)}</div></section>` : '';
     const entries = [...(!admin && isHeadTeacherClass() ? [['borrowing', '借用管控', '设置允许借用的日期和时段']] : []), ...(admin || isHeadTeacherClass() ? [['duration', '使用时长管控', '设置使用时长、休息和每日可用时段']] : []), ['homework', '智阅作业', '设置答案和详解的查看权限'], ['world', '万象视界', '开放或关闭学生进入权限']];
     const list = entries.map(([module, title, description]) => `<button class="control-entry-card" onclick="${admin ? 'enterAdminModule' : 'openControlModule'}('${module}')"><span class="control-entry-icon ${module}">${controlCardIcon(module)}</span><span class="control-entry-copy"><h3>${title}</h3><p>${description}</p></span><span class="control-entry-action">›</span></button>`).join('');
@@ -101,36 +145,39 @@
     syncReview();
   }
   function scopeRows() {
-    const keys = adminVisibleScopeKeys();
+    const keys = adminLevel === 'class' ? [selectedTeacherClass] : adminVisibleScopeKeys();
     return keys.map(key => {
       const refs = scopeRefs(key), students = R.resolve(controlData, refs).map(row => row.student), mixed = groups(refs).length > 1;
-      const active = students.some(s => controlModule === 'duration' ? s.durationRules.length : controlModule === 'borrowing' ? s.schedules.length : controlModule === 'homework' ? s.answer || s.explanation : controlModule === 'world' ? s.world : s.locked);
-      if (!key.includes(ui.scopeQuery) || ui.scopeFilter === 'mixed' && !mixed || ui.scopeFilter === 'same' && mixed || ui.scopeFilter === 'active' && !active || ui.scopeFilter === 'inactive' && active) return '';
-      const next = adminLevel === 'school' ? `enterAdminGrade('${key}')` : `enterAdminClass('${key}')`;
-      const count = students.filter(s => controlModule === 'duration' ? s.durationRules.length : controlModule === 'borrowing' ? s.schedules.length : controlModule === 'homework' ? s.answer || s.explanation : controlModule === 'world' ? s.world : s.locked).length;
-      const direct = controlModule === 'world' || controlModule === 'lock', on = students.every(s => controlModule === 'world' ? s.world : s.locked);
-      return `<div class="admin-level-row">${adminBatchMode ? `<label><input class="admin-level-check" type="checkbox" aria-label="选择${key}" ${adminSelectedScopes.has(key) ? 'checked' : ''} onchange="parity.selectScope('${key}',this.checked)"></label>` : ''}<button class="admin-level-link" onclick="${adminBatchMode ? `parity.selectScope('${key}',!adminSelectedScopes.has('${key}'))` : next}"><span class="admin-level-copy"><b>${key}</b><small>${students.length}名学生 · ${count}人${direct ? controlModule === 'world' ? '已开放' : '已锁屏' : '已设置'}</small><small>${mixed ? '学生规则有差异' : '学生规则一致'}</small></span><i>›</i></button>${!adminBatchMode ? `<div class="parity-scope-actions">${mixed ? `<button onclick="parity.differences('${key}')">查看差异</button>` : ''}${direct ? binaryToggleButton(controlModule, on, `parity.scopeBoolean('${key}',${!on})`, (on ? '关闭' : '开启') + key + controlLabels[controlModule]) : `<button onclick="parity.editScope('${key}')">设置</button>`}</div>` : ''}</div>`;
+      const next = adminLevel === 'school' ? `enterAdminGrade('${key}')` : '';
+      const count = students.filter(s => controlModule === 'duration' ? s.durationRules.length : controlModule === 'borrowing' ? s.schedules.length : controlModule === 'homework' ? s.answer || s.explanation : controlModule === 'world' ? s.world : isLocked(s)).length;
+      const direct = controlModule === 'world' || controlModule === 'lock', on = students.every(s => controlModule === 'world' ? s.world : isLocked(s));
+      return `<div class="admin-level-row">${adminBatchMode ? `<label><input class="admin-level-check" type="checkbox" aria-label="选择${key}" ${adminSelectedScopes.has(key) ? 'checked' : ''} onchange="parity.selectScope('${key}',this.checked)"></label>` : ''}<button class="admin-level-link" ${!adminBatchMode && adminLevel !== 'school' ? 'disabled' : ''} onclick="${adminBatchMode ? `parity.selectScope('${key}',!adminSelectedScopes.has('${key}'))` : next}"><span class="admin-level-copy"><b>${key}</b><small>${students.length}名学生 · ${count}人${direct ? controlModule === 'world' ? '已开放' : '已锁屏' : '已设置'}</small><small>${mixed ? '学生规则有差异' : '学生规则一致'}</small>${scopeModifiedInfo(students)}</span>${adminLevel === 'school' ? '<i>›</i>' : ''}</button>${!adminBatchMode ? `<div class="parity-scope-actions">${controlModule === 'lock' ? lockToggle('lock', ownTemporaryLock(scopeLockKey(key)), `parity.scopeBoolean('${key}',${!ownTemporaryLock(scopeLockKey(key))})`, (ownTemporaryLock(scopeLockKey(key)) ? '解除临时锁屏：' : '临时锁屏：') + key) : direct ? lockToggle(controlModule, on, `parity.scopeBoolean('${key}',${!on})`, (on ? '关闭' : '开启') + key + controlLabels[controlModule]) : `<button onclick="parity.editScope('${key}')">设置</button>`}</div>` : ''}</div>`;
     }).join('') || '<div class="control-empty">没有符合条件的年级或班级</div>';
   }
   function selectionFooter(admin = false) {
     const refs = admin ? adminSelectionRefs() : targetRefs('selected'), selected = admin ? adminSelectedScopes.size : controlSelected.size;
     let actions;
-    if (controlModule === 'lock' || controlModule === 'world') {
-      const states = R.resolve(controlData, refs).map(({ student }) => controlModule === 'lock' ? student.locked : student.world);
-      actions = (states.some(Boolean) ? button(controlModule === 'lock' ? '解锁' : '关闭', 'parity.selectedBoolean(false)', true) : '')
-        + (states.some(value => !value) ? button(controlModule === 'lock' ? '锁屏' : '开放', 'parity.selectedBoolean(true)') : '');
+    if (controlModule === 'lock' && controlDemoRole === 'admin') {
+      const entries = selectionLockEntries();
+      actions = (entries.some(entry => ownTemporaryLock(entry.key)) ? button('解除临时锁屏', 'parity.selectedBoolean(false)', true) : '')
+        + (entries.some(entry => !ownTemporaryLock(entry.key)) ? button('临时锁屏', 'parity.selectedBoolean(true)') : '');
+    } else if (controlModule === 'lock' || controlModule === 'world') {
+      const states = R.resolve(controlData, refs).map(({ student }) => controlModule === 'lock' ? isLocked(student) : student.world);
+      const blocked = controlModule === 'lock' && refs.some(ref => refLocked(ref));
+      actions = (states.some(Boolean) ? button(controlModule === 'lock' ? '解锁' : '关闭', 'parity.selectedBoolean(false)', true, blocked) : '')
+        + (states.some(value => !value) ? button(controlModule === 'lock' ? '锁屏' : '开放', 'parity.selectedBoolean(true)', false, blocked) : '');
     } else actions = button(controlModule === 'duration' ? '恢复默认' : controlModule === 'homework' ? '恢复默认' : '删除规则', 'parity.selectedReset()', true, !selected) + button(controlModule === 'borrowing' ? '设置规则' : controlModule === 'duration' ? '设置时长' : '设置权限', 'parity.selectedEdit()', false, !selected);
     const visible = admin ? visibleScopeKeys() : filteredControlStudents().map(s => s.id), set = admin ? adminSelectedScopes : controlSelected;
     return `<footer class="admin-batchbar parity-batchbar"><label class="control-footer-select"><input type="checkbox" aria-label="全选" ${visible.length && visible.every(key => set.has(key)) ? 'checked' : ''} onchange="parity.selectAll(this.checked)"><span>全选</span><small>${selected}/${visible.length}</small></label><div class="admin-batch-actions">${button('取消', 'parity.cancelSelection()', true)}${actions}</div><small class="parity-affected">本次已选 ${refs.length} 名学生</small></footer>`;
   }
   function scopePage() {
     const footer = adminBatchMode ? selectionFooter(true) : '';
-    shell(controlLabels[controlModule], `${defaultCard()}<div class="admin-scope-summary"><b>${adminBatchMode ? '选择' : '按'}${adminLevel === 'school' ? '年级' : '班级'}${adminBatchMode ? '' : '查看'}</b>${adminBatchMode ? '' : '<button onclick="parity.startSelection()">批量设置</button>'}</div><div class="control-list-tools"><label class="borrow-list-search"><input aria-label="搜索年级或班级" placeholder="搜索年级或班级" value="${esc(ui.scopeQuery)}" oninput="parity.scopeFilter(this.value,null)"></label><select class="borrow-status-filter" aria-label="筛选范围规则状态" onchange="parity.scopeFilter(null,this.value)">${[['all', '全部状态'], ['same', '规则一致'], ['mixed', '规则有差异'], ['active', stateLabels()[0]], ['inactive', stateLabels()[1]]].map(([value, label]) => `<option value="${value}" ${ui.scopeFilter === value ? 'selected' : ''}>${label}</option>`).join('')}</select></div><div id="parity-scope-rows" class="admin-level-list">${scopeRows()}</div>`, 'parity.back()', footer);
+    shell(controlLabels[controlModule], `${defaultCard()}<div class="admin-scope-summary"><b>${adminBatchMode ? '选择' : '按'}${adminLevel === 'school' ? '年级' : '班级'}${adminBatchMode ? '' : '查看'}</b>${adminBatchMode ? '' : '<button onclick="parity.startSelection()">批量设置</button>'}</div><div id="parity-scope-rows" class="admin-level-list">${scopeRows()}</div>`, 'parity.back()', footer);
   }
   function filteredControlStudents() {
     return controlStudents().filter(s => {
       if (!s.name.includes(controlQuery) && !String(s.id).padStart(6, '0').includes(controlQuery)) return false;
-      const active = controlModule === 'duration' ? s.durationRules.length > 0 : controlModule === 'borrowing' ? R.prune(s.schedules).length > 0 : controlModule === 'homework' ? s.answer || s.explanation : controlModule === 'world' ? s.world : s.locked;
+      const active = controlModule === 'duration' ? s.durationRules.length > 0 : controlModule === 'borrowing' ? R.prune(s.schedules).length > 0 : controlModule === 'homework' ? s.answer || s.explanation : controlModule === 'world' ? s.world : isLocked(s);
       return controlFilter === 'all' || (controlFilter === 'yes' ? active : !active);
     }).sort((a, b) => (b.operatedAt?.[controlModule] || 0) - (a.operatedAt?.[controlModule] || 0));
   }
@@ -139,8 +186,8 @@
       const selection = controlView === 'students', rules = controlModule === 'borrowing' || controlModule === 'duration';
       const main = `<b>${esc(s.name)}</b><small>编号 ${String(s.id).padStart(6, '0')}</small>${rules || selection ? `<span>${summary(s).map(esc).join('<br>')}</span>` : ''}${modifiedInfo(s)}`;
       if (selection) return `<button class="control-student-row ${controlSelected.has(s.id) ? 'selected' : ''}" onclick="parity.selectStudent(${s.id})"><span class="parity-student-main">${main}</span><span class="control-check">${controlSelected.has(s.id) ? '✓' : ''}</span></button>`;
-      const direct = controlModule === 'lock' || controlModule === 'world', on = controlModule === 'lock' ? s.locked : s.world;
-      const action = direct ? binaryToggleButton(controlModule, on, `confirmControl(${s.id},${!on})`, (on ? '关闭' : '开启') + s.name + controlLabels[controlModule]) : controlModule === 'homework' ? `<span class="homework-inline-permissions">${permissionMiniSwitch(s, 'answer', '答案')}${permissionMiniSwitch(s, 'explanation', '详解')}</span>` : '<span class="control-detail-arrow">›</span>';
+      const direct = controlModule === 'lock' || controlModule === 'world', on = controlModule === 'lock' ? isLocked(s) : s.world;
+      const action = controlModule === 'lock' && controlDemoRole === 'admin' ? lockToggle('lock', ownTemporaryLock(studentLockKey({ className: selectedTeacherClass, id: s.id })), `parity.studentTemporaryLock(${s.id})`, (ownTemporaryLock(studentLockKey({ className: selectedTeacherClass, id: s.id })) ? '解除临时锁屏：' : '临时锁屏：') + s.name) : direct ? lockToggle(controlModule, on, `confirmControl(${s.id},${!on})`, (on ? '关闭' : '开启') + s.name + controlLabels[controlModule]).replace('<button ', controlModule === 'lock' && refLocked({ className: selectedTeacherClass, id: s.id }) ? '<button disabled ' : '<button ') : controlModule === 'homework' ? `<span class="homework-inline-permissions">${permissionMiniSwitch(s, 'answer', '答案')}${permissionMiniSwitch(s, 'explanation', '详解')}</span>` : '<span class="control-detail-arrow">›</span>';
       return `<div class="parity-student-row"><button class="parity-student-main" onclick="openControlStudentDetail(${s.id})">${main}${direct ? `<span>${esc(summary(s)[0])}</span>` : ''}</button>${action}</div>`;
     }).join('') || '<div class="control-empty">没有符合条件的学生</div>';
   }
@@ -150,41 +197,49 @@
     shell(selection ? '选择学生' : controlLabels[controlModule], `<div class="parity-context">${selectedTeacherClass}${selection ? ' · 可多选' : ''}</div>${selection ? '' : defaultCard()}${reset ? `<div class="control-actions">${reset}</div>` : ''}<div class="borrow-list-head"><b>${selection ? '选择学生' : controlModule === 'homework' ? '学生权限' : '学生规则'}</b>${selection ? '' : `<button onclick="openControlStudents('${controlModule}')">批量设置</button>`}</div><div class="control-list-tools"><label class="borrow-list-search"><input aria-label="搜索学生姓名或编号" placeholder="搜索学生姓名或编号" value="${esc(controlQuery)}" oninput="parity.studentFilter(this.value,null)"></label><select class="borrow-status-filter" aria-label="筛选学生规则状态" onchange="parity.studentFilter(null,this.value)">${[['all', '全部'], ['yes', stateLabels()[0]], ['no', stateLabels()[1]]].map(([id, label]) => `<option value="${id}" ${controlFilter === id ? 'selected' : ''}>${label}</option>`).join('')}</select></div><div class="parity-student-list" id="parity-student-rows">${studentRows()}</div>`, 'parity.back()', selection ? selectionFooter() : '', selection ? 'control-student-screen' : '');
   }
   function ruleCards(student) {
-    const rules = controlModule === 'borrowing' ? R.prune(student.schedules) : student.durationRules;
-    return rules.map(rule => `<article class="parity-rule"><b>${esc(controlModule === 'borrowing' ? R.borrowText(rule) : R.dayText(rule.weekdays))}</b>${controlModule === 'duration' ? `<p>${esc(R.durationText(rule.useDefault ? R.defaultDuration : rule))}</p>` : ''}<div class="parity-rule-actions">${ruleIconButton('edit', `parity.editStudentRule(${student.id},'${rule.id}')`)}${ruleIconButton('delete', `parity.deleteStudentRule(${student.id},'${rule.id}')`)}</div></article>`).join('') || `<p class="parity-note">${controlModule === 'borrowing' ? '尚未设置借用规则，没有有效规则时不能借用。' : '没有单独规则，按学校默认使用时长规则执行。'}</p>`;
+    const rules = controlModule === 'borrowing' ? student.schedules : student.durationRules;
+    return rules.map(rule => `<article class="parity-rule"><b>${esc(controlModule === 'borrowing' ? R.borrowText(rule) : R.dayText(rule.weekdays))}</b>${controlModule === 'borrowing' && rule.mode === 'dates' ? `<span class="parity-rule-status">${R.borrowStatus(rule)}</span>` : ''}${controlModule === 'duration' ? `<p>${esc(R.durationText(rule.useDefault ? R.defaultDuration : rule))}</p>` : ''}<div class="parity-rule-actions">${controlModule === 'borrowing' && R.borrowStatus(rule) === '已失效' ? '' : ruleIconButton('edit', `parity.editStudentRule(${student.id},'${rule.id}')`)}${ruleIconButton('delete', `parity.deleteStudentRule(${student.id},'${rule.id}')`)}</div></article>`).join('') || `<p class="parity-note">${controlModule === 'borrowing' ? '未设置借用规则，暂不能借用。' : '未单独设置，使用学校默认规则。'}</p>`;
   }
   function detailPage() {
     const student = controlStudents().find(s => s.id === controlStudentDetailId);
     if (!student) { controlView = 'module'; return renderControl(); }
+    let footer = '';
     let body = `<section class="control-student-detail-card"><div class="control-student-detail-name"><h3>${esc(student.name)}</h3><span>编号 ${String(student.id).padStart(6, '0')}</span></div><div class="control-student-detail-content">${summary(student).map(text => `<p>${esc(text)}</p>`).join('')}${modifiedInfo(student)}</div>`;
     if (controlModule === 'borrowing' || controlModule === 'duration') {
       if (controlModule === 'borrowing') { const effective = R.effectiveBorrow(student, R.today(), schoolBorrowingEnabled); body += `<p class="parity-note">今日生效：${esc(effective.reason || R.periodText(effective))}</p>`; }
-      body += button('新增' + (controlModule === 'borrowing' ? '借用规则' : '使用时长规则'), `openControlEditor(${student.id})`, false, controlModule === 'borrowing' && !schoolBorrowingEnabled) + ruleCards(student);
-      if (controlModule === 'duration') body += button('恢复默认规则', `parity.resetStudent(${student.id})`, true);
+      body += ruleCards(student);
+      if (controlModule === 'borrowing') footer = `<footer class="borrow-editor-actions parity-detail-actions">${button('新增借用规则', `openControlEditor(${student.id})`, false, !schoolBorrowingEnabled)}</footer>`;
+      if (controlModule === 'duration') footer = `<footer class="borrow-editor-actions parity-detail-actions">${button('恢复默认规则', `parity.resetStudent(${student.id})`, true)}${button('新增使用时长规则', `openControlEditor(${student.id})`)}</footer>`;
     } else if (controlModule === 'homework') body += `<span class="homework-inline-permissions">${permissionMiniSwitch(student, 'answer', '答案')}${permissionMiniSwitch(student, 'explanation', '详解')}</span>`;
-    else { const value = controlModule === 'lock' ? !student.locked : !student.world; body += button(controlModule === 'lock' ? value ? '锁屏平板' : '解锁平板' : value ? '开放万象视界' : '关闭万象视界', `confirmControl(${student.id},${value})`); }
-    shell(controlLabels[controlModule] + '详情', `<div class="parity-context">${selectedTeacherClass}</div>${body}</section>`, "controlView='module';renderControl()");
+    else if (controlModule === 'lock' && controlDemoRole === 'admin') {
+      const active = ownTemporaryLock(studentLockKey({ className: selectedTeacherClass, id: student.id }));
+      body += button(active ? '解除临时锁屏' : '临时锁屏', `parity.studentTemporaryLock(${student.id})`, active);
+    } else { const value = controlModule === 'lock' ? !isLocked(student) : !student.world; body += button(controlModule === 'lock' ? value ? '锁屏平板' : '解锁平板' : value ? '开放万象视界' : '关闭万象视界', `confirmControl(${student.id},${value})`, false, controlModule === 'lock' && refLocked({ className: selectedTeacherClass, id: student.id })); }
+    shell(controlLabels[controlModule] + '详情', `<div class="parity-context">${selectedTeacherClass}</div>${body}</section>`, "controlView='module';renderControl()", footer);
   }
   function schoolBorrowPage() {
-    const rules = R.prune(controlData.schoolSettings?.borrowingRules || []);
-    const sections = [['weekly', '每周固定借用规则', '每周按所选星期和时段重复执行。'], ['dates', '指定日期借用规则', '指定日期内优先按本规则执行；到期或删除后恢复每周固定规则。']].map(([mode, title, note]) => {
+    const rules = controlData.schoolSettings?.borrowingRules || [];
+    const sections = [['weekly', '每周固定借用规则', '每周在所选时间可借用。'], ['dates', '指定日期借用规则', '所选日期优先执行，到期或删除后恢复每周规则。']].map(([mode, title, note]) => {
       const items = rules.filter(rule => rule.mode === mode);
-      return `<section class="parity-borrow-section" aria-label="${title}"><div class="parity-borrow-heading"><h3>${title}</h3></div><p class="parity-note">${note}</p>${items.map(rule => `<article class="parity-rule"><b>${esc(R.borrowText(rule))}</b><div class="parity-rule-actions">${ruleIconButton('edit', "parity.schoolBorrowEdit('" + rule.id + "')", !schoolBorrowingEnabled)}${ruleIconButton('delete', "parity.schoolBorrowDelete('" + rule.id + "')", !schoolBorrowingEnabled)}</div></article>`).join('') || '<p class="parity-borrow-empty">尚未设置' + title + '</p>'}</section>`;
+      return `<section class="parity-borrow-section" aria-label="${title}"><div class="parity-borrow-heading"><h3>${title}</h3></div><p class="parity-note">${note}</p>${items.map(rule => `<article class="parity-rule"><b>${esc(R.borrowText(rule))}</b>${rule.mode === 'dates' ? `<span class="parity-rule-status">${R.borrowStatus(rule)}</span>` : ''}<div class="parity-rule-actions">${R.borrowStatus(rule) === '已失效' ? '' : ruleIconButton('edit', "parity.schoolBorrowEdit('" + rule.id + "')", !schoolBorrowingEnabled)}${ruleIconButton('delete', "parity.schoolBorrowDelete('" + rule.id + "')", !schoolBorrowingEnabled)}</div></article>`).join('') || '<p class="parity-borrow-empty">尚未设置' + title + '</p>'}</section>`;
     }).join('');
-    const content = `<p class="parity-note">统一设置全校设备从柜机借出的时间，没有有效规则时不能借用。${schoolBorrowingEnabled ? '' : '全校借用管控已关闭，已有规则保留；开启后可编辑。'}</p>${sections}`;
+    const content = `<p class="parity-note">设置全校可借用时间，无有效规则时不能借用。${schoolBorrowingEnabled ? '' : '已关闭借用，规则保留，开启后可编辑。'}</p>${sections}`;
     shell('借用管控', content, 'leaveControlCenter()', `<div class="parity-borrow-floating">${button('＋ 新增规则', 'parity.newBorrowRule()', false, !schoolBorrowingEnabled)}</div>`, 'parity-school-borrow');
   }
   function renderControl() {
-    schoolControlClasses.forEach(className => controlData[className].forEach(s => s.schedules = R.prune(s.schedules)));
     if (controlView === 'entry' || controlView === 'home') return renderEntry();
     if (controlView === 'ruleEditor') return renderEditor();
-    if (controlView === 'studentDetail') return detailPage();
+    if (controlView === 'studentDetail' && controlDemoRole !== 'admin') return detailPage();
     if (controlDemoRole === 'admin' && controlModule === 'borrowing') return schoolBorrowPage();
-    if (controlDemoRole === 'admin' && adminLevel !== 'class' && controlView !== 'students') return scopePage();
+    if (controlDemoRole === 'admin') {
+      if (controlView === 'students' || controlView === 'studentDetail') { controlView = 'module'; controlSelected.clear(); }
+      return scopePage();
+    }
     return studentPage();
   }
   function scopeFields(editor) {
-    return needScope(editor.refs) ? `<fieldset class="parity-apply-scope"><legend>修改范围（必选）</legend><label><input type="radio" name="parity-apply-scope" value="all" ${editor.scope === 'all' ? 'checked' : ''}>修改当前范围全部学生<small>包括老师按班级或学生单独设置的规则。</small></label><label><input type="radio" name="parity-apply-scope" value="unmodified" ${editor.scope === 'unmodified' ? 'checked' : ''}>仅修改老师未单独设置的学生<small>保留老师已按班级或学生设置的规则。</small></label></fieldset>` : '';
+    if (schoolDateRule(editor)) return '<p class="control-form-note">默认对全校学生生效。</p>';
+    return needScope(editor.refs) ? `<fieldset class="parity-apply-scope"><legend>修改范围（必选）</legend><label><input type="radio" name="parity-apply-scope" value="all" ${editor.scope === 'all' ? 'checked' : ''}>修改当前范围全部学生<small>包括老师按班级或学生单独设置的规则。</small></label><label><input type="radio" name="parity-apply-scope" value="unmodified" ${editor.scope === 'unmodified' ? 'checked' : ''}>跳过老师单独设置的学生<small>保留老师已按班级或学生设置的规则。</small></label></fieldset>` : '';
   }
   function daysFields(value) { return `<div class="control-weekdays" id="parity-days">${['一', '二', '三', '四', '五', '六', '日'].map((label, day) => `<button type="button" data-day="${day}" aria-pressed="${value.includes(day)}" onclick="this.setAttribute('aria-pressed',this.getAttribute('aria-pressed')!=='true')">${label}</button>`).join('')}</div>`; }
   function periodFields(value) { return `<div id="parity-periods" class="control-period-list">${value.map((period, index) => periodRow(period, index)).join('')}</div><button class="control-add-period" onclick="parity.addPeriod()">＋ 添加时段</button>`; }
@@ -193,7 +248,7 @@
     const editor = ui.editor, form = document.getElementById('parity-rule-form');
     if (!editor || !form) return;
     const days = [...form.querySelectorAll('#parity-days [aria-pressed=true]')].map(node => Number(node.dataset.day));
-    editor.scope = form.querySelector('[name=parity-apply-scope]:checked')?.value || null;
+    editor.scope = schoolDateRule(editor) ? 'all' : form.querySelector('[name=parity-apply-scope]:checked')?.value || null;
     const periodRows = [...form.querySelectorAll('#parity-periods [data-period-row]')].map(row => { const inputs = row.querySelectorAll('input'); return { start: inputs[0].value, end: inputs[1].value }; });
     if (controlModule === 'borrowing') {
       editor.rule.weekdays = days;
@@ -219,17 +274,17 @@
     let form = `<p class="control-scope">${esc(editor.label)} · 已选 ${editor.refs.length} 名学生</p><div id="parity-rule-form" class="borrow-editor-card">`;
     if (controlModule === 'borrowing') {
       if (!editor.editingId && !editor.schoolRule) form += `<div class="control-form-section"><b class="control-form-title">规则类型</b><div class="control-segment">${[['weekly', '每周固定'], ['dates', '指定日期']].map(([mode, label]) => `<button aria-pressed="${rule.mode === mode}" onclick="parity.editorMode('${mode}')">${label}</button>`).join('')}</div></div>`;
-      form += `<p class="control-form-note">指定日期内优先执行指定日期规则，到期或删除后恢复每周规则。</p>`;
-      form += rule.mode === 'weekly' ? `<div class="control-form-section"><b class="control-form-title">适用星期</b>${daysFields(rule.weekdays)}</div>` : `<div class="control-form-section"><b class="control-form-title">适用日期（包含起止日期）</b><div class="control-date-row"><input id="parity-date-start" aria-label="开始日期" type="date" value="${rule.startDate}"><span>至</span><input id="parity-date-end" aria-label="结束日期" type="date" value="${rule.endDate}"></div><fieldset class="parity-borrow-choice"><legend class="control-form-title">借用方式</legend>${[['periods', '按时段借用', '仅在下方设置的时段内可借用'], ['deny', '全天禁止借用', '所选日期全天不能借用平板']].map(([value, label, note]) => `<label class="parity-borrow-option"><input type="radio" name="parity-borrow-way" value="${value}" ${rule.deny === (value === 'deny') ? 'checked' : ''} onchange="parity.borrowWay()"><span class="parity-borrow-option-body"><span><b>${label}</b><small>${note}</small></span><i aria-hidden="true">✓</i></span></label>`).join('')}</fieldset></div>`;
+      form += `<p class="control-form-note">指定日期规则优先，到期或删除后恢复每周规则。</p>`;
+      form += rule.mode === 'weekly' ? `<div class="control-form-section"><b class="control-form-title">适用星期</b>${daysFields(rule.weekdays)}</div>` : `<div class="control-form-section"><b class="control-form-title">适用日期（包含起止日期）</b><div class="control-date-row"><input id="parity-date-start" aria-label="开始日期" type="date" onchange="parity.borrowDateChanged()" min="${R.today()}" value="${rule.startDate}"><span>至</span><input id="parity-date-end" aria-label="结束日期" type="date" onchange="parity.borrowDateChanged()" min="${rule.startDate && rule.startDate > R.today() ? rule.startDate : R.today()}" value="${rule.endDate}"></div><fieldset class="parity-borrow-choice"><legend class="control-form-title">借用方式</legend>${[['periods', '按时段借用', '仅在下方设置的时段内可借用'], ['deny', '全天禁止借用', '所选日期全天不能借用平板']].map(([value, label, note]) => `<label class="parity-borrow-option"><input type="radio" name="parity-borrow-way" value="${value}" ${rule.deny === (value === 'deny') ? 'checked' : ''} onchange="parity.borrowWay()"><span class="parity-borrow-option-body"><span><b>${label}</b><small>${note}</small></span><i aria-hidden="true">✓</i></span></label>`).join('')}</fieldset></div>`;
       if (!(rule.mode === 'dates' && rule.deny)) form += `<div class="control-form-section"><b class="control-form-title">借用时段</b>${periodFields(rule.periods)}</div>`;
     } else if (controlModule === 'duration') {
       form += `<div class="control-form-section"><b class="control-form-title">适用星期</b>${daysFields(rule.weekdays)}</div><div class="parity-radio-row">${[[true, '默认规则'], [false, '自定义']].map(([value, label]) => `<label><input type="radio" name="parity-duration-type" ${rule.useDefault === value ? 'checked' : ''} onchange="parity.durationType(${value})">${label}</label>`).join('')}</div>`;
       if (rule.useDefault) form += `<p class="parity-note">${R.durationText(R.defaultDuration)}</p>`;
-      else form += `<div class="control-form-section">${[['continuousMinutes', '连续使用时长'], ['restMinutes', '休息时间'], ['dailyMinutes', '每日累计时长']].map(([key, label]) => `<div class="control-number-row"><label for="parity-${key}">${label}</label><span><input id="parity-${key}" type="number" min="1" step="1" value="${rule[key]}">分钟</span></div>`).join('')}</div><div class="control-form-section"><b class="control-form-title">每日可用时段</b>${periodFields(rule.periods)}<p class="control-form-note">不添加可用时段时，所选星期全天可用，仍受时长限制。</p></div>`;
+      else form += `<div class="control-form-section">${[['continuousMinutes', '连续使用时长'], ['restMinutes', '休息时间'], ['dailyMinutes', '每日累计时长']].map(([key, label]) => `<div class="control-number-row"><label for="parity-${key}">${label}</label><span><input id="parity-${key}" type="number" min="1" step="1" value="${rule[key]}">分钟</span></div>`).join('')}</div><div class="control-form-section"><b class="control-form-title">每日可用时段</b>${periodFields(rule.periods)}<p class="control-form-note">不设时段，全天可用，仍受时长限制。</p></div>`;
     } else form += [['answer', '查看答案'], ['explanation', '查看详解']].map(([key, label]) => `<fieldset class="parity-permission"><legend>${label}</legend>${[['true', '允许'], ['false', '不允许']].map(([value, text]) => `<label><input type="radio" name="parity-${key}" value="${value}" ${String(editor.value[key]) === value ? 'checked' : ''}>${text}</label>`).join('')}</fieldset>`).join('');
     form += `${scopeFields(editor)}<p id="parity-error" class="control-error" role="alert"></p></div>`;
     const title = controlModule === 'borrowing' && (editor.editingId || editor.schoolRule) ? (editor.editingId ? '编辑' : '新增') + (rule.mode === 'weekly' ? '每周固定借用规则' : '指定日期借用规则') : '设置' + controlLabels[controlModule];
-    app.innerHTML = `<main class="screen control-screen borrow-editor-screen">${pageTop(title, 'parity.cancelEditor()')}<section class="borrow-editor-content">${form}</section><footer class="borrow-editor-actions parity-editor-actions">${button('取消', 'parity.cancelEditor()', true)}${button('保存并生效', 'parity.saveEditor()')}</footer><div id="control-overlay"></div><div id="control-toast" role="status"></div></main>`;
+    app.innerHTML = `<main class="screen control-screen borrow-editor-screen">${pageTop(title, 'parity.cancelEditor()')}<section class="borrow-editor-content">${form}</section><footer class="borrow-editor-actions parity-editor-actions">${button('取消', 'parity.cancelEditor()', true)}${button(controlModule === 'borrowing' && rule.mode === 'dates' ? '保存' : '保存并生效', 'parity.saveEditor()')}</footer><div id="control-overlay"></div><div id="control-toast" role="status"></div></main>`;
     syncReview();
   }
   function openEditor(refs, label, ruleId, schoolRule = false) {
@@ -239,17 +294,18 @@
     controlData = loadLatest();
     const first = R.resolve(controlData, refs)[0].student, key = controlModule === 'borrowing' ? 'schedules' : 'durationRules';
     const existing = ruleId ? (schoolRule ? controlData.schoolSettings?.borrowingRules || [] : first[key]).find(rule => rule.id === ruleId) : null;
+    if (controlModule === 'borrowing' && existing && R.borrowStatus(existing) === '已失效') return controlToast('已失效规则只能删除');
     const rule = existing ? R.copy(existing) : controlModule === 'borrowing' ? { id: uid(), mode: schoolRule ? ui.borrowMode : 'weekly', weekdays: [], startDate: '', endDate: '', deny: false, periods: [{ start: '', end: '' }] } : { ...R.copy(R.defaultDuration), id: uid(), weekdays: [], useDefault: false, fixed: false };
     if (controlModule === 'duration') rule.useDefault = Boolean(rule.useDefault);
     const selectedStudents = R.resolve(controlData, refs).map(row => row.student);
     const permissionValue = key => selectedStudents.every(s => s[key] === first[key]) ? first[key] : '';
-    ui.editor = { schoolRule, refs: R.copy(refs), label, base: baseFor(refs), scope: needScope(refs) ? null : 'all', editingId: existing?.id, returnView: controlView, rule, value: { answer: permissionValue('answer'), explanation: permissionValue('explanation') } };
+    ui.editor = { schoolRule, refs: R.copy(refs), label, base: baseFor(refs), scope: controlDemoRole === 'admin' && controlModule === 'borrowing' && rule.mode === 'dates' ? 'all' : needScope(refs) ? null : 'all', editingId: existing?.id, returnView: controlView, rule, value: { answer: permissionValue('answer'), explanation: permissionValue('explanation') } };
     controlView = 'ruleEditor'; renderControl();
   }
   function operationChange(operation) {
     return student => {
       if (operation.kind === 'save') {
-        if (operation.module === 'borrowing') student.schedules = R.mergeBorrow(R.prune(student.schedules), operation.value, operation.editingId);
+        if (operation.module === 'borrowing') student.schedules = R.mergeBorrow(student.schedules, operation.value, operation.editingId);
         else if (operation.module === 'duration') student.durationRules = R.mergeDuration(student.durationRules, operation.value, operation.editingId);
         else Object.assign(student, operation.value);
       } else if (operation.kind === 'delete') {
@@ -263,7 +319,12 @@
   }
   function request(operation) {
     try {
+      if (schoolDateRule(operation)) operation.scope = 'all';
       assertPermission(operation.refs, operation.module);
+      if (operation.kind === 'save' && operation.module === 'borrowing') {
+        const error = R.validateBorrow(operation.value);
+        if (error) throw Error(error);
+      }
       if (operation.module === 'borrowing' && !schoolBorrowingEnabled) throw Error('全校借用管控已关闭，当前不能修改借用规则');
       if (!operation.refs.length) return controlToast('请先选择操作对象');
       if (needScope(operation.refs, operation.module) && !operation.scope) {
@@ -300,7 +361,7 @@
       const warning = operation.scope === 'unmodified' ? `保留老师已单独设置的学生，本次跳过 ${operation.refs.length - rows.length} 人。` : '本次范围内以保存后的规则为准。';
       const label = operation.kind === 'delete' ? '删除规则' : operation.kind === 'reset' ? '恢复默认规则' : operation.module === 'lock' ? operation.value ? '锁屏' : '解除锁屏' : operation.module === 'world' ? operation.value ? '开放万象视界' : '关闭万象视界' : '保存' + controlLabels[operation.module];
       ui.pending = operation;
-      controlOverlay(`确认${label}？`, `<p class="control-scope">${esc(operation.label)} · 实际影响 ${rows.length} 名学生</p><p class="control-confirm-copy">${warning}</p>${before.length ? `<details class="parity-preview"><summary>将覆盖以下原规则（仅替换重叠日期）</summary>${[...new Set(before)].map(text => `<p>${esc(text)}</p>`).join('')}</details>` : ''}<details open class="parity-preview"><summary>${previewTitle}</summary>${texts.map(text => `<p>${esc(text)}</p>`).join('')}</details>${operation.module === 'duration' && operation.kind === 'save' && !R.periods(operation.value.useDefault ? R.defaultDuration : operation.value).length ? '<p class="control-form-note">未限制每日可用时间，仍受连续使用、休息和每日累计时长限制。</p>' : ''}`, button('取消', 'closeControlOverlay()', true) + button('确认生效', 'parity.apply()'));
+      controlOverlay(`确认${label}？`, `<p class="control-scope">${esc(operation.label)} · 实际影响 ${rows.length} 名学生</p><p class="control-confirm-copy">${warning}</p>${before.length ? `<details class="parity-preview"><summary>将覆盖以下原规则（仅替换重叠日期）</summary>${[...new Set(before)].map(text => `<p>${esc(text)}</p>`).join('')}</details>` : ''}<details open class="parity-preview"><summary>${previewTitle}</summary>${texts.map(text => `<p>${esc(text)}</p>`).join('')}</details>${operation.module === 'duration' && operation.kind === 'save' && !R.periods(operation.value.useDefault ? R.defaultDuration : operation.value).length ? '<p class="control-form-note">全天可用，连续使用、休息和每日总时长限制仍生效。</p>' : ''}`, button('取消', 'closeControlOverlay()', true) + button(operation.kind === 'save' && operation.module === 'borrowing' && operation.value.mode === 'dates' ? '保存' : '确认生效', 'parity.apply()'));
     } catch (error) { conflict(error); }
   }
   function conflict(error) {
@@ -314,6 +375,10 @@
     if (!operation) return;
     try {
       assertPermission(operation.refs, operation.module);
+      if (operation.kind === 'save' && operation.module === 'borrowing') {
+        const error = R.validateBorrow(operation.value);
+        if (error) throw Error(error);
+      }
       if (operation.module === 'borrowing' && localStorage.getItem('school-borrowing-enabled') === 'false') throw Error('全校借用管控已关闭，请刷新后重新操作');
       const latest = loadLatest();
       // 完整范围先做版本校验；删除只写入确实包含目标规则的学生。
@@ -323,7 +388,7 @@
       if (result.count) {
         if (operation.schoolRule) {
           const rules = result.data.schoolSettings?.borrowingRules || [];
-          result.data.schoolSettings = { ...result.data.schoolSettings, borrowingRules: operation.kind === 'save' ? R.mergeBorrow(R.prune(rules), operation.value, operation.editingId) : rules.filter(rule => rule.id !== operation.ruleId) };
+          result.data.schoolSettings = { ...result.data.schoolSettings, borrowingRules: operation.kind === 'save' ? R.mergeBorrow(rules, operation.value, operation.editingId) : rules.filter(rule => rule.id !== operation.ruleId) };
         }
         persist(result.data);
       }
@@ -331,17 +396,58 @@
       ui.pending = null; ui.editor = null;
       if (controlView === 'ruleEditor') controlView = returnView === 'studentDetail' ? 'studentDetail' : 'module';
       adminBatchMode = false; controlSelected.clear(); adminSelectedScopes.clear();
-      renderControl(); controlToast(result.count ? `${operation.kind === 'delete' ? '删除成功' : '已生效'} · ${result.count}名学生` : '没有符合修改范围的学生，原规则保留');
+      renderControl(); controlToast(result.count ? operation.kind === 'save' && operation.module === 'borrowing' && operation.value.mode === 'dates' ? '已保存' : `${operation.kind === 'delete' ? '删除成功' : '已生效'} · ${result.count}名学生` : '没有符合修改范围的学生，原规则保留');
     } catch (error) { conflict(error); }
   }
   function makeOperation(refs, label, kind, value, extra = {}) { return { refs, label, kind, value, module: controlModule, base: baseFor(refs), ...extra }; }
-  function currentSelectedRefs() { return controlDemoRole === 'admin' && adminLevel !== 'class' ? adminSelectionRefs() : targetRefs('selected'); }
+  function currentSelectedRefs() { return controlDemoRole === 'admin' ? adminSelectionRefs() : targetRefs('selected'); }
   function visibleScopeKeys() {
     const container = document.getElementById('parity-scope-rows');
-    if (!container) return adminVisibleScopeKeys();
-    return adminVisibleScopeKeys().filter(key => [...container.querySelectorAll('.admin-level-copy b')].some(node => node.textContent === key));
+    const keys = adminLevel === 'class' ? [selectedTeacherClass] : adminVisibleScopeKeys();
+    if (!container) return keys;
+    return keys.filter(key => [...container.querySelectorAll('.admin-level-copy b')].some(node => node.textContent === key));
   }
   window.parity = {
+    setTemporaryLocks(entries, active) {
+      try {
+        if (controlDemoRole !== 'admin') throw Error('仅学校管理员可操作临时锁屏');
+        if (entries.some(entry => entry.key.startsWith('student:'))) throw Error('学校管理员仅支持全校、年级或班级操作');
+        if (!entries.length) return controlToast('请先选择操作对象');
+        const latest = loadLatest();
+        entries.forEach(entry => R.resolve(latest, entry.refs));
+        latest.schoolSettings ||= {};
+        latest.schoolSettings.temporaryLocks ||= {};
+        const changed = entries.filter(entry => Boolean(latest.schoolSettings.temporaryLocks[entry.key]?.active) !== active);
+        if (!changed.length) return controlToast(active ? '所选范围已开启临时锁屏' : '所选范围未开启临时锁屏');
+        changed.forEach(entry => {
+          if (active) latest.schoolSettings.temporaryLocks[entry.key] = { active: true, refs: R.copy(entry.refs), ...actor(), at: new Date().toLocaleString('zh-CN', { hour12: false }) };
+          else delete latest.schoolSettings.temporaryLocks[entry.key];
+        });
+        recordTemporaryLock(latest, changed.flatMap(entry => entry.refs));
+        persist(latest); ui.pending = null; closeControlOverlay(); renderControl();
+        controlToast(active ? '已开启所选范围临时锁屏' : '已解除临时锁屏');
+      } catch (error) { conflict(error); }
+    },
+    studentTemporaryLock(id) {
+      const refs = targetRefs(id), key = studentLockKey(refs[0]);
+      this.setTemporaryLocks([{ key, refs }], !ownTemporaryLock(key));
+    },
+    toggleTemporaryLock(value) {
+      try {
+        if (controlDemoRole !== 'admin') throw Error('仅学校管理员可操作全校临时锁屏');
+        const latest = loadLatest(), active = typeof value === 'boolean' ? value : !temporaryLockActive(latest);
+        if (active === temporaryLockActive(latest)) return controlToast(active ? '已开启全校临时锁屏' : '已解除临时锁屏');
+        // 只叠加临时状态，保留原有锁屏配置；最近操作信息独立更新。
+        latest.schoolSettings ||= {};
+        latest.schoolSettings.temporaryLock = { active, ...actor(), at: new Date().toLocaleString('zh-CN', { hour12: false }) };
+        recordTemporaryLock(latest, allRefs());
+        persist(latest);
+        ui.pending = null;
+        closeControlOverlay();
+        renderControl();
+        controlToast(active ? '已开启全校临时锁屏' : '已解除临时锁屏');
+      } catch (error) { conflict(error); }
+    },
     newBorrowRule() {
       if (!schoolBorrowingEnabled) return controlToast('开启全校借用管控后可新增规则');
       controlOverlay('新增借用规则', `<div class="parity-borrow-type-actions">${button('每周固定借用规则', "parity.chooseBorrowType('weekly')", true)}${button('指定日期借用规则', "parity.chooseBorrowType('dates')", true)}</div>`, button('取消', 'closeControlOverlay()', true));
@@ -349,19 +455,18 @@
     chooseBorrowType(mode) { closeControlOverlay(); this.schoolBorrowEdit(null, mode); },
     schoolBorrowEdit(id, mode) { if (mode) ui.borrowMode = mode; openEditor(allRefs(), '全校', id, true); },
     schoolBorrowDelete(ruleId) { request(makeOperation(allRefs(), '全校', 'delete', null, { ruleId, schoolRule: true, scope: 'all' })); },
-    back() { ui.scopeQuery = ''; ui.scopeFilter = 'all'; if (controlView === 'students') { controlView = 'module'; controlSelected.clear(); return renderControl(); } if (controlDemoRole === 'admin') return adminBack(); leaveControlCenter(); },
+    back() { if (controlView === 'students') { controlView = 'module'; controlSelected.clear(); return renderControl(); } if (controlDemoRole === 'admin') return adminBack(); leaveControlCenter(); },
     startSelection() { adminBatchMode = true; adminSelectedScopes.clear(); renderControl(); },
     cancelSelection() { adminBatchMode = false; controlSelected.clear(); adminSelectedScopes.clear(); controlView = 'module'; renderControl(); },
     selectScope(key, value) { value ? adminSelectedScopes.add(key) : adminSelectedScopes.delete(key); renderControl(); },
     selectStudent(id) { controlSelected.has(id) ? controlSelected.delete(id) : controlSelected.add(id); renderControl(); },
-    selectAll(value) { const admin = controlDemoRole === 'admin' && adminLevel !== 'class', set = admin ? adminSelectedScopes : controlSelected; (admin ? visibleScopeKeys() : filteredControlStudents().map(s => s.id)).forEach(key => value ? set.add(key) : set.delete(key)); renderControl(); },
-    scopeFilter(query, filter) { if (query !== null) ui.scopeQuery = query; if (filter !== null) ui.scopeFilter = filter; adminSelectedScopes.clear(); document.getElementById('parity-scope-rows').innerHTML = scopeRows(); const footer = document.querySelector('.parity-batchbar'); if (footer) footer.outerHTML = selectionFooter(true); },
+    selectAll(value) { const admin = controlDemoRole === 'admin', set = admin ? adminSelectedScopes : controlSelected; (admin ? visibleScopeKeys() : filteredControlStudents().map(s => s.id)).forEach(key => value ? set.add(key) : set.delete(key)); renderControl(); },
     studentFilter(query, filter) { if (query !== null) controlQuery = query; if (filter !== null) controlFilter = filter; controlSelected.clear(); this.renderRows(); },
     renderRows() { const rows = document.getElementById('parity-student-rows'); if (rows) rows.innerHTML = studentRows(); const footer = document.querySelector('.parity-batchbar'); if (footer) footer.outerHTML = selectionFooter(); },
     editScope(key) { openEditor(scopeRefs(key), key); },
-    selectedEdit() { const refs = currentSelectedRefs(); const names = controlDemoRole === 'admin' && adminLevel !== 'class' ? [...adminSelectedScopes] : R.resolve(controlData, refs).map(row => row.student.name); openEditor(refs, names.join('、')); },
-    scopeBoolean(key, value) { request(makeOperation(scopeRefs(key), key, 'boolean', value)); },
-    selectedBoolean(value) { request(makeOperation(currentSelectedRefs(), '所选对象', 'boolean', value)); },
+    selectedEdit() { const refs = currentSelectedRefs(); const names = controlDemoRole === 'admin' ? [...adminSelectedScopes] : R.resolve(controlData, refs).map(row => row.student.name); openEditor(refs, names.join('、')); },
+    scopeBoolean(key, value) { if (controlModule === 'lock' && controlDemoRole === 'admin') return this.setTemporaryLocks([{ key: scopeLockKey(key), refs: scopeRefs(key) }], value); request(makeOperation(scopeRefs(key), key, 'boolean', value)); },
+    selectedBoolean(value) { if (controlModule === 'lock' && controlDemoRole === 'admin') return this.setTemporaryLocks(selectionLockEntries(), value); request(makeOperation(currentSelectedRefs(), '所选对象', 'boolean', value)); },
     selectedReset() {
       const refs = currentSelectedRefs(); if (!refs.length) return;
       if (controlModule === 'borrowing') { this.borrowDeleteChoice(refs, '所选对象'); return; }
@@ -369,14 +474,30 @@
     },
     resetCurrent() { request(makeOperation(activeRefs(), scopeLabel(), 'reset', null)); },
     resetStudent(id) { request(makeOperation(targetRefs(id), selectedTeacherClass, 'reset', null)); },
-    borrowDeleteChoice(refs, label) { ui.pending = makeOperation(refs, label, 'delete', null); controlOverlay('删除哪类借用规则？', '<p class="control-confirm-copy">删除所选类型的借用规则，另一类型规则保留。没有有效规则时不能借用。</p>', button('取消', 'closeControlOverlay()', true) + button('每周固定', "parity.deleteMode('weekly')", true) + button('指定日期', "parity.deleteMode('dates')")); },
+    borrowDeleteChoice(refs, label) {
+      try {
+        assertPermission(refs, 'borrowing');
+        const modes = [...new Set(R.resolve(loadLatest(), refs).flatMap(({ student }) => student.schedules.map(rule => rule.mode)))];
+        if (!modes.length) return controlToast('所选范围内没有有效借用规则，无需删除');
+        const operation = makeOperation(refs, label, 'delete', null);
+        if (modes.length === 1) return request({ ...operation, mode: modes[0] });
+        ui.pending = operation;
+        controlOverlay('删除哪类借用规则？', '<p class="control-confirm-copy">删除所选类型的借用规则，另一类型规则保留。没有有效规则时不能借用。</p>', button('取消', 'closeControlOverlay()', true) + button('每周固定', "parity.deleteMode('weekly')", true) + button('指定日期', "parity.deleteMode('dates')"));
+      } catch (error) { conflict(error); }
+    },
     deleteMode(mode) { const operation = { ...ui.pending, mode }; request(operation); },
     editStudentRule(id, ruleId) { openEditor(targetRefs(id), selectedTeacherClass + ' · ' + controlStudents().find(s => s.id === id).name, ruleId); },
     deleteStudentRule(id, ruleId) { request(makeOperation(targetRefs(id), selectedTeacherClass + ' · ' + controlStudents().find(s => s.id === id).name, 'delete', null, { ruleId })); },
-    differences(key) { const refs = key ? scopeRefs(key) : activeRefs(); controlOverlay((key || scopeLabel()) + ' · 学生规则差异', groups(refs).map((group, index) => `<details class="parity-rule"><summary>生效规则 ${index + 1} · ${group.refs.length}名学生</summary>${summary(group.student).map(text => `<p>${esc(text)}</p>`).join('')}<details><summary>查看学生</summary>${group.refs.map(ref => { const s = controlData[ref.className].find(row => row.id === ref.id); return `<p>${esc(s.name)} · ${ref.className} · 编号 ${String(s.id).padStart(6, '0')}</p>`; }).join('')}</details></details>`).join(''), button('关闭', 'closeControlOverlay()', true)); },
     cancelEditor() { const view = ui.editor?.returnView; ui.editor = null; ui.pending = null; controlView = view || 'module'; renderControl(); },
     editorMode(mode) { if (!ui.editor || ui.editor.editingId || ui.editor.schoolRule) return; collectEditor(); ui.editor.rule.mode = mode; ui.editor.rule.deny = false; renderEditor(); },
     borrowWay() { collectEditor(); renderEditor(); },
+    borrowDateChanged() {
+      const start = document.getElementById('parity-date-start'), end = document.getElementById('parity-date-end'), error = document.getElementById('parity-error');
+      start.min = R.today();
+      if (start.value && start.value < start.min) { start.value = ''; error.textContent = '生效日期只能选择今天及以后'; }
+      end.min = start.value && start.value > R.today() ? start.value : R.today();
+      if (end.value && end.value < end.min) { end.value = ''; error.textContent = '结束日期不能早于今天或开始日期'; }
+    },
     durationType(value) { collectEditor(); ui.editor.rule.useDefault = value; renderEditor(); },
     addPeriod() { const host = document.getElementById('parity-periods'); host.insertAdjacentHTML('beforeend', periodRow({ start: '', end: '' }, host.children.length)); },
     saveEditor() {
@@ -397,9 +518,16 @@
   };
   window.renderControl = renderControl;
   window.filteredControlStudents = filteredControlStudents;
-  window.openControlEditor = target => openEditor(targetRefs(target), target === 'adminSelected' ? '所选对象' : selectedTeacherClass + (typeof target === 'number' ? ' · ' + (controlStudents().find(s => s.id === target)?.name || '') : ''));
-  window.confirmControl = (target, value) => request(makeOperation(targetRefs(target), selectedTeacherClass, 'boolean', value));
-  window.adminBatchAction = (module, value) => { controlModule = module; request(makeOperation(allRefs(), '全校', 'boolean', value)); };
+  window.openControlEditor = target => {
+    if (controlDemoRole === 'admin' && typeof target === 'number') return controlToast('学校管理员仅支持全校、年级或班级操作');
+    openEditor(targetRefs(target), target === 'adminSelected' ? '所选对象' : selectedTeacherClass + (typeof target === 'number' ? ' · ' + (controlStudents().find(s => s.id === target)?.name || '') : ''));
+  };
+  window.confirmControl = (target, value) => {
+    if (controlDemoRole === 'admin' && typeof target === 'number') return controlToast('学校管理员仅支持全校、年级或班级操作');
+    if (controlModule === 'lock' && controlDemoRole === 'admin') return parity.setTemporaryLocks([{ key: scopeLockKey(selectedTeacherClass), refs: classRefs() }], value);
+    request(makeOperation(targetRefs(target), selectedTeacherClass, 'boolean', value));
+  };
+  window.adminBatchAction = (module, value) => { controlModule = module; if (module === 'lock') return parity.toggleTemporaryLock(value); request(makeOperation(allRefs(), '全校', 'boolean', value)); };
   window.toggleHomeworkPermission = (id, key, value) => {
     const refs = targetRefs(id);
     try {
@@ -409,20 +537,16 @@
     } catch (error) { conflict(error); }
   };
   window.toggleSchoolBorrowing = () => controlOverlay(`确认${schoolBorrowingEnabled ? '关闭' : '开启'}全校借用管控？`, `<p class="control-confirm-copy">${schoolBorrowingEnabled ? '关闭后，所有学生均不能从柜机借用平板，已有规则保留。' : '开启后，仅允许在有效规则允许的时段借用，没有有效规则时不能借用。'}</p>`, button('取消', 'closeControlOverlay()', true) + button('确认生效', `applySchoolBorrowing(${!schoolBorrowingEnabled})`));
-  let displayedDate = R.today();
+  let displayedBorrowStates = '';
   const refreshExpiredRules = () => {
-    if (displayedDate === R.today()) return;
-    displayedDate = R.today();
     try {
       const latest = loadLatest();
-      schoolControlClasses.forEach(className => latest[className].forEach(student => student.schedules = R.prune(student.schedules)));
-      if (latest.schoolSettings) latest.schoolSettings.borrowingRules = R.prune(latest.schoolSettings.borrowingRules || []);
-      persist(latest);
-      if (!ui.editor && !ui.pending) renderControl();
+      const states = JSON.stringify([...schoolControlClasses.flatMap(className => latest[className].flatMap(student => student.schedules)), ...(latest.schoolSettings?.borrowingRules || [])].filter(rule => rule.mode === 'dates').map(rule => [rule.id, R.borrowStatus(rule)]));
+      if (states !== displayedBorrowStates && !ui.editor && !ui.pending) { displayedBorrowStates = states; controlData = latest; renderControl(); }
     } catch { /* 不在后台覆盖失败数据；用户再次保存时会得到错误提示。 */ }
   };
   window.addEventListener('focus', refreshExpiredRules);
-  setInterval(refreshExpiredRules, 60000);
+  setInterval(refreshExpiredRules, 1000);
   window.addEventListener('storage', event => {
     if (event.key === storageKey) { try { controlData = loadLatest(); } catch { return; } }
     if (event.key === 'school-borrowing-enabled') schoolBorrowingEnabled = event.newValue !== 'false';

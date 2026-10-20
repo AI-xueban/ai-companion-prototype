@@ -197,3 +197,6 @@
 .control-screen .parity-editor-actions .control-secondary { width: 32%; }
 .control-screen .parity-editor-actions .control-primary { flex: 1; width: auto; }
 .control-screen .parity-batchbar .admin-batch-actions button:disabled { opacity: 1; color: #a4b3bf; background: #f2f6f9; border-color: #e7eef4; }
+.control-screen .parity-detail-actions { display: flex; gap: 10px; flex-shrink: 0; }
+.control-screen .parity-detail-actions button { flex: 1; width: 0; min-width: 0; white-space: nowrap; padding-left: 8px; padding-right: 8px; }
+.parity-rule-status { display: inline-block; margin: 6px 0 0 8px; padding: 2px 7px; border-radius: 5px; background: #edf5fc; color: #607f99; font-size: 12px; }
