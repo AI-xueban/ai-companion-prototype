@@ -903,6 +903,8 @@ body.req-annotate-on .req-active-target {
 
 .modal.modal-xl { max-width: min(1200px, 100%); }
 
+.modal.modal-md { max-width: min(680px, 100%); }
+
 .modal.modal-sm { max-width: min(420px, 100%); }
 
 .modal.modal-md { max-width: min(560px, 100%); }

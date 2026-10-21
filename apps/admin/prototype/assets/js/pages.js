@@ -1388,6 +1388,7 @@ function renderPage(route, params) {
     case 'layout-template': return renderLayoutTemplatePage(params?.type);
     case 'device-overview': return renderDeviceOverviewPage();
     case 'cabinet': return renderCabinetPage();
+    case 'cabinet-version': return renderCabinetVersionPage();
     case 'cabinet-detail': return renderCabinetDetailPage(params);
     case 'tablet': return renderTabletPage();
     case 'tablet-detail': return renderTabletDetailPage(params);

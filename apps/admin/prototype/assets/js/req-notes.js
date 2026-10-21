@@ -796,6 +796,11 @@ function renderConsolePanel() {
     return;
   }
 
+  if (route === 'cabinet-version' && typeof renderCabinetUpgradeConsole === 'function') {
+    bodyEl.innerHTML = renderCabinetUpgradeConsole();
+    return;
+  }
+
   bodyEl.innerHTML = `
     <div class="console-page-head">
       <span class="console-route-label">当前菜单</span>

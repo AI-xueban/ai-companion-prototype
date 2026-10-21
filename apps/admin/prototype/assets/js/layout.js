@@ -15,6 +15,7 @@ const MENU = [
     children: [
       { key: 'device-overview', label: '概览', route: 'device-overview' },
       { key: 'cabinet', label: '柜机管理', route: 'cabinet' },
+      { key: 'cabinet-version', label: '柜机升级', route: 'cabinet-version' },
       { key: 'tablet', label: '平板设备', route: 'tablet' },
       { key: 'device-usage', label: '使用记录', route: 'device-usage' },
       { key: 'device-alert', label: '状态告警', route: 'device-alert' },
@@ -58,6 +59,7 @@ const MENU = [
 ];
 
 const ROUTE_META = {
+  'cabinet-version': { title: '柜机升级', breadcrumb: ['设备管理', '柜机升级'] },
   'mall': { title: '捐赠与爱心池', breadcrumb: ['金币运营', '捐赠与爱心池'] },
   'home-config': { title: '首页配置', breadcrumb: ['内容运营', '万象视界管理', '首页配置'] },
   'hot-recommend': { title: '热门推荐', breadcrumb: ['内容运营', '万象视界管理', '热门推荐'] },
