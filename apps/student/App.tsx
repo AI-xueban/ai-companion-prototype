@@ -138,6 +138,7 @@ const App: React.FC = () => {
   const [appMode, setAppMode] = useState<'student' | 'teacher'>('student');
   const [teacherEntryRole, setTeacherEntryRole] = useState<TeacherPortalRole>('teacher');
   const [demoLockScreen, setDemoLockScreen] = useState<DemoLockType | null>(null);
+  const [lowBatteryDemoNext, setLowBatteryDemoNext] = useState<'reminder' | 'lock'>('reminder');
   const [worldLocked, setWorldLocked] = useState(false);
   const [worldLockNotifications, setWorldLockNotifications] = useState<StudentNotification[]>([]);
 
@@ -831,7 +832,10 @@ const App: React.FC = () => {
       onDemoLockScreen={(type) => {
         setAppMode('student');
         setDemoLockScreen(type);
+        if (type === 'low-battery-reminder') setLowBatteryDemoNext('lock');
+        if (type === 'low-battery') setLowBatteryDemoNext('reminder');
       }}
+      lowBatteryDemoNext={lowBatteryDemoNext}
       worldLocked={worldLocked}
       onDemoWorldLockToggle={() => {
         const nextLocked = !worldLocked;
