@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20261020-admin-menu" />
+  <link rel="stylesheet" href="styles.css?v=20261021-admin-eight" />
 </head>
 <body>
   <aside class="studio-bar">
@@ -134,9 +134,8 @@
           </div>
         </section>
         <section class="page page-admin-manage" data-page="admin-manage">
-          <div class="admin-titlebar"><button type="button" class="text-btn admin-top-back" id="adminLogout">← 返回</button><h2 class="page-title">柜机管理</h2></div>
-          <div class="admin-identity"><strong>示例姓名 · 学校管理员</strong><span id="adminAccount"></span><span>柜机 A03</span></div>
-          <div class="admin-menu"><button type="button" class="admin-menu-item" data-admin-feature="开箱测试"><span aria-hidden="true">▣</span><strong>开箱测试</strong></button><button type="button" class="admin-menu-item" data-admin-feature="格口详情"><span aria-hidden="true">▤</span><strong>格口详情</strong></button><button type="button" class="admin-menu-item" data-admin-feature="摄像头配置"><span aria-hidden="true">◎</span><strong>摄像头配置</strong></button><button type="button" class="admin-menu-item" data-admin-feature="人脸底库"><span aria-hidden="true">◉</span><strong>人脸底库</strong></button><button type="button" class="admin-menu-item" data-admin-feature="设备管理"><span aria-hidden="true">▥</span><strong>设备管理</strong></button></div>
+          <button type="button" class="text-btn admin-top-back" id="adminLogout">返回</button><span id="adminAccount" hidden></span>
+          <div class="admin-menu"><button type="button" class="admin-menu-item" data-admin-feature="开箱测试"><span aria-hidden="true">▣</span><strong>开箱测试</strong></button><button type="button" class="admin-menu-item" data-admin-feature="激活设备"><span aria-hidden="true">▱</span><strong>激活设备</strong></button><button type="button" class="admin-menu-item" data-admin-feature="用户管理"><span aria-hidden="true">♙</span><strong>用户管理</strong></button><button type="button" class="admin-menu-item" data-admin-feature="格口详情"><span aria-hidden="true">▤</span><strong>格口详情</strong></button><button type="button" class="admin-menu-item" data-admin-feature="摄像头配置"><span aria-hidden="true">◎</span><strong>摄像头配置</strong></button><button type="button" class="admin-menu-item" data-admin-feature="人脸底库"><span aria-hidden="true">◉</span><strong>人脸底库</strong></button><button type="button" class="admin-menu-item" data-admin-feature="设备管理"><span aria-hidden="true">▥</span><strong>设备管理</strong></button><button type="button" class="admin-menu-item" data-admin-feature="退出软件"><span aria-hidden="true">⏻</span><strong>退出软件</strong></button></div>
           <p class="admin-feature-note" id="adminFeatureNote" role="status"></p>
         </section>
 
@@ -396,6 +395,6 @@
     </div>
   </main>
 
-  <script src="app.js?v=20261020-admin-menu"></script>
+  <script src="app.js?v=20261021-admin-eight"></script>
 </body>
 </html>
