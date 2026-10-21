@@ -9,7 +9,7 @@
 }
 .control-screen .wx-nav h2 { color: var(--control-ink); }
 .control-screen > .control-workbench-tools { padding: 10px 17px 12px; background: #f5fbff; border-color: #e5edf3; }
-.control-screen .control-entry { padding: 14px 17px 24px; background: #f5fbff; }
+.control-screen .control-entry { padding: 14px 17px 92px; scroll-padding-bottom: 80px; background: #f5fbff; }
 .control-screen .control-content { padding: 12px 17px 24px; background: #f5fbff; }
 .control-screen .borrow-editor-content { padding: 14px 17px 24px; background: #f5fbff; }
 .control-screen .control-entry-lock,
