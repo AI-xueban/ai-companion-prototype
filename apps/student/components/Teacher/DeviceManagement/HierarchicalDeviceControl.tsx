@@ -49,6 +49,7 @@ import {
   ControlConfigurationHeaders,
 } from "./ControlConfigurationColumns";
 import { DeviceControlLayer } from "./DeviceControlLayer";
+import { applySchoolDurationRule, durationUpdateDays } from "../data/durationApplyScope";
 import { DurationRuleEditor } from "./DurationRuleEditor";
 import { WorldUsageEditor } from "./WorldUsageEditor";
 import { TemporaryLockEditor } from "./TemporaryLockEditor";
@@ -113,6 +114,7 @@ const CONTROL_STORAGE_KEY = "ai-companion-device-controls-v2";
 const HISTORY_STORAGE_KEY = "ai-companion-device-control-history-v2";
 type LockSnapshot = Record<string, boolean>;
 type StoredControls = {
+  durationTeacherCanEdit?: boolean;
   borrow: Record<string, StudentControl>;
   duration: Record<string, StudentControl>;
   temporaryLockSnapshot?: LockSnapshot | null;
@@ -173,6 +175,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
   const defaultDurationEnabled = true;
   const [defaultDuration, setDefaultDuration] = useState<DurationRule>({ id: "default-duration", weekdays: [0, 1, 2, 3, 4, 5, 6], useDefault: false, ...defaultDurationRule, periods: [] });
   const [storedControls] = useState(readStoredControls);
+  const [durationTeacherCanEdit, setDurationTeacherCanEdit] = useState(storedControls.durationTeacherCanEdit ?? false);
   const [temporaryLocks, setTemporaryLocks] = useState<TemporaryLocks>(storedControls.temporaryLocks ?? {});
   const [schoolTemporaryLockSession, setSchoolTemporaryLockSession] = useState<SchoolTemporaryLockSession>(storedControls.schoolTemporaryLockSession ?? { active: false, dailySnapshot: {} });
   const [temporaryLockClassStates, setTemporaryLockClassStates] = useState<TemporaryLockClassStates>(() => {
@@ -220,6 +223,28 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
   const operatorLabel = operatorPhone
     ? `${currentUser.name}（${operatorPhone}）`
     : currentUser.name;
+  const changeDurationPermission = (allowed: boolean) => {
+    setDurationTeacherCanEdit(allowed);
+    setOperationRecords((records) => limitHistoryByModule([{
+      id: `permission-${Date.now()}`, module: "duration", title: allowed ? "开放班主任调整权限" : "关闭班主任调整权限", scope: "全校",
+      time: new Date().toLocaleString("zh-CN", { hour12: false }), operator: operatorLabel, source: "teacher-portal", operatorRole: currentUser.role,
+      before: [durationTeacherCanEdit ? "班主任调整权限已开放" : "班主任调整权限未开放"], after: [allowed ? "班主任调整权限已开放，当前规则不变" : "班主任调整权限未开放，当前规则保留"], ids: deviceControlStudents.map((student) => student.id), snapshot: {},
+    }, ...records]));
+  };
+  useEffect(() => {
+    const sync = (event: StorageEvent) => {
+      if (event.key !== CONTROL_STORAGE_KEY) return;
+      const latest = readStoredControls();
+      setBorrowControls(latest.borrow);
+      setDurationControls(latest.duration);
+      setDurationTeacherCanEdit(latest.durationTeacherCanEdit ?? false);
+      setTemporaryLocks(latest.temporaryLocks ?? {});
+      setSchoolTemporaryLockSession(latest.schoolTemporaryLockSession ?? { active: false, dailySnapshot: {} });
+      setTemporaryLockClassStates(latest.temporaryLockClassStates ?? {});
+    };
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, []);
   useEffect(() => {
     if (tab !== "borrowing" || borrowMode !== "dates") return;
     setRuleStatusNow(new Date());
@@ -228,9 +253,9 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
   }, [tab, borrowMode]);
   useEffect(() => {
     try {
-      window.localStorage.setItem(CONTROL_STORAGE_KEY, JSON.stringify({ borrow: borrowControls, duration: durationControls, temporaryLocks, schoolTemporaryLockSession, temporaryLockClassStates }));
+      window.localStorage.setItem(CONTROL_STORAGE_KEY, JSON.stringify({ borrow: borrowControls, duration: durationControls, durationTeacherCanEdit, temporaryLocks, schoolTemporaryLockSession, temporaryLockClassStates }));
     } catch { /* 浏览器存储不可用时继续使用当前会话数据 */ }
-  }, [borrowControls, durationControls, temporaryLocks, schoolTemporaryLockSession, temporaryLockClassStates]);
+  }, [borrowControls, durationControls, durationTeacherCanEdit, temporaryLocks, schoolTemporaryLockSession, temporaryLockClassStates]);
   useEffect(() => {
     try {
       window.localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(limitHistoryByModule(operationRecords)));
@@ -504,7 +529,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
           ? newBorrowSchedule(mode)
           : undefined,
       editingId: schedule?.id,
-      requireApplyScope: !classId && ids.length > 1 && (schedule?.mode ?? mode) !== "dates",
+      requireApplyScope: tab !== "borrowing" && !classId && ids.length > 1,
       baseSignatures: Object.fromEntries(ids.map((id) => [id, policySignature(controls[id], tab)])),
     });
   };
@@ -533,23 +558,19 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
         setMessage({ text: "所选学生已被其他老师修改，请刷新后重新操作", tone: "warning" });
         return;
       }
+      const scope = applyScope ?? "all";
+      const updateIds = ids.filter((id) => durationUpdateDays(durationControls[id], rule, scope).length > 0);
       setConfirmation({
-        title: "确认保存使用时长规则？",
-        scope: label,
-        selectedObjects: label.startsWith("已选") ? selectedObjectNames : undefined,
-        count: ids.length,
-        description: durationRuleText(rule),
-        warning: applyScope ? `修改范围：${applyScope === "all" ? `修改${label === "全校" ? "全校" : "当前所选范围"}全部学生，将覆盖老师此前单独设置的学生` : "跳过老师单独设置的学生，保留老师已有设置"}。` : undefined,
-        resultPreview: <><p className="font-bold">保存后实际生效规则</p><p className="mt-1">{weekdayRangeText(rule.weekdays)}：{durationRuleText(rule)}</p><p className="mt-1 text-slate-500">本次仅修改所选星期；其他日期保留原规则，没有单独规则时执行全校默认规则。</p></>,
+        title: "确认保存使用时长规则？", scope: label,
+        selectedObjects: durationEditor.selectedObjects,
+        count: updateIds.length,
+        description: `${weekdayRangeText(rule.weekdays)}：${durationRuleText(rule)}`,
         action: "确认并生效",
-        run: () => writeControls(ids, (control) => ({
-          ...control,
-          durationRules: [
-            ...control.durationRules.filter((existing) => existing.id !== editingId && !existing.weekdays.some((day) => rule.weekdays.includes(day))).map((existing) => ({ ...existing })),
-            ...control.durationRules.filter((existing) => existing.id !== editingId && existing.weekdays.some((day) => rule.weekdays.includes(day))).map((existing) => ({ ...existing, weekdays: existing.weekdays.filter((day) => !rule.weekdays.includes(day)) })).filter((existing) => existing.weekdays.length),
-            ...(rule.useDefault ? [] : [{ ...rule, weekdays: [...rule.weekdays], periods: rule.periods.map((period) => ({ ...period })) }]),
-          ],
-        }), "保存使用时长规则"),
+        run: () => {
+          if (ids.some((id) => policySignature(durationControls[id], "duration") !== baseSignatures[id])) { setMessage({ text: "所选学生已被其他老师修改，请刷新后重新操作", tone: "warning" }); return; }
+          if (updateIds.length) writeControls(updateIds, (control) => applySchoolDurationRule(control, rule, scope), "保存使用时长规则");
+          else setMessage({ text: "全部所选星期均为班主任配置，本次保留原规则", tone: "success" });
+        },
       });
     }
     setDurationEditor(null);
@@ -558,7 +579,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
     title: ruleId ? "确认删除使用时长规则？" : "确认恢复默认规则？",
     scope: label,
     count: ids.length,
-    description: `${ruleId ? "删除后，对应星期恢复默认规则。" : "将清除所选范围当前设置的规则，并恢复默认规则。"}默认规则：${durationRuleText(defaultDuration)}。`,
+    description: `${ruleId ? "删除后，对应星期恢复默认设置。" : "将清除所选范围当前设置的规则，并恢复默认规则。"}默认设置：连续使用60分钟、休息15分钟、每天累计180分钟，不限使用时段。`,
     action: ruleId ? "确认删除" : "确认恢复",
     danger: true,
     run: () => writeControls(ids, (control) => ({ ...control, durationRules: ruleId ? control.durationRules.filter((rule) => rule.id !== ruleId) : [] }), ruleId ? "删除使用时长规则" : "恢复默认使用时长规则"),
@@ -902,7 +923,6 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
               </button>
             )}
           </div>
-          {tab === "lock" && schoolTemporaryLockSession.active && <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">全校临时锁屏管控中。即使某班已单独解除，老师仍不可修改锁屏；结束全校管控后恢复老师操作权限。</p>}
           <section className="dc-scope-card">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="dc-scope-heading">
@@ -912,7 +932,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
                 <div>
                   <h2>
                     {scopeLabel} · {tabs.find((t) => t.id === tab)?.label}
-                    <span
+                    {tab !== "duration" && <span
                       role="status"
                       className={`dc-state-badge ${tab === "world" || tab === "lock" ? "dc-state-count" : ""}`}
                       data-tone={
@@ -926,17 +946,17 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
                       }
                     >
                       {scopeStateLabel}
-                    </span>
+                    </span>}
                   </h2>
                   <p>
                     {tab === "duration"
-                      ? `全校默认配置说明：${durationRuleText(defaultDuration)}；教师端可按年级或班级设置规则，学生个人设置在小程序操作。`
+                      ? "默认规则：周一至周日，连续使用60分钟、休息15分钟、每天累计180分钟，不限使用时段。"
                       : isScheduleTab
                       ? "仅可在学生有效规则允许的时段借出；没有有效规则的学生无法借用。特殊日期可设置全天禁止借用，到期后恢复每周规则。"
                       : tab === "homework"
                         ? "设置学生查看答案、详解的权限，默认均不允许。"
                         : tab === "lock"
-                          ? "可对全校、年级或班级临时锁屏，解除后恢复原有日常锁屏状态。"
+                          ? <>可对全校、年级或班级临时锁屏，解除后恢复原有日常锁屏状态。<strong className="ml-1 font-bold">临时锁屏老师不可操作</strong></>
                           : "可统一设置全校学生是否允许使用万象视界，也可在下方按年级、班级设置。"}
                     {grade && tab !== "borrowing" && ` 当前 ${currentStudents.length} 名学生。`}
                   </p>
@@ -949,6 +969,12 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
               )}
             </div>
           </section>
+          {tab === "duration" && <section className="dc-list-card p-5">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div><h3 className="font-bold text-slate-900">班主任调整权限 · {durationTeacherCanEdit ? "已开放" : "未开放"}</h3><p className="mt-2 text-sm text-slate-500">开放后，班主任可调整本班使用时长。关闭后，班主任不能修改，已有设置继续生效。</p></div>
+              <div className="flex flex-wrap gap-3"><button type="button" className={button} onClick={() => setConfirmation({ title: durationTeacherCanEdit ? "关闭班主任调整权限？" : "开放班主任调整权限？", scope: "全校", count: schoolStudentIds.length, description: durationTeacherCanEdit ? "关闭后班主任只能查看使用时长，现有规则继续生效。" : "班主任可调整本班及学生的使用时长，当前规则保持不变，之前被替换的配置不会恢复。", action: "确认", run: () => { changeDurationPermission(!durationTeacherCanEdit); setMessage({ text: durationTeacherCanEdit ? "已关闭班主任调整权限，现有规则保持不变" : "已开放班主任调整权限，当前规则保持不变", tone: "success" }); } })}>{durationTeacherCanEdit ? "关闭调整权限" : "开放调整权限"}</button></div>
+            </div>
+          </section>}
           {tab === "borrowing" && (
             <section className="dc-list-card overflow-hidden">
               <nav role="tablist" aria-label="全校借用规则类型" className="dc-rule-tabs flex border-b border-slate-100">
@@ -1340,11 +1366,11 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
         rule={durationEditor.rule}
         defaultRule={defaultDuration}
         isDefault={durationEditor.isDefault}
-        requireApplyScope={durationEditor.requireApplyScope}
+        requireApplyScope={!durationEditor.isDefault}
         onClose={() => setDurationEditor(null)}
         onSave={saveDurationRule}
       />}
-      {lockEditor && <TemporaryLockEditor label={lockEditor.label} selectedObjects={lockEditor.label.startsWith("已选") ? selectedObjectNames : undefined} count={lockEditor.ids.length} lockClassCount={affectedLockClassCount(lockEditor.ids, true)} unlockClassCount={affectedLockClassCount(lockEditor.ids, false)} schoolSessionActive={schoolTemporaryLockSession.active} state={temporaryState(lockEditor.ids)} onClose={() => setLockEditor(null)} onSave={(enabled) => requestTemporaryLock([{ key: "selection", label: lockEditor.label, ids: lockEditor.ids }], enabled, true)} />}
+      {lockEditor && <TemporaryLockEditor label={lockEditor.label} selectedObjects={lockEditor.label.startsWith("已选") ? selectedObjectNames : undefined} count={lockEditor.ids.length} lockClassCount={affectedLockClassCount(lockEditor.ids, true)} unlockClassCount={affectedLockClassCount(lockEditor.ids, false)} lockedCount={lockEditor.ids.filter((studentId) => temporaryLockedIds.has(studentId)).length} schoolSessionActive={schoolTemporaryLockSession.active} state={temporaryState(lockEditor.ids)} onClose={() => setLockEditor(null)} onSave={(enabled) => requestTemporaryLock([{ key: "selection", label: lockEditor.label, ids: lockEditor.ids }], enabled, true)} />}
       {worldEditor && <WorldUsageEditor label={worldEditor.label} selectedObjects={worldEditor.label.startsWith("已选") ? selectedObjectNames : undefined} total={worldEditor.ids.length} allowed={worldEditor.ids.filter((id) => controls[id].world).length} onClose={() => setWorldEditor(null)} onSave={(value) => {
         const changedIds = worldEditor.ids.filter((id) => controls[id].world !== value);
         if (!changedIds.length) return;

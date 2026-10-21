@@ -15,7 +15,7 @@ export const WorldUsageEditor: React.FC<{
   const changed = value === null ? 0 : value ? total - allowed : allowed;
   const state = value ? "允许使用" : "禁止使用";
   return <DeviceControlLayer variant="dialog" labelId="world-usage-title" onClose={onClose} unsavedChanges={value !== null}>
-    {(close, closeAfterSave) => <>
+    {(_close, closeAfterSave) => <>
       <div className="dc-confirm-body">
         <h2 id="world-usage-title" className="text-xl font-bold text-slate-900">设置这 {total} 名学生的万象视界使用状态</h2>
         <p className="mt-3 text-sm text-slate-600">设置范围：{label}</p>
@@ -33,7 +33,7 @@ export const WorldUsageEditor: React.FC<{
       </div>
       {error && <ControlValidationNotice message={error} onClose={() => setError("")} />}
       <div className="dc-confirm-footer">
-        <button type="button" className="dc-btn" onClick={close}>取消</button>
+        <button type="button" className="dc-btn" onClick={closeAfterSave}>取消</button>
         <button type="button" className="dc-btn-primary" disabled={value !== null && !changed} onClick={() => { if (value === null) { setError("请选择万象视界设置后的状态：允许使用或禁止使用"); return; } if (!changed) return; onSave(value); closeAfterSave(); }}>确认设置</button>
       </div>
     </>}

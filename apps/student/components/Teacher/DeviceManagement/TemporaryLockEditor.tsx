@@ -7,17 +7,20 @@ export const TemporaryLockEditor: React.FC<{
   selectedObjects?: string[];
   count: number;
   lockClassCount: number;
+  lockedCount: number;
   unlockClassCount: number;
   schoolSessionActive?: boolean;
   state: "已开启" | "未开启" | "部分开启";
   onClose: () => void;
   onSave: (enabled: boolean) => void;
-}> = ({ label, selectedObjects, count, lockClassCount, unlockClassCount, schoolSessionActive, state, onClose, onSave }) => {
+}> = ({ label, selectedObjects, count, lockedCount, lockClassCount, unlockClassCount, schoolSessionActive, state, onClose, onSave }) => {
   const [error, setError] = useState("");
   const [value, setValue] = useState<boolean | null>(null);
+  const changed = value === null ? 0 : value ? count - lockedCount : lockedCount;
+  const actionState = value ? "开启临时锁屏" : "解除临时锁屏";
   const unchanged = value === true && state === "已开启" || value === false && state === "未开启";
   return <DeviceControlLayer variant="dialog" labelId="temporary-lock-editor-title" onClose={onClose} unsavedChanges={value !== null}>
-    {(close, closeAfterSave) => <>
+    {(_close, closeAfterSave) => <>
       <div className="dc-confirm-body">
         <h2 id="temporary-lock-editor-title" className="text-xl font-bold text-slate-900">设置临时锁屏</h2>
         <p className="mt-3 text-sm text-slate-600">设置范围：{label} · 共 {count} 名学生</p>
@@ -33,11 +36,11 @@ export const TemporaryLockEditor: React.FC<{
             </span>
           </label>)}
         </fieldset>
-        {value !== null && <p role="status" className="mt-5 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">{unchanged ? `所选范围临时锁屏均${state}，无需重复操作。` : value ? "确认后将临时锁定所选范围的学生设备，期间老师无法解锁。" : `解除临时锁屏后，恢复原有日常锁屏状态。${schoolSessionActive ? "全校临时锁屏管控尚未结束，老师仍不可修改锁屏。" : "老师恢复锁屏操作权限。"}`}</p>}
+        {value !== null && <p role="status" className="mt-5 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">{changed ? changed === count ? `${changed} 名学生将全部${actionState}。` : `其中 ${changed} 名学生将${actionState}，其余 ${count - changed} 名学生保持不变。` : `所选学生均已${value ? "开启" : "解除"}临时锁屏，无需修改。`}</p>}
       </div>
       {error && <ControlValidationNotice message={error} onClose={() => setError("")} />}
       <div className="dc-confirm-footer">
-        <button type="button" className="dc-btn" onClick={close}>取消</button>
+        <button type="button" className="dc-btn" onClick={closeAfterSave}>取消</button>
         <button type="button" className="dc-btn-primary" disabled={unchanged} onClick={() => { if (value === null) { setError("请选择要执行的操作：开启临时锁屏或解除临时锁屏"); return; } if (unchanged) return; onSave(value); closeAfterSave(); }}>确认{value === null ? "设置" : value ? "开启" : "解除"}</button>
       </div>
     </>}
