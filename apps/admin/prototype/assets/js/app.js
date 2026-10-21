@@ -48,10 +48,6 @@ if (typeof initReqNotes === 'function') {
   initReqNotes();
 }
 
-document.getElementById('req-panel-fab')?.addEventListener('click', () => setReqPanelOpen(true));
-document.getElementById('req-panel-close')?.addEventListener('click', () => setReqPanelOpen(false));
-setReqPanelOpen(false);
-
 if (!location.hash) {
   location.hash = 'home-config';
 } else {
