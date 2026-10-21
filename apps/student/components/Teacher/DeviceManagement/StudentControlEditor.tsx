@@ -302,7 +302,7 @@ export const StudentControlEditor: React.FC<{
             )}
             {showApplyScope && (
               <fieldset className="rounded-lg bg-slate-50 p-4">
-                <legend className="text-sm font-bold text-slate-800"><span className="text-red-500">*</span> 修改范围</legend>
+                <legend className="text-sm font-bold text-slate-800"><span className="text-red-500">*</span> 本次修改哪些学生？</legend>
                 <div className="mt-3 space-y-3">
                   <label className="block cursor-pointer">
                     <span className="flex items-start gap-3"><input type="radio" name="apply-scope" checked={applyScope === "all"} onChange={() => { setApplyScope("all"); setError(""); }} className="mt-1" /><span><b className="block text-sm text-slate-900">{targetLabel === "全校" ? "全校修改" : "修改当前范围全部学生"}</b><span className="mt-1 block text-xs leading-5 text-slate-500">覆盖本次范围内全部学生，包括老师此前单独设置的学生。</span></span></span>

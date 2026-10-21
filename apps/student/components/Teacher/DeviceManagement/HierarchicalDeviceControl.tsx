@@ -971,7 +971,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
           </section>
           {tab === "duration" && <section className="dc-list-card p-5">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <div><h3 className="font-bold text-slate-900">班主任调整权限 · {durationTeacherCanEdit ? "已开放" : "未开放"}</h3><p className="mt-2 text-sm text-slate-500">开放后，班主任可调整本班使用时长。关闭后，班主任不能修改，已有设置继续生效。</p></div>
+              <div><h3 className="font-bold text-slate-900">允许班主任调整本班使用时长 · {durationTeacherCanEdit ? "已开放" : "未开放"}</h3><p className="mt-2 text-sm text-slate-500">开放后，班主任可调整本班学生的使用时长；关闭后不能继续修改，已有设置继续生效。</p></div>
               <div className="flex flex-wrap gap-3"><button type="button" className={button} onClick={() => setConfirmation({ title: durationTeacherCanEdit ? "关闭班主任调整权限？" : "开放班主任调整权限？", scope: "全校", count: schoolStudentIds.length, description: durationTeacherCanEdit ? "关闭后班主任只能查看使用时长，现有规则继续生效。" : "班主任可调整本班及学生的使用时长，当前规则保持不变，之前被替换的配置不会恢复。", action: "确认", run: () => { changeDurationPermission(!durationTeacherCanEdit); setMessage({ text: durationTeacherCanEdit ? "已关闭班主任调整权限，现有规则保持不变" : "已开放班主任调整权限，当前规则保持不变", tone: "success" }); } })}>{durationTeacherCanEdit ? "关闭调整权限" : "开放调整权限"}</button></div>
             </div>
           </section>}
@@ -999,7 +999,6 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
               <div className="dc-list-heading flex flex-wrap items-center justify-between gap-3 border-b border-slate-100">
                 <div>
                   <h3 className="font-bold text-slate-900">全校借出时间段</h3>
-                  <p className="mt-1 text-xs text-slate-500">统一设置全校设备从柜机借出的时间。</p>
                 </div>
                 <button type="button" className={primary} onClick={() => openEditor(schoolStudentIds, "全校", borrowMode)}>
                   {borrowMode === "weekly" ? "新增每周借用规则" : "新增指定日期借用规则"}
@@ -1026,13 +1025,6 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
             <div className="dc-list-heading flex flex-wrap items-center justify-between gap-3 border-b border-slate-100">
               <div>
                 <h3 className="font-bold text-slate-900">{rowType}列表</h3>
-                <p className="mt-1 text-xs text-slate-500">
-                  {classId
-                      ? "可在操作列单独设置学生，或使用批量操作。"
-                      : grade
-                        ? "可在操作列设置班级，或使用批量操作；教师端不展示学生列表。"
-                        : "点击年级名称查看班级，可在操作列单独设置或使用批量操作。"}
-                </p>
               </div>
               <div className="dc-actions">
                 {tab === "duration" || tab === "homework" ? (
@@ -1371,11 +1363,11 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
         onSave={saveDurationRule}
       />}
       {lockEditor && <TemporaryLockEditor label={lockEditor.label} selectedObjects={lockEditor.label.startsWith("已选") ? selectedObjectNames : undefined} count={lockEditor.ids.length} lockClassCount={affectedLockClassCount(lockEditor.ids, true)} unlockClassCount={affectedLockClassCount(lockEditor.ids, false)} lockedCount={lockEditor.ids.filter((studentId) => temporaryLockedIds.has(studentId)).length} schoolSessionActive={schoolTemporaryLockSession.active} state={temporaryState(lockEditor.ids)} onClose={() => setLockEditor(null)} onSave={(enabled) => requestTemporaryLock([{ key: "selection", label: lockEditor.label, ids: lockEditor.ids }], enabled, true)} />}
-      {worldEditor && <WorldUsageEditor label={worldEditor.label} selectedObjects={worldEditor.label.startsWith("已选") ? selectedObjectNames : undefined} total={worldEditor.ids.length} allowed={worldEditor.ids.filter((id) => controls[id].world).length} onClose={() => setWorldEditor(null)} onSave={(value) => {
-        const changedIds = worldEditor.ids.filter((id) => controls[id].world !== value);
+      {worldEditor && <WorldUsageEditor label={worldEditor.label} selectedObjects={worldEditor.label.startsWith("已选") ? selectedObjectNames : undefined} total={worldEditor.ids.length} allowed={worldEditor.ids.filter((id) => controls[id].world).length} teacherTotal={worldEditor.ids.filter((id) => controls[id].worldSource === 'teacher').length} teacherAllowed={worldEditor.ids.filter((id) => controls[id].worldSource === 'teacher' && controls[id].world).length} onClose={() => setWorldEditor(null)} onSave={(value, scope) => {
+        const changedIds = worldEditor.ids.filter((id) => controls[id].world !== value && (scope === 'all' || controls[id].worldSource !== 'teacher'));
         if (!changedIds.length) return;
         const state = value ? "允许使用" : "禁止使用";
-        writeControls(changedIds, (control) => ({ ...control, world: value }), `${state}万象视界`);
+        writeControls(changedIds, (control) => ({ ...control, world: value, worldSource: 'school' }), `${state}万象视界`);
         setMessage({ text: `已将 ${changedIds.length} 名学生设为${state}万象视界`, tone: "success" });
       }} />}
       {historyOpen && (
