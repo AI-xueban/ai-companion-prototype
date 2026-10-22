@@ -1,15 +1,17 @@
+import type { AnswerStandard } from './homeworkGrading';
+import { holdManualResult, confirmManualResult, gradingStatistics, answersEquivalent, initializeAnswerStandards, confirmAnswerStandard, startStandardGrading, completeMockStandardGrading, standardPhase, isFormalGrade, demoQuestionContent, demoPhotoPath, realPhotoQuestions, gradingSignature, gradingProgress, releaseQuestion } from './homeworkGrading';
 import { DEMO_CLASSES, DEMO_STUDENTS, GUARDIAN_STUDENT_ID, DEMO_GUARDIAN_CHILD_IDS, formatHomeworkTitle } from './schoolDemoRoster';
 export { DEMO_CLASSES, DEMO_STUDENTS, GUARDIAN_STUDENT_ID } from './schoolDemoRoster';
 
 export type HomeworkKind = 'homework' | 'checkin';
 export type SubmitType = 'file' | 'photo' | 'video' | 'audio' | 'none';
-export type GradeState = 'confirmed' | 'review' | 'unreadable' | 'no-answer';
+export type GradeState = 'confirmed' | 'review' | 'unreadable' | 'no-answer' | 'queued' | 'processing' | 'failed';
 
 export interface HomeworkItem { id: string; title: string; instruction: string; submitType: SubmitType; required: boolean }
 export interface HomeworkAttachment { id: string; name: string; type: 'image' | 'video' | 'file'; path: string; size: number; source: string }
-export interface HomeworkTask { id: string; title: string; description: string; materialPhoto?: string; attachments?: HomeworkAttachment[]; kind: HomeworkKind; classIds: string[]; targetStudentIds: string[] | null; targetSnapshotIds?: string[]; schoolId?: string; subject?: string; items: HomeworkItem[]; deadline: string; submitDeadline: string; parentVisible: boolean; publishedAt: string; publishedBy?: string; seriesId?: string; cycleId?: string; cycleCount?: number }
+export interface HomeworkTask { gradingPolicyVersion?:number; needsAnswerConfirmation?:boolean; answerStandards?:AnswerStandard[]; id: string; title: string; description: string; materialPhoto?: string; attachments?: HomeworkAttachment[]; kind: HomeworkKind; classIds: string[]; targetStudentIds: string[] | null; targetSnapshotIds?: string[]; schoolId?: string; subject?: string; items: HomeworkItem[]; deadline: string; submitDeadline: string; parentVisible: boolean; publishedAt: string; publishedBy?: string; seriesId?: string; cycleId?: string; cycleCount?: number }
 export interface HomeworkStudent { id: string; name: string; classId: string }
-export interface GradeQuestion { id: string; questionVersion?: number; label: string; answer: string; answerVersion?: number; studentAnswer?: string; correct: boolean; state: GradeState; reviewedAt?: string; reviewHistory?: { at: string; before: GradeState; after: GradeState; correct: boolean; reason: string; reviewerId: string }[] }
+export interface GradeQuestion { explanationInvalidated?:boolean; aiUnavailable?:boolean;aiCorrect?:boolean;aiState?:string;aiAnswer?:string;aiExplanation?:string;reviewReason?:'answer-changed'|'manual-hold';decisionSource?:'ai'|'teacher'; standardStatus?:'pending'|'processing'|'ready';standardVersion?:number;recognizedFinalAnswer?:string; region?: { x: number; y: number; width: number; height: number }; stem?: string; analysis?: string; explanation?: string; keyPoint?: string; knowledge?: string; knowledgeVideoUrl?: string; releasedSignature?: string; releasedAt?: string; estimatedMinutes?: number; id: string; questionVersion?: number; label: string; answer: string; answerVersion?: number; studentAnswer?: string; correct: boolean; state: GradeState; reviewedAt?: string; reviewHistory?: { at: string; before: GradeState; after: GradeState; correct: boolean; reason: string; reviewerId: string }[] }
 export interface ItemSubmission { studentId: string; taskId: string; itemId: string; submittedAt: string; late?: boolean; operatorId?: string; operatorName?: string; mediaLabel: string; mediaPath?: string; isMock?: boolean; version?: number; questions: GradeQuestion[] }
 export interface HomeworkStudentRow { student: HomeworkStudent; status: 'completed' | 'partial' | 'missing'; submissions: ItemSubmission[]; wrongQuestions: GradeQuestion[]; latestSubmittedAt: string }
 interface Store { tasks: HomeworkTask[]; submissions: ItemSubmission[] }
@@ -30,10 +32,11 @@ const seededTasks: HomeworkTask[] = [
 ];
 
 function mockExternalGrade(taskId: string, itemId: string, studentId: string): GradeQuestion[] {
+  if (taskId === 'grading-demo-v1') return realPhotoQuestions(itemId, taskId+':'+itemId+':');
   const number = Number(studentId.slice(-2)) || 1;
   return [
-    { id: `${taskId}:${itemId}:q1`, questionVersion: 1, label: '第 1 题 · 分数计算', answer: '3/4', answerVersion: 1, studentAnswer: number % 3 !== 0 ? '3/4' : '2/4', correct: number % 3 !== 0, state: number % 13 === 0 ? 'review' : 'confirmed' },
-    { id: `${taskId}:${itemId}:q2`, questionVersion: 1, label: '第 2 题 · 应用题', answer: number % 17 === 0 ? '' : '24 人', answerVersion: 1, studentAnswer: number % 4 !== 0 ? '24 人' : '18 人', correct: number % 4 !== 0, state: number % 17 === 0 ? 'no-answer' : number % 11 === 0 ? 'unreadable' : 'confirmed' },
+    { id: `${taskId}:${itemId}:q1`, questionVersion: 1, label: '第 1 题 · 分数计算', answer: '3/4', answerVersion: 1, studentAnswer: number % 3 !== 0 ? '3/4' : '2/4', correct: number % 3 !== 0, ...demoQuestionContent('q1'), state: number % 13 === 0 ? 'review' : 'confirmed' },
+    { id: `${taskId}:${itemId}:q2`, questionVersion: 1, label: '第 2 题 · 应用题', answer: number % 17 === 0 ? '' : '24 人', answerVersion: 1, studentAnswer: number % 4 !== 0 ? '24 人' : '18 人', correct: number % 4 !== 0, ...demoQuestionContent('q2'), state: number % 17 === 0 ? 'no-answer' : number % 11 === 0 ? 'unreadable' : 'confirmed' },
   ];
 }
 
@@ -86,6 +89,16 @@ function ensureGuardianStatusDemo(store: Store): boolean {
   return changed;
 }
 
+function ensureGradingDemo(store: Store): boolean {
+  if (store.tasks.some(task => task.id === 'grading-demo-v1')) return false;
+  const day = new Date(); day.setDate(day.getDate() + 2);
+  const deadline = day.toISOString().slice(0,10) + ' 20:00';
+  const task: HomeworkTask = { id:'grading-demo-v1', title:'分数计算与应用题', subject:'数学', kind:'homework', classIds:['c1','c2'], targetStudentIds:null, targetSnapshotIds:DEMO_STUDENTS.filter(s => ['c1','c2'].includes(s.classId)).map(s=>s.id), description:'完成两页分数练习，每页分别拍照提交。', deadline, submitDeadline:addDays(deadline,7), parentVisible:false, publishedAt:addDays(deadline,-3), publishedBy:'teacher-demo-001', items:[1,2].map(n=>({id:'grading-page-'+n,title:'第 '+n+' 页练习',instruction:'拍摄完整答题页',submitType:'photo' as const,required:true})) };
+  store.tasks.push(task);
+  targetStudents(task).forEach((student,i)=>{if(i%6===0&&!DEMO_GUARDIAN_CHILD_IDS.includes(student.id))return;task.items.forEach(item=>store.submissions.push({studentId:student.id,taskId:task.id,itemId:item.id,submittedAt:addDays(deadline,-2),mediaLabel:'分数练习作业原图',mediaPath:demoPhotoPath(item.id),isMock:true,version:1,questions:mockExternalGrade(task.id,item.id,student.id)}));});
+  return true;
+}
+
 function readStore(): Store {
   const stored = wx.getStorageSync(STORAGE_KEY) as Store | undefined;
   if (stored?.tasks && stored?.submissions) {
@@ -117,7 +130,7 @@ function readStore(): Store {
       if (!task.submitDeadline) { task.submitDeadline = addDays(task.deadline, 7); changed = true; }
       if (task.kind === 'checkin' && !task.cycleId) { task.seriesId = task.seriesId || task.id; task.cycleId = 'cycle-1'; changed = true; }
     });
-    stored.submissions.forEach(row => { const id = studentId(row.studentId); if (id !== row.studentId) { row.studentId = id; changed = true; } if (!row.operatorName) { row.operatorId = row.operatorId || 'guardian-demo-001'; row.operatorName = '王女士'; changed = true; } if (row.isMock === undefined && row.mediaLabel.startsWith('演示')) { row.isMock = true; changed = true; } if (row.isMock && !row.mediaPath && taskPhotoItem(stored.tasks, row)) { row.mediaPath = '/assets/homework-demo-paper.png'; changed = true; } });
+    stored.submissions.forEach(row => { if(row.isMock)(row.questions||[]).forEach(q=>{if(!q.stem){Object.assign(q,demoQuestionContent(q.id));changed=true;}}); const id = studentId(row.studentId); if (id !== row.studentId) { row.studentId = id; changed = true; } if (!row.operatorName) { row.operatorId = row.operatorId || 'guardian-demo-001'; row.operatorName = '王女士'; changed = true; } if (row.isMock === undefined && row.mediaLabel.startsWith('演示')) { row.isMock = true; changed = true; } if (row.isMock && !row.mediaPath && taskPhotoItem(stored.tasks, row)) { row.mediaPath = '/assets/homework-demo-paper.png'; changed = true; } });
     if (stored.tasks.some(task => task.id === 'task-demo-2')) {
       for (const phase of seededTasks.filter(task => task.id === 'task-demo-2-cycle-2' || task.id === 'task-demo-2-cycle-3')) {
         if (!stored.tasks.some(task => task.id === phase.id)) { stored.tasks.push({ ...phase, items: phase.items.map(item => ({ ...item })) }); changed = true; }
@@ -125,12 +138,18 @@ function readStore(): Store {
       const first = stored.tasks.find(task => task.id === 'task-demo-2');
       if (first && first.cycleCount !== 3) { first.cycleCount = 3; changed = true; }
     }
+    if (ensureGradingDemo(stored)) changed = true;
+    stored.submissions.filter(row=>row.taskId==='grading-demo-v1'&&row.isMock).forEach(row=>{if(!row.questions.some(q=>q.label.startsWith('第 21 题')||q.label.startsWith('第 23 题'))){row.questions=mockExternalGrade(row.taskId,row.itemId,row.studentId);row.mediaPath=demoPhotoPath(row.itemId);changed=true;}});
+    const currentSample=stored.tasks.find(t=>t.id==='grading-demo-v1');if(currentSample&&!currentSample.needsAnswerConfirmation){currentSample.needsAnswerConfirmation=true;changed=true;}
+    stored.tasks.filter(t=>t.needsAnswerConfirmation).forEach(t=>{const before=JSON.stringify(t.answerStandards||[]);initializeAnswerStandards(t,currentRows(stored.submissions.filter(r=>r.taskId===t.id)));if(before!==JSON.stringify(t.answerStandards||[]))changed=true;});
     if (ensureGuardianStatusDemo(stored)) changed = true;
     if (ensureTeacherHistoryDemo(stored)) changed = true;
     if (changed) saveStore(stored);
     return stored;
   }
   const seed = seedStore();
+  ensureGradingDemo(seed);
+  const answerSample=seed.tasks.find(t=>t.id==='grading-demo-v1');if(answerSample){answerSample.needsAnswerConfirmation=true;initializeAnswerStandards(answerSample,currentRows(seed.submissions.filter(r=>r.taskId===answerSample.id)));}
   ensureGuardianStatusDemo(seed);
   ensureTeacherHistoryDemo(seed);
   wx.setStorageSync(STORAGE_KEY, seed);
@@ -151,7 +170,7 @@ export function getTaskStudentRows(task: HomeworkTask): HomeworkStudentRow[] {
     const mine = submissions.filter(row => row.studentId === student.id);
     const required = task.items.filter(item => item.required);
     const status = !mine.length ? 'missing' : required.every(item => mine.some(row => row.itemId === item.id)) ? 'completed' : 'partial';
-    return { student, status, submissions: mine, wrongQuestions: mine.flatMap(row => row.questions || []).filter(question => question.state === 'confirmed' && !question.correct), latestSubmittedAt: mine.map(row => row.submittedAt).sort().pop() || '' };
+    return { student, status, submissions: mine, wrongQuestions: mine.flatMap(row => row.questions || []).filter(question => isFormalGrade(question) && !question.correct), latestSubmittedAt: mine.map(row => row.submittedAt).sort().pop() || '' };
   });
 }
 export function listSharedSubmissions(task: HomeworkTask, studentId: string) {
@@ -173,7 +192,7 @@ export function publishHomework(input: Omit<HomeworkTask, 'id' | 'publishedAt'>)
     deadline.setDate(deadline.getDate() + index);
     const due = `${deadline.getFullYear()}-${String(deadline.getMonth() + 1).padStart(2, '0')}-${String(deadline.getDate()).padStart(2, '0')} ${String(deadline.getHours()).padStart(2, '0')}:${String(deadline.getMinutes()).padStart(2, '0')}`;
     const submitDeadline = addDays(input.submitDeadline, index);
-    return { ...input, parentVisible: false, id: count === 1 ? seriesId : `${seriesId}-cycle-${index + 1}`, seriesId, cycleId: input.kind === 'checkin' ? `cycle-${index + 1}` : undefined, title: count === 1 ? generatedTitle : `${generatedTitle} · 第${index + 1}期`, targetSnapshotIds: DEMO_STUDENTS.filter(student => input.classIds.includes(student.classId) && (!input.targetStudentIds || input.targetStudentIds.includes(student.id))).map(student => student.id), schoolId: input.schoolId || 'luohu-demo', deadline: due, submitDeadline, publishedAt };
+    return { ...input,needsAnswerConfirmation:input.kind==='homework'&&input.items.some(i=>i.submitType==='photo'), parentVisible: false, id: count === 1 ? seriesId : `${seriesId}-cycle-${index + 1}`, seriesId, cycleId: input.kind === 'checkin' ? `cycle-${index + 1}` : undefined, title: count === 1 ? generatedTitle : `${generatedTitle} · 第${index + 1}期`, targetSnapshotIds: DEMO_STUDENTS.filter(student => input.classIds.includes(student.classId) && (!input.targetStudentIds || input.targetStudentIds.includes(student.id))).map(student => student.id), schoolId: input.schoolId || 'luohu-demo', deadline: due, submitDeadline, publishedAt };
   });
   store.tasks.unshift(...tasks);
   saveStore(store);
@@ -190,8 +209,9 @@ export function submitHomeworkItem(taskId: string, itemId: string, studentId: st
   const now = new Date();
   const submittedAt = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   const version = store.submissions.filter(row => row.studentId === studentId && row.taskId === taskId && row.itemId === itemId).reduce((max, row) => Math.max(max, row.version || 1), 0) + 1;
-  const submission: ItemSubmission = { studentId, taskId, itemId, submittedAt, late: submittedAt > task.deadline, operatorId: operator?.id, operatorName: operator?.name, mediaLabel: file?.name || (item.submitType === 'none' ? '家长确认已完成' : `模拟${SUBMIT_LABEL[item.submitType]}提交`), mediaPath: file?.path || (item.submitType === 'photo' ? '/assets/homework-demo-paper.png' : ''), isMock: !file && item.submitType !== 'none', version, questions: item.submitType === 'photo' && task.kind === 'homework' ? mockExternalGrade(taskId, itemId, studentId) : [] };
+  const submission: ItemSubmission = { studentId, taskId, itemId, submittedAt, late: submittedAt > task.deadline, operatorId: operator?.id, operatorName: operator?.name, mediaLabel: file?.name || (item.submitType === 'none' ? '家长确认已完成' : `模拟${SUBMIT_LABEL[item.submitType]}提交`), mediaPath: file?.path || (item.submitType === 'photo' ? demoPhotoPath(itemId) : ''), isMock: !file && item.submitType !== 'none', version, questions: item.submitType === 'photo' && task.kind === 'homework' ? mockExternalGrade(taskId, itemId, studentId).map(q => ({ ...q, state: 'queued' as const, estimatedMinutes: 2 })) : [] };
   store.submissions.push(submission);
+  if(task.needsAnswerConfirmation){initializeAnswerStandards(task,currentRows(store.submissions.filter(r=>r.taskId===taskId)));startStandardGrading(task,currentRows(store.submissions.filter(r=>r.taskId===taskId)));}
   saveStore(store);
   return submission;
 }
@@ -202,29 +222,46 @@ export function summarizeHomework(task: HomeworkTask) {
   const completed = students.filter(student => task.items.filter(item => item.required).every(item => submissions.some(row => row.studentId === student.id && row.itemId === item.id))).length;
   const partial = students.filter(student => submissions.some(row => row.studentId === student.id) && !task.items.filter(item => item.required).every(item => submissions.some(row => row.studentId === student.id && row.itemId === item.id))).length;
   const questions = submissions.flatMap(row => row.questions);
-  const confirmed = questions.filter(question => question.state === 'confirmed');
+  const confirmed = questions.filter(isFormalGrade);
   const questionRows = [...new Set(questions.map(question => question.id))].map(id => {
-    const rows = questions.filter(question => question.id === id && question.state === 'confirmed');
+    const rows = questions.filter(question => question.id === id && isFormalGrade(question));
     const first = questions.find(question => question.id === id)!;
-    return { id, label: first.label, answer: first.answer || '暂无标准答案', graded: rows.length, correct: rows.filter(question => question.correct).length, review: questions.filter(question => question.id === id && question.state === 'review').length, unreadable: questions.filter(question => question.id === id && question.state === 'unreadable').length, rate: rows.length ? Math.round(rows.filter(question => question.correct).length / rows.length * 100) : 0 };
+    return { id, ...gradingStatistics(questions.filter(q=>q.id===id)), wrong: rows.filter(question => !question.correct).length,  pending: questions.filter(q => q.id === id && (q.state === "queued" || q.state === "processing")).length, noAnswer: questions.filter(q => q.id === id && q.state === "no-answer").length, failed: questions.filter(q => q.id === id && q.state === "failed").length, label: (task.items.find(i=>submissions.some(s=>s.itemId===i.id&&s.questions.some(q=>q.id===id)))?.title||'作业')+' · '+first.label, answer: first.answer || '暂无标准答案', graded: rows.length, correct: rows.filter(question => question.correct).length, review: questions.filter(question => question.id === id && question.state === 'review').length, unreadable: questions.filter(question => question.id === id && question.state === 'unreadable').length, rate: rows.length ? Math.round(rows.filter(question => question.correct).length / rows.length * 100) : 0 };
   });
-  return { target: students.length, completed, partial, missing: students.length - completed - partial, completionRate: students.length ? Math.round(completed / students.length * 100) : 0, graded: confirmed.length, correct: confirmed.filter(question => question.correct).length, correctness: confirmed.length ? Math.round(confirmed.filter(question => question.correct).length / confirmed.length * 100) : 0, review: questions.filter(question => question.state === 'review').length, unreadable: questions.filter(question => question.state === 'unreadable').length, noAnswer: questions.filter(question => question.state === 'no-answer').length, questionRows };
+  return { grading: gradingProgress(questions), target: students.length, completed, partial, missing: students.length - completed - partial, completionRate: students.length ? Math.round(completed / students.length * 100) : 0, graded: confirmed.length, correct: confirmed.filter(question => question.correct).length, ...gradingStatistics(questions), review: questions.filter(question => question.state === 'review').length, unreadable: questions.filter(question => question.state === 'unreadable').length, noAnswer: questions.filter(question => question.state === 'no-answer').length, questionRows };
 }
 
-export function confirmMockReview(taskId: string, questionId: string, correct: boolean, reason: string, reviewerId: string): boolean {
+export function confirmMockReview(taskId: string, questionId: string, correct: boolean|null, reason: string, reviewerId: string, allowedStudentIds?: string[], expected?: {itemId:string;version:number;signature:string}): boolean {
   if (!reason.trim()) return false;
   const store = readStore();
   for (const submission of currentRows(store.submissions)) {
-    if (submission.taskId !== taskId) continue;
-    const question = submission.questions.find(row => row.id === questionId && row.state === 'review');
+    if (submission.taskId !== taskId || allowedStudentIds && !allowedStudentIds.includes(submission.studentId)) continue;
+    if(expected&&(submission.itemId!==expected.itemId||(submission.version||1)!==expected.version))continue;
+    const question = submission.questions.find(row => row.id === questionId && ['review','confirmed','unreadable','no-answer'].includes(row.state));
+    if(question&&expected&&gradingSignature(question)!==expected.signature)return false;
     if (!question) continue;
     const at = new Date().toISOString();
-    question.reviewHistory = [...(question.reviewHistory || []), { at, before: question.state, after: 'confirmed', correct, reason: reason.trim(), reviewerId }];
-    question.correct = correct;
-    question.state = 'confirmed';
-    question.reviewedAt = at;
+    question.reviewHistory = [...(question.reviewHistory || []), { at, before: question.state, after: 'confirmed', correct:correct??question.correct, reason: reason.trim(), reviewerId }];
+    const task=store.tasks.find(t=>t.id===taskId);if(!task||task.publishedBy!==reviewerId)return false;
+    if(correct===null)holdManualResult(question,at);else confirmManualResult(task,currentRows(store.submissions.filter(r=>r.taskId===taskId)),question,correct,at);
     saveStore(store);
     return true;
   }
   return false;
 }
+
+export function releaseHomeworkResults(task: HomeworkTask): number {
+  const store = readStore(); const targets = new Set(targetStudents(task).map(s=>s.id)); let count=0;
+  currentRows(store.submissions.filter(s=>s.taskId===task.id&&targets.has(s.studentId))).forEach(s=>s.questions.forEach(q=>{if(releaseQuestion(q,new Date().toISOString()))count++;}));
+  saveStore(store); return count;
+}
+/** Explicit mock response adapter; production must replace it with the grading service response. */
+export function applyMockGradingResponse(taskId: string, studentId: string): void {
+  const store=readStore(); const task=store.tasks.find(t=>t.id===taskId); if(!task)return;
+  currentRows(store.submissions.filter(s=>s.taskId===taskId&&s.studentId===studentId)).forEach(s=>{s.questions=mockExternalGrade(taskId,s.itemId,studentId);});if(task.needsAnswerConfirmation){initializeAnswerStandards(task,currentRows(store.submissions.filter(r=>r.taskId===taskId)));startStandardGrading(task,currentRows(store.submissions.filter(r=>r.taskId===taskId)));}saveStore(store);
+}
+
+export function enableHomeworkAnswerWorkflow(taskId:string,by:string,conflicts=false){const store=readStore(),task=store.tasks.find(t=>t.id===taskId);if(!task||task.publishedBy!==by)return false;task.needsAnswerConfirmation=true;initializeAnswerStandards(task,currentRows(store.submissions.filter(r=>r.taskId===taskId)),conflicts);saveStore(store);return true;}
+export function approveHomeworkAnswer(taskId:string,id:string,source:'teacher'|'ai'|'custom',by:string,answer='',explanation=''){const store=readStore(),task=store.tasks.find(t=>t.id===taskId);if(!task||task.publishedBy!==by)return false;const records=currentRows(store.submissions.filter(r=>r.taskId===taskId));if(!confirmAnswerStandard(task,records,id,source,by,answer,explanation))return false;saveStore(store);return true;}
+export function approveMatchingHomeworkAnswers(taskId:string,by:string){const store=readStore(),task=store.tasks.find(t=>t.id===taskId);if(!task||task.publishedBy!==by)return false;const records=currentRows(store.submissions.filter(r=>r.taskId===taskId));task.answerStandards?.filter(s=>s.status==='pending'&&answersEquivalent(s.teacherAnswer,s.aiAnswer)).forEach(s=>confirmAnswerStandard(task,records,s.questionId,'teacher',by));saveStore(store);return true;}
+export function refreshMockHomeworkAnswerGrading(taskId:string,by:string){const store=readStore(),task=store.tasks.find(t=>t.id===taskId);if(!task||task.publishedBy!==by)return false;const changed=completeMockStandardGrading(task,currentRows(store.submissions.filter(r=>r.taskId===taskId)));if(changed)saveStore(store);return changed;}

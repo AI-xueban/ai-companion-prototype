@@ -1,3 +1,4 @@
+import { gradingProgress } from '../../../services/homeworkGrading';
 import { FILE_LIMITS, SUBMIT_LABEL, getStudentSubmissions, getSubmissionHistory, listStudentTasks, submitHomeworkItem } from '../../../services/homeworkMock';
 import type { HomeworkTask } from '../../../services/homeworkMock';
 import { hasRole } from '../../../permissions/access';
@@ -6,7 +7,7 @@ import { getDemoStudent } from '../../../services/schoolDemoRoster';
 
 Page({
   data: {
-    mode: 'list', statusBarHeight: 24, navBarHeight: 44,
+    mode: 'list', statusBarHeight: 24, navBarHeight: 44, capsuleSafeInset: 100,
     studentId: '',
     studentLabel: '', studentName: '', className: '',
     children: [] as Array<{ id: string; name: string; className: string; selected: boolean }>, childPickerOpen: false,
@@ -18,12 +19,13 @@ Page({
     visibleTasks: [] as Array<{ id: string; title: string; subject: string; kindLabel: string; deadline: string; progress: string; completed: boolean; status: string; statusTone: string; priority: number; closed: boolean; actionLabel: string }>, deadlineNotice: '', submissionClosed: false,
     task: null as HomeworkTask | null,
     items: [] as Array<{ id: string; title: string; instruction: string; submitLabel: string; submitType: string; submitted: boolean; submittedAt: string; late: boolean; version: number; history: Array<{ version: number; submittedAt: string; late: boolean; mediaLabel: string }>; mediaLabel: string; mediaPath: string; questions: Array<{ id: string; label: string; result: string; answer: string; studentAnswer: string }> }>,
+    grading: gradingProgress([]),
     completed: false,
     progressLabel: '',
     pendingUpload: null as { itemId: string; taskId: string; studentId: string; path: string; name: string; type: string } | null,
-    uploadState: 'idle' as 'idle' | 'saving' | 'failed', uploadError: '', demoExceptionOpen: false, demoExceptionItemId: '',
+    uploadState: 'idle' as 'idle' | 'saving' | 'failed', uploadError: '', demoExceptionOpen: false, demoExceptionItemId: '', demoActive: false, demoOriginalError: '', demoOriginalState: 'idle' as 'idle' | 'saving' | 'failed', hasUploadItems: false, hasVideoItems: false,
   },
-  onLoad() { const info = wx.getWindowInfo(); const capsule = wx.getMenuButtonBoundingClientRect(); this.setData({ statusBarHeight: info.statusBarHeight, navBarHeight: capsule.height + Math.max(0, capsule.top - info.statusBarHeight) * 2 }); },
+  onLoad() { const info = wx.getWindowInfo(); const capsule = wx.getMenuButtonBoundingClientRect(); this.setData({ statusBarHeight: info.statusBarHeight, navBarHeight: capsule.height + Math.max(0, capsule.top - info.statusBarHeight) * 2, capsuleSafeInset: Math.max(96, info.windowWidth - capsule.left + 8) }); },
   detailHome() { this.setData({ mode: 'list', task: null, pendingUpload: null }); wx.redirectTo({ url: '/pages/guardian/learning/index' }); },
   navigationBack() { if (this.data.mode === 'detail') this.backToList(); else wx.redirectTo({ url: '/pages/guardian/home/index' }); },
   onShow() {
@@ -87,7 +89,7 @@ Page({
   },
   openTask(event: WechatMiniprogram.BaseEvent) {
     const task = listStudentTasks(this.data.studentId).find(row => row.id === event.currentTarget.dataset.id);
-    if (task) { this.setData({ task, mode: 'detail', pendingUpload: null, uploadState: 'idle', uploadError: '', demoExceptionOpen: false }); this.refreshTask(); }
+    if (task) { this.setData({ task, mode: 'detail', pendingUpload: null, uploadState: 'idle', uploadError: '', demoExceptionOpen: false, demoActive: false }); this.refreshTask(); }
   },
   refreshTask() {
     const task = this.data.task;
@@ -95,16 +97,17 @@ Page({
     const submitted = getStudentSubmissions(task.id, this.data.studentId);
     const items = task.items.map(item => {
       const record = submitted.find(row => row.itemId === item.id);
-      return { id: item.id, title: item.title, instruction: item.instruction, submitLabel: item.submitType === 'none' ? '家长确认' : `上传${SUBMIT_LABEL[item.submitType]}`, submitType: item.submitType, submitted: Boolean(record), submittedAt: record?.submittedAt || '', late: Boolean(record?.late), version: record?.version || 1, history: getSubmissionHistory(task.id, item.id, this.data.studentId).map(row => ({ version: row.version || 1, submittedAt: row.submittedAt, late: Boolean(row.late), mediaLabel: row.mediaLabel })), mediaLabel: record?.mediaLabel || '', mediaPath: record?.mediaPath || '', questions: (record?.questions || []).map(question => ({ id: question.id, label: question.label, result: question.state === 'review' ? '待教师复核' : question.state === 'unreadable' ? '识别不清' : question.state === 'no-answer' ? '暂无标准答案' : question.correct ? '正确' : '做错', answer: question.answer || '暂无标准答案', studentAnswer: question.studentAnswer || '未提供' })) };
+      return { id: item.id, title: item.title, instruction: item.instruction, submitLabel: item.submitType === 'none' ? '家长确认' : `上传${SUBMIT_LABEL[item.submitType]}`, submitType: item.submitType, submitted: Boolean(record), submittedAt: record?.submittedAt || '', late: Boolean(record?.late), version: record?.version || 1, history: getSubmissionHistory(task.id, item.id, this.data.studentId).map(row => ({ version: row.version || 1, submittedAt: row.submittedAt, late: Boolean(row.late), mediaLabel: row.mediaLabel })), mediaLabel: record?.mediaLabel || '', mediaPath: record?.mediaPath || '', questions: [] };
     });
     const required = task.items.filter(item => item.required);
     const count = required.filter(item => submitted.some(row => row.itemId === item.id)).length;
     const completed = count === required.length;
     const overdue = Date.now() > new Date(task.deadline.replace(' ', 'T')).getTime();
     const submissionClosed = Date.now() > new Date(task.submitDeadline.replace(' ', 'T')).getTime();
-    this.setData({ items, completed, submissionClosed, progressLabel: `${count}/${required.length} 项`, deadlineNotice: submissionClosed ? `补交期限已于 ${task.submitDeadline} 结束，任务仅供查看。` : overdue ? `已过原截止时间，可补交至 ${task.submitDeadline}；提交记录会标注为补交。` : completed ? '所有必做项目已完成，可在提交期限内重新提交。' : `请在 ${task.deadline} 前完成；最晚可补交至 ${task.submitDeadline}。` });
+    this.setData({ hasUploadItems: items.some(item => item.submitType !== 'none'), hasVideoItems: items.some(item => item.submitType === 'video'), grading: gradingProgress(submitted.flatMap(row=>row.questions||[]),true), items, completed, submissionClosed, progressLabel: `${count}/${required.length} 项`, deadlineNotice: submissionClosed ? `补交期限已于 ${task.submitDeadline} 结束，任务仅供查看。` : overdue ? `已过原截止时间，可补交至 ${task.submitDeadline}；提交记录会标注为补交。` : completed ? '所有必做项目已完成，可在提交期限内重新提交。' : `请在 ${task.deadline} 前完成；最晚可补交至 ${task.submitDeadline}。` });
   },
-  backToList() { this.setData({ mode: 'list', task: null, pendingUpload: null, uploadState: 'idle', uploadError: '', demoExceptionOpen: false }); this.refreshList(); },
+  openGradingResult() { const task=this.data.task; if(task && gradingProgress(getStudentSubmissions(task.id,this.data.studentId).flatMap(row=>row.questions||[]),true).released > 0)wx.navigateTo({url:'/pages/homework-result/index?role=guardian&taskId='+encodeURIComponent(task.id)+'&studentId='+encodeURIComponent(this.data.studentId)}); },
+  backToList() { this.setData({ mode: 'list', task: null, pendingUpload: null, uploadState: 'idle', uploadError: '', demoExceptionOpen: false, demoActive: false }); this.refreshList(); },
   openLearning() { if (this.data.mode === 'list') wx.redirectTo({ url: '/pages/guardian/learning/index' }); },
   submitItem(event: WechatMiniprogram.BaseEvent) {
     const task = this.data.task;
@@ -123,13 +126,32 @@ Page({
     const item = task?.items.find(row => row.id === event.currentTarget.dataset.id);
     if (!task || this.data.submissionClosed || !item || (item.submitType !== 'photo' && item.submitType !== 'video')) return;
     const submitType = item.submitType;
-    wx.chooseMedia({ count: 1, mediaType: [submitType === 'photo' ? 'image' : 'video'], sourceType: ['album', 'camera'], success: result => {
+    if (submitType === 'photo') {
+      wx.showActionSheet({ itemList: ['手机相册 · 图片', '微信聊天记录 · 图片'], success: choice => {
+        if (choice.tapIndex === 1) {
+          wx.chooseMessageFile({ count: 1, type: 'image', success: result => {
+            const selected = result.tempFiles[0];
+            if (!selected?.path) return;
+            if (!/\.(png|jpe?g|webp|gif|bmp|heic)$/i.test(selected.name || '') && selected.type !== 'image') { this.setData({ uploadState: 'failed', uploadError: '请选择图片文件后重试。' }); return; }
+            if ((selected.size || 0) > FILE_LIMITS.photo.bytes) { this.setData({ uploadState: 'failed', uploadError: `图片不能超过 ${FILE_LIMITS.photo.label}，请压缩后重新选择。` }); return; }
+            this.setData({ pendingUpload: { taskId: task.id, itemId: item.id, studentId: this.data.studentId, path: selected.path, name: selected.name || '微信聊天记录图片', type: 'photo' }, uploadState: 'idle', uploadError: '' });
+          }, fail: error => { if (!String(error.errMsg || '').includes('cancel')) this.setData({ uploadState: 'failed', uploadError: '未能读取微信聊天记录中的图片，请重新选择。' }); } });
+          return;
+        }
+        this.selectSubmissionMediaFromAlbum(task.id, item.id, 'photo');
+      } });
+      return;
+    }
+    this.selectSubmissionMediaFromAlbum(task.id, item.id, 'video');
+  },
+  selectSubmissionMediaFromAlbum(taskId: string, itemId: string, submitType: 'photo' | 'video') {
+    wx.chooseMedia({ count: 1, mediaType: [submitType === 'photo' ? 'image' : 'video'], sourceType: submitType === 'photo' ? ['album'] : ['album', 'camera'], success: result => {
       const selected = result.tempFiles[0];
       if (!selected?.tempFilePath) return;
       const limit = FILE_LIMITS[submitType];
       if ((selected.size || 0) > limit.bytes) { this.setData({ uploadState: 'failed', uploadError: `${submitType === 'photo' ? '图片' : '视频'}不能超过 ${limit.label}，请压缩后重新选择。` }); return; }
       if (submitType === 'video' && (selected.duration || 0) > FILE_LIMITS.video.seconds) { this.setData({ uploadState: 'failed', uploadError: '视频不能超过 5 分钟，请剪辑后重新选择。' }); return; }
-      this.setData({ pendingUpload: { taskId: task.id, itemId: item.id, studentId: this.data.studentId, path: selected.tempFilePath, name: submitType === 'photo' ? '家长提交的作业原图' : '家长提交的讲解视频', type: submitType }, uploadState: 'idle', uploadError: '' });
+      this.setData({ pendingUpload: { taskId, itemId, studentId: this.data.studentId, path: selected.tempFilePath, name: submitType === 'photo' ? '家长提交的作业原图' : '家长提交的讲解视频', type: submitType }, uploadState: 'idle', uploadError: '' });
     }, fail: error => { if (!String(error.errMsg || '').includes('cancel')) this.setData({ uploadState: 'failed', uploadError: '未能读取照片或视频，请检查相册权限后重试。' }); } });
   },
   chooseAudio(event: WechatMiniprogram.BaseEvent) {
@@ -157,6 +179,7 @@ Page({
   openSubmittedFile(event: WechatMiniprogram.BaseEvent) { const filePath = String(event.currentTarget.dataset.path || ''); if (filePath) wx.openDocument({ filePath, showMenu: true }); },
   cancelUpload() { this.setData({ pendingUpload: null, uploadState: 'idle', uploadError: '' }); },
   confirmUpload() {
+    if (this.data.demoActive) return;
     const pending = this.data.pendingUpload;
     const task = this.data.task;
     if (!pending || !task || this.data.submissionClosed || pending.taskId !== task.id || pending.studentId !== this.data.studentId || !task.items.some(item => item.id === pending.itemId && item.submitType === pending.type)) return;
@@ -175,10 +198,12 @@ Page({
       catch (error) { this.setData({ uploadState: 'failed', uploadError: error instanceof Error ? error.message : '提交失败，请稍后重试。' }); }
     }, fail: () => this.setData({ uploadState: 'failed', uploadError: '文件保存失败，已保留当前选择，请重试。' }) });
   },
-  toggleDemoExceptions(event: WechatMiniprogram.BaseEvent) { const itemId = String(event.currentTarget.dataset.id); this.setData({ demoExceptionItemId: itemId, demoExceptionOpen: this.data.demoExceptionItemId === itemId ? !this.data.demoExceptionOpen : true }); },
+  toggleDemoExceptions() { this.setData({ demoExceptionOpen: !this.data.demoExceptionOpen }); },
+  closeDemoExceptions() { this.setData({ demoExceptionOpen: false }); },
   simulateUploadException(event: WechatMiniprogram.BaseEvent) {
     const messages: Record<string, string> = { format: '文件格式不支持，请选择 JPG、PNG、MP4、MOV、MP3、M4A 或 WAV。', size: '文件超过当前类型大小限制，请压缩后重新选择。', duration: '视频超过 5 分钟，请剪辑后重新选择。', network: '网络连接中断，当前选择已保留，请恢复网络后重试。' };
-    this.setData({ uploadState: 'failed', uploadError: messages[String(event.currentTarget.dataset.type)] || '提交失败，请重试。', demoExceptionOpen: false });
+    if (!this.data.demoActive) this.setData({ demoOriginalError: this.data.uploadError, demoOriginalState: this.data.uploadState });
+    this.setData({ demoActive: true, uploadState: 'failed', uploadError: messages[String(event.currentTarget.dataset.type)] || '提交失败，请重试。', demoExceptionOpen: false });
   },
-  clearUploadError() { this.setData({ uploadState: 'idle', uploadError: '' }); },
+  clearUploadError() { this.setData({ uploadState: this.data.demoActive ? this.data.demoOriginalState : 'idle', uploadError: this.data.demoActive ? this.data.demoOriginalError : '', demoActive: false, demoExceptionOpen: false }); },
 });

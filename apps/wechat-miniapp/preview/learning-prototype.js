@@ -46,6 +46,7 @@ window.learningPrototype = (() => {
       <p class="pr-footnote">仅展示学伴内已记录的学习；时长不含小晤问答。未记录到活动，不代表孩子没有学习。</p>${evidenceSheet(report)}</div>`;
   };
   return {
+    getDemoContext:()=>({...state}),
     renderParent,
     openTasks() { window.homeworkPrototype?.resetParentView(); window.homeworkPrototype?.changeParentTaskTab('pending'); window.parentPrototype?.tab('homework'); },
     period(value) { if(!['day','7d','30d'].includes(value)) return; state.period=value; state.activityId=''; state.showAllTimeline=false; window.parentPrototype?.render(); },
