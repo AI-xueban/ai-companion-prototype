@@ -23,3 +23,16 @@ export function getDemoCoinIncomeHistory(): RewardHistoryEntry[] {
     create('path', '学习路径 · L2 通关', 4320 + 60, [{ scene: 'quiz_correct', label: '答对 5 道题 × 2 金币', value: 10 }, { scene: 'path_clear', label: 'L2 关卡通关奖励', value: 10 }], 20, 80),
   ];
 }
+
+/** Empty-expense preview fixtures. Display only; never deduct coins or create applications. */
+export function getDemoCoinExpenseHistory(): RewardHistoryEntry[] {
+  const now = Date.now();
+  return [
+    { id: 'outfit', title: '装扮兑换 · 星空围巾', minutesAgo: 20, coins: 120 },
+    { id: 'charity', title: '公益捐赠 · 爱心助学', minutesAgo: 90, coins: 50 },
+    { id: 'wish', title: '许愿池兑换 · 课堂加分 +5（已完成）', minutesAgo: 1440 + 45, coins: 80 },
+    { id: 'book', title: '许愿池兑换 · 课外图书（已完成）', minutesAgo: 4320 + 60, coins: 500 },
+  ].map(({ id, title, minutesAgo, coins }) => ({
+    id: `demo-coin-expense-${id}`, title, timestamp: now - minutesAgo * 60000, coins: -coins, xp: 0,
+  }));
+}
