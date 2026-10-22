@@ -229,7 +229,7 @@ console.log('Passed: 6-person capacity, direct transfer, sole guardian promotion
 // Page-level anomalies must preserve identity, application status and access boundaries.
 {
  const d=create();d.p.scenario('first');d.p.action('scanResult');d.p.exception('firstBindRace');d.p.action('confirm');assert.equal(d.state().view,'needInvite');assert.equal(d.state().families[0].members.length,1);assert.notEqual(d.state().families[0].primaryId,'owner');assert.equal(d.state().bound,false);assert.match(d.html(),/李先生 · 爸爸/);assert.match(d.html(),/138\*\*\*\*8000/);assert.doesNotMatch(d.html(),/13800138000/);
- d.p.action('schoolAssist');d.p.action('submitAssistance');assert.equal(d.state().view,'schoolAssist');d.p.familyInput('assistName','王女士');d.p.familyInput('assistPhone','13900139000');d.p.familyInput('assistDescription','我是孩子的妈妈，不认识已绑定的家长。');const original=d.state().families;d.p.action('submitAssistance');assert.equal(d.state().view,'assistancePending');assert.deepEqual(d.state().families,original);assert.equal(d.state().bound,false);assert.equal(create(d.storage).state().assistance.status,'pending');
+ const original=JSON.stringify(d.state().families);d.p.exception('bindingDispute');assert.match(d.html(),/请联系学校协助处理/);assert.doesNotMatch(d.html(),/schoolAssist|submitAssistance|核实申请/);assert.equal(d.state().view,'needInvite');assert.equal(JSON.stringify(d.state().families),original);assert.equal(d.state().bound,false);
 }
 {
  const d=create();d.p.scenario('first');d.p.action('scanResult');d.p.action('confirm');d.p.input('phone','13800138000');d.p.action('sendCode');d.p.input('code','123456');d.p.setAgreement(true);d.p.exception('firstBindRace');d.p.action('verifyPhone');assert.equal(d.state().view,'needInvite');assert.equal(d.state().families[0].members.length,1);assert.equal(d.state().bound,false);
@@ -238,7 +238,7 @@ console.log('Passed: 6-person capacity, direct transfer, sole guardian promotion
  const d=create();submit(d);d.p.familyReview('manager');d.p.action('inviter');const applicant=d.state().families[0].application.id;d.p.exception('managerChanged');assert.match(d.html(),/主管理权限已变更/);assert.doesNotMatch(d.html(),/>同意绑定<|>拒绝申请</);d.p.action('approve');assert.equal(d.state().families[0].application.status,'pending');assert.equal(d.state().families[0].members.some(m=>m.id===applicant),false);d.p.familyReview('manager');d.p.action('approve');assert.equal(d.state().families[0].application.status,'approved');
 }
 {
- const d=create();submit(d);d.p.familyReview('manager');d.p.action('inviter');d.p.exception('studentUnavailable');d.p.action('approve');assert.equal(d.state().families[0].application.status,'pending');assert.equal(d.state().families[0].members.length,1);
+ const d=create();submit(d);d.p.familyReview('manager');d.p.action('inviter');d.p.exception('studentUnavailable');d.p.action('approve');assert.equal(d.state().families[0].application.status,'pending');assert.equal(d.state().families[0].members.length,1);d.p.action('reject');assert.equal(d.state().families[0].application.status,'rejected');assert.equal(d.state().families[0].members.length,1);
 }
 {
  const d=create();d.p.scenario('second');d.p.action('beginRequest');d.p.exception('duplicateRequest');const r=d.state().families[0].application;d.p.action('submitFamilyRequest');assert.deepEqual(d.state().families[0].application,r);assert.equal(d.state().families[0].members.length,1);
@@ -250,7 +250,7 @@ console.log('Passed: 6-person capacity, direct transfer, sole guardian promotion
 {
  const d=create();d.p.scenario('twoChildren');d.p.exception('bindingRemoved');assert.equal(d.state().view,'pending');assert.equal(d.state().boundStudents.includes(0),false);assert.equal(d.state().boundStudents.includes(1),true);d.p.action('home');assert.notEqual(d.state().view,'home');d.p.action('remainingChildren');assert.equal(d.state().activeStudent,1);assert.equal(d.state().view,'home');
 }
-console.log('Passed: page anomalies, first-binding races, school assistance, stale-manager denial, disabled students, duplicate requests, network retry and removal access.');
+console.log('Passed: page anomalies, first-binding races, school contact guidance without online application, stale-manager denial, disabled-student approval denial and rejection, duplicate requests, network retry and removal access.');
 
 {
  const d=create();d.p.scenario('first');d.p.setAgreement(true);d.p.action('scan');d.p.action('denyWechatPhone');assert.equal(d.state().view,'scan');d.p.action('scanResult');d.p.action('confirm');d.p.action('skipPhone');assert.equal(d.state().view,'bindSuccess');assert.equal(d.state().verifiedPhone,'');assert.equal(d.state().families[0].members[0].phone,'');const r=create(d.storage);r.p.start();assert.equal(r.state().verifiedPhone,'');r.p.tab('mine');assert.match(r.html(),/绑定本人手机号/);r.p.action('changePhone');assert.doesNotMatch(r.html(),/跳过手机号|暂不绑定手机号/);r.p.input('phone','13900139000');r.p.action('sendCode');r.p.input('code','123456');r.p.action('verifyPhone');assert.equal(r.state().verifiedPhone,'13900139000');assert.equal(r.state().families[0].members.length,1);assert.equal(r.state().families[0].members[0].phone,'13900139000');assert.equal(r.state().families[0].primaryId,'owner');
@@ -272,4 +272,18 @@ console.log('Passed: optional phone on first binding and invitations, empty phon
 }
 console.log('Passed: exception sheet close/back, immediate QR results, isolated switching, one-click restoration and preserved phone draft.');
 
-{const d=create();d.p.scenario('second');d.p.action('scanResult');assert.equal(d.state().view,'needInvite');assert.match(d.html(),/已绑定的主管理家长/);assert.match(d.html(),/李先生 · 爸爸/);assert.match(d.html(),/138\*\*\*\*8000/);assert.doesNotMatch(d.html(),/13800138000/);assert.equal(d.state().bound,false);d.p.action('schoolAssist');assert.equal(d.state().view,'schoolAssist');}console.log('Passed: existing manager identity, relationship and masked phone visible without granting access.');
+{
+ const d=create();d.p.scenario('first');d.p.action('scanResult');d.p.back();
+ d.p.toggleExceptionMenu(true);
+ assert.ok(d.html().indexOf('已绑定当前孩子')<d.html().indexOf('不是本产品的学生码'),'Repeated scan is the first scan exception');
+ d.p.exception('alreadyBound');assert.equal(d.state().view,'alreadyBound');assert.match(d.html(),/你已绑定该孩子/);
+ d.p.action('enterBoundChild');assert.equal(d.state().view,'home');
+ d.p.exception('normal');assert.equal(d.state().view,'scan');assert.equal(d.state().bound,false);assert.equal(d.state().families[0].members.length,0);
+ d.p.exception('alreadyBound');d.p.exception('invalid');assert.equal(d.state().view,'cardError');assert.equal(d.state().families[0].members.length,0,'Switching exceptions clears the simulated binding');
+ d.p.exception('normal');assert.equal(d.state().view,'scan');
+ const bound=create();bound.p.scenario('duplicateScan');bound.p.exception('alreadyBound');assert.equal(bound.state().families[0].members.length,1,'An existing binding must not gain another slot');bound.p.exception('normal');assert.equal(bound.state().bound,true);assert.equal(bound.state().view,'scan');
+ assert.doesNotMatch(readFileSync(new URL('./index.html',import.meta.url),'utf8'),/data-parent-scenario="duplicateScan"/);
+}
+console.log('Passed: repeated scan is grouped on the scan page, opens the child home, restores the original state and has no standalone console entry.');
+
+{const d=create();d.p.scenario('second');d.p.action('scanResult');assert.equal(d.state().view,'needInvite');assert.match(d.html(),/已绑定的主管理家长/);assert.match(d.html(),/李先生 · 爸爸/);assert.match(d.html(),/138\*\*\*\*8000/);assert.doesNotMatch(d.html(),/13800138000/);assert.equal(d.state().bound,false);assert.match(d.html(),/联系学校/);assert.doesNotMatch(d.html(),/schoolAssist|submitAssistance|核实申请/);}console.log('Passed: existing manager identity, relationship, masked phone and school contact visible without granting access.');
