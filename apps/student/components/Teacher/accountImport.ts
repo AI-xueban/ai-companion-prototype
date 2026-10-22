@@ -1,10 +1,10 @@
 import { TEACHER_SUBJECT_OPTIONS } from './data/teacherAccess';
 
 export type ImportKind = 'teachers' | 'students' | 'classes';
-export type ImportPerson = { name: string; account: string; className: string; subject?: string; homeroomClassName?: string; gradeLeaderGrades?: string; researchGroupSubjects?: string; professionalTitle?: string; grade?: number; sort?: number; note?: string };
+export type ImportPerson = { name: string; account: string; className: string; subject?: string; homeroomClassName?: string; gradeLeaderGrades?: string; researchGroupSubjects?: string; grade?: number; sort?: number; note?: string };
 export type ImportRow = { row: number; values: string[]; errors: string[]; person: ImportPerson };
 export const IMPORT_HEADERS = {
-  teachers: ['登录手机号', '教师姓名', '任教学科', '任教班级', '班主任班级', '年级组长年级', '教研组长学科', '专业技术职称'],
+  teachers: ['登录手机号', '教师姓名', '任教学科', '任教班级', '班主任班级', '年级组长年级', '教研组长学科'],
   students: ['学生姓名', '所属班级'],
   classes: ['年级', '班级名称', '排序', '备注'],
 };
@@ -125,7 +125,7 @@ export function validateAccountRows(raw: { row: number; values: string[] }[], ki
     };
     let person: ImportPerson;
     if (kind === 'teachers') {
-      const [,, subject = '', teaching = '', homeroom = '', gradeLeader = '', researchGroup = '', professionalTitle = ''] = values;
+      const [,, subject = '', teaching = '', homeroom = '', gradeLeader = '', researchGroup = ''] = values;
       const subjects = splitList(subject).map((item) => item === '道法' ? '道德与法治' : item);
       if (!subjects.length) errors.push('任教学科必填');
       for (const item of subjects) if (!TEACHER_SUBJECT_OPTIONS.includes(item)) errors.push(`任教学科不支持：${item}`);
@@ -136,7 +136,7 @@ export function validateAccountRows(raw: { row: number; values: string[] }[], ki
       const researchGroupSubjects = splitList(researchGroup).map((item) => item === '道法' ? '道德与法治' : item);
       for (const item of researchGroupSubjects) if (!TEACHER_SUBJECT_OPTIONS.includes(item)) errors.push(`教研组长学科不支持：${item}`);
       for (const item of splitList(homeroomClassName).filter((v) => v !== '未分配')) if ((owners.get(item)?.length ?? 0) > 1) errors.push(`${item}班主任冲突：${owners.get(item)!.join('、')}`);
-      person = { account, name, subject: [...new Set(subjects)].join('、'), className, homeroomClassName, gradeLeaderGrades: gradeLeaderGrades.join('、'), researchGroupSubjects: [...new Set(researchGroupSubjects)].join('、'), professionalTitle };
+      person = { account, name, subject: [...new Set(subjects)].join('、'), className, homeroomClassName, gradeLeaderGrades: gradeLeaderGrades.join('、'), researchGroupSubjects: [...new Set(researchGroupSubjects)].join('、') };
     }
     return { row, values, errors, person };
   });
