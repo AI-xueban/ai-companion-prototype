@@ -1,5 +1,5 @@
 import type { SessionProfile } from '../types/identity';
-import { DEMO_CLASSES, DEMO_STUDENTS } from './schoolDemoRoster';
+import { DEMO_CLASSES, DEMO_STUDENTS, getDemoTeachingAssignments } from './schoolDemoRoster';
 import { queryLearning } from './learningMock';
 import type { LearningPeriod } from './learningMock';
 import type { HomeworkTask } from './homeworkMock';
@@ -12,6 +12,16 @@ let current: WorkScope = { view: 'school', period: '7d', grade: 'all', classId: 
 export function resetWorkScope(): void { owner = ''; current = { view: 'school', period: '7d', grade: 'all', classId: 'all' }; }
 
 export const workViewLabel = (view: WorkView) => labels[view];
+export function teacherAssignments(profile: SessionProfile) { return profile.teachingAssignments ?? getDemoTeachingAssignments(profile.userId); }
+export function publishingClassIds(profile: SessionProfile, scope: WorkScope): string[] { return scope.view !== 'school' ? [...new Set(teacherAssignments(profile).flatMap(row => row.classIds))] : scopeClassIds(scope); }
+export function teachingSubjectOptions(profile: SessionProfile, scope: WorkScope): string[] {
+  const allowed = publishingClassIds(profile, scope);
+  return [...new Set(teacherAssignments(profile).filter(row => row.classIds.some(id => allowed.includes(id))).map(row => row.subject))];
+}
+export function subjectClassIds(profile: SessionProfile, scope: WorkScope, subject: string): string[] {
+  const allowed = publishingClassIds(profile, scope);
+  return [...new Set(teacherAssignments(profile).filter(row => row.subject === subject).flatMap(row => row.classIds).filter(id => allowed.includes(id)))];
+}
 export function availableWorkViews(profile: SessionProfile): WorkView[] {
   const views: WorkView[] = [];
   if (profile.roles.includes('school_admin')) views.push('school');
@@ -58,7 +68,7 @@ export function scopeTitle(scope: WorkScope): string {
   return DEMO_CLASSES.find(row => row.id === scope.classId)?.name || '班级';
 }
 export function scopeSubtitle(scope: WorkScope): string { return `${scopeTitle(scope)} · ${scope.view === 'subject' ? '数学' : '全科'} · ${scope.period === '7d' ? '近 7 天' : '近 30 天'}`; }
-export function homeworkScopeSubtitle(scope: WorkScope): string { return `${scopeTitle(scope)} · ${scope.view === 'subject' ? '数学' : '全科'}`; }
+export function homeworkScopeSubtitle(scope: WorkScope): string { return `${scopeTitle(scope)} · ${scope.view === 'subject' ? '任教学科' : '全科'}`; }
 export function queryWorkLearning(scope: WorkScope, studentId = 'all') {
   const classes = scopeClassIds(scope);
   const subject = scope.view === 'subject' ? '数学' : 'all';

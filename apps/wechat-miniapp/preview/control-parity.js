@@ -292,6 +292,7 @@
     shell('借用管控', content, 'leaveControlCenter()', canEdit() ? `<div class="parity-borrow-floating">${button('＋ 新增规则', 'parity.newBorrowRule()')}</div>` : '', 'parity-school-borrow');
   }
   function renderControl() {
+    if (typeof renderControlAvailability === 'function' && renderControlAvailability()) return;
     if (controlDemoRole !== 'admin' && controlModule === 'borrowing') {
       ui.editor = null; ui.pending = null; controlView = 'entry';
       return renderEntry();

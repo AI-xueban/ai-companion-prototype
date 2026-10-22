@@ -139,8 +139,47 @@
     clock.textContent = `${hh}:${mm}`;
   }
 
+
+  // Prototype-only administrator session; no SMS or hardware requests are sent.
+  const adminPhone = document.getElementById('adminPhone');
+  const adminCode = document.getElementById('adminCode');
+  const adminTip = document.getElementById('adminLoginTip');
+  const adminSend = document.getElementById('adminSendCode');
+  let adminSession = false, adminSentPhone = '', adminSentAt = 0, adminCountdown = null;
+  function adminMessage(message) { adminTip.hidden = false; adminTip.textContent = message; }
+  function resetAdminLogin() {
+    adminSession = false; adminPhone.value = ''; adminCode.value = ''; adminSentPhone = ''; adminSentAt = 0;
+    clearInterval(adminCountdown); adminSend.disabled = false; adminSend.textContent = '获取验证码'; adminTip.hidden = true;
+
+  }
+
+  adminSend.addEventListener('click', () => {
+    if (!/^1[3-9]\d{9}$/.test(adminPhone.value)) return adminMessage('请输入正确的11位手机号');
+    adminSentPhone = adminPhone.value; adminSentAt = Date.now();
+    adminMessage('原型演示：验证码为 123456，5分钟内有效（未发送真实短信）');
+    let remaining = 60; adminSend.disabled = true; adminSend.textContent = remaining+'秒后重发';
+    clearInterval(adminCountdown); adminCountdown = setInterval(() => { remaining--; adminSend.textContent = remaining+'秒后重发'; if(remaining<=0) {clearInterval(adminCountdown); adminSend.disabled=false; adminSend.textContent='重新获取';} },1000);
+  });
+  document.getElementById('adminLoginForm').addEventListener('submit', e => {
+    e.preventDefault();
+    if (!/^1[3-9]\d{9}$/.test(adminPhone.value)) return adminMessage('请输入正确的11位手机号');
+    if (adminSentPhone !== adminPhone.value || !adminSentAt) return adminMessage('请先为当前手机号获取验证码');
+    if (adminCode.value !== '123456' || Date.now()-adminSentAt>300000) return adminMessage('验证码错误或已失效，请重新获取');
+    adminSession=true; adminSentAt=0;
+    document.getElementById('adminAccount').textContent=adminPhone.value.slice(0,3)+'****'+adminPhone.value.slice(-4);
+    document.getElementById('adminFeatureNote').textContent=''; showPage('admin-manage');
+  });
+  document.getElementById('adminLogout').addEventListener('click', () => {resetAdminLogin(); showPage('home');});
+  document.querySelector('.admin-menu').addEventListener('click', e => {
+    const item=e.target.closest('[data-admin-feature]');
+    if(!item || !adminSession) return;
+    document.getElementById('adminFeatureNote').textContent=item.dataset.adminFeature+'：登录后进入柜机现有功能页面，沿用原有操作流程。';
+  });
+
   function showPage(name, options = {}) {
     if (registrationLocked) return;
+    if (name === "admin-manage" && !adminSession) name = "admin-login";
+    if (name === "admin-login" || (adminSession && name !== "admin-manage")) resetAdminLogin();
     clearTimeout(enrollmentTimer);
     enrollFailureAction.hidden = true;
     document.querySelectorAll(".page").forEach((page) => {

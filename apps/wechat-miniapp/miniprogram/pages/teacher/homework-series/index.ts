@@ -1,6 +1,7 @@
 import { getSession } from '../../../stores/session';
 import { DEMO_CLASSES, listHomeworkTasks, summarizeHomework } from '../../../services/homeworkMock';
 import { availableWorkViews, scopedHomeworkTask, taskInScope, workScope } from '../../../services/workbenchScope';
+import { returnToHomeworkModuleHome } from '../../../services/moduleNavigation';
 
 Page({
   data: {
@@ -27,4 +28,5 @@ Page({
     if (this.data.phases.some(row => row.id === id)) wx.navigateTo({ url: `/pages/teacher/homework/index?taskId=${encodeURIComponent(id)}&fromSeries=1` });
   },
   back() { wx.navigateBack({ delta: 1 }); },
+  returnToModuleHome() { returnToHomeworkModuleHome(); },
 });

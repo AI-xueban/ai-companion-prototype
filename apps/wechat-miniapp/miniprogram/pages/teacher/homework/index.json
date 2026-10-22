@@ -1,1 +1,8 @@
-{ "navigationBarTitleText": "作业与打卡" }
+{
+  "navigationBarTitleText": "作业",
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "page-navigation": "/components/page-navigation/index",
+    "task-attachments": "/components/task-attachments/index"
+  }
+}

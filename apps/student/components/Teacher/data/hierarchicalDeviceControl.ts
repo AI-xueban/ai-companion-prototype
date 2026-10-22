@@ -36,10 +36,19 @@ export const weekdayRangeText = (weekdays: number[]) => {
 };
 export const scheduleDateText = (s: BorrowSchedule) => s.mode === 'weekly' ? weekdayRangeText(s.weekdays) : `${s.startDate} 至 ${s.endDate}`;
 export const schedulePeriodText = (s: BorrowSchedule) => s.deny ? '全天禁止借用' : s.periods.map(p => `${p.start}–${p.end}`).join('、');
-export const validateSchedule = (s: BorrowSchedule): string => {
+// 生命周期按包含起止日期的有效期判断，借用时段只决定当前能否借出。
+export const borrowScheduleStatus = (s: BorrowSchedule, now = new Date()): '待生效' | '生效中' | '已失效' => {
+  const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  if (date < s.startDate) return '待生效';
+  if (date > s.endDate) return '已失效';
+  return '生效中';
+};
+export const validateSchedule = (s: BorrowSchedule, now = new Date()): string => {
   if (s.mode === 'weekly' && !s.weekdays.length) return '请至少选择一个星期';
   if (s.mode === 'dates' && (!s.startDate || !s.endDate)) return '请选择开始和结束日期';
   if (s.mode === 'dates' && s.startDate > s.endDate) return '结束日期不能早于开始日期';
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  if (s.mode === 'dates' && s.startDate < today) return '生效日期只能选择当天及之后';
   if (s.mode === 'dates' && s.deny) return '';
   if (!s.periods.length || s.periods.some(p => !p.start || !p.end)) return '请填写完整的借用时段';
   if (s.periods.some(p => p.start >= p.end)) return '结束时间须晚于开始时间，暂不支持跨日';

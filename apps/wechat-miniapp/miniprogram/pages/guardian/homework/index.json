@@ -1,1 +1,7 @@
-{ "navigationBarTitleText": "作业" }
+{
+  "navigationBarTitleText": "作业",
+  "usingComponents": {
+    "task-attachments": "/components/task-attachments/index"
+  },
+  "navigationStyle": "custom"
+}

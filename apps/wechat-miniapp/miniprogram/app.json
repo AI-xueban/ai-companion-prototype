@@ -3,13 +3,19 @@
     "pages/auth/login/index",
     "pages/guardian/home/index",
     "pages/guardian/homework/index",
-    "pages/guardian/learning/index"
+    "pages/guardian/learning/index",
+    "pages/homework-result/index"
   ],
   "subpackages": [
     {
       "root": "pages/teacher",
       "name": "teacher",
-      "pages": ["home/index", "homework/index", "homework-series/index", "learning/index"]
+      "pages": [
+        "home/index",
+        "homework/index",
+        "homework-series/index",
+        "learning/index"
+      ]
     }
   ],
   "window": {

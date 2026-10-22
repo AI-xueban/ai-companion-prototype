@@ -13,7 +13,7 @@ interface ThirdPartyAppRailProps {
 }
 
 type AppAction = 'install' | 'update' | 'open';
-type Transfer = { progress: number; paused: boolean; action: 'install' | 'update' };
+type Transfer = { progress: number; action: 'install' | 'update' };
 
 function getAppAction(app: ThirdPartyApp): AppAction {
   if (!app.installed) return 'install';
@@ -30,7 +30,7 @@ export function ThirdPartyAppRail({ showEntry = true, isOpen, apps, onToggle, on
   const [pendingUninstall, setPendingUninstall] = React.useState<ThirdPartyApp | null>(null);
   const [localApps, setLocalApps] = React.useState(apps);
   const [transfers, setTransfers] = React.useState<Record<string, Transfer>>({});
-  React.useEffect(() => { const timer = window.setInterval(() => { setTransfers((current) => { const next = { ...current }; Object.entries(next).forEach(([id, transfer]) => { if (transfer.paused) return; const progress = Math.min(100, transfer.progress + 5); if (progress >= 100) { const item = localApps.find((app) => app.id === id); if (item) setLocalApps((apps) => apps.map((app) => app.id === id ? { ...app, installed: true, installedVersion: app.latestVersion } : app)); delete next[id]; } else next[id] = { ...transfer, progress }; }); return next; }); }, 700); return () => window.clearInterval(timer); }, [localApps]);
+  React.useEffect(() => { const timer = window.setInterval(() => { setTransfers((current) => { const next = { ...current }; Object.entries(next).forEach(([id, transfer]) => { const progress = Math.min(100, transfer.progress + 5); if (progress >= 100) { const item = localApps.find((app) => app.id === id); if (item) setLocalApps((apps) => apps.map((app) => app.id === id ? { ...app, installed: true, installedVersion: app.latestVersion } : app)); delete next[id]; } else next[id] = { ...transfer, progress }; }); return next; }); }, 700); return () => window.clearInterval(timer); }, [localApps]);
   const visibleApps = localApps.filter((app) => app.enabled !== false || app.installed);
   const installedApps = visibleApps.filter((app) => getAppAction(app) === 'open');
   const updateApps = visibleApps.filter((app) => getAppAction(app) === 'update');
@@ -39,12 +39,7 @@ export function ThirdPartyAppRail({ showEntry = true, isOpen, apps, onToggle, on
   const openApp = (app: ThirdPartyApp) => { if (app.type === 'web') { setWebViewApp(app); return; } setNativeApp(app); };
   const handleClose = () => { setIsMorePageOpen(false); setWebViewApp(null); setNativeApp(null); onClose(); };
 
-  const startTransfer = (app: ThirdPartyApp) => { const action = getAppAction(app); if (action === 'open') return openApp(app); setTransfers((current) => ({ ...current, [app.id]: { progress: 0, paused: false, action } })); };
-  const toggleTransfer = (app: ThirdPartyApp) => setTransfers((current) => {
-    if (current[app.id]?.action === 'install') return current;
-    return current[app.id] ? { ...current, [app.id]: { ...current[app.id], paused: !current[app.id].paused } } : current;
-  });
-  const cancelTransfer = (app: ThirdPartyApp) => setTransfers((current) => { const next = { ...current }; delete next[app.id]; return next; });
+  const startTransfer = (app: ThirdPartyApp) => { const action = getAppAction(app); if (action === 'open') return openApp(app); setTransfers((current) => ({ ...current, [app.id]: { progress: 0, action } })); };
   const uninstallApp = (app: ThirdPartyApp) => {
     setTransfers((current) => {
       const next = { ...current };
@@ -65,7 +60,7 @@ export function ThirdPartyAppRail({ showEntry = true, isOpen, apps, onToggle, on
       <div key={app.id} role={openable ? 'button' : undefined} tabIndex={openable ? 0 : undefined} onClick={() => openable ? openApp(app) : undefined} onKeyDown={(event) => { if (openable && (event.key === 'Enter' || event.key === ' ')) openApp(app); }} className={`${full ? 'min-h-[138px] px-2 py-3' : 'min-h-[104px] px-1.5 py-2'} flex flex-col items-center justify-center rounded-2xl border border-indigo-100/80 bg-white/90 shadow-[0_4px_14px_rgba(55,65,120,0.06)] ${openable ? 'cursor-pointer transition-all hover:border-indigo-200 hover:bg-white' : ''}`}>
         <span className={`${full ? 'h-12 w-12 text-base' : 'h-10 w-10 text-sm'} flex items-center justify-center rounded-[14px] bg-gradient-to-br from-indigo-300 to-violet-500 font-black text-white shadow-[0_5px_12px_rgba(99,102,241,0.23)]`}>{app.icon || app.name.slice(0, 1)}</span>
         <span className="mt-1.5 text-[12px] font-bold text-slate-700">{app.name}</span>
-        {transfer ? <><div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-indigo-500 transition-all" style={{ width: `${transfer.progress}%` }} /></div><span className="mt-1 text-[9px] text-slate-400">{transfer.paused ? '已暂停，点击继续' : `${transfer.action === 'install' ? '安装' : '更新'}中 ${transfer.progress}%`}</span><button type="button" onClick={(event) => { event.stopPropagation(); cancelTransfer(app); }} className="mt-1 text-[9px] text-slate-400 hover:text-red-500">取消</button></> : <div className="mt-1 flex items-center justify-center gap-1">{action !== 'open' && <button type="button" onClick={(event) => { event.stopPropagation(); startTransfer(app); }} className="flex items-center justify-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[9px] font-medium text-slate-500 hover:bg-slate-100"><span>{action === 'install' ? <Download size={10} /> : <RefreshCw size={10} />}</span>{actionLabel(action)}</button>}{app.installed && <button type="button" aria-label={`卸载${app.name}`} title="卸载" onClick={(event) => { event.stopPropagation(); setPendingUninstall(app); }} className="flex h-6 w-6 items-center justify-center rounded-md border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"><Trash2 size={11} /></button>}</div>}
+        {transfer ? <><div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-indigo-500 transition-all" style={{ width: `${transfer.progress}%` }} /></div><span className="mt-1 text-[9px] text-slate-400">{`${transfer.action === 'install' ? '安装' : '更新'}中 ${transfer.progress}%`}</span></> : <div className="mt-1 flex items-center justify-center gap-1">{action !== 'open' && <button type="button" onClick={(event) => { event.stopPropagation(); startTransfer(app); }} className="flex items-center justify-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[9px] font-medium text-slate-500 hover:bg-slate-100"><span>{action === 'install' ? <Download size={10} /> : <RefreshCw size={10} />}</span>{actionLabel(action)}</button>}{app.installed && <button type="button" aria-label={`卸载${app.name}`} title="卸载" onClick={(event) => { event.stopPropagation(); setPendingUninstall(app); }} className="flex h-6 w-6 items-center justify-center rounded-md border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"><Trash2 size={11} /></button>}</div>}
       </div>
     );
   };

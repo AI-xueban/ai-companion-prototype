@@ -101,6 +101,7 @@ Page({
     this.setData({ selectedStudentId: studentId, selectedStudentName: student.name, selectedSummary: getStudentLearning(report, studentId), selectedTimeline: timelineRows(report).slice(0, 20), selectedQuestion: null, selectedActivity: null });
   },
   closeStudent() { this.setData({ selectedStudentId: '', selectedTimeline: [], selectedSummary: null, selectedActivity: null }); },
+  returnToModuleHome() { this.setData({ tab: 'overview', selectedStudentId: '', selectedStudentName: '', selectedTimeline: [], selectedSummary: null, selectedKnowledge: '', selectedQuestion: null, selectedActivity: null, filtersOpen: false, roleMenuOpen: false }); this.refresh(); },
   openActivity(event: WechatMiniprogram.BaseEvent) {
     if (!this.data.selectedStudentId) return;
     const report = queryWorkLearning(this.data.scope, this.data.selectedStudentId);
