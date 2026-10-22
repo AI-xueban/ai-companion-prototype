@@ -157,7 +157,7 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRol
           case 'inbox':
               return <SmartInbox />;
           case 'profile':
-              return <TeacherProfile />;
+              return <TeacherProfile user={teacherUser} />;
           case 'school': return <SchoolAdminManagement initialView="school" currentUser={teacherUser} onNavigate={navigate} />;
           case 'classes': return <SchoolAdminManagement initialView="classes" currentUser={teacherUser} onNavigate={navigate} />;
           case 'teachers': return <SchoolAdminManagement initialView="teachers" currentUser={teacherUser} onNavigate={navigate} />;
@@ -222,7 +222,6 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRol
       <TeacherSidebar 
         activePage={deviceMenuPage ?? activePage}
         onNavigate={page => { navigate(page); setDeviceNavOpen(false); }}
-        onLogout={handleLogout}
         onSwitchToBoard={teacherUser.role === 'school-admin' ? () => { setBoardPasswordOpen(true); setBoardPassword(''); setBoardPasswordError(''); } : undefined}
         user={teacherUser}
       />
@@ -231,16 +230,18 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRol
       <div className="flex-1 flex flex-col min-w-0">
         {activePage === 'school-device-control' && <div className="dc-mobile-bar"><button type="button" aria-label="打开导航菜单" aria-controls="teacher-sidebar" aria-expanded={deviceNavOpen} onClick={() => setDeviceNavOpen(open => !open)}><Menu size={17} />菜单</button><span>学校管理</span></div>}
 
-        {/* Header（个人中心和消息页隐藏班级切换条） */}
-        {activePage !== 'profile' && activePage !== 'inbox' && (
+        {/* Header（账号入口始终保留，个人中心和消息页隐藏班级切换条） */}
+        {(
           <TeacherHeader
             unreadMessageCount={unreadMessageCount}
             onOpenInbox={handleOpenInbox}
+            onOpenProfile={() => navigate('profile')}
+            onLogout={handleLogout}
             user={teacherUser}
             currentClassId={currentClassId}
             onClassChange={setCurrentClassId}
-            showClassSelector={!isReportPage && !isSchoolReport && !['school-device-control', 'school-device-usage', 'device-overview', 'cabinet', 'tablet', 'device-usage', 'device-alert', 'face-library'].includes(activePage)}
-            showMessages={!isReportPage && !isSchoolReport}
+            showClassSelector={!['profile', 'inbox'].includes(activePage) && !isReportPage && !isSchoolReport && !['school-device-control', 'school-device-usage', 'device-overview', 'cabinet', 'tablet', 'device-usage', 'device-alert', 'face-library'].includes(activePage)}
+            showMessages={!['profile', 'inbox'].includes(activePage) && !isReportPage && !isSchoolReport}
           />
         )}
 

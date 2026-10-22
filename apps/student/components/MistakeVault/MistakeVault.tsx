@@ -1130,7 +1130,7 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
 
       <AnimatePresence>
         {showMemoryRule && (
-          <div className="absolute inset-0 z-[85] flex items-center justify-center p-4">
+          <div className="absolute inset-0 z-[85] flex items-center justify-center px-5 pt-5 pb-20">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1142,33 +1142,47 @@ export const MistakeVault: React.FC<MistakeVaultProps> = ({
               initial={{ scale: 0.92, opacity: 0, y: 10 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.92, opacity: 0, y: 10 }}
-              className="relative z-10 w-full max-w-sm rounded-[28px] bg-white p-5 shadow-2xl border border-white/70"
+              className="relative z-10 flex max-h-full w-full max-w-3xl flex-col overflow-hidden rounded-[24px] bg-white shadow-2xl border border-white/70"
             >
-              <div className="flex items-start justify-between gap-4 mb-4">
+              <div className="flex shrink-0 items-start justify-between gap-4 bg-white px-6 py-2">
                 <div>
-                  <h3 className="text-[15px] font-semibold text-gray-900">错题复习规则</h3>
-                  <p className="text-[11px] font-medium text-gray-400 mt-1">基于艾宾浩斯间隔复习自动安排</p>
+                  <h3 className="text-xl font-black text-slate-900">错题怎么复习？</h3>
+                  <p className="mt-1 text-sm text-slate-500">答题更新状态，按计划巩固</p>
                 </div>
-                <button
-                  onClick={() => setShowMemoryRule(false)}
-                  className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center"
-                >
+                <button onClick={() => setShowMemoryRule(false)} aria-label="关闭错题复习规则" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200">
                   <X size={16} />
                 </button>
               </div>
-              <div className="space-y-2">
-                {[
-                  ['🔴 待攻克', '答错会回到待攻克，下一次优先复习。'],
-                  ['🟡 第1次答对', '进入待复习，按间隔再练。'],
-                  ['🟡 第2次连对', '间隔拉长到 3 天后。'],
-                  ['🟡 第3次连对', '间隔拉长到 7 天后。'],
-                  ['🟢 已掌握', '彻底掌握后，30 天后做防遗忘抽查。'],
-                ].map(([title, desc]) => (
-                  <div key={title} className="rounded-2xl bg-gray-50 border border-gray-100 px-3 py-2">
-                    <div className="text-[13px] font-semibold text-gray-800">{title}</div>
-                    <div className="text-[11px] font-medium text-gray-500 mt-0.5">{desc}</div>
+              <div className="min-h-0 overflow-y-auto px-6 pb-2" data-mistake-rule-content>
+                <section aria-labelledby="mistake-status-title" className="border-t border-slate-100 pt-2">
+                  <h4 id="mistake-status-title" className="sr-only">三种复习状态</h4>
+                  <div className="grid grid-cols-3 divide-x divide-slate-100">
+                    <div className="pr-3"><p className="flex items-center gap-2 text-base font-bold text-slate-900"><span className="h-2.5 w-2.5 rounded-full bg-rose-500" />待攻克</p><p className="mt-1 text-[13px] text-slate-500">未答对，或复习时答错</p></div>
+                    <div className="px-3"><p className="flex items-center gap-2 text-base font-bold text-slate-900"><span className="h-2.5 w-2.5 rounded-full bg-amber-500" />待复习</p><p className="mt-1 text-[13px] text-slate-500">已答对，等待下次巩固</p></div>
+                    <div className="pl-3"><p className="flex items-center gap-2 text-base font-bold text-slate-900"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />已掌握</p><p className="mt-1 text-[13px] text-slate-500">已标记掌握，定期抽查</p></div>
                   </div>
-                ))}
+                </section>
+                <section aria-labelledby="mistake-interval-title" className="mt-1 border-t border-slate-100 pt-1">
+                  <h4 id="mistake-interval-title" className="text-center text-sm font-bold text-slate-900">答对后，状态与复习安排</h4>
+                  <div className="mt-2 flex items-center justify-center gap-3 text-[13px]">
+                    <span className="flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 font-bold text-rose-700"><span className="h-2 w-2 rounded-full bg-rose-500" />待攻克</span>
+                    <span className="flex items-center gap-2 text-slate-500">首次答对<ArrowRight size={16} /></span>
+                    <span className="flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 font-bold text-amber-700"><span className="h-2 w-2 rounded-full bg-amber-500" />待复习</span>
+                  </div>
+                  <ol className="mt-1 grid grid-cols-3 gap-4">
+                    {[
+                      ['第一次答对', '1', '转为待复习'],
+                      ['连续答对 2 次', '3', '保持待复习'],
+                      ['连续答对 3 次', '7', '保持待复习'],
+                    ].map(([label, days, state], index) => <li key={days} className="relative text-center"><div className="mb-1 flex h-3 items-center justify-center"><span className="relative z-10 h-2.5 w-2.5 rounded-full border-2 border-amber-500 bg-white ring-4 ring-white" />{index < 2 && <span className="absolute left-1/2 top-1.5 w-[calc(100%+1rem)] border-t border-slate-200" />}</div><p className="text-[13px] text-slate-700">{label}</p><span className="mt-1 inline-block rounded-full border border-amber-200 px-2 py-0.5 text-[11px] font-semibold text-amber-700">{state}</span><p className="mt-1 text-[13px] text-slate-700"><b className="mr-1 text-3xl font-black text-amber-600">{days}</b>天后复习</p></li>)}
+                  </ol>
+                  <p className="mt-1 text-center text-xs text-slate-600">连续答对期间保持黄色，复习间隔逐步拉长。</p>
+                  <p className="mt-0.5 text-center text-[11px] text-slate-500">间隔均从本次答对后开始计算。</p>
+                </section>
+                <div className="mt-1 divide-y divide-slate-100 border-t border-slate-100 text-[13px]">
+                  <p className="flex items-center gap-2 py-1 text-slate-700"><RotateCcw size={15} className="shrink-0 text-rose-500" /><span className="w-24">任何一次答错</span><ArrowRight size={14} className="text-slate-400" /><span>回到</span><span className="ml-1 h-2 w-2 rounded-full bg-rose-500" /><b>待攻克</b></p>
+                  <p className="flex items-center gap-2 pt-1 text-slate-700"><CheckCircle2 size={15} className="shrink-0 text-emerald-500" /><span className="w-24">标记掌握</span><ArrowRight size={14} className="text-slate-400" /><span>转为</span><span className="ml-1 h-2 w-2 rounded-full bg-emerald-500" /><b>已掌握</b><span className="text-slate-400">·</span><span>30 天后抽查</span></p>
+                </div>
               </div>
             </motion.div>
           </div>
