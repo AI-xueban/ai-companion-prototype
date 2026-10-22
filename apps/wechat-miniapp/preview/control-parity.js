@@ -121,9 +121,9 @@
       return [refLocked({className}) ? '已开启临时锁屏' : '未开启临时锁屏'];
     }
     if (module === 'borrowing') return student.schedules.length ? student.schedules.map(rule => R.borrowText(rule) + (rule.mode === 'dates' ? ' · ' + R.borrowStatus(rule) : '')) : ['未设置借用规则，没有有效规则时不能借用'];
-    if (module === 'duration') return R.durationGroups(student);
+    if (module === 'duration') return R.durationGroups(student).map(text => text.replace(/(?:单独规则|默认规则) · /g, ''));
     if (module === 'homework') return [`答案${student.answer ? '允许' : '不允许'} · 详解${student.explanation ? '允许' : '不允许'}`];
-    return [module === 'world' ? student.world ? '万象视界允许使用' : '万象视界禁止使用' : isLocked(student) ? '平板已锁屏' : '平板未锁屏'];
+    return [module === 'world' ? student.world ? '允许使用' : '禁止使用' : isLocked(student) ? '已锁屏' : '未锁屏'];
   }
   function configurationKey(student, module = controlModule) {
     return JSON.stringify(module === 'duration' ? R.durationGroups(student) : module === 'borrowing' ? R.prune(student.schedules).map(rule => { const { id, ...value } = rule; return value; }).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))) : summary(student, module));
