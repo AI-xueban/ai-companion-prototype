@@ -16,8 +16,8 @@ window.demoWorkspace = (() => {
   ];
   const entries = catalog.flatMap(g=>g.roles?g.roles.flatMap(r=>r.items):g.items);
   let selected='', activeFlow='',flowRole='',stateInfo=null;
-  const loginUiKey='twj-review-login-ui';
-  let loginUiMode=(()=>{try{return sessionStorage.getItem(loginUiKey)==='legacy'?'legacy':'new';}catch{return 'new';}})();
+  const uiKey='twj-review-ui-mode';
+  let uiMode=(()=>{try{return sessionStorage.getItem(uiKey)==='legacy'?'legacy':'new';}catch{return 'new';}})();
   const isControl = () => location.pathname.endsWith('control-prototype.html');
   const get = id => document.getElementById(id);
   const button = item => `<button data-dw-entry="${item.id}" class="${item.kind==='flow'?'dw-full-flow':''}" type="button">${esc(item.label)}</button>`;
@@ -67,27 +67,26 @@ window.demoWorkspace = (() => {
     get('dw-context').textContent=(parent?'家长':typeof stage!=='undefined'&&stage.startsWith('teacher')?'教师':'小程序')+' · '+title;
     document.querySelectorAll('[data-dw-entry]').forEach(b=>{const active=b.dataset.dwEntry===selected;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
     const accountStates=get('dw-account-states');if(accountStates)accountStates.hidden=parent||stage==='home';
-    syncLoginUi();
+    syncUi();
     syncFlow();
   }
-  function syncLoginUi(){
-    const selector=get('dw-login-ui');if(!selector)return;
-    selector.hidden=!document.querySelector('#app .parent-login-screen,#app .teacher-login-screen');
-    document.body.classList.toggle('dw-login-ui-new',loginUiMode==='new');
-    selector.querySelectorAll('[data-dw-login-ui]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.dwLoginUi===loginUiMode)));
+  function syncUi(){
+    const selector=get('dw-ui-mode');if(!selector)return;
+    document.body.classList.toggle('dw-ui-new',uiMode==='new');
+    selector.querySelectorAll('[data-dw-ui-mode]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.dwUiMode===uiMode)));
   }
-  function setLoginUi(mode){
+  function setUiMode(mode){
     if(!['new','legacy'].includes(mode))return;
-    loginUiMode=mode;
-    try{sessionStorage.setItem(loginUiKey,mode);}catch{}
-    syncLoginUi();
+    uiMode=mode;
+    try{sessionStorage.setItem(uiKey,mode);}catch{}
+    syncUi();
   }
   function setState(context){stateInfo=context;const dock=get('dw-state');if(!dock)return;dock.hidden=!context?.choices?.length;get('dw-state-title').textContent='当前页：'+(context?.title||'');get('dw-state-active').textContent=context?.active?'正在演示：'+(context.label||context.active):'正常';get('dw-state-restore').hidden=!context?.active;}
   function restart(){window.pageDemoTools?.restore();if(activeFlow==='homework')homeworkDemoConsole.start('published');else if(flowRole==='parent')parentPrototype.restart();else if(flowRole==='teacher')restartTeacherScenario();sync();}
   async function copyLink(){const url=new URL(location.href);if(selected)url.searchParams.set('demo',selected);url.searchParams.delete('demoState');try{await navigator.clipboard.writeText(url.href);get('dw-copy').textContent='已复制';setTimeout(()=>get('dw-copy').textContent='复制场景入口',1500);}catch{prompt('复制场景入口',url.href);}}
   function init(){
     if(!enabled)return;document.body.classList.add('demo-workspace');
-    const root=document.createElement('div');root.id='demo-workspace';root.innerHTML=`<header class="dw-header"><div><button type="button" onclick="document.body.classList.toggle('dw-nav-open')" aria-label="展开功能目录">☰</button><strong>小程序演示台</strong><small>方案预览</small></div><div><button onclick="demoWorkspace.focus()" id="dw-focus">专注预览</button><button onclick="demoWorkspace.copyLink()" id="dw-copy">复制场景入口</button></div></header><nav class="dw-sidebar" aria-label="演示功能目录"><input class="dw-search" id="dw-search" type="search" placeholder="搜索功能或流程" aria-label="搜索功能或流程">${catalog.map(g=>`<details data-dw-group="${g.id}" ${g.id==='login'?'open':''}><summary>${g.label}</summary>${g.roles?g.roles.map(r=>`<details class="dw-role" ${r.id==='parent'?'open':''}><summary>${r.label}</summary><div class="dw-items">${r.items.map(button).join('')}</div></details>`).join(''):`<div class="dw-items">${g.items.map(button).join('')}</div>`}</details>`).join('')}</nav><section class="dw-center"><div class="dw-context" id="dw-context"></div><div class="dw-login-ui" id="dw-login-ui" hidden aria-label="登录页视觉版本"><span>登录页视觉</span><div class="dw-login-ui-options"><button type="button" data-dw-login-ui="new" onclick="demoWorkspace.setLoginUi('new')">新版</button><button type="button" data-dw-login-ui="legacy" onclick="demoWorkspace.setLoginUi('legacy')">原版</button></div></div><div id="dw-canvas"></div><section class="dw-state" id="dw-state" hidden aria-label="当前页状态演示"><div class="dw-state-heading"><span id="dw-state-title"></span><span id="dw-state-active"></span><button id="dw-state-restore" onclick="pageDemoTools.restore()" hidden>恢复</button><button onclick="pageDemoTools.toggle()" id="dw-state-toggle" aria-expanded="false">状态与异常 ▾</button></div><div id="dw-state-body"></div></section></section><button class="dw-flow-toggle" onclick="demoWorkspace.toggleFlow()" aria-controls="dw-flow" aria-expanded="false">‹ 流程</button><aside class="dw-flow" id="dw-flow" aria-label="当前流程辅助"><div class="dw-flow-head"><span id="dw-flow-title">当前流程</span><button onclick="demoWorkspace.toggleFlow()" aria-label="收起流程">›</button></div><div id="dw-flow-body"></div><details id="dw-account-states"><summary>账号与数据演示</summary><p>这些状态沿用原控制台，会改变教师演示账号和数据范围。</p>${Object.entries({noClasses:'当前教师无班级',noStudents:'当前班级无学生',deleted:'离职后账号已删除',normal:'恢复正常账号与数据'}).map(([id,label])=>`<button data-availability="${id}" onclick="demoWorkspace.availability('${id}')">${label}</button>`).join('')}</details></aside>`;
+    const root=document.createElement('div');root.id='demo-workspace';root.innerHTML=`<header class="dw-header"><div><button type="button" onclick="document.body.classList.toggle('dw-nav-open')" aria-label="展开功能目录">☰</button><strong>小程序演示台</strong><small>方案预览</small></div><div><button onclick="demoWorkspace.focus()" id="dw-focus">专注预览</button><button onclick="demoWorkspace.copyLink()" id="dw-copy">复制场景入口</button></div></header><nav class="dw-sidebar" aria-label="演示功能目录"><input class="dw-search" id="dw-search" type="search" placeholder="搜索功能或流程" aria-label="搜索功能或流程">${catalog.map(g=>`<details data-dw-group="${g.id}" ${g.id==='login'?'open':''}><summary>${g.label}</summary>${g.roles?g.roles.map(r=>`<details class="dw-role" ${r.id==='parent'?'open':''}><summary>${r.label}</summary><div class="dw-items">${r.items.map(button).join('')}</div></details>`).join(''):`<div class="dw-items">${g.items.map(button).join('')}</div>`}</details>`).join('')}</nav><section class="dw-center"><div class="dw-context" id="dw-context"></div><div class="dw-ui-mode" id="dw-ui-mode" aria-label="全局界面视觉版本"><span>全局界面</span><div class="dw-ui-mode-options"><button type="button" data-dw-ui-mode="new" onclick="demoWorkspace.setUiMode('new')">新版</button><button type="button" data-dw-ui-mode="legacy" onclick="demoWorkspace.setUiMode('legacy')">原版</button></div></div><div id="dw-canvas"></div><section class="dw-state" id="dw-state" hidden aria-label="当前页状态演示"><div class="dw-state-heading"><span id="dw-state-title"></span><span id="dw-state-active"></span><button id="dw-state-restore" onclick="pageDemoTools.restore()" hidden>恢复</button><button onclick="pageDemoTools.toggle()" id="dw-state-toggle" aria-expanded="false">状态与异常 ▾</button></div><div id="dw-state-body"></div></section></section><button class="dw-flow-toggle" onclick="demoWorkspace.toggleFlow()" aria-controls="dw-flow" aria-expanded="false">‹ 流程</button><aside class="dw-flow" id="dw-flow" aria-label="当前流程辅助"><div class="dw-flow-head"><span id="dw-flow-title">当前流程</span><button onclick="demoWorkspace.toggleFlow()" aria-label="收起流程">›</button></div><div id="dw-flow-body"></div><details id="dw-account-states"><summary>账号与数据演示</summary><p>这些状态沿用原控制台，会改变教师演示账号和数据范围。</p>${Object.entries({noClasses:'当前教师无班级',noStudents:'当前班级无学生',deleted:'离职后账号已删除',normal:'恢复正常账号与数据'}).map(([id,label])=>`<button data-availability="${id}" onclick="demoWorkspace.availability('${id}')">${label}</button>`).join('')}</details></aside>`;
     document.body.append(root);get('dw-canvas').append(document.querySelector('.device'));
     root.querySelectorAll('[data-dw-entry]').forEach(b=>b.addEventListener('click',()=>{select(b.dataset.dwEntry);if(innerWidth<=650)document.body.classList.remove('dw-nav-open');}));
     let searchOpen=null;
@@ -99,7 +98,7 @@ window.demoWorkspace = (() => {
     const requested=query.get('demo');if(entries.some(e=>e.id===requested)){root.querySelectorAll('.dw-sidebar details').forEach(d=>d.open=false);select(requested);}else if(typeof teacherScenario!=='undefined'&&teacherScenario){activeFlow='teacher';flowRole='teacher';}else if(typeof stage!=='undefined'&&stage==='parent'){activeFlow='parent';flowRole='parent';}
     window.pageDemoTools?.sync();sync();if(query.get('demoState'))window.pageDemoTools?.select(query.get('demoState'));
   }
-  const api={enabled,catalog,entries,select,sync,syncFlow,setState,setLoginUi,restart,copyLink,init,toggleFlow(){if(window.homeworkDemoConsole?.isActive())activeFlow='homework';document.body.classList.toggle('dw-flow-open');document.querySelector('.dw-flow-toggle')?.setAttribute('aria-expanded',String(document.body.classList.contains('dw-flow-open')));syncFlow();},focus(){const on=document.body.classList.toggle('dw-focus');get('dw-focus').textContent=on?'退出专注':'专注预览';},availability(value){if(isControl()){const url=new URL('index.html',location.href);url.search='?review=1&availability='+value;location.assign(url.href);return;}window.pageDemoTools?.restore();setTeacherAvailability(value);sync();}};
+  const api={enabled,catalog,entries,select,sync,syncFlow,setState,setUiMode,restart,copyLink,init,toggleFlow(){if(window.homeworkDemoConsole?.isActive())activeFlow='homework';document.body.classList.toggle('dw-flow-open');document.querySelector('.dw-flow-toggle')?.setAttribute('aria-expanded',String(document.body.classList.contains('dw-flow-open')));syncFlow();},focus(){const on=document.body.classList.toggle('dw-focus');get('dw-focus').textContent=on?'退出专注':'专注预览';},availability(value){if(isControl()){const url=new URL('index.html',location.href);url.search='?review=1&availability='+value;location.assign(url.href);return;}window.pageDemoTools?.restore();setTeacherAvailability(value);sync();}};
   return api;
 })();
 window.demoWorkspace.init();

@@ -10,6 +10,7 @@ window.pageDemoTools = (() => {
   }
   function getContext() {
     if (typeof location==='undefined' || new URLSearchParams(location.search).get('review')!=='1' || typeof stage==='undefined') return null;
+    if (stage==='parent' && ['1对1讲题','孩子的错题本'].includes(document.querySelector('#app .wx-title')?.textContent?.trim())) return null;
     const parent = stage==='parent', hw = parent ? window.parentPrototype?.getDemoContext?.().homework : stage==='teacherDesk' && typeof teacherTab!=='undefined' && teacherTab==='homework';
     if (hw && window.homeworkPrototype?.getPageDemoContext) {
       const role=parent?'parent':'teacher', c=window.homeworkPrototype.getPageDemoContext(role);
