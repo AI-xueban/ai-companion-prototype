@@ -35,24 +35,23 @@ const FACE_STUDENTS = [
 const FACE_LOGIN_RECORDS = [
   { time: '2026-09-28 08:31:22', id: '2026001', name: '张三', className: '一年级1班', result: 'success', method: '人脸识别', cabinet: '柜机-001', reason: '—' },
   { time: '2026-09-28 08:29:07', id: '2026008', name: '赵六', className: '一年级2班', result: 'failed', method: '人脸识别', cabinet: '柜机-001', reason: '未匹配到人脸' },
-  { time: '2026-09-27 16:12:45', id: '2026003', name: '王五（01）', className: '一年级1班', result: 'fallback', method: '学号密码', cabinet: '柜机-002', reason: '人脸已停用' },
+  { time: '2026-09-27 16:12:45', id: '2026003', name: '王五（01）', className: '一年级1班', result: 'fallback', method: '学号密码', cabinet: '柜机-002', reason: '未录入人脸' },
 ];
 let faceCurrentPage = 1;
 let facePageSize = 10;
 let faceSelectedSchool = '';
-let faceFilters = { id: '', name: '', className: '', status: '', faceState: '', hasFace: '' };
+let faceFilters = { id: '', name: '', className: '', status: '', hasFace: '' };
 FACE_STUDENTS.forEach((student, index) => {
   student.syncStatus = student.recognitionSource ? ['同步成功', '同步中', '同步失败', '待同步'][index % 4] : '';
   student.registeredPhotoFile = student.syncStatus === '同步成功' ? student.photoFile : null;
   student.syncFailureReason = student.syncStatus === '同步失败' ? (student.id === '2026005' ? '未检测到有效人脸，请更换照片' : '柜机 A03 下发失败，请重试') : '';
 });
 function searchFaceStudents(reset = false) {
-  faceFilters = reset ? { id: '', name: '', className: '', status: '', faceState: '', hasFace: '' } : {
+  faceFilters = reset ? { id: '', name: '', className: '', status: '', hasFace: '' } : {
     id: document.getElementById('face-filter-id').value.trim(),
     name: document.getElementById('face-filter-name').value.trim(),
     className: document.getElementById('face-filter-class').value,
     status: document.getElementById('face-filter-status').value,
-    faceState: document.getElementById('face-filter-state').value,
     hasFace: document.getElementById('face-filter-has-face').value
   };
   faceCurrentPage = 1;
@@ -74,7 +73,7 @@ function openFacePhotoEdit(id) {
   document.getElementById('modal-title').textContent = student.photoFile ? '修改照片' : '上传照片';
   document.getElementById('modal-subtitle').style.display = 'none';
   const photo = student.photoUrl ? '<img src="'+esc(student.photoUrl)+'" alt="当前学生照片">' : '<div class="face-edit-empty"><span class="face-edit-avatar">'+(student.photoFile?esc(student.name.slice(0,1)):'—')+'</span><span>'+(student.photoFile?'示例照片':'暂无照片')+'</span></div>';
-  document.getElementById('modal-body').innerHTML = '<div class="face-edit-ui"><div class="face-edit-student"><strong>'+esc(student.name)+'</strong><span>编号：'+esc(student.id)+'</span><span>'+esc(student.className)+'</span></div><div class="face-edit-columns"><section class="face-edit-panel"><h4>当前照片</h4><div class="face-edit-image">'+photo+'</div><p class="face-edit-filename">'+esc(student.photoFile||'尚未上传照片')+'</p></section><section class="face-edit-panel"><h4>新照片</h4><label class="face-edit-upload" id="face-edit-upload" for="face-edit-file"><div id="face-edit-preview" class="face-edit-image"><div class="face-edit-empty"><span class="face-edit-plus">＋</span><strong>点击上传照片</strong><span>JPG / JPEG / PNG · 自动压缩</span></div></div><input id="face-edit-file" type="file" accept="image/jpeg,image/png" hidden onchange="selectFaceEditPhoto(this)"></label><div class="face-edit-file-actions"><span class="face-edit-filename" id="face-edit-filename">上传后自动以学生姓名命名</span><button type="button" class="btn-link" id="face-edit-reselect" hidden onclick="document.getElementById(&quot;face-edit-file&quot;).click()">重新选择</button></div></section></div><p class="face-edit-note">自动压缩至每张不超过 2MB，并以学生姓名命名。同步成功后更新学生照片及最近注册成功照片。</p></div>';
+  document.getElementById('modal-body').innerHTML = '<div class="face-edit-ui"><div class="face-edit-student"><strong>'+esc(student.name)+'</strong><span>编号：'+esc(student.id)+'</span><span>'+esc(student.className)+'</span></div><div class="face-edit-columns"><section class="face-edit-panel"><h4>当前照片</h4><div class="face-edit-image">'+photo+'</div><p class="face-edit-filename">'+esc(student.photoFile||'尚未上传照片')+'</p></section><section class="face-edit-panel"><h4>新照片</h4><label class="face-edit-upload" id="face-edit-upload" for="face-edit-file"><div id="face-edit-preview" class="face-edit-image"><div class="face-edit-empty"><span class="face-edit-plus">＋</span><strong>点击上传照片</strong><span>JPG / JPEG / PNG · 自动压缩</span></div></div><input id="face-edit-file" type="file" accept="image/jpeg,image/png" hidden onchange="selectFaceEditPhoto(this)"></label><div class="face-edit-file-actions"><span class="face-edit-filename" id="face-edit-filename">请选择照片</span><button type="button" class="btn-link" id="face-edit-reselect" hidden onclick="document.getElementById(&quot;face-edit-file&quot;).click()">重新选择</button></div></section></div><p class="face-edit-note">自动压缩至每张不超过 2MB。同步成功后更新学生照片及最近注册成功照片。</p></div>';
   document.getElementById('modal-footer').innerHTML = `<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-primary" id="face-edit-save" disabled>保存并同步</button>`;
   document.getElementById('face-edit-save').onclick = () => saveFacePhotoEdit(id);
   document.getElementById('modal-footer').style.display = '';
@@ -117,7 +116,7 @@ async function selectFaceEditPhoto(input) {
   }
   if (!student) return;
   const extension = file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase();
-  const savedName = student.name + '.' + extension;
+  const savedName = file.name;
   document.getElementById('face-edit-filename').textContent = '正在处理照片…';
   let compressed;
   try { compressed = await compressFacePhoto(file); } catch(error) {
@@ -151,6 +150,87 @@ function saveFacePhotoEdit(id) {
   saveFaceHistory();
   closeModal(); navigate('face-library'); toast('照片已更新，已加入同步队列', 'success');
   processFaceSyncQueue();
+}
+function faceStudentHasPhoto(student) {
+  return !!(student?.photoFile || student?.registeredPhotoFile || student?.pendingPhoto);
+}
+function deleteFaceStudentPhotos(student) {
+  if (student.photoUrl?.startsWith('blob:')) URL.revokeObjectURL(student.photoUrl);
+  if (student.pendingPhoto?.url?.startsWith('blob:')) URL.revokeObjectURL(student.pendingPhoto.url);
+  student.photoFile = null;
+  student.photoUrl = null;
+  student.registeredPhotoFile = null;
+  delete student.pendingPhoto;
+  delete student.syncTaskId;
+  student.recognitionSource = null;
+  student.updatedAt = null;
+  student.syncStatus = '';
+  student.syncFailureReason = '';
+}
+function openFacePhotoDelete(id) {
+  const student = FACE_STUDENTS.find(item => item.id === id && item.schoolId === faceSelectedSchool);
+  if (!student || !faceStudentHasPhoto(student)) return;
+  openFaceDialog('删除照片', '<p>确认删除学生：'+esc(student.name)+'（'+esc(student.id)+'）的照片吗？</p><p class="form-hint">删除后，学生照片和最近注册成功照片都会清空。</p>', '<button class="btn" onclick="closeModal()">取消</button><button class="btn face-bulk-danger" id="face-photo-delete-confirm">确认删除</button>');
+  document.getElementById('modal').classList.remove('modal-xl', 'modal-sm', 'modal-lg');
+  document.getElementById('modal').classList.add('modal-md');
+  document.getElementById('face-photo-delete-confirm').onclick = () => {
+    deleteFaceStudentPhotos(student);
+    closeModal();
+    navigate('face-library');
+    toast('照片已删除', 'success');
+  };
+}
+let facePhotoDeleteScope = 'grade';
+let facePhotoDeleteValues = [];
+function filteredFaceStudents() {
+  return FACE_STUDENTS.filter(student => student.schoolId === faceSelectedSchool && student.id.includes(faceFilters.id) && student.name.includes(faceFilters.name) && (!faceFilters.className || student.className === faceFilters.className) && (!faceFilters.status || student.syncStatus === faceFilters.status) && (!faceFilters.hasFace || (student.photoFile || student.recognitionSource ? 'yes' : 'no') === faceFilters.hasFace));
+}
+function facePhotoDeleteValue(student) { return facePhotoDeleteScope === 'grade' ? faceGrade(student) : student.className; }
+function facePhotoDeleteEligible(student) { return student.schoolId === faceSelectedSchool && faceStudentHasPhoto(student); }
+function renderFacePhotoDeleteOptions() {
+  const students = FACE_STUDENTS.filter(student => student.schoolId === faceSelectedSchool);
+  const values = [...new Set(students.map(facePhotoDeleteValue))];
+  return values.map(value => {
+    const count = students.filter(student => facePhotoDeleteValue(student) === value && facePhotoDeleteEligible(student)).length;
+    return '<label class="face-bulk-row '+(!count?'is-disabled':'')+'"><input type="checkbox" name="face-photo-delete-range" value="'+esc(value)+'" '+(!count?'disabled':'')+' '+(facePhotoDeleteValues.includes(value)?'checked':'')+' onchange="updateFacePhotoDeleteSelection()"><span>'+esc(value)+'</span><span class="face-bulk-row-count">'+(count?count+' 张':'暂无照片')+'</span></label>';
+  }).join('');
+}
+function switchFacePhotoDeleteScope(value) {
+  facePhotoDeleteScope = value === 'class' ? 'class' : 'grade';
+  facePhotoDeleteValues = [];
+  document.getElementById('face-photo-delete-options').innerHTML = renderFacePhotoDeleteOptions();
+  updateFacePhotoDeleteSelection();
+}
+function toggleAllFacePhotoDelete(checked) {
+  document.querySelectorAll('input[name="face-photo-delete-range"]:not(:disabled)').forEach(input => { input.checked = checked; });
+  updateFacePhotoDeleteSelection();
+}
+function updateFacePhotoDeleteSelection() {
+  facePhotoDeleteValues = [...document.querySelectorAll('input[name="face-photo-delete-range"]:checked')].map(input => input.value);
+  const count = FACE_STUDENTS.filter(student => facePhotoDeleteValues.includes(facePhotoDeleteValue(student)) && facePhotoDeleteEligible(student)).length;
+  const label = facePhotoDeleteScope === 'grade' ? '年级' : '班级';
+  document.getElementById('face-photo-delete-summary').textContent = '已选 '+facePhotoDeleteValues.length+' 个'+label+'，共 '+count+' 张照片';
+  document.getElementById('face-photo-delete-next').disabled = !count;
+  const all = document.getElementById('face-photo-delete-all');
+  const choices = [...document.querySelectorAll('input[name="face-photo-delete-range"]:not(:disabled)')];
+  if (all) { all.disabled = !choices.length; all.checked = choices.length > 0 && choices.every(input => input.checked); all.indeterminate = choices.some(input => input.checked) && !all.checked; }
+}
+function openFacePhotoBulkDelete(keepSelection = false) {
+  if (!keepSelection) facePhotoDeleteValues = [];
+  const scopeButtons = ['grade','class'].map(type => '<label><input type="radio" name="face-photo-delete-scope" value="'+type+'" '+(facePhotoDeleteScope===type?'checked':'')+' onchange="switchFacePhotoDeleteScope(this.value)"><span>'+(type==='grade'?'按年级':'按班级')+'</span></label>').join('');
+  const school = FACE_SCHOOLS.find(item => item.id === faceSelectedSchool)?.name || '';
+  openFaceDialog('批量删除年级/班级照片','<div class="face-bulk-ui"><div class="face-bulk-school"><span>所属学校</span><strong>'+esc(school)+'</strong></div><div class="face-bulk-scope"><span>删除范围</span><div class="face-photo-delete-radios">'+scopeButtons+'</div></div><p class="face-bulk-help">选择需要删除照片的年级或班级，可多选。</p><div class="face-bulk-list"><div class="face-bulk-list-head"><label><input type="checkbox" id="face-photo-delete-all" onchange="toggleAllFacePhotoDelete(this.checked)"> 全选</label><span>照片数量</span></div><div id="face-photo-delete-options">'+renderFacePhotoDeleteOptions()+'</div></div><div class="face-bulk-summary" id="face-photo-delete-summary">已选 0 项，共 0 张照片</div></div>','<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-primary" id="face-photo-delete-next" disabled onclick="confirmFacePhotoBulkDelete()">下一步</button>');
+  updateFacePhotoDeleteSelection();
+}
+function confirmFacePhotoBulkDelete() {
+  const values = [...facePhotoDeleteValues], scope = facePhotoDeleteScope;
+  const students = FACE_STUDENTS.filter(student => values.includes(scope === 'grade' ? faceGrade(student) : student.className) && facePhotoDeleteEligible(student));
+  if (!students.length) return toast('请选择有照片的年级或班级', 'warning');
+  const label = scope === 'grade' ? '年级' : '班级';
+  openFaceDialog('确认批量删除照片','<div class="face-bulk-ui face-bulk-confirm"><p style="line-height:1.8;margin:0 0 12px">确认删除 <strong>'+values.map(value=>esc(value)).join('、')+'</strong> 共 <strong>'+students.length+'</strong> 张学生照片吗？</p><div class="face-bulk-warning">删除后，学生照片和最近注册成功照片都会清空。</div></div>','<button class="btn" onclick="openFacePhotoBulkDelete(true)">上一步</button><button class="btn" onclick="closeModal()">取消</button><button class="btn face-bulk-danger" id="face-photo-delete-confirm">确认删除</button>');
+  const modal = document.getElementById('modal');
+  modal.classList.remove('modal-xl','modal-sm','modal-lg'); modal.classList.add('modal-md');
+  document.getElementById('face-photo-delete-confirm').onclick = () => { students.forEach(deleteFaceStudentPhotos); closeModal(); navigate('face-library'); toast('已删除 '+values.length+' 个'+label+'、'+students.length+' 张学生照片','success'); };
 }
 
 
@@ -475,7 +555,7 @@ function switchFacePage(page) {
 function switchFaceSchool(schoolId) {
   faceSelectedSchool = schoolId;
 
-  faceFilters = { id: '', name: '', className: '', status: '', faceState: '', hasFace: '' };
+  faceFilters = { id: '', name: '', className: '', status: '', hasFace: '' };
   faceCurrentPage = 1;
   navigate('face-library');
 }
@@ -489,17 +569,17 @@ function renderFaceLibraryPage() {
   }
   const schoolStudents = FACE_STUDENTS.filter(student => student.schoolId === faceSelectedSchool);
   const schoolClasses = [...new Set(schoolStudents.map(student => student.className))];
-  const filteredStudents = schoolStudents.filter(student => student.id.includes(faceFilters.id) && student.name.includes(faceFilters.name) && (!faceFilters.className || student.className === faceFilters.className) && (!faceFilters.status || student.syncStatus === faceFilters.status) && (!faceFilters.faceState || (faceDisabled[student.id] ? 'disabled' : 'normal') === faceFilters.faceState) && (!faceFilters.hasFace || (student.photoFile || student.recognitionSource ? 'yes' : 'no') === faceFilters.hasFace));
+  const filteredStudents = filteredFaceStudents();
   const totalPages = Math.max(1, Math.ceil(filteredStudents.length / facePageSize));
   faceCurrentPage = Math.min(faceCurrentPage, totalPages);
   const pageStudents = filteredStudents.slice((faceCurrentPage - 1) * facePageSize, faceCurrentPage * facePageSize);
   return `<div class="page-card">
     <div class="page-card-header"><div><div class="page-card-title">学生人脸信息</div><p class="form-hint">查看当前学校柜机录入并同步的学生人脸信息。学生照片仅展示后台最近一次上传的照片，当前识别数据以人脸来源为准。</p></div></div>
     ${schoolSelector}
-    <div class="filter-row"><label>学生编号 <input id="face-filter-id" class="input" placeholder="请输入学生编号" value="${esc(faceFilters.id)}"></label><label>姓名 <input id="face-filter-name" class="input" placeholder="请输入姓名" value="${esc(faceFilters.name)}"></label><label>班级 <select id="face-filter-class" class="select"><option value="">全部班级</option>${schoolClasses.map(c => `<option value="${esc(c)}" ${faceFilters.className === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label><label>是否已有人脸信息 <select id="face-filter-has-face" class="select"><option value="">全部</option><option value="yes" ${faceFilters.hasFace === 'yes' ? 'selected' : ''}>有</option><option value="no" ${faceFilters.hasFace === 'no' ? 'selected' : ''}>无</option></select></label><label>人脸状态 <select id="face-filter-state" class="select"><option value="">全部</option><option value="normal" ${faceFilters.faceState === 'normal' ? 'selected' : ''}>正常</option><option value="disabled" ${faceFilters.faceState === 'disabled' ? 'selected' : ''}>已禁用</option></select></label><label>同步状态 <select id="face-filter-status" class="select"><option value="">全部状态</option>${['同步中','同步成功','同步失败','待同步'].map(status => `<option ${faceFilters.status === status ? 'selected' : ''}>${status}</option>`).join('')}</select></label><button class="btn btn-secondary" onclick="searchFaceStudents(true)">重置</button><button class="btn btn-primary" onclick="searchFaceStudents()">搜索</button></div>
-    <div class="page-card-actions" style="margin:16px 0"><button class="btn btn-primary" onclick="openFaceImportModal()">＋ 导入照片</button> <button class="btn" id="face-bulk-disable" onclick="openFaceBulkDisable()">批量禁用年级/班级</button> <button class="btn" id="face-bulk-restore" onclick="openFaceBulkRestore()">批量恢复年级/班级</button> <button class="btn" onclick="openFaceSyncStatus()">查看同步状态${faceSyncPendingCount() ? '（'+faceSyncPendingCount()+'）' : ''}</button></div>
-    <table class="data-table"><thead><tr><th>学生编号</th><th>姓名</th><th>班级</th><th title="保留最近同步成功的照片，新照片同步成功后更新">学生照片</th><th title="本次更新尚未同步成功时为空">最近注册成功照片</th><th>人脸来源</th><th>最近更新时间</th><th>人脸状态</th><th>同步状态</th><th>操作</th></tr></thead><tbody>${pageStudents.map(s => `<tr><td>${s.id}</td><td>${s.name}</td><td>${s.className}</td><td>${facePhotoHtml(s)}</td><td>${s.registeredPhotoFile ? facePhotoHtml(s) : '<span class="text-muted">—</span>'}</td><td>${s.recognitionSource || '—'}</td><td>${s.updatedAt || '—'}</td><td>${faceDisabled[s.id] ? '<span style="color:#cf1322">已禁用</span>' : '正常'}</td><td><span style="color:${({'同步中':'#1677ff','同步成功':'#389e0d','同步失败':'#cf1322','待同步':'#d48806'})[s.syncStatus] || '#999'}">${s.syncStatus || '—'}</span></td><td style="white-space:nowrap"><button class="btn-link" onclick="openFacePhotoEdit('${s.id}')">${s.photoFile ? '修改照片' : '上传照片'}</button> ${faceDisabled[s.id] ? `<button class="btn-link" onclick="openFaceRestore('${s.id}')">恢复</button>` : `<button class="btn-link" onclick="openFaceDisable('${s.id}')">禁用人脸</button>`}</td></tr>`).join('')}</tbody></table>
-    <div class="pagination pagination--with-size"><span class="page-btn ${faceCurrentPage === 1 ? 'disabled' : ''}" onclick="${faceCurrentPage === 1 ? '' : 'switchFacePage(' + (faceCurrentPage - 1) + ')'}">‹</span>${Array.from({length: totalPages}, (_, i) => `<span class="page-btn ${faceCurrentPage === i + 1 ? 'active' : ''}" onclick="switchFacePage(${i + 1})">${i + 1}</span>`).join('')}<span class="page-btn ${faceCurrentPage === totalPages ? 'disabled' : ''}" onclick="${faceCurrentPage === totalPages ? '' : 'switchFacePage(' + (faceCurrentPage + 1) + ')'}">›</span><span class="page-size-picker">每页 <select class="select page-size-select" aria-label="每页条数"><option selected>10 条</option><option>20 条</option><option>50 条</option></select></span><span class="page-jump">跳至 <input class="input sm" value="${faceCurrentPage}"> 页</span></div>
+    <div class="filter-row"><label>学生编号 <input id="face-filter-id" class="input" placeholder="请输入学生编号" value="${esc(faceFilters.id)}"></label><label>姓名 <input id="face-filter-name" class="input" placeholder="请输入姓名" value="${esc(faceFilters.name)}"></label><label>班级 <select id="face-filter-class" class="select"><option value="">全部班级</option>${schoolClasses.map(c => `<option value="${esc(c)}" ${faceFilters.className === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label><label>是否已有人脸信息 <select id="face-filter-has-face" class="select"><option value="">全部</option><option value="yes" ${faceFilters.hasFace === 'yes' ? 'selected' : ''}>有</option><option value="no" ${faceFilters.hasFace === 'no' ? 'selected' : ''}>无</option></select></label><label>同步状态 <select id="face-filter-status" class="select"><option value="">全部状态</option>${['同步中','同步成功','同步失败','待同步'].map(status => `<option ${faceFilters.status === status ? 'selected' : ''}>${status}</option>`).join('')}</select></label><button class="btn btn-secondary" onclick="searchFaceStudents(true)">重置</button><button class="btn btn-primary" onclick="searchFaceStudents()">搜索</button></div>
+    <div class="page-card-actions" style="margin:16px 0"><button class="btn btn-primary" onclick="openFaceImportModal()">＋ 导入照片</button> <button class="btn" onclick="openFacePhotoBulkDelete()">批量删除年级/班级照片</button> <button class="btn" onclick="openFaceSyncStatus()">查看同步状态${faceSyncPendingCount() ? '（'+faceSyncPendingCount()+'）' : ''}</button></div>
+    <table class="data-table"><thead><tr><th>学生编号</th><th>姓名</th><th>班级</th><th title="保留最近同步成功的照片，新照片同步成功后更新">学生照片</th><th title="本次更新尚未同步成功时为空">最近注册成功照片</th><th>人脸来源</th><th>最近更新时间</th><th>同步状态</th><th>操作</th></tr></thead><tbody>${pageStudents.map(s => `<tr><td>${s.id}</td><td>${s.name}</td><td>${s.className}</td><td>${facePhotoHtml(s)}</td><td>${s.registeredPhotoFile ? facePhotoHtml(s) : '<span class="text-muted">—</span>'}</td><td>${s.recognitionSource || '—'}</td><td>${s.updatedAt || '—'}</td><td><span style="color:${({'同步中':'#1677ff','同步成功':'#389e0d','同步失败':'#cf1322','待同步':'#d48806'})[s.syncStatus] || '#999'}">${s.syncStatus || '—'}</span></td><td style="white-space:nowrap"><button class="btn-link" onclick="openFacePhotoEdit('${s.id}')">${s.photoFile ? '修改照片' : '上传照片'}</button>${faceStudentHasPhoto(s) ? ` <button class="btn-link" style="color:#cf1322" onclick="openFacePhotoDelete('${s.id}')">删除照片</button>` : ''}</td></tr>`).join('')}</tbody></table>
+    <div class="pagination pagination--with-size"><span class="page-btn ${faceCurrentPage === 1 ? 'disabled' : ''}" onclick="${faceCurrentPage === 1 ? '' : 'switchFacePage(' + (faceCurrentPage - 1) + ')'}">‹</span>${Array.from({length: totalPages}, (_, i) => `<span class="page-btn ${faceCurrentPage === i + 1 ? 'active' : ''}" onclick="switchFacePage(${i+1})">${i + 1}</span>`).join('')}<span class="page-btn ${faceCurrentPage === totalPages ? 'disabled' : ''}" onclick="${faceCurrentPage === totalPages ? '' : 'switchFacePage(' + (faceCurrentPage + 1) + ')'}">›</span><span class="page-size-picker">每页 <select class="select page-size-select" aria-label="每页条数"><option selected>10 条</option><option>20 条</option><option>50 条</option></select></span><span class="page-jump">跳至 <input class="input sm" value="${faceCurrentPage}"> 页</span></div>
   </div>`;
 }
 
@@ -592,7 +672,8 @@ function closeFaceSyncDrawer(){document.getElementById('face-sync-drawer')?.remo
 function renderFaceSyncCard(t){
   const c=faceTaskCounts(t),done=c.success+c.failed,remaining=c.waiting+c.running;
   const errors=t.items.filter(i=>i.status==='同步失败');
-  return '<article class="face-sync-card"><div class="face-sync-card-head"><strong title="'+esc(t.fileName)+'">'+esc(t.fileName)+'</strong><span class="face-sync-card-time">'+esc(t.time)+'</span>'+(remaining===0?'<span>同步完成</span>':'<span style="color:#1677ff">同步中</span>')+'</div><div class="face-sync-card-progress"><progress max="'+t.items.length+'" value="'+done+'" aria-label="'+esc(t.fileName)+'同步进度"></progress><strong>'+done+' / '+t.items.length+' 张</strong></div><div class="face-sync-card-meta"><span>'+esc(t.className)+'</span><span>待同步 '+c.waiting+'</span><span>同步中 '+c.running+'</span><span>同步成功 '+c.success+'</span><span class="'+(c.failed?'face-sync-card-failed':'')+'">同步失败 '+c.failed+'</span></div>'+(errors.length?'<details data-task="'+esc(t.id)+'"><summary>查看异常（'+errors.length+'）</summary><div class="face-sync-errors">'+errors.map(i=>'<div><strong>'+esc(i.fileName)+'</strong>'+(i.reason && i.reason!=='未检测到有效人脸，请更换照片'?'<p>'+esc(i.reason)+'</p>':'')+'</div>').join('')+'</div></details>':'')+'</article>';
+  const statusMeta=[['待同步',c.waiting],['同步中',c.running],['同步成功',c.success],['同步失败',c.failed]].filter(([,count])=>count>0).map(([label,count])=>'<span class="'+(label==='同步失败'?'face-sync-card-failed':'')+'">'+label+' '+count+'</span>').join('');
+  return '<article class="face-sync-card"><div class="face-sync-card-head"><strong title="'+esc(t.fileName)+'">'+esc(t.fileName)+'</strong><span class="face-sync-card-time">'+esc(t.time)+'</span>'+(remaining===0?'<span>已完成</span>':'<span style="color:#1677ff">进行中</span>')+'</div><div class="face-sync-card-progress"><progress max="'+t.items.length+'" value="'+done+'" aria-label="'+esc(t.fileName)+'同步进度"></progress><strong>'+done+' / '+t.items.length+' 张</strong></div><div class="face-sync-card-meta"><span>'+esc(t.className)+'</span>'+statusMeta+'</div>'+(errors.length?'<details data-task="'+esc(t.id)+'"><summary>查看异常（'+errors.length+'）</summary><div class="face-sync-errors">'+errors.map(i=>'<div><strong>'+esc(i.fileName)+'</strong></div>').join('')+'</div></details>':'')+'</article>';
 }
 function refreshFaceSyncDrawer(){
   const body=document.getElementById('face-sync-drawer-body');if(!body)return;
