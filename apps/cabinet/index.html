@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20261021-admin-eight" />
+  <link rel="stylesheet" href="styles.css?v=20261022-login-switch" />
 </head>
 <body>
   <aside class="studio-bar">
@@ -28,6 +28,7 @@
       <button type="button" class="nav-btn nav-demo" id="simulateEnrollFail">模拟录入失败</button>
       <button type="button" class="nav-btn nav-demo" id="simulateNotCharging">模拟未充电</button>
       <button type="button" class="nav-btn nav-demo" id="simulateDoorOpen">模拟门没关</button>
+      <button type="button" class="nav-btn nav-demo" id="simulateCabinetUpgrade">模拟柜机版本升级</button>
     </nav>
     <div class="admin-demo-note"><strong>管理员登录模拟</strong><p>模拟手机号：<br /><b>13800000000</b></p><p>模拟验证码：<b>123456</b></p><p>输入手机号 → 获取验证码 → 输入验证码 → 登录</p><small>仅用于原型演示，不发送真实短信。</small></div>
     <p class="studio-hint">画布会按窗口自动等比缩小，完整显示在当前屏幕内；设计稿仍为 1080×1920。</p>
@@ -116,20 +117,21 @@
             <button type="button" class="feedback-btn" id="faceRegister">人脸注册</button>
             <button type="button" class="feedback-btn" id="feedbackOpenBtn">问题反馈</button>
             <button type="button" class="feedback-btn" data-goto="admin-login">管理员登录</button>
+            <p class="cabinet-version">柜机版本 <span id="cabinetVersion">V1.3.0</span><span class="version-update-dot" id="cabinetUpdateDot" role="img" aria-label="有新版本" title="有新版本" hidden></span></p>
           </footer>
         </section>
-
-
         <section class="page page-admin-login" data-page="admin-login">
           <div class="admin-login-card">
             <h2 class="page-title">管理员登录</h2>
-            <p class="page-desc">使用本校学校管理员绑定的手机号登录</p>
-            <form id="adminLoginForm" class="login-form" novalidate>
-              <label class="field"><span class="field-label">手机号</span><input id="adminPhone" type="tel" inputmode="numeric" maxlength="11" autocomplete="off" placeholder="请输入管理员手机号" /></label>
-              <label class="field"><span class="field-label">短信验证码</span><div class="admin-code-row"><input id="adminCode" type="text" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="请输入6位验证码" /><button type="button" id="adminSendCode">获取验证码</button></div></label>
-              <p id="adminLoginTip" class="login-tip" role="status" hidden></p>
-              <button type="submit" class="primary-btn login-submit">登录</button>
-            </form>
+              <div id="adminLoginPanel">
+                <p class="page-desc">使用本校学校管理员绑定的手机号登录</p>
+                <form id="adminLoginForm" class="login-form" novalidate>
+                  <label class="field"><span class="field-label">手机号</span><input id="adminPhone" type="tel" inputmode="numeric" maxlength="11" autocomplete="off" placeholder="请输入管理员手机号" /></label>
+                  <label class="field"><span class="field-label">短信验证码</span><div class="admin-code-row"><input id="adminCode" type="text" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="请输入6位验证码" /><button type="button" id="adminSendCode">获取验证码</button></div></label>
+                  <p id="adminLoginTip" class="login-tip" role="status" hidden></p>
+                  <button type="submit" class="primary-btn login-submit">登录</button>
+                </form>
+              </div>
             <button type="button" class="text-btn" data-goto="home">← 返回首页</button>
           </div>
         </section>
@@ -166,39 +168,43 @@
             </div>
 
             <div class="password-login" id="passwordLogin" hidden>
-              <h2 class="page-title">学员登录</h2>
-              <p class="page-desc" id="passwordLoginDesc">请输入编号和密码后查看可用设备</p>
-              <form class="login-form" id="loginForm">
-              <label class="field">
-                <span class="field-label">编号</span>
-                <input
-                  id="studentId"
-                  name="studentId"
-                  type="text"
-                  inputmode="none"
-                  readonly
-                  autocomplete="off"
-                  placeholder="请输入编号"
-                  maxlength="20"
-                />
-              </label>
-              <label class="field">
-                <span class="field-label">密码</span>
-                <input
-                  id="studentPwd"
-                  name="studentPwd"
-                  type="password"
-                  inputmode="none"
-                  readonly
-                  autocomplete="off"
-                  placeholder="请输入密码"
-                  maxlength="20"
-                />
-              </label>
-              <p class="login-tip" id="loginTip" hidden>请填写编号和密码</p>
-              <button type="submit" class="primary-btn login-submit">登录</button>
-              </form>
-              <button type="button" class="back-btn" id="passwordToFace">人脸识别</button>
+              <h2 class="page-title" id="loginPageTitle">学生登录</h2>
+
+              <div id="studentLoginPanel">
+                <p class="page-desc" id="passwordLoginDesc">请输入编号和密码后查看可用设备</p>
+                <form class="login-form" id="loginForm">
+                  <label class="field">
+                    <span class="field-label">编号</span>
+                    <input
+                      id="studentId"
+                      name="studentId"
+                      type="text"
+                      inputmode="none"
+                      readonly
+                      autocomplete="off"
+                      placeholder="请输入编号"
+                      maxlength="20"
+                    />
+                  </label>
+                  <label class="field">
+                    <span class="field-label">密码</span>
+                    <input
+                      id="studentPwd"
+                      name="studentPwd"
+                      type="password"
+                      inputmode="none"
+                      readonly
+                      autocomplete="off"
+                      placeholder="请输入密码"
+                      maxlength="20"
+                    />
+                  </label>
+                  <p class="login-tip" id="loginTip" hidden>请填写编号和密码</p>
+                  <button type="submit" class="primary-btn login-submit">登录</button>
+                </form>
+                <button type="button" class="back-btn" id="passwordToFace">人脸识别</button>
+              </div>
+
               <button type="button" class="text-btn face-back" id="faceBack">← 返回首页</button>
             </div>
 
@@ -395,6 +401,6 @@
     </div>
   </main>
 
-  <script src="app.js?v=20261021-admin-eight"></script>
+  <script src="app.js?v=20261022-login-switch"></script>
 </body>
 </html>

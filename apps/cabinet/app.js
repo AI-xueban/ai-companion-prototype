@@ -179,7 +179,7 @@
   function showPage(name, options = {}) {
     if (registrationLocked) return;
     if (name === "admin-manage" && !adminSession) name = "admin-login";
-    if (name === "admin-login" || (adminSession && name !== "admin-manage")) resetAdminLogin();
+    if (name === "admin-login" || (name !== "admin-manage" && screenEl.dataset.page === "admin-login") || (adminSession && name !== "admin-manage")) resetAdminLogin();
     clearTimeout(enrollmentTimer);
     enrollFailureAction.hidden = true;
     document.querySelectorAll(".page").forEach((page) => {
@@ -946,4 +946,11 @@
   setInterval(updateClock, 1000 * 15);
   initBanner();
   initFeedback();
+
+  // Local demonstration only: no package download or cabinet update is performed.
+  const upgradeButton = document.getElementById("simulateCabinetUpgrade");
+  upgradeButton.addEventListener("click", () => {
+    if (registrationLocked || upgradeButton.disabled) return;
+    document.getElementById("cabinetUpdateDot").hidden = false;
+  });
 })();

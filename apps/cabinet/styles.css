@@ -687,11 +687,33 @@ button {
 .home-footer {
   flex-shrink: 0;
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   justify-content: center;
   gap: 24px;
   padding: 0 56px 40px;
 }
+
+.version-update-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-left: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+  vertical-align: middle;
+}
+
+.version-update-dot[hidden] { display: none; }
+
+.cabinet-version {
+  flex-basis: 100%;
+  margin: 0;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 22px;
+}
+
 
 .exception-return-entry {
   position: relative;
@@ -1385,7 +1407,7 @@ button {
   height: 100px;
 }
 
-/* —— 学员登录（整屏垂直居中） —— */
+/* —— 学生/管理员登录（整屏垂直居中） —— */
 .page-pickup {
   padding: 0;
   justify-content: center;
@@ -1401,8 +1423,17 @@ button {
 
 .page-pickup .page-title {
   font-size: 48px;
-  margin-bottom: 12px;
+  margin: 36px 0 12px;
   text-align: center;
+}
+
+#studentLoginPanel[hidden],
+#adminLoginPanel[hidden] {
+  display: none !important;
+}
+
+#adminLoginPanel .login-form {
+  text-align: left;
 }
 
 .page-pickup .page-desc {
@@ -2498,11 +2529,11 @@ button {
 .face-login.is-processing .face-desc { visibility: hidden; }
 
 /* Administrator screens */
-.page-admin-login {justify-content:center; align-items:center;}
-.admin-login-card {width:760px;text-align:center;}
-.admin-emblem {width:112px;height:112px;margin:0 auto 32px;border-radius:32px;background:#e8f3ff;color:#2563eb;font-size:76px;line-height:112px;}
-.admin-eyebrow {font-size:24px;color:#64748b;letter-spacing:2px;margin:0 0 16px;}
-.admin-login-card .login-form {text-align:left;margin-top:56px;}
+.page-admin-login { justify-content: center; align-items: center; }
+.admin-login-card { width: 800px; text-align: center; }
+.admin-login-card .page-title { font-size: 48px; margin: 0 0 12px; }
+.admin-login-card .page-desc { font-size: 28px; margin-bottom: 36px; }
+.admin-login-card > .text-btn { margin-top: 28px; color: #64748b; font-size: 24px; padding: 16px 24px; }
 .admin-code-row {display:flex;gap:18px;}
 .admin-code-row input {min-width:0;flex:1;}
 .admin-code-row button {border:1px solid #bfdbfe;background:#eff6ff;color:#2563eb;border-radius:18px;font:inherit;font-size:25px;padding:0 24px;min-width:210px;cursor:pointer;}
