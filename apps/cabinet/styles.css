@@ -2591,3 +2591,17 @@ button {
 .page-admin-manage .admin-menu-item strong {font-size:42px;font-weight:400;}
 .page-admin-manage .admin-menu-item:active {background:#4abde4;}
 .page-admin-manage .admin-feature-note {font-size:23px;margin-left:80px;}
+
+.cabinet-version { border: 0; background: transparent; cursor: pointer; font-family: inherit; }
+#adminVersionUpdate { position: relative; }
+#adminUpdateDot { position: absolute; top: 28px; right: 28px; }
+.upgrade-system-mask { position: absolute; inset: 0; z-index: 200; background: #0007; display: flex; align-items: center; justify-content: center; }
+.upgrade-system-mask[hidden], .upgrade-toast[hidden] { display: none; }
+.upgrade-system-card { width: 790px; padding: 48px; border-radius: 24px; background: white; color: #222; box-shadow: 0 20px 80px #0003; }
+.upgrade-system-card small { font-size: 22px; color: #777; }
+.upgrade-system-card h3 { font-size: 32px; line-height: 1.6; overflow-wrap: anywhere; }
+.upgrade-system-card p { font-size: 26px; }
+.upgrade-system-card > div { display: flex; justify-content: flex-end; gap: 28px; }
+.upgrade-system-card button { border: 0; background: transparent; color: #2563eb; padding: 18px 24px; font-size: 28px; cursor: pointer; }
+.upgrade-system-card button:disabled { color: #aaa; }
+.upgrade-toast { position: absolute; z-index: 220; left: 50%; bottom: 220px; transform: translateX(-50%); width: max-content; max-width: 85%; border-radius: 16px; background: #172033ed; color: white; padding: 24px 32px; font-size: 28px; text-align: center; }
