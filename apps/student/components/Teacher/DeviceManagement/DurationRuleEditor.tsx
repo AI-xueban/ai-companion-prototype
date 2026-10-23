@@ -9,6 +9,7 @@ import { ControlValidationNotice } from "./ControlValidationNotice";
 import { ControlToast } from "./ControlToast";
 
 type Props = {
+  initialApplyScope?: "all" | "unmodified";
   label: string;
   count: number;
   selectedObjects?: string[];
@@ -20,8 +21,8 @@ type Props = {
   onSave: (rule: DurationRule, applyScope?: "all" | "unmodified") => void;
 };
 
-export const DurationRuleEditor: React.FC<Props> = ({ label, count, selectedObjects, rule, defaultRule, isDefault, requireApplyScope, onClose, onSave }) => {
-  const [applyScope, setApplyScope] = useState<"all" | "unmodified" | null>(null);
+export const DurationRuleEditor: React.FC<Props> = ({ initialApplyScope, label, count, selectedObjects, rule, defaultRule, isDefault, requireApplyScope, onClose, onSave }) => {
+  const [applyScope, setApplyScope] = useState<"all" | "unmodified" | null>(initialApplyScope ?? null);
   const [draft, setDraft] = useState<DurationRule>({ ...rule, weekdays: [...rule.weekdays], periods: rule.periods.map((period) => ({ ...period })) });
   const [error, setError] = useState("");
   const [restoreNotice, setRestoreNotice] = useState(0);

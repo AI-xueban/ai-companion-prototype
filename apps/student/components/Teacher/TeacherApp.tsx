@@ -15,7 +15,8 @@ import { ClassIncentives } from './Incentives/ClassIncentives';
 import { TeacherProfile } from './Profile/TeacherProfile';
 import { TeacherLogin } from './Login/TeacherLogin.tsx';
 import { messages } from './data/mockTeacherData';
-import { TeacherPortalRole, TeacherPortalUser } from './data/teacherAccess';
+import type { ControlExceptionDemo } from './data/controlExceptionDemo';
+import { DEMO_TEACHER_ACCOUNTS, TeacherPortalRole, TeacherPortalUser } from './data/teacherAccess';
 import { SchoolAdminManagement } from './SchoolAdminManagement';
 import { DeviceManagement } from './DeviceManagement/DeviceManagement';
 import { SchoolDeviceControl } from './DeviceManagement/SchoolDeviceControl';
@@ -23,9 +24,10 @@ import { SchoolDeviceControl } from './DeviceManagement/SchoolDeviceControl';
 interface TeacherAppProps {
     onSwitchBack: () => void;
     initialRole?: TeacherPortalRole;
+    controlException?: ControlExceptionDemo;
 }
 
-export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRole = 'teacher' }) => {
+export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRole = 'teacher', controlException }) => {
   const [activePage, setActivePage] = useState('dashboard');
   const [deviceNavOpen, setDeviceNavOpen] = useState(false);
   useEffect(() => {
@@ -37,6 +39,13 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRol
   const [deviceMenuPage, setDeviceMenuPage] = useState<string | null>(null);
   const [loggedIn, setLoggedIn] = useState(false);
   const [teacherUser, setTeacherUser] = useState<TeacherPortalUser | null>(null);
+  useEffect(() => {
+    if (!controlException) return;
+    setTeacherUser(DEMO_TEACHER_ACCOUNTS.find(user => user.role === 'school-admin')!);
+    setLoggedIn(true);
+    setActivePage('school-device-control');
+    setDeviceMenuPage(null);
+  }, [controlException]);
   const [currentClassId, setCurrentClassId] = useState('c1');
   const [isMessageDrawerOpen, setIsMessageDrawerOpen] = useState(false);
   const [reportScope, setReportScope] = useState<ReportScope>({ view: 'teaching', classId: '', grade: 'all', subject: '', period: '7d' });
@@ -128,7 +137,7 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({ onSwitchBack, initialRol
                 setSchoolScope(scope => ({ ...scope, classId, subject: 'all' })); setSchoolPanel('class');
               }} />;
           case 'school-device-control':
-              return teacherUser.role === 'school-admin' ? <SchoolDeviceControl currentUser={teacherUser} /> : null;
+              return teacherUser.role === 'school-admin' ? <SchoolDeviceControl key={controlException?.key} currentUser={teacherUser} demoScenario={controlException} /> : null;
           case 'school-device-usage':
               return <div className="flex h-full flex-col"><div className="shrink-0 border-b border-slate-200 bg-white px-6 py-5 lg:px-8"><h1 className="text-2xl font-black text-slate-900">全校设备使用</h1><p className="mt-1 text-sm text-slate-500">{teacherUser.schoolName} · 查看平板借用、归还及异常记录；设备借用不等于学伴应用内学习。</p><div className="mt-4 flex gap-2">{([['overview','设备使用概览'],['usage','借还使用明细']] as const).map(([id,label]) => <button key={id} type="button" aria-pressed={schoolDeviceTab === id} onClick={() => setSchoolDeviceTab(id)} className={`rounded-lg px-3 py-2 text-xs font-bold ${schoolDeviceTab === id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>{label}</button>)}</div></div><div className="min-h-0 flex-1"><DeviceManagement initialView={schoolDeviceTab} currentUser={teacherUser} /></div></div>;
           case 'dashboard':

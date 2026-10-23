@@ -4,6 +4,7 @@ import {
   BorrowSchedule,
   StudentControl,
   validateSchedule,
+  schoolDate,
   weekdayNames,
 } from "../data/hierarchicalDeviceControl";
 import { DeviceControlLayer } from "./DeviceControlLayer";
@@ -17,6 +18,7 @@ export type ControlEditorValue = {
   applyScope?: "all" | "unmodified";
 };
 export const StudentControlEditor: React.FC<{
+  initialApplyScope?: "all" | "unmodified";
   targetLabel: string;
   count: number;
   selectedObjects?: string[];
@@ -26,7 +28,7 @@ export const StudentControlEditor: React.FC<{
   batchDefaults?: boolean;
   onClose: () => void;
   onSave: (value: ControlEditorValue) => void;
-}> = ({ targetLabel, count, selectedObjects, schedule, homework, requireApplyScope, batchDefaults, onClose, onSave }) => {
+}> = ({ initialApplyScope, targetLabel, count, selectedObjects, schedule, homework, requireApplyScope, batchDefaults, onClose, onSave }) => {
   const [draft, setDraft] = useState(schedule);
   const [answer, setAnswer] = useState(homework?.answer ?? false);
   const [explanation, setExplanation] = useState(
@@ -34,7 +36,7 @@ export const StudentControlEditor: React.FC<{
   );
   const [error, setError] = useState("");
   const [restoreNotice, setRestoreNotice] = useState(0);
-  const [applyScope, setApplyScope] = useState<"all" | "unmodified" | null>(null);
+  const [applyScope, setApplyScope] = useState<"all" | "unmodified" | null>(initialApplyScope ?? null);
   const initial = useRef(JSON.stringify({ draft, answer, explanation, applyScope }));
   const dirty = initial.current !== JSON.stringify({ draft, answer, explanation, applyScope });
   const showApplyScope = requireApplyScope && draft?.mode !== "dates";
@@ -60,7 +62,7 @@ export const StudentControlEditor: React.FC<{
   const inputClass =
     "rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm";
   const now = new Date();
-  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const today = schoolDate(now);
   return (
     <DeviceControlLayer
       labelId="student-control-editor-title"
@@ -91,7 +93,7 @@ export const StudentControlEditor: React.FC<{
             </button>
           </header>
           <div className="dc-panel-body space-y-6">
-            {!draft && <div className="text-sm leading-6 text-slate-500"><p>全校默认规则：不允许查看答案和详解。</p><p>可直接修改。点击“恢复全校默认规则”后，仍需点击“保存”才会生效。</p></div>}
+            {!draft && <div className="text-sm leading-6 text-slate-500"><p>全校默认规则：不允许查看答案和详解。</p></div>}
             <div className="dc-target">
               <p className="text-sm font-bold text-indigo-900">{targetLabel}</p>
               <p className="mt-1 text-xs text-indigo-700">

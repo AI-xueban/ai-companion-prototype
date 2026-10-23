@@ -3,6 +3,7 @@ import { DeviceControlLayer } from "./DeviceControlLayer";
 import { ControlValidationNotice } from "./ControlValidationNotice";
 
 export const WorldUsageEditor: React.FC<{
+  initialSelection?: { value: boolean; scope: "all" | "unmodified" };
   label: string;
   selectedObjects?: string[];
   total: number;
@@ -11,10 +12,10 @@ export const WorldUsageEditor: React.FC<{
   teacherAllowed: number;
   onClose: () => void;
   onSave: (allowed: boolean, scope: "all" | "unmodified") => void;
-}> = ({ label, selectedObjects, total, allowed, teacherTotal, teacherAllowed, onClose, onSave }) => {
-  const [scope, setScope] = useState<"all" | "unmodified" | null>(null);
+}> = ({ initialSelection, label, selectedObjects, total, allowed, teacherTotal, teacherAllowed, onClose, onSave }) => {
+  const [scope, setScope] = useState<"all" | "unmodified" | null>(initialSelection?.scope ?? null);
   const [error, setError] = useState("");
-  const [value, setValue] = useState<boolean | null>(null);
+  const [value, setValue] = useState<boolean | null>(initialSelection?.value ?? null);
   const eligible = total - (scope === "unmodified" ? teacherTotal : 0);
   const eligibleAllowed = allowed - (scope === "unmodified" ? teacherAllowed : 0);
   const changed = value === null ? 0 : value ? eligible - eligibleAllowed : eligibleAllowed;

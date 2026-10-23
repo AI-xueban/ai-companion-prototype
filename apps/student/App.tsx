@@ -19,6 +19,7 @@ import { LearningFlow } from './components/Learning/LearningFlow';
 import { isKgMicroLessonTask, KG_SCOPE_SECTION_PRACTICE } from './utils/kgMicroLesson';
 import { AssessmentFlow } from './components/Assessment/AssessmentFlow';
 import { CoinStoreModal } from './components/Store/CoinStoreModal';
+import type { ControlExceptionDemo } from './components/Teacher/data/controlExceptionDemo';
 import { DemoControls } from './components/Demo/DemoControls'; 
 import { DeviceLockDemo, type DemoLockType } from './components/Demo/DeviceLockDemo';
 import { createWorldLockNotification, type StudentNotification } from './data/studentNotifications';
@@ -136,6 +137,7 @@ const DEMO_TOOL_RAIL_WIDTH = 96;
 const App: React.FC = () => {
   // --- Global Mode State ---
   const [appMode, setAppMode] = useState<'student' | 'teacher'>('student');
+  const [controlException, setControlException] = useState<ControlExceptionDemo | undefined>();
   const [teacherEntryRole, setTeacherEntryRole] = useState<TeacherPortalRole>('teacher');
   const [demoLockScreen, setDemoLockScreen] = useState<DemoLockType | null>(null);
   const [worldLocked, setWorldLocked] = useState(false);
@@ -811,9 +813,11 @@ const App: React.FC = () => {
 
   const demoControls = APP_CONFIG.features.demoControls ? (
     <DemoControls
+      onControlException={scenario => { setControlException(scenario); setTeacherEntryRole('school-admin'); setAppMode('teacher'); }}
       onSwitchPersona={handlePersonaSwitch}
       onSwitchMode={setAppMode}
       onSwitchTeacherRole={(role) => {
+        setControlException(undefined);
         setTeacherEntryRole(role);
         setAppMode('teacher');
       }}
@@ -844,7 +848,7 @@ const App: React.FC = () => {
   if (appMode === 'teacher') {
       return (
           <>
-            <TeacherApp key={teacherEntryRole} initialRole={teacherEntryRole} onSwitchBack={() => setAppMode('student')} />
+            <TeacherApp key={teacherEntryRole} initialRole={teacherEntryRole} controlException={controlException} onSwitchBack={() => setAppMode('student')} />
             {demoControls}
             <QuestionBankModal
                 isOpen={showQuestionBankModal}

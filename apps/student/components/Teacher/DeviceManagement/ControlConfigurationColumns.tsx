@@ -11,7 +11,7 @@ const durationDayLabel = (days: number[]) => {
 };
 
 export const ControlConfigurationHeaders: React.FC<HeaderProps> = ({ module, student, mode }) => <>
-  {module === 'duration' ? <><th className={heading}>当前生效规则</th>{!student && <><th className={heading}>说明</th></>}</> : module === 'borrowing' ? <><th className={heading}>{mode === 'weekly' ? '适用星期' : '适用日期'}</th>{mode === 'dates' && <th className={heading}>借用方式</th>}<th className={heading}>借用时段</th>{!student && <><th className={heading}>覆盖人数</th><th className={heading}>说明</th></>}</> : module === 'homework' ? <><th className={heading}>查看答案</th><th className={heading}>查看详解</th></> : <th className={heading}>{module === 'world' ? '使用状态' : student ? '锁屏状态' : '临时锁屏状态'}</th>}
+  {module === 'duration' ? <><th className={heading}>当前主要生效规则</th>{!student && <th className={heading}>说明</th>}</> : module === 'borrowing' ? <><th className={heading}>{mode === 'weekly' ? '适用星期' : '适用日期'}</th>{mode === 'dates' && <th className={heading}>借用方式</th>}<th className={heading}>借用时段</th>{!student && <><th className={heading}>覆盖人数</th><th className={heading}>说明</th></>}</> : module === 'homework' ? <><th className={heading}>查看答案</th><th className={heading}>查看详解</th></> : <th className={heading}>{module === 'world' ? '使用状态' : student ? '锁屏状态' : '临时锁屏状态'}</th>}
   <th className={heading} title="当前范围内该模块最近一次操作的人员">最后操作人</th><th className={heading} title="当前范围内该模块最近一次操作的时间">操作时间</th>
 </>;
 
@@ -31,18 +31,20 @@ export const ControlConfigurationCells: React.FC<HeaderProps & {
   if (module === 'duration') {
     const effectiveRules = entries.map(entry => weekdayNames.map((_, day) => {
       const rule = entry.durationRules.find(item => item.weekdays.includes(day)) ?? (defaultDurationEnabled ? defaultDurationRule : undefined);
-      return rule ? durationRuleText(rule) : '连续 60 分钟 · 休息 15 分钟 · 每日累计 180 分钟 · 不限可用时段';
+      return rule ? durationRuleText({ ...rule, useDefault: false, periods: [...rule.periods].sort((a, b) => a.start.localeCompare(b.start)) }) : '连续 60 分钟 · 休息 15 分钟 · 每日累计 180 分钟 · 不限可用时段';
     }));
-    const sample = (effectiveRules[0] ?? []).reduce<Array<{ text: string; days: number[] }>>((groups, text, day) => {
+    const groups = new Map<string, { rules: string[]; count: number }>();
+    effectiveRules.forEach(rules => { const key = JSON.stringify(rules); const group = groups.get(key); if (group) group.count++; else groups.set(key, { rules, count: 1 }); });
+    const main = [...groups.values()].sort((a, b) => b.count - a.count)[0];
+    const sample = (main?.rules ?? []).reduce<Array<{ text: string; days: number[] }>>((groups, text, day) => {
       const group = groups.find(item => item.text === text);
       if (group) group.days.push(day);
       else groups.push({ text, days: [day] });
       return groups;
     }, []);
-    const distinct = new Set(effectiveRules.map(rules => JSON.stringify(rules))).size > 1;
     return <>
       <td className={`${cell} min-w-72 max-w-[420px]`}>{sample.map(rule => <div key={`${rule.text}-${rule.days.join('-')}`} className="border-b border-slate-100 py-2 first:pt-0 last:border-0 last:pb-0"><p className="font-semibold text-slate-800">{durationDayLabel(rule.days)}</p><p className="mt-1 text-sm leading-6 text-slate-600">{rule.text}</p></div>)}</td>
-      {!student && <td className={cell}>{distinct ? '学生规则有差异' : '学生规则一致'}</td>}
+      {!student && <td className={cell}>{groups.size > 1 ? '学生规则有差异' : '学生规则一致'}</td>}
       {operationCells}
     </>;
   }
