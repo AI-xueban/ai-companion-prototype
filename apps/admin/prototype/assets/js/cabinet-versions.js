@@ -2,7 +2,7 @@
 function cvStore() {
   data.cabinetVersions ||= [];
   data.cabinetInstallTasks ||= [];
-  cvExpireOfflineTasks();
+
   // 清理原型早期上传的 ZIP 包及其明确关联的记录。
   const zipIds = new Set(data.cabinetVersions.filter(p => /\.zip$/i.test(p.fileName || '')).map(p => p.id));
   if (zipIds.size) {
@@ -13,25 +13,11 @@ function cvStore() {
   return data.cabinetVersions;
 }
 function cvTime() { return new Date().toLocaleString('zh-CN', { hour12: false }); }
-function cvExpireOfflineTasks(now = Date.now()) {
-  let changed = false;
-  for (const task of data.cabinetInstallTasks || []) {
-    const cabinet = data.cabinets.find(c => c.id === task.cabinetId);
-    const created = task.createdAtMs || new Date(task.createdAt).getTime();
-    if (task.status === 'pending' && cabinet?.online === false && Number.isFinite(created) && now - created >= 86400000) {
-      task.status = 'failed';
-      task.failureReason = '柜机离线超时，请重新下发';
-      task.completedAt = cvTime();
-      changed = true;
-    }
-  }
-  if (changed) saveData(data);
-}
 function cvCancelTask(id) {
   const task = data.cabinetInstallTasks.find(t => t.id === id);
-  if (task?.status !== 'pending') return toast('仅待升级任务可以取消', 'error');
+  if (!cvCanCancel(task)) return toast('仅待更新任务可以取消', 'error');
   showConfirmModal({ title: '取消升级任务', message: '取消后柜机将不再执行此任务，是否继续？', confirmText: '确认取消', onConfirm: () => {
-    if (task.status !== 'pending') return toast('任务已开始，无法取消', 'error');
+    if (!cvCanCancel(task)) return toast('任务已开始，无法取消', 'error');
     task.status = 'cancelled'; task.completedAt = cvTime(); saveData(data); cvRefresh();
   } });
 }
@@ -65,7 +51,7 @@ function cvRecordFiltersHtml() {
       <label>柜机<input class="input" name="cabinet" placeholder="名称或ID" value="${esc(f.cabinet || '')}"></label>
       <label>学校<select class="select" name="school"><option value="">全部学校</option>${[...new Set(data.cabinets.map(c => c.schoolName).filter(Boolean))].map(name => `<option value="${esc(name)}" ${f.school === name ? 'selected' : ''}>${esc(name)}</option>`).join('')}</select></label>
       <label>版本<select class="select" name="version"><option value="">全部版本</option>${[...new Set(data.cabinetInstallTasks.map(t => t.version))].map(v => `<option ${f.version === v ? 'selected' : ''} value="${esc(v)}">${esc(v)}</option>`).join('')}</select></label>
-      <label>状态<select class="select" name="status"><option value="">全部状态</option>${['待升级','升级中','成功','失败','已取消'].map(v => `<option ${f.status === v ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+      <label>状态<select class="select" name="status"><option value="">全部状态</option>${['待更新','更新中','成功','失败','已取消'].map(v => `<option ${f.status === v ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
       <label>下发开始日期<input class="input" type="date" name="start" value="${esc(f.start || '')}"></label>
       <label>下发结束日期<input class="input" type="date" name="end" value="${esc(f.end || '')}"></label>
       <button class="btn btn-primary" type="submit">查询</button><button class="btn" type="button" onclick="cvResetRecords()">重置</button>
@@ -84,8 +70,10 @@ function cvRecordPager(total) {
   return `<div class="pagination pagination--with-size cv-record-pagination"><span>共 ${total} 条</span><button class="page-btn" ${cvRecordPage === 1 ? 'disabled' : ''} onclick="cvRecordPage--;cvRefresh()">‹</button><span>${cvRecordPage} / ${pages}</span><button class="page-btn" ${cvRecordPage === pages ? 'disabled' : ''} onclick="cvRecordPage++;cvRefresh()">›</button><label>跳至 <input type="number" class="input" style="width:70px" min="1" max="${pages}" value="${cvRecordPage}" onchange="cvRecordPage=Math.min(${pages},Math.max(1,Number(this.value)||1));cvRefresh()"> 页</label><select class="select" aria-label="每页条数" onchange="cvRecordSize=Number(this.value);cvRecordPage=1;cvRefresh()">${[10,20,50].map(n => `<option value="${n}" ${cvRecordSize === n ? 'selected' : ''}>${n} 条/页</option>`).join('')}</select></div>`;
 }
 function cvRefresh() { renderApp('cabinet-version'); }
+function cvCanCancel(task) { return task?.status === 'pending' || (task?.status === 'installing' && task.manualStage === 'waiting'); }
 function cvStatus(task) {
-  return { pending: '待升级', downloading: '升级中', installing: '升级中', success: '成功', failed: '失败', cancelled: '已取消' }[task.status];
+  if (task.status === 'installing' && task.manualStage === 'waiting') return '待更新';
+  return { pending: '待更新', downloading: '更新中', installing: '更新中', success: '成功', failed: '失败', cancelled: '已取消' }[task.status];
 }
 function cvBusy(id) { return (data.cabinetInstallTasks || []).some(t => t.cabinetId === id && ['pending', 'downloading', 'installing'].includes(t.status)); }
 let cvActiveTab = 'packages';
@@ -113,21 +101,22 @@ function renderCabinetVersionPage() {
   cvRecordPage = Math.min(cvRecordPage, Math.max(1, Math.ceil(records.length / cvRecordSize)));
   return `<div class="page-card" style="min-height:auto"><div class="page-card-title">柜机升级</div><p class="form-hint" style="margin:0 0 16px">上传柜机安装包，选择指定柜机下发并跟踪安装结果。</p>
     <p class="form-hint" style="margin:0 0 16px">升级结果由柜机回执更新；原型可通过右下角控制台模拟回执。</p>
-    <div class="mall-project-tabs" role="tablist" aria-label="柜机升级"><button type="button" id="cv-tab-packages" role="tab" aria-selected="${cvActiveTab === 'packages'}" aria-controls="cv-panel-packages" class="mall-project-tab ${cvActiveTab === 'packages' ? 'active' : ''}" onclick="cvSwitchTab('packages')">版本包</button><button type="button" id="cv-tab-records" role="tab" aria-selected="${cvActiveTab === 'records'}" aria-controls="cv-panel-records" class="mall-project-tab ${cvActiveTab === 'records' ? 'active' : ''}" onclick="cvSwitchTab('records')">升级记录</button></div><div id="cv-panel-packages" role="tabpanel" aria-labelledby="cv-tab-packages" ${cvActiveTab !== 'packages' ? 'hidden' : ''}>${cvPackageFiltersHtml()}<div class="toolbar" style="margin-bottom:16px"><div class="toolbar-left"><button class="btn btn-primary" onclick="cvUpload()">上传版本包</button></div><div class="toolbar-right status-text">共 ${versions.length} 个版本包</div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>版本号</th><th>安装包</th><th>大小</th><th>更新说明</th><th>已下发柜机数</th><th>上传时间</th><th>操作</th></tr></thead><tbody>${versions.map(v => {
+    <div class="mall-project-tabs" role="tablist" aria-label="柜机升级"><button type="button" id="cv-tab-packages" role="tab" aria-selected="${cvActiveTab === 'packages'}" aria-controls="cv-panel-packages" class="mall-project-tab ${cvActiveTab === 'packages' ? 'active' : ''}" onclick="cvSwitchTab('packages')">柜机版本</button><button type="button" id="cv-tab-records" role="tab" aria-selected="${cvActiveTab === 'records'}" aria-controls="cv-panel-records" class="mall-project-tab ${cvActiveTab === 'records' ? 'active' : ''}" onclick="cvSwitchTab('records')">升级记录</button></div><div id="cv-panel-packages" role="tabpanel" aria-labelledby="cv-tab-packages" ${cvActiveTab !== 'packages' ? 'hidden' : ''}>${cvPackageFiltersHtml()}<div class="toolbar" style="margin-bottom:16px"><div class="toolbar-left"><button class="btn btn-primary" onclick="cvUpload()">上传版本包</button></div><div class="toolbar-right status-text">共 ${versions.length} 个版本包</div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>版本号</th><th>安装包</th><th>大小</th><th>更新说明</th><th>已下发柜机数</th><th>上传时间</th><th>操作</th></tr></thead><tbody>${versions.map(v => {
       const dispatchedCount = new Set(data.cabinetInstallTasks.filter(t => t.packageId === v.id).map(t => t.cabinetId)).size;
       return `<tr><td>${esc(v.version)}</td><td>${esc(v.fileName)}</td><td>${v.size} MB</td><td style="max-width:280px;white-space:pre-wrap">${esc(v.notes)}</td><td><button class="btn-link" onclick="cvOpenRecords('${v.id}')">${dispatchedCount} 台</button></td><td>${esc(v.createdAt)}</td><td><button class="btn-link" onclick="cvDispatch('${v.id}')">下发柜机</button></td></tr>`;
     }).join('') || '<tr><td colspan="7" style="text-align:center;padding:36px">暂无符合条件的版本包</td></tr>'}</tbody></table></div>
-    </div><div id="cv-panel-records" role="tabpanel" aria-labelledby="cv-tab-records" ${cvActiveTab !== 'records' ? 'hidden' : ''}>${cvRecordFiltersHtml()}<div class="status-text" style="margin-bottom:12px;text-align:right">共 ${records.length} 条记录</div><div class="table-wrap"><table class="data-table cv-record-table"><thead><tr><th>柜机ID</th><th>柜机名称</th><th>学校</th><th>升级前版本</th><th>目标版本</th><th>升级状态</th><th>说明</th><th>下发时间</th><th>操作</th></tr></thead><tbody>${records.slice((cvRecordPage - 1) * cvRecordSize, cvRecordPage * cvRecordSize).map(t => {
+    </div><div id="cv-panel-records" role="tabpanel" aria-labelledby="cv-tab-records" ${cvActiveTab !== 'records' ? 'hidden' : ''}>${cvRecordFiltersHtml()}<div class="status-text" style="margin-bottom:12px;text-align:right">共 ${records.length} 条记录</div><div class="table-wrap"><table class="data-table cv-record-table"><thead><tr><th>柜机ID</th><th>柜机名称</th><th>学校</th><th>升级前版本</th><th>目标版本</th><th>升级状态</th><th>下发时间</th><th>操作</th></tr></thead><tbody>${records.slice((cvRecordPage - 1) * cvRecordSize, cvRecordPage * cvRecordSize).map(t => {
       const c = data.cabinets.find(c => c.id === t.cabinetId);
-      return `<tr><td>${esc(t.cabinetId)}</td><td>${esc(c?.name || '—')}</td><td>${esc(c?.schoolName || '—')}</td><td>${esc(t.from)}</td><td>${esc(t.version)}</td><td><span class="tag ${t.status === 'success' ? 'tag-green' : t.status === 'failed' ? 'tag-red' : ''}">${cvStatus(t)}</span></td><td style="max-width:240px;white-space:normal">${esc(cvDescription(t, c))}</td><td>${esc(t.createdAt)}</td><td>${t.status === 'pending' ? `<button class="btn-link" onclick="cvCancelTask('${t.id}')">取消</button>` : ''} ${t.status === 'failed' ? `<button class="btn-link" onclick="cvRetry('${t.id}')">重试</button>` : ''}</td></tr>`;
-    }).join('') || '<tr><td colspan="9" style="text-align:center;padding:30px">暂无符合条件的升级记录</td></tr>'}</tbody></table></div>${cvRecordPager(records.length)}</div></div>`;
+      return `<tr><td>${esc(t.cabinetId)}</td><td>${esc(c?.name || '—')}</td><td>${esc(c?.schoolName || '—')}</td><td>${esc(t.from)}</td><td>${esc(t.version)}</td><td><span class="tag ${t.status === 'success' ? 'tag-green' : t.status === 'failed' ? 'tag-red' : ''}">${cvStatus(t)}</span></td><td>${esc(t.createdAt)}</td><td>${cvCanCancel(t) ? `<button class="btn-link" onclick="cvCancelTask('${t.id}')">取消</button>` : ''} ${t.status === 'failed' ? `<button class="btn-link" onclick="cvRetry('${t.id}')">重试</button>` : ''}</td></tr>`;
+    }).join('') || '<tr><td colspan="8" style="text-align:center;padding:30px">暂无符合条件的升级记录</td></tr>'}</tbody></table></div>${cvRecordPager(records.length)}</div></div>`;
 }
 function cvDescription(task, cabinet) {
-  if (task.status === 'failed' && /超时/.test(task.failureReason || task.message || '')) return '超时';
-  if (['pending', 'downloading', 'installing'].includes(task.status) && cabinet?.online === false) return '离线';
+  if (task.status === 'pending') return task.downloadInterrupted ? '下载中断' : cabinet?.online === false ? '离线' : '待下载';
+  if (task.status === 'downloading') return '下载中';
+  if (task.status === 'installing') return task.manualStage === 'waiting' ? '待安装' : '安装中';
+  if (task.status === 'failed') return '—';
   return '—';
 }
-
 let cvConsoleTaskId = '';
 const cvConsoleFailures = { failed: '升级失败' };
 function cvClearUpgradeData() {
@@ -169,12 +158,19 @@ function renderCabinetUpgradeConsole() {
     </div>
     <section class="console-section">
       <h4>场景模拟</h4>
-      <p>选任务，点场景。</p>
+      <p>选择任务，模拟管理员更新。</p>
       ${tasks.length ? `
         <label class="console-field" for="cv-console-task">待回执任务</label>
         <select class="select console-select" id="cv-console-task" onchange="cvConsoleTaskId=this.value;renderConsolePanel()">${options}</select>
         <p>${esc(cvStatus(selected))} · ${device?.online ? '在线' : '离线'}</p>
-        <div class="cv-console-buttons">${button('offline','柜机离线',!!device?.online)}${button('online','恢复在线',!device?.online)}${button('offlineExpired','离线超24小时',pending)}${button('progress','升级中',pending && !!device?.online)}${button('success','升级成功',!!device?.online)}${button('failed','升级失败',!!device?.online)}</div>
+        <p>${esc(cvDescription(selected, device))}</p>
+        <div class="cv-console-buttons">
+          ${button('offline',selected.status === 'downloading' ? '下载断网' : '柜机离线',!!device?.online)}${button('online','恢复联网',!device?.online)}
+          ${pending ? button('progress',selected.downloadInterrupted ? '重新下载' : '管理员下载',!!device?.online) : ''}
+          ${selected.status === 'downloading' ? button('downloaded','下载完成',!!device?.online) : ''}
+          ${selected.status === 'installing' && selected.manualStage === 'waiting' ? button('cancelInstall','取消安装') + button('install','管理员安装') : ''}
+          ${selected.status === 'installing' && selected.manualStage !== 'waiting' ? button('success','升级成功',!!device?.online) + button('failed','升级失败',!!device?.online) : ''}
+        </div>
       ` : '<div class="console-empty console-empty--compact"><p>暂无待回执的升级任务</p></div>'}
     </section>
     <section class="console-section"><button type="button" class="btn btn-danger" onclick="cvClearUpgradeData()">清空版本包和升级记录</button></section>
@@ -194,27 +190,25 @@ function cvConsoleResolve(result) {
   if (!cabinet) return toast('柜机不存在', 'error');
   cvConsoleTaskId = taskId;
   if (result === 'offline' || result === 'online') {
-    cvExpireOfflineTasks();
-    cabinet.online = result === 'online';
+
+    cabinet.online = result === 'online'; if (!cabinet.online && task.status === 'downloading') { task.status = 'pending'; task.downloadInterrupted = true; }
     saveData(data); cvRefresh(); return;
   }
-  if (result === 'noReply') {
-    if (task.status === 'pending') return toast('请先开始升级', 'error');
-    toast('未收到回执，保持升级中'); return;
-  }
-  if ((result === 'success' || cvConsoleFailures[result]) && !cabinet.online) return toast('请先恢复在线', 'error');
-  if (result === 'busy' || result === 'idle') {
-    if (task.status !== 'pending') return toast('仅待升级任务可演示借还等待', 'error');
-    cabinet.upgradeBorrowBusy = result === 'busy';
+  const waiting = task.status === 'installing' && task.manualStage === 'waiting';
+  const executing = task.status === 'installing' && task.manualStage !== 'waiting';
+  const allowed = {
+    progress: task.status === 'pending' && cabinet.online,
+    downloaded: task.status === 'downloading' && cabinet.online,
+    install: waiting,
+    cancelInstall: waiting,
+    success: executing && cabinet.online,
+    failed: executing && cabinet.online
+  };
+  if (!allowed[result]) return toast('当前阶段不可执行该操作', 'error');
+  if (result === 'cancelInstall') {
+    toast('已取消本次安装，仍等待管理员安装');
     saveData(data); cvRefresh(); return;
-  }
-  if (result === 'offlineExpired') {
-    if (task.status !== 'pending') return toast('已开始任务不适用离线有效期', 'error');
-    cabinet.online = false; task.createdAtMs = Date.now() - 86400000;
-    cvExpireOfflineTasks(); cvRefresh(); return;
-  }
-  if (result === 'progress' && !cabinet.online) return toast('请先恢复在线', 'error');
-  if (result === 'progress') { task.status = 'installing'; task.message = '';
+  }  if (result === 'downloaded') { task.status = 'installing'; task.manualStage = 'waiting'; } else if (result === 'install') { task.status = 'installing'; task.manualStage = 'installing'; } else if (result === 'progress') { task.status = 'downloading'; task.downloadInterrupted = false; task.manualStage = null; task.message = '';
   } else if (result === 'success') {
     task.status = 'success';
     task.message = '安装成功，版本已更新（控制台模拟）';
@@ -273,7 +267,7 @@ function cvDispatch(id) {
   if (!v) return;
   cvSelection = new Set();
   cvTargetState = { versionId: id, keyword: '', page: 1, pageSize: 10 };
-  openSimpleModal({ title: `下发安装 · ${v.version}`, size: 'xl', body: `<p>选择需要安装的柜机。离线柜机可下发，待上线后安装；同版本及有进行中任务的柜机不可重复下发。</p><input class="input" placeholder="搜索柜机名称、ID、学校" oninput="cvFilterTargets(this.value)" style="margin-bottom:16px"><div id="cv-target-list"></div><p id="cv-dispatch-error" role="alert" style="color:#d4380d"></p>`, footer: `<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="cvConfirmDispatch('${id}')">下一步：确认下发</button>` });
+  openSimpleModal({ title: `下发安装 · ${v.version}`, size: 'xl', body: `<p>选择需要安装的柜机。离线柜机可下发，待上线后待管理员更新；同版本及有进行中任务的柜机不可重复下发。</p><input class="input" placeholder="搜索柜机名称、ID、学校" oninput="cvFilterTargets(this.value)" style="margin-bottom:16px"><div id="cv-target-list"></div><p id="cv-dispatch-error" role="alert" style="color:#d4380d"></p>`, footer: `<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="cvConfirmDispatch('${id}')">下一步：确认下发</button>` });
   cvRenderTargets();
 }
 function cvFilterTargets(value) {
@@ -323,7 +317,7 @@ function cvRenderTargets() {
   const selectedCount = eligible.filter(c => cvSelection.has(c.id)).length;
   root.innerHTML = `<div class="cv-target-selection-summary">已选 <strong>${cvSelection.size}</strong> 台，共 ${filtered.length} 台 <button class="btn-link" onclick="cvToggleAllTargets(true, true)">选择全部搜索结果</button> <button class="btn-link" onclick="cvSelection.clear();cvRenderTargets()">清空选择</button></div><div class="table-wrap"><table class="data-table"><thead><tr><th><label style="display:flex;align-items:center;gap:6px;white-space:nowrap"><input id="cv-target-select-all" type="checkbox" onchange="cvToggleAllTargets(this.checked)"> 全选本页</label></th><th>柜机名称</th><th>柜机ID</th><th>学校</th><th>在线状态</th><th>当前版本</th><th>说明</th></tr></thead><tbody>${rows.map(c => {
     const reason = cvTargetReason(c, version);
-    return `<tr><td><input type="checkbox" ${reason ? 'disabled' : ''} ${cvSelection.has(c.id) ? 'checked' : ''} onchange="cvToggleTarget('${c.id}', this.checked)"></td><td>${esc(c.name)}</td><td>${esc(c.id)}</td><td>${esc(c.schoolName)}</td><td>${c.online ? '在线' : '离线'}</td><td>${esc(c.installedVersion || '未上报')}</td><td>${reason || (c.online ? '可下发' : '上线后安装')}</td></tr>`;
+    return `<tr><td><input type="checkbox" ${reason ? 'disabled' : ''} ${cvSelection.has(c.id) ? 'checked' : ''} onchange="cvToggleTarget('${c.id}', this.checked)"></td><td>${esc(c.name)}</td><td>${esc(c.id)}</td><td>${esc(c.schoolName)}</td><td>${c.online ? '在线' : '离线'}</td><td>${esc(c.installedVersion || '未上报')}</td><td>${reason || (c.online ? '可下发' : '上线后待管理员更新')}</td></tr>`;
   }).join('') || '<tr><td colspan="7" style="text-align:center;padding:30px">未找到符合条件的柜机</td></tr>'}</tbody></table></div><div class="pagination pagination--with-size"><span class="page-btn ${cvTargetState.page === 1 ? 'disabled' : ''}" onclick="cvTargetPage(${cvTargetState.page - 1})">‹</span>${Array.from({ length: totalPages }, (_, index) => index + 1).map(page => `<span class="page-btn ${page === cvTargetState.page ? 'active' : ''}" onclick="cvTargetPage(${page})">${page}</span>`).join('')}<span class="page-btn ${cvTargetState.page === totalPages ? 'disabled' : ''}" onclick="cvTargetPage(${cvTargetState.page + 1})">›</span><span class="page-size-picker">每页 <select class="select page-size-select" onchange="cvTargetPageSize(this.value)"><option value="10" ${cvTargetState.pageSize === 10 ? 'selected' : ''}>10 条</option><option value="20" ${cvTargetState.pageSize === 20 ? 'selected' : ''}>20 条</option><option value="50" ${cvTargetState.pageSize === 50 ? 'selected' : ''}>50 条</option></select></span></div>`;
   const master = document.getElementById('cv-target-select-all');
   if (master) {
@@ -379,7 +373,7 @@ function cvConfirmDispatch(id) {
         <summary>查看已选柜机</summary>
         <ul class="cv-confirm-targets">${targetItems}</ul>
       </details>
-      <div class="cv-confirm-note">${offlineCount ? `${offlineCount} 台柜机离线，将在设备上线后升级；` : ''}升级时柜机可能重启，请避开借还高峰。</div>
+      <div class="cv-confirm-note">${offlineCount ? `${offlineCount} 台柜机离线，上线后等待管理员下载安装；` : ''}升级时柜机可能重启，请避开借还高峰。</div>
     `,
     confirmText: `确认下发至 ${targets.length} 台柜机`,
     onConfirm: () => {
