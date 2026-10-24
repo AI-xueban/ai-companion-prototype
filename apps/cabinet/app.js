@@ -113,7 +113,7 @@
   const faceProfiles = new Map();
   const faceEnrollmentLogs = [];
   const DEMO_NAV_SELECTOR =
-    "#simulateBorrowControl, #simulateScanFail, #simulateFaceFail, #simulateEnrollFail, #simulateNotCharging, #simulateDoorOpen";
+    "#simulateBorrowControl, #simulateBorrowDateControl, #simulateBorrowStudentControl, #simulateScanFail, #simulateFaceFail, #simulateEnrollFail, #simulateNotCharging, #simulateDoorOpen";
 
   function fitScreen() {
     const stage = document.querySelector(".stage");
@@ -361,9 +361,15 @@
     borrowControlModal.hidden = true;
   }
 
-  function openBorrowControl() {
+  function openBorrowControl(kind = "time") {
     clearTimeout(borrowControlTimer);
     showPage("home");
+    const messages = {
+      time: '现在还不能借用哦，请在<br /><strong>周一到周五 08:10–12:10、14:00–16:30</strong><br />时间内再来借吧',
+      date: '以下日期范围内暂不可借用<br /><strong>2026-10-24 至 2026-10-24</strong><br />请在上述日期范围以外再来借用',
+      student: '当前学生编号不可借用<br />如有疑问，请联系管理员'
+    };
+    borrowControlModal.querySelector('.borrow-control-message').innerHTML = messages[kind];
     borrowControlModal.hidden = false;
     borrowControlTimer = window.setTimeout(closeBorrowControl, 60 * 1000);
   }
@@ -851,6 +857,15 @@
   simulateBorrowControl.addEventListener("click", (e) => {
     e.stopPropagation();
     openBorrowControl();
+  });
+
+  document.getElementById("simulateBorrowDateControl").addEventListener("click", (e) => {
+    e.stopPropagation();
+    openBorrowControl("date");
+  });
+  document.getElementById("simulateBorrowStudentControl").addEventListener("click", (e) => {
+    e.stopPropagation();
+    openBorrowControl("student");
   });
 
   borrowControlAcknowledge.addEventListener("click", closeBorrowControl);

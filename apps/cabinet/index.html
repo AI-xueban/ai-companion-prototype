@@ -22,7 +22,14 @@
     </div>
     <nav class="studio-nav" id="pageNav">
       <button type="button" class="nav-btn is-active" data-page="home">首页</button>
-      <button type="button" class="nav-btn nav-demo nav-demo-important" id="simulateBorrowControl">借用管控</button>
+      <div class="borrow-control-tools" role="group" aria-label="借用管控">
+        <span class="borrow-control-label">借用管控</span>
+        <div class="borrow-control-buttons">
+      <button type="button" class="nav-btn nav-demo nav-demo-important" id="simulateBorrowControl">时段</button>
+      <button type="button" class="nav-btn nav-demo" id="simulateBorrowDateControl">日期</button>
+      <button type="button" class="nav-btn nav-demo" id="simulateBorrowStudentControl">学生编号</button>
+        </div>
+      </div>
       <button type="button" class="nav-btn nav-demo" id="simulateScanFail">模拟扫码失败</button>
       <button type="button" class="nav-btn nav-demo" id="simulateFaceFail">模拟人脸未匹配</button>
       <button type="button" class="nav-btn nav-demo" id="simulateEnrollFail">模拟录入失败</button>
@@ -332,7 +339,7 @@
           </div>
         </div>
 
-        <!-- 当前时段不可借用 -->
+        <!-- 借用管控：时段、日期、学生编号 -->
         <div class="confirm-mask borrow-control-mask" id="borrowControlModal" hidden>
           <div class="confirm-card borrow-control-card" role="dialog" aria-modal="true" aria-labelledby="borrowControlTitle">
             <div class="borrow-control-icon" aria-hidden="true">

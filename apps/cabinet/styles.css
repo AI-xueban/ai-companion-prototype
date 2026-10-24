@@ -124,9 +124,16 @@ button {
   background: rgba(59, 130, 246, 0.08);
 }
 
-#simulateBorrowControl {
+.borrow-control-tools {
   margin-top: 8px;
+  padding: 10px 8px;
+  border: 1px solid #b8cce8;
+  border-radius: 12px;
+  background: #f0f5fc;
 }
+.borrow-control-label { display: block; margin-bottom: 8px; font-size: 13px; color: #64748b; }
+.borrow-control-buttons { display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 4px; }
+.borrow-control-buttons .nav-btn { min-width: 0; padding: 10px 3px; font-size: 12px; text-align: center; white-space: nowrap; }
 
 .nav-demo-important {
   border-style: solid;
