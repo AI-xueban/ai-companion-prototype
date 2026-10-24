@@ -24,6 +24,7 @@ const LOCAL_STORAGE_KEYS = new Set([
 ]);
 
 const LOCAL_STORAGE_PREFIXES = [
+  'ai-companion-borrowing-v3:',
   'ai_friend_reward_stats_',
   'kg-last-scope-',
   'sync-lesson-progress-',

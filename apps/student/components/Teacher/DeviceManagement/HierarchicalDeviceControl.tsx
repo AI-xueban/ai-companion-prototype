@@ -43,6 +43,7 @@ import {
 import { StudentControlDetail } from "./StudentControlDetail";
 import { borrowingConfigurationKey } from "../data/borrowingOverview";
 import { BorrowingOverviewDrawer } from "./BorrowingOverviewDrawer";
+import { SchoolBorrowingControl } from "./SchoolBorrowingControl";
 import {
   configurationColumnCount,
   ControlConfigurationCells,
@@ -876,7 +877,6 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
         : !grade && tab === "borrowing"
           ? "按有效规则借用"
           : scopeStatus.main;
-  const ActiveIcon = tabs.find((item) => item.id === tab)?.icon ?? Clock;
   const visibleOperationRecords = operationRecords.filter((record, index, records) => {
     if (record.module !== tab) return false;
     const signature = JSON.stringify([record.module, record.title, record.scope, record.time, record.before, record.after]);
@@ -954,7 +954,8 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
         aria-labelledby={`control-tab-${tab}`}
         className="dc-workspace min-h-0 flex-1 overflow-y-auto"
       >
-        <div className="dc-content mx-auto space-y-5">
+        <div className={`dc-content mx-auto space-y-5 ${tab !== "borrowing" ? "dc-unified-panels" : ""}`}>
+          {tab === "borrowing" ? <SchoolBorrowingControl currentUser={currentUser} initialGrade={grade} onGradeChange={value => { setGrade(value); setClassId(null); }} demoScenario={demoScenario?.module === 'borrowing' ? demoScenario : undefined} /> : <>
           <div className="dc-breadcrumb flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-4">
               {grade && (
@@ -973,7 +974,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
               <button
                 type="button"
                 onClick={() => setHistoryOpen(true)}
-                className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-indigo-600"
+                className="dc-btn"
               >
                 <History size={15} />
                 操作记录
@@ -983,9 +984,6 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
           <section className="dc-scope-card">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="dc-scope-heading">
-                <span className="dc-scope-icon">
-                  <ActiveIcon size={21} strokeWidth={1.7} />
-                </span>
                 <div>
                   <h2>
                     {scopeLabel} · {tabs.find((t) => t.id === tab)?.label}
@@ -1013,9 +1011,9 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
                       : tab === "homework"
                         ? "设置学生查看答案、详解的权限，默认均不允许。"
                         : tab === "lock"
-                          ? <>可对全校、年级或班级临时锁屏，解除后恢复原有日常锁屏状态。<strong className="ml-1 font-bold">临时锁屏老师不可操作</strong></>
+                          ? <>可对全校、年级或班级临时锁屏，解除后执行当前日常锁屏设置。<strong className="ml-1 font-bold">临时锁屏老师不可操作</strong></>
                           : "可统一设置全校学生是否允许使用万象视界，也可在下方按年级、班级设置。"}
-                    {grade && tab !== "borrowing" && ` 当前 ${currentStudents.length} 名学生。`}
+                    {grade && ` 当前 ${currentStudents.length} 名学生。`}
                   </p>
                 </div>
               </div>
@@ -1032,52 +1030,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
               <div className="flex flex-wrap gap-3"><button type="button" className={button} onClick={() => setConfirmation({ title: durationTeacherCanEdit ? "关闭班主任调整权限？" : "开放班主任调整权限？", scope: "全校", count: schoolStudentIds.length, description: durationTeacherCanEdit ? "关闭后班主任只能查看使用时长，现有规则继续生效。" : "开放后，班主任可调整本班学生的使用时长，已有设置保持不变。", action: "确认", run: () => { changeDurationPermission(!durationTeacherCanEdit); setMessage({ text: durationTeacherCanEdit ? "已关闭班主任调整权限，现有规则保持不变" : "已开放班主任调整权限，当前规则保持不变", tone: "success" }); } })}>{durationTeacherCanEdit ? "关闭调整权限" : "开放调整权限"}</button></div>
             </div>
           </section>}
-          {tab === "borrowing" && (
-            <section className="dc-list-card overflow-hidden">
-              <nav role="tablist" aria-label="全校借用规则类型" className="dc-rule-tabs flex border-b border-slate-100">
-                {(["weekly", "dates"] as const).map((mode) => (
-                  <button
-                    type="button"
-                    role="tab"
-                    key={mode}
-                    aria-selected={borrowMode === mode}
-                    onClick={() => setBorrowMode(mode)}
-                    className={`border-b-2 px-1 py-4 text-sm font-bold ${borrowMode === mode ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-900"}`}
-                  >
-                    {mode === "weekly" ? "每周固定借用规则" : "指定日期借用规则"}
-                  </button>
-                ))}
-              </nav>
-              {borrowMode === "dates" && (
-                <p className="border-b border-slate-100 bg-indigo-50/60 px-5 py-3 text-xs leading-5 text-indigo-700">
-                  指定日期内优先按本规则执行；规则到期或删除后，恢复每周借用规则。
-                </p>
-              )}
-              <div className="dc-list-heading flex flex-wrap items-center justify-between gap-3 border-b border-slate-100">
-                <div>
-                  <h3 className="font-bold text-slate-900">全校借出时间段</h3>
-                </div>
-                <button type="button" className={primary} onClick={() => openEditor(schoolStudentIds, "全校", borrowMode)}>
-                  {borrowMode === "weekly" ? "新增每周借用规则" : "新增指定日期借用规则"}
-                </button>
-              </div>
-              <div className="space-y-3 p-5">
-                {schoolBorrowRules.length ? schoolBorrowRules.map((rule) => (
-                  <div key={rule.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4">
-                    <div>
-                      <p className="flex items-center gap-3 font-bold text-slate-900">{scheduleDateText(rule)}{rule.mode === "dates" && <span className={`rounded-md px-2 py-1 text-xs font-medium ${borrowScheduleStatus(rule, ruleStatusNow) === "生效中" ? "bg-emerald-50 text-emerald-700" : borrowScheduleStatus(rule, ruleStatusNow) === "已失效" ? "bg-slate-100 text-slate-500" : "bg-amber-50 text-amber-700"}`}>{borrowScheduleStatus(rule, ruleStatusNow)}</span>}</p>
-                      <p className="mt-1 text-sm text-slate-600">{schedulePeriodText(rule)}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      {(rule.mode !== "dates" || borrowScheduleStatus(rule, ruleStatusNow) !== "已失效") && <button type="button" className={button} onClick={() => openEditor(schoolStudentIds, "全校", undefined, rule)}>编辑</button>}
-                      <button type="button" className={button} onClick={() => deleteSchoolSchedule(rule)}>删除</button>
-                    </div>
-                  </div>
-                )) : <p className="py-8 text-center text-sm text-slate-500">尚未设置{borrowMode === "weekly" ? "每周固定" : "指定日期"}借用规则</p>}
-              </div>
-            </section>
-          )}
-          {tab !== "borrowing" && (!isScheduleTab || scheduleEnabled) && (
+          {(!isScheduleTab || scheduleEnabled) && (
           <section className="dc-list-card overflow-hidden">
             <div className="dc-list-heading flex flex-wrap items-center justify-between gap-3 border-b border-slate-100">
               <div>
@@ -1085,11 +1038,11 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
               </div>
               <div className="dc-actions">
                 {tab === "duration" || tab === "homework" ? (
-                  !batchMode && <button type="button" disabled={!rows.length} className={primary} onClick={() => { setBatchMode(true); setSelected([]); setMessage({ text: `请选择要设置的${rowType}`, tone: "info" }); }}>批量操作</button>
+                  !batchMode && <button type="button" disabled={!rows.length} className={button} onClick={() => { setBatchMode(true); setSelected([]); setMessage({ text: `请选择要设置的${rowType}`, tone: "info" }); }}>批量操作</button>
                 ) : tab === "world" ? (
-                  !batchMode && <button type="button" className={primary} onClick={() => { setBatchMode(true); setSelected([]); setMessage({ text: `请选择要设置的${rowType}`, tone: "info" }); }}>批量设置</button>
+                  !batchMode && <button type="button" className={button} onClick={() => { setBatchMode(true); setSelected([]); setMessage({ text: `请选择要设置的${rowType}`, tone: "info" }); }}>批量操作</button>
                 ) : (
-                  !batchMode && <button type="button" className={primary} onClick={() => {
+                  !batchMode && <button type="button" className={button} onClick={() => {
                     setBatchMode(true);
                     setSelected([]);
                     setMessage({ text: `请选择需要锁屏或解除临时锁屏的${rowType}`, tone: "info" });
@@ -1154,7 +1107,6 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
                         />
                       </th>
                     )}
-                    <th className="w-16 py-3 font-medium">序号</th>
                     <th className="min-w-32 py-3 font-medium">
                       {rowType}
                       {classId ? " / 编号" : ""}
@@ -1170,7 +1122,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
                   </tr>
                 </thead>
                 <tbody>
-                  {pageRows.map((row, index) => (
+                  {pageRows.map((row) => (
                     <tr
                       key={row.id}
                       data-selected={selected.includes(row.id)}
@@ -1192,9 +1144,6 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
                           />
                         </td>
                       )}
-                      <td className="py-4 align-top text-slate-400">
-                        {(currentPage - 1) * pageSize + index + 1}
-                      </td>
                       <td className="py-4 align-top">
                         {row.classId ? <span className="font-bold text-slate-900">{row.label}</span> : <button
                           type="button"
@@ -1203,11 +1152,11 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
                               ? setDetailId(row.student.id)
                               : navigate(row.grade!, row.classId ?? null)
                           }
-                          className="font-bold text-indigo-600 hover:underline"
+                          className="inline-flex items-center gap-2 font-bold text-indigo-600"
                         >
-                          {row.label}
+                          {row.label}<ChevronRight size={15} />
                         </button>}
-                        {row.subtitle && (
+                        {row.student && row.subtitle && (
                           <p className="mt-1 text-xs text-slate-400">
                             {row.subtitle}
                           </p>
@@ -1227,17 +1176,17 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
                       <td className="dc-row-actions sticky right-0 px-5 py-4 align-top">
                         <div className="flex flex-col items-start gap-3">
                           {tab === "duration" && (
-                            <button type="button" className="dc-link whitespace-nowrap" onClick={() => openDurationEditor(row.ids, row.label)}>
+                            <button type="button" className="dc-btn whitespace-nowrap" onClick={() => openDurationEditor(row.ids, row.label)}>
                               设置使用时长
                             </button>
                           )}
                           {tab === "homework" && (
-                            <button type="button" className="dc-link whitespace-nowrap" onClick={() => openEditor(row.ids, row.label, undefined, undefined, [row.label])}>
+                            <button type="button" className="dc-btn whitespace-nowrap" onClick={() => openEditor(row.ids, row.label, undefined, undefined, [row.label])}>
                               设置权限
                             </button>
                           )}
-                          {tab === "world" && <button type="button" className="dc-link whitespace-nowrap" onClick={() => openWorldEditor(row.ids, row.label)}>设置使用状态</button>}
-                          {tab === "lock" && <button type="button" className="dc-link whitespace-nowrap" onClick={() => openLockAction(row.ids, row.label)}>{lockActionLabel(row.ids)}</button>}
+                          {tab === "world" && <button type="button" className="dc-btn whitespace-nowrap" onClick={() => openWorldEditor(row.ids, row.label)}>设置使用状态</button>}
+                          {tab === "lock" && <button type="button" className="dc-btn whitespace-nowrap" onClick={() => openLockAction(row.ids, row.label)}>{lockActionLabel(row.ids)}</button>}
                           {!row.classId && <button
                             type="button"
                             onClick={() =>
@@ -1262,7 +1211,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
                     <tr>
                       <td
                         colSpan={
-                          3 +
+                          2 +
                           (batchMode ? 1 : 0) +
                           configurationColumnCount({
                             module: tab,
@@ -1339,6 +1288,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
           </section>
           )}
           {message && <ControlToast duration={demoScenario && (exception === "conflict" || exception === "scope-changed" || exception === "save-failed") ? 12000 : undefined} message={message.text} tone={message.tone} onClose={() => setMessage(null)} />}
+          </>}
         </div>
       </div>
       {detailStudent && (
@@ -1436,22 +1386,25 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
             <header className="flex items-center justify-between border-b p-6">
               <div>
                 <h2 id="operation-history-title" className="text-xl font-bold text-slate-900">{tabs.find((item) => item.id === tab)?.label}操作记录</h2>
-                <p className="mt-1 text-sm text-slate-500">仅记录教师端学校管理员的操作，每个模块显示近100条记录</p>
+
               </div>
               <button type="button" aria-label="关闭操作记录" onClick={close} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X size={20} /></button>
             </header>
             <div className="dc-panel-body space-y-4">
-              {visibleOperationRecords.length ? visibleOperationRecords.map((record) => (
-                <article key={record.id} className="rounded-xl border border-slate-200 bg-white p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div><h3 className="font-bold text-slate-900">{record.title}</h3><p className="mt-1 text-xs text-slate-500">{record.time} · {record.operator} · {record.scope}</p></div>
-                  </div>
-                  <div className="mt-4 grid gap-3 md:grid-cols-2">
-                    <div className="rounded-lg bg-slate-50 p-3"><p className="mb-2 text-xs font-bold text-slate-500">修改前</p>{record.before.map((item) => <p key={item} className="mt-1 text-sm text-slate-700">{item}</p>)}</div>
-                    <div className="rounded-lg bg-indigo-50 p-3"><p className="mb-2 text-xs font-bold text-indigo-600">修改后</p>{record.after.map((item) => <p key={item} className="mt-1 text-sm text-slate-700">{item}</p>)}</div>
-                  </div>
-                </article>
-              )) : <div className="rounded-xl border border-dashed p-10 text-center text-sm text-slate-500">暂无操作记录</div>}
+              <p className="text-xs text-slate-500">仅记录教师端学校管理员的操作，每个模块显示近100条记录。</p>
+              {visibleOperationRecords.map(record => (
+                <section key={record.id} className="rounded-xl border p-4">
+                  <h3 className="font-bold">{record.title}</h3>
+                  <p className="mt-2 text-sm">操作对象：{record.scope || '未记录'}</p>
+                  <p className="mt-2 text-xs text-slate-500">{record.operator} · {record.time}</p>
+                  <details className="mt-3 text-sm">
+                    <summary>查看修改前后</summary>
+                    <p className="mt-2 whitespace-pre-line">修改前：{record.before.join('\n') || '无'}</p>
+                    <p className="mt-2 whitespace-pre-line">修改后：{record.after.join('\n') || '无'}</p>
+                  </details>
+                </section>
+              ))}
+              {!visibleOperationRecords.length && <p className="py-10 text-center text-slate-500">暂无操作记录</p>}
             </div>
           </>}
         </DeviceControlLayer>

@@ -97,7 +97,7 @@ export const StudentControlEditor: React.FC<{
             <div className="dc-target">
               <p className="text-sm font-bold text-indigo-900">{targetLabel}</p>
               <p className="mt-1 text-xs text-indigo-700">
-                {draft?.mode === "dates" ? `默认全校生效，影响 ${count} 名学生` : `本次设置影响 ${count} 名学生`}
+                {`本次设置影响 ${count} 名学生`}
               </p>
               {!!selectedObjects?.length && (
                 <ul className="dc-selected-objects" aria-label="本次设置对象列表">
@@ -156,7 +156,7 @@ export const StudentControlEditor: React.FC<{
                         />
                       </div>
                       <p className="mt-2 text-xs leading-5 text-slate-500">
-                        生效日期只能选择当天及之后，包含起止日期。到期后恢复每周规则；已失效规则仅支持删除。
+                        生效日期只能选择当天及之后，包含起止日期。到期后按剩余规则执行；无每周规则时默认可借。已失效规则仅支持删除。
                       </p>
                     </>
                   )}

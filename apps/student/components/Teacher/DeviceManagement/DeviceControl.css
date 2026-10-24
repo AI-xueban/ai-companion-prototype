@@ -1107,3 +1107,29 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Match the borrowing workspace's cards, tables and action controls. */
+.dc-unified-panels .dc-breadcrumb { padding: 0; background: transparent; border: 0; }
+.dc-unified-panels .dc-breadcrumb nav button { color: #4f46e5; }
+.dc-unified-panels .dc-scope-heading { gap: 0; }
+.dc-unified-panels .dc-list-heading { padding: 20px 22px; }
+.dc-unified-panels .dc-selection-bar { background: #eef2ff; color: #475569; padding: 12px 20px; flex-wrap: wrap; }
+.dc-unified-panels .dc-selection-bar > div { flex-wrap: wrap; }
+.dc-unified-panels .dc-data-table { font-size: 14px; }
+.dc-unified-panels .dc-data-table th,
+.dc-unified-panels .dc-data-table td { padding: 16px; vertical-align: middle; }
+.dc-unified-panels .dc-data-table th { font-weight: 600; background: #f8fafc; }
+.dc-unified-panels .dc-row-actions > div { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+/* Keep all module list typography aligned with the borrowing list. */
+.dc-unified-panels .dc-data-table th { font-size: 14px; line-height: 20px; font-weight: 700; color: #64748b; height: auto; }
+.dc-unified-panels .dc-data-table td { font-size: 12px; line-height: 20px; color: #64748b; }
+.dc-unified-panels .dc-data-table td > button { font-size: 14px; font-weight: 700; }
+.dc-unified-panels .dc-data-table td p { font-size: 12px; line-height: 20px; }
+.dc-unified-panels .dc-data-table td p.font-semibold { font-weight: 400; color: #64748b; }
+.dc-unified-panels .dc-data-table td:has(> .dc-btn),
+.dc-unified-panels .dc-data-table td:has(> span.whitespace-nowrap) { white-space: nowrap; }
+.dc-unified-panels .dc-data-table th { min-width: 88px; }
+.dc-unified-panels .dc-data-table td.min-w-44 { min-width: 140px; white-space: normal; }
+.dc-unified-panels .dc-data-table td.min-w-72 { min-width: 240px; }
+.dc-unified-panels .dc-data-table td > span.rounded-lg { border-radius: 6px; padding: 4px 8px; }
