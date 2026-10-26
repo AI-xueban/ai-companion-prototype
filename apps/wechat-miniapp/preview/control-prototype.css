@@ -1,4 +1,13 @@
 /* 管控沿用教师工作台的浅蓝底、白色内容和蓝色操作。 */
+.control-screen .control-description-fold { margin:0; }
+.control-screen .control-description-fold > summary { display:flex; align-items:center; justify-content:flex-start; gap:4px; width:100%; min-height:36px; margin:0; padding:4px 0; list-style:none; color:#6c8395; font-size:12px; cursor:pointer; border-radius:8px; }
+.control-screen .control-description-fold > summary::-webkit-details-marker { display:none; }
+.control-screen .control-description-fold > summary::marker { content:''; }
+.control-screen .control-description-fold > summary:focus-visible { outline:2px solid #168fe0; outline-offset:2px; }
+.control-screen .control-description-fold[open] > summary svg { transform:rotate(180deg); }
+.control-screen .control-description-body { padding:0; }
+.control-screen .control-description-body .parity-note { margin:4px 0 8px; }
+.control-screen .control-description-fold + .control-actions { margin-top:4px; }
 .control-screen {
   --accent: #168fe0;
   --control-ink: #193349;

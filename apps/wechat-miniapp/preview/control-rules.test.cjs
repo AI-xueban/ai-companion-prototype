@@ -139,6 +139,25 @@ test('全校、年级、班级临时锁屏保留原状态，范围重叠及教�
   context.parity.toggleTemporaryLock(false, true);
   assert.equal(JSON.parse(stored).schoolSettings.temporaryLock.active, false);
   assert.deepEqual(JSON.parse(stored).A.map(s => Boolean(s.locked)), [true, false, false]);
+  // 子页顶部大按钮只操作当前年级/班级；局部解除不结束全校会话。
+  context.controlData.B = [student(4)]; context.schoolControlClasses.push('B'); stored = JSON.stringify(context.controlData);
+  context.parity.toggleTemporaryLock(true, true);
+  context.adminLevel = 'grade'; context.adminSelectedGrade = 'A'; context.renderControl();
+  assert.match(context.app.innerHTML,/A临时锁屏/);
+  assert.match(context.app.innerHTML,/parity.currentScopeLock\(\)/);
+  const beforeConfirm = stored;
+  context.parity.currentScopeLock(); assert.match(dialog,/解除临时锁屏/); assert.equal(stored,beforeConfirm);
+  context.parity.commitScopedLock(false);
+  assert.equal(JSON.parse(stored).schoolSettings.temporaryClassStates.A,false);
+  assert.equal(JSON.parse(stored).schoolSettings.temporaryClassStates.B,true);
+  assert.equal(JSON.parse(stored).schoolSettings.temporaryLock.active,true);
+  context.adminLevel = 'class'; context.renderControl();
+  assert.match(context.app.innerHTML,/A临时锁屏/);
+  assert.match(context.app.innerHTML,/>一键锁屏A<\/button>/);
+  context.parity.currentScopeLock(); assert.match(dialog,/开启临时锁屏/);
+  context.parity.commitScopedLock(true);
+  assert.equal(JSON.parse(stored).schoolSettings.temporaryClassStates.A,true);
+  assert.deepEqual(JSON.parse(stored).A.map(s => Boolean(s.locked)),[true,false,false]);
 });
 
 for (const role of ['school', 'homeroom']) for (const type of (role === 'school' ? ['weekly', 'dates', 'duration'] : ['duration'])) {

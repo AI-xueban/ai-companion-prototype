@@ -177,8 +177,18 @@
     if (controlModule === 'duration') return card('全校默认配置说明', `<p>${R.dayText(R.defaultDuration.weekdays)} · ${R.durationText(R.defaultDuration)}</p>`) + (controlDemoRole === 'admin' && adminLevel === 'school' ? card('允许班主任调整本班使用时长', `<p>开放后可调整；关闭后不能修改，已有设置继续生效。</p>${button(durationAllowed() ? '关闭调整权限' : '开放调整权限', 'parity.durationPermission()', true)}`) : controlDemoRole !== 'admin' && !durationAllowed() ? '<p class="parity-note">学校暂未开放调整权限，仅可查看。</p>' : '');
     if (controlModule === 'homework') return card('学生权限', '<p>默认所有学生不能查看答案和详解。</p>');
     const students = R.resolve(controlData, activeRefs()).map(row => row.student), count = students.filter(s => controlModule === 'world' ? s.world : isLocked(s)).length;
-    if (controlModule === 'lock' && controlDemoRole === 'admin') return '';
+    if (controlModule === 'lock' && controlDemoRole === 'admin') return temporaryLockScopeCard();
     return card(scopeLabel() + '当前状态', `<p>${count}人${controlModule === 'world' ? '允许使用' : '已锁屏'} · ${students.length - count}人${controlModule === 'world' ? '禁止使用' : '未锁屏'}</p>${controlDemoRole === 'admin' && controlModule === 'world' && adminLevel === 'school' ? button('设置全校使用状态', "parity.schoolWorld()") : ''}`);
+  }
+  const temporaryLockDescription = () => '<details class="control-description-fold"><summary aria-label="临时锁屏说明"><span>管控说明</span><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary><div class="control-description-body"><p class="parity-note">临时锁屏期间，相关班级的老师不能修改锁屏。解除后恢复日常锁屏状态和老师原有操作权限。</p></div></details>';
+  function temporaryLockScopeCard() {
+    const classes = adminLevel === 'school' ? schoolControlClasses : adminLevel === 'grade' ? schoolControlClasses.filter(name => name.startsWith(adminSelectedGrade)) : [selectedTeacherClass];
+    const locked = classes.filter(className => refLocked({ className })).length;
+    const school = adminLevel === 'school', mixed = locked > 0 && locked < classes.length;
+    const scope = scopeLabel().replace(/\s/g, '');
+    const label = school ? temporaryLockActive() ? '结束全校临时锁屏' : '一键锁屏全校' : mixed ? '设置临时锁屏' : locked ? `解除${scope}临时锁屏` : `一键锁屏${scope}`;
+    const status = school && temporaryLockActive() ? '全校临时锁屏中' + (locked < classes.length ? '，部分班级已解除' : '') : locked === classes.length && classes.length ? '已开启临时锁屏' : mixed ? '部分班级临时锁屏中' : '未开启临时锁屏';
+    return `<section class="control-entry-lock"><div class="control-entry-lock-head"><div><h3>${esc(scopeLabel())}临时锁屏</h3><p>${status}</p></div></div>${temporaryLockDescription()}<div class="control-actions">${button(label, 'parity.currentScopeLock()', false, !activeRefs().length)}</div></section>`;
   }
   function schoolStatus(module) {
     const students = adminAllStudents();
@@ -213,11 +223,11 @@
     const admin = controlDemoRole === 'admin', students = admin ? adminAllStudents() : controlStudents(), locked = students.filter(s => isLocked(s)).length;
     const lockScope = admin ? '全校' : '全班', lockAction = admin ? "adminBatchAction('lock'," : "controlModule='lock';confirmControl('all',";
     const temporary = admin ? temporaryLockActive() : classRefs().some(ref => refLocked(ref));
-    const lockActions = admin ? button(temporary ? '解除临时锁屏' : '一键临时锁屏', 'parity.toggleTemporaryLock()', temporary) : temporary ? button('本班临时锁屏中', '', true, true) : button(lockScope + '解锁', lockAction + 'false)', true, !locked) + button(lockScope + '锁屏', lockAction + 'true)', false, locked === students.length);
-    const lockDescription = admin ? '<p class="parity-note">解除后恢复日常锁屏状态。<b>临时锁屏老师不可操作。</b></p>' : lockNotice();
+    const lockActions = admin ? button(temporary ? '结束全校临时锁屏' : '一键锁屏全校', 'parity.toggleTemporaryLock()', temporary) : temporary ? button('本班临时锁屏中', '', true, true) : button(lockScope + '解锁', lockAction + 'false)', true, !locked) + button(lockScope + '锁屏', lockAction + 'true)', false, locked === students.length);
+    const lockDescription = admin ? temporaryLockDescription() : lockNotice();
     const lockCard = `<section class="control-entry-lock"><div class="control-entry-lock-head"><div><h3>${admin ? '全校临时锁屏' : '平板锁屏'}</h3><p>${admin ? schoolStatus('lock') : locked + '人已锁屏 · ' + (students.length - locked) + '人未锁屏'}</p></div><button onclick="${admin ? "enterAdminModule('lock')" : "openControlModule('lock')"}">查看详情 ›</button></div>${lockDescription}<div class="control-actions">${lockActions}</div></section>`;
     const borrowCard = admin && window.borrowing ? borrowing.entryCard() : '';
-    const entries = [...(!admin && controlWorkView === 'homeroom' && isHeadTeacherClass() ? [['borrowing', '借用管控', '禁止学生借用或解除禁借']] : []), ...(admin || isHeadTeacherClass() ? [['duration', '使用时长管控', '设置使用时长、休息和每日可用时段']] : []), ['homework', '智阅作业', '设置答案和详解的查看权限'], ['world', '万象视界', '允许或禁止学生进入']];
+    const entries = [...(!admin && controlWorkView === 'homeroom' && isHeadTeacherClass() ? [['borrowing', '柜机借用管控', '禁止学生借用或解除禁借']] : []), ...(admin || isHeadTeacherClass() ? [['duration', '使用时长管控', '设置使用时长、休息和每日可用时段']] : []), ['homework', '智阅作业管控', '设置答案和详解的查看权限'], ['world', '万象视界管控', '允许或禁止学生进入']];
     const list = entries.map(([module, title, description]) => `<button class="control-entry-card" onclick="${admin ? 'enterAdminModule' : 'openControlModule'}('${module}')"><span class="control-entry-icon ${module}">${controlCardIcon(module)}</span><span class="control-entry-copy"><h3>${title}</h3>${admin ? `<p class="parity-school-status" role="status">${schoolStatus(module)}</p>` : ''}<p>${description}</p></span><span class="control-entry-action">›</span></button>`).join('');
     app.innerHTML = `<main class="screen control-screen">${header('管控', false)}${controlRoleSwitcher()}<section class="control-entry" id="teacher-tab-panel" role="tabpanel">${lockCard}${admin ? '' : `<div class="control-actions">${button('查看借用时间', 'parity.showBorrowTimes()', true)}</div>`}${borrowCard}<div class="control-entry-subtitle">其他管控</div><div class="control-entry-list">${list}</div></section>${teacherTabBar()}<div id="control-overlay"></div><div id="control-toast" role="status"></div></main>`;
     syncReview();
@@ -308,7 +318,7 @@
       return `<section class="parity-borrow-section" aria-label="${title}"><div class="parity-borrow-heading"><h3>${title}</h3></div><p class="parity-note">${note}</p>${items.map(rule => `<article class="parity-rule"><b>${esc(R.borrowText(rule))}</b>${rule.mode === 'dates' ? `<span class="parity-rule-status">${R.borrowStatus(rule)}</span>` : ''}<div class="parity-rule-actions">${R.borrowStatus(rule) === '已失效' ? '' : ruleIconButton('edit', "parity.schoolBorrowEdit('" + rule.id + "')", !schoolBorrowingEnabled)}${ruleIconButton('delete', "parity.schoolBorrowDelete('" + rule.id + "')", !schoolBorrowingEnabled)}</div></article>`).join('') || '<p class="parity-borrow-empty">尚未设置' + title + '</p>'}</section>`;
     }).join('');
     const content = `<p class="parity-note">${canEdit() ? '无有效规则时不能借用。' : '由学校管理员统一设置，仅可查看。'}</p>${sections}`;
-    shell('借用管控', content, 'leaveControlCenter()', canEdit() ? `<div class="parity-borrow-floating">${button('＋ 新增规则', 'parity.newBorrowRule()')}</div>` : '', 'parity-school-borrow');
+    shell('柜机借用管控', content, 'leaveControlCenter()', canEdit() ? `<div class="parity-borrow-floating">${button('＋ 新增规则', 'parity.newBorrowRule()')}</div>` : '', 'parity-school-borrow');
   }
   function renderControl() {
     if (!renderingDemo && !window.controlPageDemo?.isActive() && controlWorkView === 'homeroom' && controlModule === 'duration' && !ui.editor) controlData = loadLatest();
@@ -721,6 +731,12 @@
     renderRows() { const rows = document.getElementById('parity-student-rows'); if (rows) rows.innerHTML = studentRows(); const footer = document.querySelector('.parity-batchbar'); if (footer) footer.outerHTML = selectionFooter(); },
     editScope(key) { openEditor(scopeRefs(key), key); },
     selectedEdit() { const refs = currentSelectedRefs(); const names = controlDemoRole === 'admin' ? [...adminSelectedScopes] : [selectedTeacherClass]; openEditor(refs, names.join('、')); },
+    currentScopeLock() {
+      if (controlDemoRole !== 'admin' || controlModule !== 'lock') return;
+      if (adminLevel === 'school') return this.toggleTemporaryLock();
+      const refs = activeRefs(), states = refs.map(ref => Boolean(refLocked(ref)));
+      return this.booleanEditor(refs, scopeLabel(), states.some(Boolean) && states.some(value => !value) ? null : !states.every(Boolean));
+    },
     scopeBoolean(key, value) { const refs = scopeRefs(key); const states = refs.map(ref => Boolean(refLocked(ref))); return this.booleanEditor(refs, key, controlModule === 'world' || states.some(Boolean) && states.some(v => !v) ? null : !states.every(Boolean)); },
     selectedBoolean(value) { if (controlModule === 'lock' && controlDemoRole === 'admin') return this.setTemporaryLocks(selectionLockEntries(), value); request(makeOperation(currentSelectedRefs(), '所选对象', 'boolean', value)); },
     selectedReset() {
@@ -806,7 +822,7 @@
       persist(result.data); renderControl(); controlToast('权限已' + (value ? '开启' : '关闭'));
     } catch (error) { conflict(error); }
   };
-  window.toggleSchoolBorrowing = () => controlOverlay(`确认${schoolBorrowingEnabled ? '关闭' : '开启'}全校借用管控？`, `<p class="control-confirm-copy">${schoolBorrowingEnabled ? '关闭后，所有学生均不能从柜机借用平板，已有规则保留。' : '开启后，仅允许在有效规则允许的时段借用，没有有效规则时不能借用。'}</p>`, button('取消', 'closeControlOverlay()', true) + button('确认生效', `applySchoolBorrowing(${!schoolBorrowingEnabled})`));
+  window.toggleSchoolBorrowing = () => controlOverlay(`确认${schoolBorrowingEnabled ? '关闭' : '开启'}全校柜机借用管控？`, `<p class="control-confirm-copy">${schoolBorrowingEnabled ? '关闭后，所有学生均不能从柜机借用平板，已有规则保留。' : '开启后，仅允许在有效规则允许的时段借用，没有有效规则时不能借用。'}</p>`, button('取消', 'closeControlOverlay()', true) + button('确认生效', `applySchoolBorrowing(${!schoolBorrowingEnabled})`));
   let displayedBorrowStates = '';
   const overlayOpen = () => typeof document !== 'undefined' && Boolean(document.querySelector?.('#control-overlay .control-shade'));
   const refreshExpiredRules = () => {
