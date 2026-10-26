@@ -21,6 +21,8 @@ window.pageDemoTools = (() => {
       return {...c,kind:'homework',choices:choices.map(([id,label,hint,group])=>({id,label,hint,group}))};
     }
     window.homeworkPrototype?.clearPageDemo?.();
+    const control=window.controlPageDemo?.context();
+    if(control)return {...control,kind:'control'};
     const learning=window.learningPageDemo?.context();
     if(learning)return {...learning,kind:'learning'};
     if(parent&&window.demoWorkspace?.enabled&&window.parentPrototype?.getPageDemoContext)return {...window.parentPrototype.getPageDemoContext(),kind:'parent'};
@@ -44,6 +46,10 @@ window.pageDemoTools = (() => {
     // Existing parent auth/family pages retain their own controller and snapshots.
     if(context.kind==='homework')screen.querySelectorAll(':scope > .parent-demo-toolbar, :scope > .parent-exception-mask').forEach(el=>el.remove());
     host.innerHTML=render({...context,open:menuOpen,select:id=>'pageDemoTools.select('+JSON.stringify(id)+')',show:'pageDemoTools.open()',close:'pageDemoTools.close()',restore:'pageDemoTools.restore()'});
+    if(context.kind==='control' && context.active){
+      const choice=context.choices.find(item=>item.id===context.active);
+      host.insertAdjacentHTML('beforeend',`<section class="control-demo-detail" role="status" style="padding:14px;line-height:1.7;color:inherit"><strong>${esc(choice.group)} · ${esc(choice.label)}</strong><p>${esc(choice.hint)}</p><small>${choice.id==='classRevoked'?'本地调整权限已关闭，弹窗仅作通知，可在管理员端重新开启。':choice.id==='durationRevoked'?'点“知道了”后同步关闭本地调整权限，可在管理员端重新开启。':'场景说明 · 不修改当前管控设置'}</small></section>`);
+    }
     document.getElementById('dw-state-toggle')?.setAttribute('aria-expanded',String(menuOpen));
     positionPicker();
   }
@@ -62,8 +68,8 @@ window.pageDemoTools = (() => {
   }
   function open(){menuOpen=true;sync();document.querySelector('#page-demo-tools-host .parent-exception-close')?.focus({preventScroll:true});}
   function close(){menuOpen=false;sync();(document.getElementById('dw-state-toggle')||document.querySelector('#page-demo-tools-host .parent-demo-open'))?.focus({preventScroll:true});}
-  function select(id){const c=getContext();if(!c?.choices.some(choice=>choice.id===id))return;changingState=Boolean(window.demoWorkspace?.enabled);if(!changingState)menuOpen=false;try{if(c.kind==='homework')window.homeworkPrototype.applyPageDemo(id,c.role);else if(c.kind==='parent')window.parentPrototype.exception(id);else if(c.kind==='learning')window.learningPageDemo.select(id);else setTeacherBranch(id);sync();}finally{changingState=false;}}
-  function restore(){const c=getContext();changingState=Boolean(window.demoWorkspace?.enabled);if(!changingState)menuOpen=false;try{if(c?.kind==='homework')window.homeworkPrototype.restorePageDemo(c.role);else if(c?.kind==='parent')window.parentPrototype.exception('normal');else if(c?.kind==='learning')window.learningPageDemo.restore();else if(c?.kind==='teacher')setTeacherBranch('normal');sync();}finally{changingState=false;}}
+  function select(id){const c=getContext();if(!c?.choices.some(choice=>choice.id===id))return;changingState=Boolean(window.demoWorkspace?.enabled);if(!changingState)menuOpen=false;try{if(c.kind==='control'){window.controlPageDemo.select(id);menuOpen=false;}else if(c.kind==='homework')window.homeworkPrototype.applyPageDemo(id,c.role);else if(c.kind==='parent')window.parentPrototype.exception(id);else if(c.kind==='learning')window.learningPageDemo.select(id);else setTeacherBranch(id);sync();}finally{changingState=false;}}
+  function restore(){const c=getContext();changingState=Boolean(window.demoWorkspace?.enabled);if(!changingState||c?.kind==='control')menuOpen=false;try{if(c?.kind==='control')window.controlPageDemo.restore();else if(c?.kind==='homework')window.homeworkPrototype.restorePageDemo(c.role);else if(c?.kind==='parent')window.parentPrototype.exception('normal');else if(c?.kind==='learning')window.learningPageDemo.restore();else if(c?.kind==='teacher')setTeacherBranch('normal');sync();if(c?.kind==='control')document.getElementById('dw-state-toggle')?.focus({preventScroll:true});}finally{changingState=false;}}
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&menuOpen)close();});
   window.addEventListener('resize',positionPicker);
   window.addEventListener('scroll',positionPicker,{passive:true});

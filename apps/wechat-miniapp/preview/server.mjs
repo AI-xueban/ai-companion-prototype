@@ -35,6 +35,10 @@ export async function handlePreviewRequest(request, response) {
       : pathname === '/assets/role-selection-approved.png'
         ? 'role-selection-approved.png'
         : null;
+    if (['/control-page-demo.js', '/control-borrowing.js', '/control-borrowing-model.js', '/control-borrowing.css'].includes(pathname)) {
+      response.writeHead(200, { 'Content-Type': pathname.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8', 'Cache-Control': 'no-store' });
+      response.end(await readFile(join(root, pathname.slice(1)))); return;
+    }
     const teacherArt = pathname === '/assets/teacher-login-illustration.png';
     const homeworkPaper = ['/miniprogram/assets/homework-demo-paper.png', '/miniprogram/assets/homework-real-page-1.jpg', '/miniprogram/assets/homework-real-page-2.png'].includes(pathname);
     const parentAsset = ['/homework-tutor.js', '/demo-workspace.js', '/demo-workspace.css', '/learning-demo.js', '/page-demo-tools.js', '/homework-console.js', '/parent-prototype.css', '/parent-prototype.js', '/homework-prototype.css', '/homework-prototype.js', '/homework-flow-lab.css', '/homework-flow-lab.js', '/homework-flow-lab.html', '/homework-preview.html', '/教师发布任务-新版预览.html', '/learning-prototype.css', '/learning-prototype.js', '/workbench-prototype.js', '/control-prototype.html', '/control-prototype.css', '/control-rules.js', '/control-parity.js'].includes(pathname) ? pathname.slice(1) : null;

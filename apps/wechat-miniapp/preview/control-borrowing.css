@@ -1,0 +1,27 @@
+.borrowing-mobile .control-content { padding-bottom: 170px; }
+.borrowing-detail-link { border:0; background:transparent; color:#168fce; padding:8px 0 8px 12px; white-space:nowrap; font-size:14px; }
+.borrowing-list-actions { flex-direction:column; gap:8px; flex-shrink:0; }
+.borrowing-list-actions button { min-width:96px; padding:9px 12px; font-size:14px; }
+.borrowing-tabs { display:flex; gap:8px; border-bottom:1px solid #dce9f3; margin:0 0 18px; }
+.borrowing-tabs button { flex:1; border:1px solid #dce9f3; border-radius:12px 12px 0 0; padding:12px 8px; background:#eff7fc; color:#6383a1; }
+.borrowing-tabs button[aria-selected=true] { background:white; color:#1296df; font-weight:700; border-bottom-color:white; box-shadow:0 -3px 10px #19395408; }
+.borrowing-mobile .control-actions { flex-wrap:wrap; gap:8px; }
+.borrowing-scope-row { padding:18px 12px; background:white; border-bottom:1px solid #e3edf5; }
+.borrowing-row-head { display:flex; gap:10px; align-items:center; }
+.borrowing-row-head span { margin-left:auto; color:#6b86a0; font-size:13px; }
+.borrowing-scope-link { border:0; background:none; text-align:left; padding:0; color:#16354b; font-size:17px; }
+.borrowing-scope-row p { color:#6985a2; font-size:14px; line-height:1.7; margin:10px 0; }
+.borrowing-footer { position:absolute; bottom:0; left:0; right:0; background:white; border-top:1px solid #dce9f3; padding:12px 20px max(20px,env(safe-area-inset-bottom)); display:flex; flex-wrap:wrap; gap:8px; z-index:20; }
+.borrowing-footer button { flex:1; min-width:90px; }
+.borrowing-footer label { align-self:center; white-space:nowrap; }
+.borrowing-roster { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:15px; max-height:50vh; overflow:auto; }
+.borrowing-select-all { display:block; padding:12px; }
+.borrowing-form label { display:block; margin:12px 0; color:#54718d; }
+.borrowing-form input[type=date], .borrowing-form select { width:100%; padding:12px; margin-top:6px; border:1px solid #dce9f3; border-radius:10px; background:white; color:#19384e; }
+.borrowing-form fieldset { border:0; padding:0; }
+.borrowing-days { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.borrowing-period { display:flex; gap:6px; align-items:center; margin:12px 0; }
+.borrowing-period input { width:0; flex:1; min-width:0; padding:10px 3px; border:1px solid #dce9f3; border-radius:8px; }
+.borrowing-period button { padding:10px 8px; }
+.borrowing-conflicts { max-height:180px; overflow:auto; background:#f4f9fc; padding:8px; }
+.borrowing-mobile .control-student-row input[type=checkbox] { width:22px; height:22px; accent-color:#1296df; }

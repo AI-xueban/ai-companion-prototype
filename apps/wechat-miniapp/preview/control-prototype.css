@@ -200,3 +200,7 @@
 .control-screen .parity-detail-actions { display: flex; gap: 10px; flex-shrink: 0; }
 .control-screen .parity-detail-actions button { flex: 1; width: 0; min-width: 0; white-space: nowrap; padding-left: 8px; padding-right: 8px; }
 .parity-rule-status { display: inline-block; margin: 6px 0 0 8px; padding: 2px 7px; border-radius: 5px; background: #edf5fc; color: #607f99; font-size: 12px; }
+/* Empty/error pages reserve the tab bar's actual height, including safe areas. */
+.screen.teacher-screen[data-control-demo] > .teacher-tabbar { position: relative; flex: 0 0 auto; }
+.screen.teacher-screen[data-control-demo] > .teacher-main { min-height: 0; padding-bottom: 24px; }
+.screen.teacher-screen[data-control-demo] .teacher-actions { flex-shrink: 0; }

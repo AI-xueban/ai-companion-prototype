@@ -1,4 +1,11 @@
 /* Review chrome is intentionally separate from the mini-program product surface. */
+/* Keep the outgoing page visible until the other teacher document is ready.
+   No cross-fade: it makes the fixed phone frame and tab bar look like they blink. */
+@view-transition { navigation: auto; }
+::view-transition-old(root) { animation: none; }
+::view-transition-new(root) { animation: none; }
+::view-transition-group(root) { animation-duration: 0s; }
+html:has(body.demo-workspace) { background: #171b22; scrollbar-gutter: stable; }
 body.demo-workspace{display:block;background:#171b22;color:#b2bcc9;--demo-border:#2b323d}
 #demo-workspace{width:100%;min-width:0}
 .dw-sidebar button[hidden],.dw-sidebar details[hidden]{display:none}

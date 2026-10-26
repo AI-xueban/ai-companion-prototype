@@ -79,7 +79,7 @@ test('全校、年级、班级临时锁屏保留原状态，范围重叠及教�
   assert.equal(JSON.parse(stored).A[0].updated.homework.by, '作业老师');
   assert.doesNotMatch(context.app.innerHTML, /最近操作/);
   assert.doesNotMatch(context.app.innerHTML, /平板未锁屏/);
-  assert.match(context.app.innerHTML, /全校临时锁屏/);
+  assert.match(context.app.innerHTML, /临时锁屏/);
   context.controlData = JSON.parse(stored);
   vm.runInNewContext(code, context);
   context.renderControl();
@@ -120,14 +120,16 @@ test('全校、年级、班级临时锁屏保留原状态，范围重叠及教�
   assert.deepEqual(JSON.parse(stored).A.map(s => s.locked), [true, false]);
   assert.ok(JSON.parse(stored).A[0].updated.lock.version > 1);
   assert.equal(JSON.parse(stored).A[0].updated.homework.version, 7);
-  // 新学生无需开启前快照；全校会话局部解除后仍限制全部老师。
+  // 全校会话仍开启，但班级解除后老师恢复原有操作权限。
   context.parity.toggleTemporaryLock(true, true);
   context.controlData.A.push(student(3)); stored = JSON.stringify(context.controlData);
   context.parity.setTemporaryLocks([{key:'class:A',refs:context.controlData.A.map(s => ({className:'A',id:s.id}))}], false, true);
   assert.equal(JSON.parse(stored).schoolSettings.temporaryLock.active, true);
   context.controlDemoRole = 'teacher'; context.controlWorkView = 'homeroom';
+  toast = ''; dialog = '';
   context.confirmControl('all', false);
-  assert.match(toast, /临时锁屏管控/);
+  assert.doesNotMatch(toast, /临时锁屏管控/);
+  assert.ok(dialog, '已解除班级可以进入普通锁屏确认');
   context.controlModule = 'borrowing'; context.openControlEditor('all');
   assert.match(toast, /老师仅可查看/);
   context.controlModule = 'duration'; context.controlData.schoolSettings.homeroomDurationEnabled = false;
@@ -214,13 +216,13 @@ test('旧总开关不影响借用；过期指定日期不再遮挡每周规则',
   assert.equal(R.effectiveBorrow(s, '2026-10-19', false).deny, false);
   assert.equal(R.effectiveBorrow(s, '2026-10-19').id, 'w');
   assert.equal(R.prune(s.schedules).length, 1);
-  assert.equal(R.effectiveBorrow({ schedules: [] }, '2026-10-19').deny, true);
+  assert.equal(R.effectiveBorrow({ schedules: [] }, '2026-10-19').deny, false);
 });
 test('删除指定日期恢复每周规则，删除全部规则不补造默认借用时段', () => {
   const rules = [weekly('w', [0]), dates('special', '2026-10-19', '2026-10-19', true)];
   assert.equal(R.effectiveBorrow({ schedules: rules }, '2026-10-19').deny, true);
   assert.equal(R.effectiveBorrow({ schedules: rules.filter(rule => rule.id !== 'special') }, '2026-10-19').id, 'w');
-  assert.equal(R.effectiveBorrow({ schedules: [] }, '2026-10-19').reason, '当天没有有效借用规则');
+  assert.equal(R.effectiveBorrow({ schedules: [] }, '2026-10-19').reason, '未设置借用时间，默认随时可借');
   assert.equal(R.effectiveBorrow({ schedules: [weekly('w', [1])] }, '2026-10-19').deny, true);
 });
 test('使用时长支持多个星期规则、覆盖拆分以及默认规则回退', () => {

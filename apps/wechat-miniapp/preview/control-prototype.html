@@ -436,7 +436,7 @@
       target.searchParams.set('identity','all');
       target.searchParams.set('workView',controlWorkView);if(params.get('review')==='1')target.searchParams.set('review','1');return target;
     }
-    function switchTeacherTab(tab){if(tab!=='control'){location.assign(teacherWorkbenchUrl(tab).href);return}teacherTab=tab;teacherDesk()}
+    function switchTeacherTab(tab){if(teacherTab===tab&&stage==='teacherDesk')return;if(tab!=='control'){location.assign(teacherWorkbenchUrl(tab).href);return}teacherTab=tab;teacherDesk()}
     // 跳转后由管控页展示账号和名单状态，不在来源页拦截导航。
     function renderControlAvailability(){
       if(localStorage.getItem('ai_companion_demo_teacher_deleted')==='1'||params.get('availability')==='deleted'){
@@ -782,7 +782,11 @@ app.innerHTML='<main class="screen control-screen">'+top+'<section class="contro
     document.querySelectorAll('[data-stage]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.stage)));document.querySelectorAll('[data-teacher-flow]').forEach(b=>b.addEventListener('click',()=>startTeacherFlow(b.dataset.teacherFlow)));restoreDemoTeacherOnLaunch();({home,auth,code,confirm,pending,approved,teacherLaunch,teacherLogin,teacherPhone:teacherPhoneLogin,teacherBind,teacherDesk,teacherSecurity}[stage]||home)();
   </script>
   <script src="control-rules.js?v=20261021-teacher-parity"></script>
-  <script src="control-parity.js?v=20261022-main-sync"></script>
+  <script src="control-parity.js?v=20261024-borrow"></script>
+  <link rel="stylesheet" href="control-borrowing.css?v=20261024">
+  <script src="control-borrowing-model.js?v=20261024"></script>
+  <script src="control-borrowing.js?v=20261024"></script>
+  <script src="control-page-demo.js"></script>
   <script src="demo-workspace.js"></script>
 </body>
 </html>

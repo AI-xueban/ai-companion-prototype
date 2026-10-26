@@ -3,10 +3,8 @@
   const copy = value => JSON.parse(JSON.stringify(value));
   const weekdays = [0, 1, 2, 3, 4, 5, 6];
   const defaultDuration = Object.freeze({ id: 'school-duration-default', weekdays, useDefault: true, continuousMinutes: 60, restMinutes: 15, dailyMinutes: 180, periods: [], fixed: true });
-  const today = () => {
-    const date = new Date();
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-  };
+  const schoolDate = (date = new Date()) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai' }).format(date);
+  const today = () => schoolDate();
   const dateOffset = (value, amount) => {
     const date = new Date(value + 'T12:00:00');
     date.setDate(date.getDate() + amount);
@@ -39,7 +37,7 @@
     const rules = prune(student.schedules || [], date);
     const matched = [...rules].reverse().find(rule => rule.mode === 'dates' && rule.startDate <= date && rule.endDate >= date)
       || [...rules].reverse().find(rule => rule.mode === 'weekly' && rule.weekdays.includes(day));
-    return matched ? { ...copy(matched), periods: matched.deny ? [] : periods(matched) } : { deny: true, periods: [], reason: '当天没有有效借用规则' };
+    return matched ? { ...copy(matched), periods: matched.deny ? [] : periods(matched) } : { deny: rules.some(rule => rule.mode === 'weekly'), periods: [], reason: rules.some(rule => rule.mode === 'weekly') ? '当前星期不在借用安排内' : '未设置借用时间，默认随时可借' };
   }
   function effectiveDuration(student, day) {
     const own = [...(student.durationRules || [])].reverse().find(rule => rule.weekdays.includes(day));
@@ -77,7 +75,7 @@
   }
   function borrowStatus(rule, now = new Date()) {
     if (rule.mode !== 'dates') return '';
-    const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const date = schoolDate(now);
     if (date < rule.startDate) return '待生效';
     if (date > rule.endDate) return '已失效';
     return '生效中';
@@ -86,7 +84,7 @@
     if (rule.mode === 'weekly' && !rule.weekdays.length) return '请至少选择一个星期';
     if (rule.mode === 'dates') {
       if (!rule.startDate || !rule.endDate || rule.startDate > rule.endDate) return '请选择正确的开始和结束日期';
-      const currentDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const currentDate = schoolDate(now);
       if (rule.startDate < currentDate) return '生效日期只能选择今天及以后';
       if (rule.deny) return '';
     }
