@@ -6,14 +6,14 @@ export const TemporaryLockEditor: React.FC<{
   label: string;
   selectedObjects?: string[];
   count: number;
-  lockClassCount: number;
+  lockClassNames: string[];
   lockedCount: number;
-  unlockClassCount: number;
+  unlockClassNames: string[];
   schoolSessionActive?: boolean;
   state: "已开启" | "未开启" | "部分开启";
   onClose: () => void;
   onSave: (enabled: boolean) => void;
-}> = ({ label, selectedObjects, count, lockedCount, lockClassCount, unlockClassCount, schoolSessionActive, state, onClose, onSave }) => {
+}> = ({ label, selectedObjects, count, lockedCount, lockClassNames, unlockClassNames, schoolSessionActive, state, onClose, onSave }) => {
   const [error, setError] = useState("");
   const [value, setValue] = useState<boolean | null>(null);
   const changed = value === null ? 0 : value ? count - lockedCount : lockedCount;
@@ -32,11 +32,11 @@ export const TemporaryLockEditor: React.FC<{
             <input type="radio" name="temporary-lock-action" checked={value === enabled} onChange={() => setValue(enabled)} />
             <span>
               <span className="block font-medium text-slate-900">{enabled ? "开启临时锁屏" : "解除临时锁屏"}</span>
-              <span className="mt-1 block text-sm text-slate-500">{enabled ? `${lockClassCount}个班未开启` : `${unlockClassCount}个班已开启`}</span>
+              <span className="mt-1 block text-sm text-slate-500">{enabled ? `${lockClassNames.length}个班有学生未开启` : `${unlockClassNames.length}个班有学生已开启`}</span>
             </span>
           </label>)}
         </fieldset>
-        {value !== null && <p role="status" className="mt-5 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">{changed ? changed === count ? `${changed} 名学生将全部${actionState}。` : `其中 ${changed} 名学生将${actionState}，其余 ${count - changed} 名学生保持不变。` : `所选学生均已${value ? "开启" : "解除"}临时锁屏，无需修改。`}</p>}
+        {value !== null && <div role="status" className="mt-5 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600"><p>{changed ? changed === count ? `${changed} 名学生将全部${actionState}。` : `其中 ${changed} 名学生将${actionState}，其余 ${count - changed} 名学生保持不变。` : `所选学生均已${value ? "开启" : "解除"}临时锁屏，无需修改。`}</p>{changed > 0 && <p className="mt-2 max-h-32 overflow-y-auto text-xs leading-6">本次涉及班级：{(value ? lockClassNames : unlockClassNames).join("、")}</p>}</div>}
       </div>
       {error && <ControlValidationNotice message={error} onClose={() => setError("")} />}
       <div className="dc-confirm-footer">

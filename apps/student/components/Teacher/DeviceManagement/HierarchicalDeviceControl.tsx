@@ -732,9 +732,10 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
     });
   };
   const schoolStudentIds = deviceControlStudents.map((student) => student.id);
-  const affectedLockClassCount = (ids: string[], enabled: boolean) => {
+  const affectedLockClassNames = (ids: string[], enabled: boolean) => {
     const selectedIds = new Set(ids);
-    return new Set(deviceControlStudents.filter((student) => selectedIds.has(student.id) && temporaryLockedIds.has(student.id) !== enabled).map((student) => student.classId)).size;
+    const affectedClassIds = new Set(deviceControlStudents.filter((student) => selectedIds.has(student.id) && temporaryLockedIds.has(student.id) !== enabled).map((student) => student.classId));
+    return schoolDeviceClasses.filter((group) => affectedClassIds.has(group.id)).map((group) => group.name);
   };
   const requestTemporaryLock = (scopes: TemporaryLockScope[], enabled: boolean, confirmed = false) => {
     const schoolAction = scopes.some((scope) => scope.key === "school");
@@ -1371,7 +1372,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
         onClose={() => setDurationEditor(null)}
         onSave={saveDurationRule}
       />}
-      {lockEditor && <TemporaryLockEditor label={lockEditor.label} selectedObjects={lockEditor.label.startsWith("已选") ? selectedObjectNames : undefined} count={lockEditor.ids.length} lockClassCount={affectedLockClassCount(lockEditor.ids, true)} unlockClassCount={affectedLockClassCount(lockEditor.ids, false)} lockedCount={lockEditor.ids.filter((studentId) => temporaryLockedIds.has(studentId)).length} schoolSessionActive={schoolTemporaryLockSession.active} state={temporaryState(lockEditor.ids)} onClose={() => setLockEditor(null)} onSave={(enabled) => requestTemporaryLock([{ key: "selection", label: lockEditor.label, ids: lockEditor.ids }], enabled, true)} />}
+      {lockEditor && <TemporaryLockEditor label={lockEditor.label} selectedObjects={lockEditor.label.startsWith("已选") ? selectedObjectNames : undefined} count={lockEditor.ids.length} lockClassNames={affectedLockClassNames(lockEditor.ids, true)} unlockClassNames={affectedLockClassNames(lockEditor.ids, false)} lockedCount={lockEditor.ids.filter((studentId) => temporaryLockedIds.has(studentId)).length} schoolSessionActive={schoolTemporaryLockSession.active} state={temporaryState(lockEditor.ids)} onClose={() => setLockEditor(null)} onSave={(enabled) => requestTemporaryLock([{ key: "selection", label: lockEditor.label, ids: lockEditor.ids }], enabled, true)} />}
       {worldEditor && <WorldUsageEditor initialSelection={(exception === "save-failed" || exception === "conflict") ? { value: worldEditor.ids.some(id => !controls[id].world), scope: "all" } : undefined} label={worldEditor.label} selectedObjects={worldEditor.label.startsWith("已选") ? selectedObjectNames : undefined} total={worldEditor.ids.length} allowed={worldEditor.ids.filter((id) => controls[id].world).length} teacherTotal={worldEditor.ids.filter((id) => controls[id].worldSource === 'teacher').length} teacherAllowed={worldEditor.ids.filter((id) => controls[id].worldSource === 'teacher' && controls[id].world).length} onClose={() => setWorldEditor(null)} onSave={(value, scope) => {
         if (hasConflict(worldEditor.ids, "world", worldEditor.baseSignatures)) return;
         const changedIds = worldEditor.ids.filter((id) => controls[id].world !== value && (scope === 'all' || controls[id].worldSource !== 'teacher'));
