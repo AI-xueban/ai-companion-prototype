@@ -213,3 +213,46 @@
 .screen.teacher-screen[data-control-demo] > .teacher-tabbar { position: relative; flex: 0 0 auto; }
 .screen.teacher-screen[data-control-demo] > .teacher-main { min-height: 0; padding-bottom: 24px; }
 .screen.teacher-screen[data-control-demo] .teacher-actions { flex-shrink: 0; }
+
+/* Match main's shared new UI in demo-workspace.css; keep the legacy variant intact. */
+body.dw-ui-new #app .control-screen {
+  --accent:var(--dw-accent,#287cca);
+  --control-ink:#234e78;
+  --control-muted:#708ba7;
+  --control-line:var(--dw-border,#dbeaf7);
+  --control-soft:var(--dw-accent-soft,#eaf5ff);
+  color:#314b61;
+}
+body.dw-ui-new #app .control-screen :is(.control-entry,.control-content,.borrow-editor-content,.control-workbench-tools) { background:transparent; }
+body.dw-ui-new #app .control-screen :is(.control-entry-lock,.admin-school-toggle,.control-module-panel,.admin-module-actions,.control-student-detail-card,.borrow-editor-card,.admin-level-list) {
+  border-color:var(--control-line); border-radius:16px; background:#ffffffed; box-shadow:0 8px 23px var(--dw-shadow,#4b85b81a);
+}
+body.dw-ui-new #app .control-screen :is(.control-entry-card h3,.control-entry-lock h3,.control-module-panel h3,.admin-level-copy b,.parity-student-main > b,.control-row-name) { color:var(--control-ink); }
+body.dw-ui-new #app .control-screen :is(.parity-note,.parity-context,.parity-student-main > span,.admin-level-copy small,.control-description-fold > summary,.control-scope,.control-form-note) { color:var(--control-muted); }
+body.dw-ui-new #app .control-screen :is(.control-primary,.control-secondary) { border-radius:12px; }
+body.dw-ui-new #app .control-screen .control-primary { border-color:var(--accent); background:var(--accent); box-shadow:0 7px 15px var(--dw-shadow,#4b85b81a); }
+body.dw-ui-new #app .control-screen .control-secondary { border-color:var(--control-line); background:#ffffffc9; color:var(--accent); box-shadow:none; }
+body.dw-ui-new #app .control-screen :is(.control-primary,.control-secondary):disabled { border-color:#e7eef4; background:#f2f6f9; color:#a4b3bf; box-shadow:none; opacity:1; cursor:default; }
+body.dw-ui-new #app .control-screen :is(.control-entry-icon,.control-segment,.admin-scope-path,.parity-apply-scope) { border-color:var(--control-line); background:var(--control-soft); color:var(--accent); }
+body.dw-ui-new #app .control-screen :is(.control-entry-lock-head button,.admin-scope-summary button,.borrow-list-head button,.flat-control-head button,.control-detail-head button) { color:var(--accent); border-radius:12px; }
+body.dw-ui-new #app .control-screen :is(.admin-scope-summary,.borrow-list-head) > button { flex:none; width:auto; margin-left:auto; }
+body.dw-ui-new #app .control-screen :is(.admin-scope-summary,.borrow-list-head,.control-list-tools) { gap:10px; }
+body.dw-ui-new #app .control-screen :is(.borrow-list-search,.borrow-status-filter,.control-period-row input,.control-time-row input,.control-date-row input,.control-number-row input,.control-add-period) { border-color:var(--control-line); border-radius:12px; background:#fff; }
+body.dw-ui-new #app .control-screen :is(input,select,textarea):focus-visible,
+body.dw-ui-new #app .control-screen button:focus-visible,
+body.dw-ui-new #app .control-screen .control-description-fold > summary:focus-visible { outline-color:var(--accent); }
+body.dw-ui-new #app .control-screen :is(input[type=checkbox],input[type=radio]) { accent-color:var(--accent); }
+body.dw-ui-new #app .control-screen :is(.control-student-row.selected,.control-class-option.active) { background:var(--control-soft); }
+body.dw-ui-new #app .control-screen .control-student-row.selected .control-check { background:var(--accent); border-color:var(--accent); }
+body.dw-ui-new #app .control-screen :is(.permission-mini-switch[aria-checked=true],.teacher-tabbar button[aria-selected=true]) { background:var(--control-soft); color:var(--accent); }
+body.dw-ui-new #app .control-screen .permission-mini-switch[aria-checked=true] { background:var(--accent); }
+body.dw-ui-new #app .control-screen :is(.control-batchbar,.admin-batchbar,.borrow-editor-actions) { border-color:var(--control-line); background:#ffffffeb; box-shadow:0 -5px 18px var(--dw-shadow,#4b85b81a); }
+body.dw-ui-new #app .control-screen .control-sheet { border-radius:24px 24px 0 0; background:#fff; }
+body.dw-ui-new #app .control-screen .control-sheet-head h3 { color:var(--control-ink); }
+body.dw-ui-new #app .control-screen :is(.parity-rule,.parity-preview,.parity-permission) { border-color:var(--control-line); border-radius:12px; }
+body.dw-ui-new #app .control-screen .parity-borrow-option-body { border-color:var(--control-line); }
+body.dw-ui-new #app .control-screen .parity-borrow-option-body b { color:var(--control-ink); }
+body.dw-ui-new #app .control-screen .parity-borrow-option input:checked + .parity-borrow-option-body { border-color:var(--accent); background:var(--control-soft); }
+body.dw-ui-new #app .control-screen .parity-borrow-option input:checked + .parity-borrow-option-body b { color:var(--accent); }
+body.dw-ui-new #app .control-screen .parity-borrow-option input:checked + .parity-borrow-option-body i { border-color:var(--accent); background:var(--accent); }
+body.dw-ui-new #app .control-screen .parity-borrow-option input:focus-visible + .parity-borrow-option-body { outline-color:var(--accent); }

@@ -45,3 +45,15 @@
 .borrowing-period button { padding:10px 8px; }
 .borrowing-conflicts { max-height:180px; overflow:auto; background:#f4f9fc; padding:8px; }
 .borrowing-mobile .control-student-row input[type=checkbox] { width:22px; height:22px; accent-color:#1296df; }
+
+/* Borrowing uses the same role tokens and card/form treatment as the other modules. */
+body.dw-ui-new #app .control-screen .borrowing-scope-card { border-color:var(--control-line); border-radius:16px; background:#ffffffed; box-shadow:0 8px 23px var(--dw-shadow,#4b85b81a); }
+body.dw-ui-new #app .control-screen :is(.borrowing-grade-link,.borrowing-card-head) { color:var(--control-ink); }
+body.dw-ui-new #app .control-screen :is(.borrowing-card-count,.borrowing-card-rules,.borrowing-card-rules small,.borrowing-card-more) { color:var(--control-muted); }
+body.dw-ui-new #app .control-screen :is(.borrowing-times-link,.borrowing-roster-link) { color:var(--accent); }
+body.dw-ui-new #app .control-screen :is(.borrowing-form input[type=date],.borrowing-form select,.borrowing-period input) { border-color:var(--control-line); border-radius:12px; background:#fff; color:var(--control-ink); font:inherit; }
+body.dw-ui-new #app .control-screen .borrowing-form label { color:var(--control-muted); font-size:12px; }
+body.dw-ui-new #app .control-screen .borrowing-rule-options button { border-color:var(--control-line); border-radius:12px; color:var(--control-muted); }
+body.dw-ui-new #app .control-screen .borrowing-rule-options button[aria-pressed=true] { border-color:var(--accent); background:var(--control-soft); color:var(--accent); }
+body.dw-ui-new #app .control-screen .borrowing-footer { border-color:var(--control-line); background:#ffffffeb; box-shadow:0 -5px 18px var(--dw-shadow,#4b85b81a); }
+body.dw-ui-new #app .control-screen .borrowing-conflicts { border-radius:12px; background:var(--control-soft); }
