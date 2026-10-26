@@ -71,6 +71,12 @@ export const SchoolBorrowingControl: React.FC<{ currentUser: TeacherPortalUser; 
   const deniedCount = (ids: string[]) => ids.filter(id => classTemporarilyDenied(state, id)).length;
   const tempLabel = (ids: string[]) => deniedCount(ids) === ids.length ? '已禁止借用' : deniedCount(ids) ? '部分禁止借用' : '未开启临时禁借';
   const go = (value: number | null) => { setGrade(value); onGradeChange?.(value); setSelected([]); setBatch(false); setPage(1); };
+  const switchRuleMode = (value: BorrowSchedule['mode']) => {
+    if (value === mode) return;
+    setMode(value);
+    setBatch(false);
+    setSelected([]);
+  };
   const askTemporary = (targetScope: Scope, enabled: boolean, schoolAction = false) => {
     setConfirm({ title: enabled ? '确认临时禁止借用？' : schoolAction ? '确认结束全校临时禁借？' : '确认解除临时禁借？', scope: targetScope, revision: state.revision,
       description: enabled ? '所选范围停止新借出，受影响班级的班主任暂时无法修改借用状态。已有借用规则和学生禁借保留。'
@@ -87,7 +93,7 @@ export const SchoolBorrowingControl: React.FC<{ currentUser: TeacherPortalUser; 
     if (!editing) return;
     const conflicts = editing.classIds.filter(id => (state.classRules[id] ?? []).some(previous => previous.id !== editing.editingId && schedulesConflict(previous, rule))).length;
     setConfirm({ title: conflicts ? '确认覆盖借用规则？' : '确认保存借用规则？', scope: editing, revision: editing.revision,
-      description: `${ruleText(rule)}。${conflicts ? `其中 ${conflicts} 个班级已有同类规则，将覆盖重叠日期，未重叠日期保留。` : '规则将应用到所选范围。'}${rule.mode === 'weekly' ? '每周规则仅允许在所选星期和时段借用；其他已设规则继续保留，指定日期规则优先。' : '每周与日期规则分别保留。'}不改变临时禁借及学生禁借。`,
+      description: `${ruleText(rule)}。${conflicts ? `其中 ${conflicts} 个班级已有同类规则，将覆盖重叠日期，未重叠日期保留。` : '规则将应用到所选范围。'}${rule.mode === 'weekly' ? '每周规则仅允许在所选星期和时段借用。' : '每周与日期规则分别保留。不改变临时禁借及学生禁借。'}`,
       change: current => saveClassBorrowingRule(current, editing.classIds, rule, editing.editingId),
       summary: current => ruleSummary(current, editing.classIds), closeEditor: true });
   };
@@ -143,60 +149,31 @@ export const SchoolBorrowingControl: React.FC<{ currentUser: TeacherPortalUser; 
       <div className="flex flex-wrap items-center justify-between gap-4"><div className="dc-scope-heading"><h2>{scope.label} · 柜机借用管控</h2><p className="mt-2">{grade === null && state.schoolTemporaryActive ? `全校临时禁借管控中${deniedCount(allClasses) < allClasses.length ? '，部分班级已单独解除' : ''}` : tempLabel(scope.classIds)}</p></div>
         <div className="flex flex-wrap gap-2">{grade === null ? <button disabled={empty} className="dc-btn-primary" onClick={() => askTemporary(scope, !state.schoolTemporaryActive, true)}>{state.schoolTemporaryActive ? '结束全校临时禁借' : '全校临时禁止借用'}</button> : temporaryActions(scope)}</div>
       </div>
-      <p className="mt-3 text-sm leading-6 text-slate-500">未设置借用时间，默认随时可借；设置后按规定时间借用。被学校或班主任禁借的学生除外。</p>
-      <p className="mt-3 text-sm leading-6 text-slate-500">解除学校临时禁借后，按当前借用安排执行；班主任设置的禁借仍需班主任解除。</p>
+      <p className="mt-3 text-sm leading-6 text-slate-500">未设置借用时间时，学生可随时借用；设置后，按规定时间借用。</p>
+      <p className="mt-3 text-sm leading-6 text-slate-500">学校临时禁借期间，相关学生不可借用。解除后，按当前借用安排执行；班主任单独设置的禁借仍需班主任解除。</p>
     </section>
     <section className="borrow-rules-section" aria-label={`${scope.label}借用规则`}>
       <nav className="borrow-raised-tabs" aria-label="借用规则类型" role="tablist">
         {(['weekly', 'dates'] as const).map(value => (
           <button key={value} id={`borrow-rule-tab-${value}`} type="button" role="tab"
             aria-selected={value === mode} aria-controls="borrow-rules-panel"
-            onClick={() => setMode(value)}>
+            onClick={() => switchRuleMode(value)}>
             {value === 'weekly' ? '每周固定借用规则' : '指定日期借用规则'}
           </button>
         ))}
       </nav>
-      <div id="borrow-rules-panel" role="tabpanel" aria-labelledby={`borrow-rule-tab-${mode}`} className="borrow-rules-panel">
-        <div className="borrow-rules-heading">
-          <div>
-            <h3>{scope.label}借用规则</h3>
-            <p>{mode === 'weekly' ? '查看和设置每周固定的借用安排。' : '指定日期规则优先于每周规则；到期或删除后，按仍有效的日期规则或每周规则执行。'}</p>
-          </div>
-          <button disabled={empty} className="dc-btn-primary" onClick={() => openRule(scope)}>
-            {mode === 'weekly' ? '新增每周规则' : '新增日期规则'}
-          </button>
-        </div>
-        <div className="borrow-inline-rules">
-          {!empty && ruleGroups(scope).map(({ rule, classIds }) => (
-            <article className="borrow-inline-rule" key={`${rule.id}-${classIds.join()}`}>
-              <div className="borrow-inline-rule-content">
-                <div className="borrow-inline-rule-title">
-                  <h4>{scheduleDateText(rule)}</h4>
-                  {rule.mode === 'dates' && <span className="borrow-rule-status" data-status={borrowScheduleStatus(rule, now)}>{borrowScheduleStatus(rule, now)}</span>}
-                </div>
-                <p className="borrow-rule-period">{schedulePeriodText(rule)}</p>
-                <p className="borrow-rule-scope">适用范围：{classIds.length === scope.classIds.length ? scope.label : scopeNames(classIds).join('、')}</p>
-              </div>
-              <div className="borrow-inline-rule-actions">
-                {(rule.mode !== 'dates' || borrowScheduleStatus(rule, now) !== '已失效') && <button className="dc-btn" onClick={() => openRule({ label: classIds.length === scope.classIds.length ? scope.label : scopeNames(classIds).join('、'), classIds }, rule, rule.id)}>编辑</button>}
-                <button className="dc-btn" onClick={() => deleteRule({ label: classIds.length === scope.classIds.length ? scope.label : scopeNames(classIds).join('、'), classIds }, rule)}>删除</button>
-              </div>
-            </article>
-          ))}
-          {(empty || !ruleGroups(scope).length) && <div className="borrow-rules-empty">尚未设置{mode === 'weekly' ? '每周固定' : '指定日期'}借用规则</div>}
-        </div>
-      </div>
-    </section>
-    <section className="dc-list-card overflow-hidden">
+    <section id="borrow-rules-panel" role="tabpanel" aria-labelledby={`borrow-rule-tab-${mode}`} className="dc-list-card overflow-hidden">
+      {mode === 'dates' && <p className="border-b border-slate-100 px-5 py-3 text-sm text-slate-500">指定日期内，按日期规则借用，不按每周固定规则执行。</p>}
       <div className="dc-list-heading flex flex-wrap items-center justify-between gap-3">
         <h3 className="font-bold">{grade === null ? '年级' : '班级'}列表</h3>
         <button disabled={empty} className="dc-btn" onClick={() => { setBatch(!batch); setSelected([]); }}>{batch ? '退出批量操作' : '批量操作'}</button>
       </div>
       {batch && <div className="flex flex-wrap items-center gap-3 border-t bg-indigo-50 px-5 py-3"><span className="text-sm">已选 {selected.length} 个{grade === null ? '年级' : '班级'} · {studentCount(target.classIds)} 名学生</span><button disabled={!selected.length} className="dc-btn" onClick={() => openRule(target)}>设置借用规则</button><button disabled={!selected.length || deniedCount(target.classIds) === target.classIds.length} className="dc-btn" onClick={() => askTemporary(target, true)}>临时禁止借用</button><button disabled={!selected.length || !deniedCount(target.classIds)} className="dc-btn" onClick={() => askTemporary(target, false)}>解除临时禁借</button></div>}
       <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="border-y bg-slate-50 text-slate-500"><tr>{batch && <th className="p-4"><input type="checkbox" aria-label="本页全选" checked={visible.length > 0 && visible.every(row => selected.includes(row.id))} onChange={event => setSelected(event.target.checked ? [...new Set([...selected, ...visible.map(row => row.id)])] : selected.filter(id => !visible.some(row => row.id === id)))} /></th>}<th className="p-4">{grade === null ? '年级' : '班级'}</th><th className="p-4">借用规则</th><th className="p-4">临时禁借状态</th><th className="p-4">说明</th><th className="p-4">最后操作人</th><th className="p-4">操作时间</th><th className="p-4">操作</th></tr></thead><tbody>
-        {empty && <tr><td colSpan={batch ? 8 : 7} className="p-12 text-center text-slate-500">{exception === 'no-grades' ? '学校暂无年级，请先完善年级信息。' : exception === 'no-classes' ? '该年级暂无班级，请先添加班级。' : '该班级暂无学生，请先添加学生。'}</td></tr>}{visible.map(row => { const summary = borrowingListSummary(state, row.classIds, mode); const last = state.history.find(record => record.classIds?.some(id => row.classIds.includes(id))); return <tr key={row.id} className="border-b border-slate-100">{batch && <td className="p-4"><input type="checkbox" aria-label={`选择${row.label}`} checked={selected.includes(row.id)} onChange={() => setSelected(selected.includes(row.id) ? selected.filter(id => id !== row.id) : [...selected, row.id])} /></td>}<td className="p-4 font-bold">{row.grade !== undefined ? <button className="inline-flex items-center gap-2 text-indigo-600" onClick={() => go(row.grade!)}>{row.label}<ChevronRight size={15} /></button> : row.label}</td><td className="max-w-xs p-4">{summary.rules.length ? summary.rules.map((rule, index) => <p key={index} className="text-xs leading-5 text-slate-500">{ruleText(rule)}</p>) : '—'}</td><td className="p-4"><span className={`rounded-md px-2 py-1 text-xs font-bold ${deniedCount(row.classIds) ? 'bg-red-50 text-red-700' : 'bg-slate-100 text-slate-600'}`}>{tempLabel(row.classIds)}</span></td><td className="p-4 text-xs leading-5 text-slate-500">{summary.note}</td><td className="max-w-40 p-4 text-xs leading-6 text-slate-500">{last?.operator ?? '—'}</td><td className="p-4 text-xs leading-6 text-slate-500">{last?.at ?? '—'}</td><td className="p-4"><div className="flex flex-wrap gap-2"><button className="dc-btn" onClick={() => setOverview(row)}>设置规则</button>{temporaryActions(row)}</div></td></tr>; })}
+        {empty && <tr><td colSpan={batch ? 8 : 7} className="p-12 text-center text-slate-500">{exception === 'no-grades' ? '学校暂无年级，请先完善年级信息。' : exception === 'no-classes' ? '该年级暂无班级，请先添加班级。' : '该班级暂无学生，请先添加学生。'}</td></tr>}{visible.map(row => { const summary = borrowingListSummary(state, row.classIds, mode); const last = state.history.find(record => record.classIds?.some(id => row.classIds.includes(id))); return <tr key={row.id} className="border-b border-slate-100">{batch && <td className="p-4"><input type="checkbox" aria-label={`选择${row.label}`} checked={selected.includes(row.id)} onChange={() => setSelected(selected.includes(row.id) ? selected.filter(id => id !== row.id) : [...selected, row.id])} /></td>}<td className="p-4 font-bold">{row.grade !== undefined ? <button className="inline-flex items-center gap-2 text-indigo-600" onClick={() => go(row.grade!)}>{row.label}<ChevronRight size={15} /></button> : row.label}</td><td className="max-w-xs p-4">{summary.rules.length ? summary.rules.map((rule, index) => <p key={index} className="text-xs leading-5 text-slate-500">{ruleText(rule)}</p>) : '—'}</td><td className="p-4"><span className={`rounded-md px-2 py-1 text-xs font-bold ${deniedCount(row.classIds) ? 'bg-red-50 text-red-700' : 'bg-slate-100 text-slate-600'}`}>{tempLabel(row.classIds)}</span></td><td className="p-4 text-xs leading-5 text-slate-500">{summary.note}</td><td className="max-w-40 p-4 text-xs leading-6 text-slate-500">{last?.operator ?? '—'}</td><td className="p-4 text-xs leading-6 text-slate-500">{last?.at ?? '—'}</td><td className="p-4"><div className="flex flex-wrap gap-2"><button className="dc-btn" onClick={() => setOverview(row)}>设置规则</button>{temporaryActions(row)}{row.grade !== undefined && <button className="dc-link inline-flex items-center gap-1 whitespace-nowrap" onClick={() => go(row.grade!)}>查看班级<ChevronRight size={15} /></button>}</div></td></tr>; })}
       </tbody></table></div>
       <div className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm text-slate-500"><span>共 {rows.length} 个{grade === null ? '年级' : '班级'}</span><div className="flex items-center gap-3"><select aria-label="每页条数" value={pageSize} onChange={event => { setPageSize(Number(event.target.value)); setPage(1); }}>{[10, 20, 40].map(value => <option key={value} value={value}>{value}条/页</option>)}</select><button className="dc-btn" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>上一页</button><span>{currentPage} / {pages}</span><button className="dc-btn" disabled={currentPage === pages} onClick={() => setPage(currentPage + 1)}>下一页</button></div></div>
+    </section>
     </section>
     {overview && <DeviceControlLayer labelId="borrow-overview" onClose={() => setOverview(null)}>{close => <><header className="flex items-center justify-between border-b p-6"><h2 id="borrow-overview" className="text-xl font-bold">设置规则 · {overview.label} · {mode === 'weekly' ? '每周借用规则' : '指定日期规则'}</h2><button aria-label="关闭规则列表" onClick={close}><X size={20} /></button></header><div className="dc-panel-body space-y-4"><p className="text-sm text-slate-500">当前所选对象的原配置，可编辑、删除或新增规则。</p>{ruleGroups(overview).map(({ rule, classIds }) => <section key={`${rule.id}-${classIds.join()}`} className="rounded-xl border p-4"><h3 className="font-bold">{scheduleDateText(rule)}</h3><p className="mt-2 text-sm">{schedulePeriodText(rule)}</p>{rule.mode === 'dates' && <p className="mt-2 text-sm text-indigo-600">{borrowScheduleStatus(rule, now)}</p>}<p className="mt-3 text-xs leading-6 text-slate-500">{scopeNames(classIds).join('、')}</p><div className="mt-3 flex gap-2">{(rule.mode !== 'dates' || borrowScheduleStatus(rule, now) !== '已失效') && <button className="dc-btn" onClick={() => openRule({ label: scopeNames(classIds).join('、'), classIds }, rule, rule.id)}>编辑</button>}<button className="dc-btn" onClick={() => deleteRule({ label: scopeNames(classIds).join('、'), classIds }, rule)}>删除</button></div></section>)}{!ruleGroups(overview).length && <p className="py-12 text-center text-slate-500">尚未设置借用规则</p>}</div><footer className="border-t p-5"><button className="dc-btn-primary" onClick={() => openRule(overview)}>新增借用规则</button></footer></>}</DeviceControlLayer>}
     {editing && <StudentControlEditor key={`${editing.rule.id}-${editing.revision}`} targetLabel={editing.label} count={studentCount(editing.classIds)} selectedObjects={scopeNames(editing.classIds)} schedule={editing.rule} onClose={() => setEditing(null)} onSave={value => { if (value.schedule) saveRule(value.schedule); }} />}
