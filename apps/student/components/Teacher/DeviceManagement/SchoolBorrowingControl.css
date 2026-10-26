@@ -45,6 +45,30 @@
 .borrow-rule-status { color: #64748b; font-size: 11px; font-weight: 400; }
 .borrow-rule-status[data-status="待生效"] { color: #8d7c62; }
 .borrow-rule-status[data-status="生效中"] { color: #628777; }
+.borrow-rule-library { margin-bottom: 20px; }
+.borrow-rule-list { padding: 0 18px; }
+.borrow-rule-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(180px, 1fr) auto; align-items: center; gap: 14px; padding: 15px 2px; border-top: 1px solid #edf0f5; }
+.borrow-rule-main { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; min-width: 0; color: #475569; font-size: 13px; }
+.borrow-rule-main strong { color: #1e293b; font-size: 14px; }
+.borrow-rule-kind { flex-shrink: 0; border-radius: 6px; background: #eef2ff; padding: 4px 7px; color: #4338ca; font-size: 12px; font-weight: 600; }
+.borrow-rule-target { min-width: 0; color: #64748b; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.borrow-rule-actions, .borrow-temporary-actions { display: flex; justify-content: flex-end; gap: 7px; }
+.borrow-rule-empty { padding: 30px 18px; color: #64748b; text-align: center; font-size: 14px; }
+.borrow-temporary-list { padding: 0 18px; }
+.borrow-temporary-row { display: flex; align-items: center; gap: 16px; min-height: 64px; border-top: 1px solid #edf0f5; }
+.borrow-temporary-row > input { width: 17px; height: 17px; accent-color: #5b55ef; }
+.borrow-temporary-name { flex: 1; min-width: 0; font-size: 14px; color: #1e293b; }
+.borrow-temporary-name button { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; }
+.borrow-temporary-name button:hover { color: #4f46e5; }
+.borrow-temporary-normal { color: #64748b; font-size: 12px; }
+.borrow-temporary-row .borrow-denied-badge { min-width: 84px; text-align: center; }
+.borrow-temporary-actions { min-width: 116px; margin-left: auto; }
+.borrow-list-count { padding: 12px 20px; border-top: 1px solid #edf0f5; color: #64748b; font-size: 12px; }
+.borrow-rule-grade { display: block; width: 100%; margin-top: 8px; border: 1px solid #dbe1ee; border-radius: 8px; background: #fff; padding: 10px; }
+.borrow-rule-class-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.borrow-rule-class-grid label { display: flex; align-items: center; gap: 8px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; font-size: 13px; }
+.borrow-rule-class-grid input { accent-color: #4f46e5; }
+@media (max-width: 800px) { .borrow-rule-row { grid-template-columns: 1fr; } .borrow-rule-actions { justify-content: flex-start; } }
 @media (max-width: 1120px) { .borrow-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; row-gap: 22px; padding: 16px; } }
 @media (max-width: 760px) { .borrow-card-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 640px) {
