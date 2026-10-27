@@ -80,12 +80,15 @@
     if (date > rule.endDate) return '已失效';
     return '生效中';
   }
-  function validateBorrow(rule, now = new Date()) {
+  function validateBorrow(rule, now = new Date(), original = null) {
     if (rule.mode === 'weekly' && !rule.weekdays.length) return '请至少选择一个星期';
     if (rule.mode === 'dates') {
       if (!rule.startDate || !rule.endDate || rule.startDate > rule.endDate) return '请选择正确的开始和结束日期';
       const currentDate = schoolDate(now);
-      if (rule.startDate < currentDate) return '生效日期只能选择今天及以后';
+      if (original && borrowStatus(original, now) === '生效中') {
+        if (rule.startDate !== original.startDate || rule.deny !== original.deny || JSON.stringify(periods(rule)) !== JSON.stringify(periods(original))) return '生效中的规则只能修改结束日期';
+        if (rule.endDate < currentDate) return '结束日期不能早于今天';
+      } else if (rule.startDate < currentDate) return '生效日期只能选择今天及以后';
       if (rule.deny) return '';
     }
     const error = validatePeriods(rule.periods);

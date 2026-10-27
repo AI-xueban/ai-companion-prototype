@@ -2,11 +2,14 @@
 window.controlPageDemo = (() => {
   const groups = {
     '班级与学生空状态': [
+      ['adminNoGrades', '学校暂无年级', '进入管理员的借用管控页，查看没有年级时的缺省提示。'],
+      ['adminNoClasses', '年级暂无班级', '进入年级借用管控页，查看没有班级时的缺省提示。'],
       ['noClasses', '老师未分配班级', '查看未分配班级的页面，可点“刷新”体验提示。'],
       ['noStudents', '班级无学生', '查看空班级，可切换其他班级对比管控区域。']
     ],
     '操作期间权限变化': [
       ['durationRevoked', '编辑时使用时长权限被关闭', '编辑页弹出权限关闭通知，点“知道了”后只能查看。'],
+      ['classRevoked', '操作时班级管理权限被收回', '当前页面通知班级权限已变更，点“知道了”后回到无班级状态。'],
       ['lockStarted', '操作时管理员开启临时锁屏', '锁屏页弹出通知，点弹窗外或“知道了”后禁止操作。'],
       ['borrowTemporaryStarted', '操作时学校开启临时禁借', '进入班主任借用页查看通知；点“知道了”后学生借用设置变为只读。'],
       ['borrowTimesChanged', '查看时学校修改借用时间', '进入班主任借用页查看更新通知；可暂不查看，或点“立即查看”查看新时间。'],
@@ -24,9 +27,12 @@ window.controlPageDemo = (() => {
   const choices = Object.entries(groups).flatMap(([group, rows]) => rows.map(([id, label, hint]) => ({id, label, hint, group})));
   let active = '', savedNodes = null, emptyClassName = '';
   const screens = {
+    adminNoGrades: ['柜机借用管控', '学校暂无年级', '请联系学校管理员配置年级。'],
+    adminNoClasses: ['柜机借用管控', '该年级暂无班级', '添加班级后可设置管控。'],
     noClasses: ['管控', '暂无已分配班级', '请联系学校管理员。'],
     noStudents: ['管控', '当前班级暂无学生', '班级加入学生后，可在这里查看和设置管控。'],
     durationRevoked: ['使用时长管控', '使用时长修改权限已关闭', '学校管理员已关闭使用时长修改权限，现在只能查看。'],
+    classRevoked: ['管控', '班级管理权限已变更', '学校管理员已取消你对该班的管理权限，现在无法继续操作。'],
     lockStarted: ['锁屏', '临时锁屏管控中', '学校管理员已开启临时锁屏，老师暂不可修改锁屏。'],
     borrowTemporaryStarted: ['柜机借用管控', '学校已开启临时禁借', '现在不能修改学生的借用状态。'],
     borrowTimesChanged: ['柜机借用管控', '借用时间已更新', '是否立即查看学校最新借用时间？'],
@@ -37,6 +43,11 @@ window.controlPageDemo = (() => {
     saveFailed: ['保存设置', '保存失败，请重试', '网络或服务异常，原设置未改变。']
   };
   function render(feedback = '') {
+    if (['adminNoGrades', 'adminNoClasses'].includes(active) && window.parity?.renderEmptyAdminDemo) {
+      window.parity.renderEmptyAdminDemo(active);
+      app.querySelector('.screen')?.setAttribute('data-control-demo', active);
+      return;
+    }
     if (active === 'borrowTemporaryStarted' || active === 'borrowTimesChanged') {
       window.borrowing?.demoStart(active === 'borrowTemporaryStarted' ? 'temporary' : 'times');
       app.querySelector('.screen')?.setAttribute('data-control-demo', active);
@@ -115,6 +126,12 @@ window.controlPageDemo = (() => {
         } catch { controlToast('权限更新失败，请重试'); }
         return;
       }
+      if (active === 'classRevoked') {
+        active = 'noClasses';
+        render();
+        window.pageDemoTools?.sync();
+        return;
+      }
       const overlay = document.getElementById('control-overlay'); if(overlay) overlay.innerHTML = '';
     },
     defer() {
@@ -124,6 +141,7 @@ window.controlPageDemo = (() => {
     },
     retry() { if(active) {
       if (window.parity?.renderDemoPage && ['saveFailed', 'changed', 'removed'].includes(active)) {
+        if (active !== 'saveFailed') window.parity.renderDemoPage(active, true);
         controlToast({saveFailed: '保存失败，请重试', changed: '规则已更新，请刷新后重试', removed: '所选学生信息有变化，请刷新后重新选择'}[active]);
       } else render('当前异常仍未解除，请稍后重试。');
       window.pageDemoTools?.sync();
