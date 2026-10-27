@@ -12,7 +12,7 @@ import './SchoolBorrowingControl.css';
 
 type Scope = { label: string; classIds: string[] };
 type Editing = Scope & { rule: BorrowSchedule; editingId?: string; revision: number };
-type Confirm = { title: string; scope: Scope; description: string; revision: number; change: (state: BorrowingState) => BorrowingState; summary: (state: BorrowingState) => string[]; closeEditor?: boolean };
+type Confirm = { title: string; scope: Scope; description: string; revision: number; change: (state: BorrowingState) => BorrowingState; summary: (state: BorrowingState) => string[]; closeEditor?: boolean; conflictDetails?: string[] };
 const allClasses = schoolDeviceClasses.map(group => group.id);
 const gradeName = (grade: number) => {
   const name = schoolDeviceClasses.find(group => group.grade === grade)?.name;
@@ -45,6 +45,7 @@ export const SchoolBorrowingControl: React.FC<{ currentUser: TeacherPortalUser; 
   const [batch, setBatch] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [overview, setOverview] = useState<Scope | null>(null);
+  const [batchRuleScope, setBatchRuleScope] = useState<Scope | null>(null);
   const [editing, setEditing] = useState<Editing | null>(null);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [temporaryChoice, setTemporaryChoice] = useState<Scope | null>(null);
@@ -70,8 +71,9 @@ export const SchoolBorrowingControl: React.FC<{ currentUser: TeacherPortalUser; 
   if (empty) rows.length = 0;
   const selectedRows = rows.filter(row => selected.includes(row.id));
   const target: Scope = { label: selectedRows.map(row => row.label).join('、'), classIds: selectedRows.flatMap(row => row.classIds) };
+  const toggleSelected = (id: string) => setSelected(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id]);
   const deniedCount = (ids: string[]) => ids.filter(id => classTemporarilyDenied(state, id)).length;
-  const tempLabel = (ids: string[]) => deniedCount(ids) === ids.length ? '已禁止借用' : deniedCount(ids) ? '部分禁止借用' : '未开启临时禁借';
+  const tempLabel = (ids: string[]) => deniedCount(ids) === ids.length ? '已临时禁止借用' : deniedCount(ids) ? '部分临时禁止借用' : '未开启临时禁借';
   const go = (value: number | null) => { setGrade(value); onGradeChange?.(value); setSelected([]); setBatch(false); };
   const openOverview = (targetScope: Scope, initialMode: BorrowSchedule['mode'] = 'weekly') => { setMode(initialMode); setOverview(targetScope); };
   const askTemporary = (targetScope: Scope, enabled: boolean, schoolAction = false) => {
@@ -92,11 +94,20 @@ export const SchoolBorrowingControl: React.FC<{ currentUser: TeacherPortalUser; 
   };
   const saveRule = (rule: BorrowSchedule) => {
     if (!editing) return;
-    const conflicts = editing.classIds.filter(id => (state.classRules[id] ?? []).some(previous => previous.id !== editing.editingId && schedulesConflict(previous, rule))).length;
+    const conflictingClasses = new Set<string>();
+    const conflictsByRule = new Map<string, string[]>();
+    editing.classIds.forEach(id => (state.classRules[id] ?? []).forEach(previous => {
+      if (previous.id === editing.editingId || !schedulesConflict(previous, rule)) return;
+      conflictingClasses.add(id);
+      const label = ruleText(previous);
+      conflictsByRule.set(label, [...(conflictsByRule.get(label) ?? []), id]);
+    }));
+    const conflictDetails = [...conflictsByRule].map(([label, ids]) => `${label} · ${scopeNames(ids).join('、')}`);
+    const conflicts = conflictingClasses.size;
     setConfirm({ title: conflicts ? '确认覆盖借用规则？' : '确认保存借用规则？', scope: editing, revision: editing.revision,
-      description: `${ruleText(rule)}。${conflicts ? `其中 ${conflicts} 个班级已有同类规则，将覆盖重叠日期，未重叠日期保留。` : '规则将应用到所选范围。'}${rule.mode === 'weekly' ? '每周规则仅允许在所选星期和时段借用。' : '每周与日期规则分别保留。不改变临时禁借及学生禁借。'}`,
+      description: `${ruleText(rule)}。${conflicts ? `其中 ${conflicts} 个班级已有同类规则，将覆盖冲突的${rule.mode === 'weekly' ? '星期' : '日期'}，其余配置保留。` : '规则将应用到所选范围。'}${rule.mode === 'weekly' ? '每周规则仅允许在所选星期和时段借用。' : '每周与日期规则分别保留。不改变临时禁借及学生禁借。'}`,
       change: current => saveClassBorrowingRule(current, editing.classIds, rule, editing.editingId),
-      summary: current => ruleSummary(current, editing.classIds), closeEditor: true });
+      summary: current => ruleSummary(current, editing.classIds), closeEditor: true, conflictDetails });
   };
   const deleteRule = (targetScope: Scope, rule: BorrowSchedule) => {
     const unrestricted = targetScope.classIds.filter(id => !(state.classRules[id] ?? []).some(item => item.id !== rule.id));
@@ -163,7 +174,7 @@ export const SchoolBorrowingControl: React.FC<{ currentUser: TeacherPortalUser; 
         {batch && <div className="borrow-batch-bar">
           <label className="borrow-select-all"><input type="checkbox" aria-label="全选当前层级" checked={rows.length > 0 && rows.every(row => selected.includes(row.id))} onChange={event => setSelected(event.target.checked ? rows.map(row => row.id) : [])} />全选当前层级</label>
           <span>已选 {selected.length} 个{grade === null ? '年级' : '班级'} · {studentCount(target.classIds)} 名学生</span>
-          <div className="borrow-batch-actions"><button disabled={!selected.length} className="dc-btn" onClick={() => openOverview(target)}>设置借用规则</button>{deniedCount(target.classIds) > 0 && deniedCount(target.classIds) < target.classIds.length ? <button className="dc-btn" onClick={() => openTemporaryChoice(target)}>设置临时禁借</button> : <button disabled={!selected.length} className="dc-btn" onClick={() => askTemporary(target, deniedCount(target.classIds) === 0)}>{deniedCount(target.classIds) === target.classIds.length && selected.length ? '解除临时禁借' : '临时禁止借用'}</button>}</div>
+          <div className="borrow-batch-actions"><button disabled={!selected.length} className="dc-btn" onClick={() => setBatchRuleScope(target)}>新增借用规则</button>{deniedCount(target.classIds) > 0 && deniedCount(target.classIds) < target.classIds.length ? <button className="dc-btn" onClick={() => openTemporaryChoice(target)}>设置临时禁借</button> : <button disabled={!selected.length} className="dc-btn" onClick={() => askTemporary(target, deniedCount(target.classIds) === 0)}>{deniedCount(target.classIds) === target.classIds.length && selected.length ? '解除临时禁借' : '临时禁止借用'}</button>}</div>
         </div>}
         <div className="borrow-card-grid">
           {empty && <p className="borrow-card-empty">{exception === 'no-grades' ? '学校暂无年级，请先完善年级信息。' : exception === 'no-classes' ? '该年级暂无班级，请先添加班级。' : '该班级暂无学生，请先添加学生。'}</p>}
@@ -177,26 +188,28 @@ export const SchoolBorrowingControl: React.FC<{ currentUser: TeacherPortalUser; 
               });
             const anyUpcomingDate = row.classIds.some(id => (state.classRules[id] ?? []).some(rule => rule.mode === 'dates' && borrowScheduleStatus(rule, now) !== '已失效'));
             const dateDiffers = dateSummary.note !== '—' && anyUpcomingDate;
+            const weeklyDiffers = row.grade !== undefined && weeklySummary.note !== '—' && weeklySummary.note !== '未设置规则';
+            const classConfigDiffers = weeklyDiffers || dateDiffers;
             const weeklyPreviewLimit = upcomingDates.length || dateDiffers ? 1 : 2;
             const previewRules = [...weeklySummary.rules.slice(0, weeklyPreviewLimit), ...upcomingDates.slice(0, 1)];
             const hiddenRuleCount = weeklySummary.rules.length + upcomingDates.length - previewRules.length;
             const last = state.history.find(record => record.classIds?.some(id => row.classIds.includes(id)));
             const denied = deniedCount(row.classIds);
-            return <article key={row.id} className="borrow-scope-card">
+            return <article key={row.id} className={`borrow-scope-card${batch ? ' borrow-scope-card--selectable' : ''}`} role={batch ? 'checkbox' : undefined} aria-checked={batch ? selected.includes(row.id) : undefined} aria-label={batch ? `选择${row.label}` : undefined} tabIndex={batch ? 0 : undefined} onClick={batch ? () => toggleSelected(row.id) : undefined} onKeyDown={batch ? event => { if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); toggleSelected(row.id); } } : undefined}>
               <div className="borrow-card-heading">
-                {batch && <input type="checkbox" aria-label={`选择${row.label}`} checked={selected.includes(row.id)} onChange={() => setSelected(selected.includes(row.id) ? selected.filter(id => id !== row.id) : [...selected, row.id])} />}
-                <div className="borrow-card-title">{row.grade !== undefined
+                {batch && <span className="borrow-card-checkbox" aria-hidden="true" />}
+                <div className="borrow-card-title">{batch ? <h4>{row.label}</h4> : row.grade !== undefined
                   ? <button className="borrow-grade-link" onClick={() => go(row.grade!)}>{row.label}</button>
                   : <h4>{row.label}</h4>}
                   {denied > 0 && <span className="borrow-denied-badge">{tempLabel(row.classIds)}</span>}
                 </div>
-                {row.grade !== undefined && <button className="borrow-grade-hint" onClick={() => go(row.grade!)}>查看班级 <ChevronRight size={16} /></button>}
+                {!batch && row.grade !== undefined && <button className="borrow-grade-hint" onClick={() => go(row.grade!)}>查看班级 <ChevronRight size={16} /></button>}
               </div>
               <div className="borrow-card-rules">
-                {weeklySummary.note !== '—' && weeklySummary.note !== '未设置规则' && <p className="borrow-card-placeholder">每周规则：{weeklySummary.note}{row.grade !== undefined && <span>，查看班级了解具体配置</span>}</p>}
+                {weeklyDiffers && <div className="borrow-card-rule borrow-card-rule--diff"><strong>每周借用规则</strong><span>部分班级有差异</span></div>}
                 {previewRules.map((rule, index) => <div key={`${rule.id}-${index}`} className="borrow-card-rule"><div className="borrow-card-rule-heading"><strong>{scheduleDateText(rule)}</strong>{rule.mode === 'dates' && <span className="borrow-rule-status" data-status={borrowScheduleStatus(rule, now)}>{borrowScheduleStatus(rule, now)}</span>}</div><span>{schedulePeriodText(rule)}</span></div>)}
-                {dateDiffers && <p className="borrow-card-placeholder">有指定日期规则，各班配置不同{row.grade !== undefined && <span>，查看班级了解具体配置</span>}</p>}
-                {!previewRules.length && !dateDiffers && weeklySummary.note === '未设置规则' && <p className="borrow-card-placeholder">未设置借用规则</p>}
+                {dateDiffers && <div className="borrow-card-rule borrow-card-rule--diff"><strong>指定日期借用规则</strong><span>部分班级有差异</span></div>}
+                {!previewRules.length && !classConfigDiffers && weeklySummary.note === '未设置规则' && <p className="borrow-card-placeholder">未设置借用规则</p>}
                 {!batch && hiddenRuleCount > 0 && <button className="borrow-card-more" onClick={() => openOverview(row, weeklySummary.rules.length > weeklyPreviewLimit ? 'weekly' : 'dates')}>还有 {hiddenRuleCount} 条，查看全部</button>}
               </div>
               {!batch && <div className="borrow-card-footer">
@@ -209,6 +222,7 @@ export const SchoolBorrowingControl: React.FC<{ currentUser: TeacherPortalUser; 
         <div className="p-4 text-sm text-slate-500">共 {rows.length} 个{grade === null ? '年级' : '班级'}</div>
       </section>
     </section>
+    {batchRuleScope && <DeviceControlLayer labelId="borrow-batch-rule-type" variant="dialog" onClose={() => setBatchRuleScope(null)}>{close => <><div className="dc-confirm-body"><h2 id="borrow-batch-rule-type" className="text-xl font-bold">为所选对象新增借用规则</h2><p className="mt-3 text-sm text-slate-600">设置范围：{scopeNames(batchRuleScope.classIds).join('、')} · 共 {studentCount(batchRuleScope.classIds)} 名学生</p><p className="mt-2 text-sm text-slate-500">选择规则类型后填写新规则。保存前可核对与已有规则的冲突。</p><div className="mt-5 flex flex-wrap gap-3">{(['weekly', 'dates'] as const).map(value => <button key={value} type="button" className="dc-btn" onClick={() => { openRule(batchRuleScope, newBorrowSchedule(value)); setBatchRuleScope(null); }}>{value === 'weekly' ? '新增每周固定规则' : '新增指定日期规则'}</button>)}</div></div><div className="dc-confirm-footer"><button type="button" className="dc-btn" onClick={close}>取消</button></div></>}</DeviceControlLayer>}
     {overview && <DeviceControlLayer labelId="borrow-overview" onClose={() => setOverview(null)}>{close => <>
       <header className="flex items-center justify-between border-b p-6"><h2 id="borrow-overview" className="text-xl font-bold">设置规则 · {overview.label}</h2><button aria-label="关闭规则列表" onClick={close}><X size={20} /></button></header>
       <div className="dc-panel-body space-y-4">
@@ -223,7 +237,7 @@ export const SchoolBorrowingControl: React.FC<{ currentUser: TeacherPortalUser; 
     </>}</DeviceControlLayer>}
     {editing && <StudentControlEditor key={`${editing.rule.id}-${editing.revision}`} targetLabel={editing.label} count={studentCount(editing.classIds)} selectedObjects={scopeNames(editing.classIds)} schedule={editing.rule} onClose={() => setEditing(null)} onSave={value => { if (value.schedule) saveRule(value.schedule); }} />}
     {temporaryChoice && <DeviceControlLayer labelId="borrow-temporary-choice" variant="dialog" onClose={() => setTemporaryChoice(null)}>{close => <><div className="dc-confirm-body"><h2 id="borrow-temporary-choice" className="text-xl font-bold">设置临时禁借</h2><p className="mt-3 text-sm text-slate-600">设置范围：{temporaryChoice.label} · 共 {studentCount(temporaryChoice.classIds)} 名学生</p><p className="mt-2 text-sm text-slate-500">当前所选范围：{deniedCount(temporaryChoice.classIds)} 个班已禁借，{temporaryChoice.classIds.length - deniedCount(temporaryChoice.classIds)} 个班未禁借。</p><fieldset className="mt-5 space-y-3"><legend className="mb-3 font-bold">请选择要执行的操作</legend>{([true, false] as const).map(enabled => <label key={String(enabled)} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-4 ${temporaryChoiceValue === enabled ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200'}`}><input type="radio" name="borrow-temporary-action" checked={temporaryChoiceValue === enabled} onChange={() => setTemporaryChoiceValue(enabled)} /><span><span className="block font-medium text-slate-900">{enabled ? '临时禁止借用' : '解除临时禁借'}</span><span className="mt-1 block text-sm text-slate-500">{enabled ? `${temporaryChoice.classIds.length - deniedCount(temporaryChoice.classIds)} 个未禁借班级将被禁借` : `${deniedCount(temporaryChoice.classIds)} 个已禁借班级将解除`}，其余保持不变。</span></span></label>)}</fieldset>{temporaryChoiceValue !== null && <p role="status" className="mt-4 max-h-32 overflow-y-auto rounded-lg bg-slate-50 p-3 text-xs leading-6 text-slate-600">本次涉及班级：{classNames(temporaryChoice.classIds.filter(id => classTemporarilyDenied(state, id) !== temporaryChoiceValue)).join('、')}</p>}</div><div className="dc-confirm-footer"><button type="button" className="dc-btn" onClick={close}>取消</button><button type="button" className="dc-btn-primary" disabled={temporaryChoiceValue === null} onClick={() => { if (temporaryChoiceValue === null) return; askTemporary(temporaryChoice, temporaryChoiceValue); setTemporaryChoice(null); }}>下一步</button></div></>}</DeviceControlLayer>}
-    {confirm && <DeviceControlLayer labelId="borrow-confirm" variant="dialog" level={3} onClose={() => setConfirm(null)}>{close => <><header className="border-b p-6"><h2 id="borrow-confirm" className="text-xl font-bold">{confirm.title}</h2></header><div className="dc-panel-body space-y-4"><p className="font-bold text-indigo-700">{confirm.scope.label}</p><p className="text-sm text-slate-500">影响 {studentCount(confirm.scope.classIds)} 名学生</p><p className="text-sm leading-7">{confirm.description}</p></div><footer className="flex justify-end gap-3 border-t p-5"><button className="dc-btn" onClick={close}>取消</button><button className="dc-btn-primary" onClick={commit}>确认并生效</button></footer></>}</DeviceControlLayer>}
+    {confirm && <DeviceControlLayer labelId="borrow-confirm" variant="dialog" level={3} onClose={() => setConfirm(null)}>{close => <><header className="border-b p-6"><h2 id="borrow-confirm" className="text-xl font-bold">{confirm.title}</h2></header><div className="dc-panel-body space-y-4"><p className="font-bold text-indigo-700">{confirm.scope.label}</p><p className="text-sm text-slate-500">影响 {studentCount(confirm.scope.classIds)} 名学生</p><p className="text-sm leading-7">{confirm.description}</p>{confirm.conflictDetails?.length ? <div className="rounded-lg bg-slate-50 p-3 text-sm"><p className="font-medium text-slate-700">将覆盖的已有规则</p><ul className="mt-2 max-h-32 space-y-1 overflow-y-auto text-slate-600">{confirm.conflictDetails.map(detail => <li key={detail}>{detail}</li>)}</ul></div> : null}</div><footer className="flex justify-end gap-3 border-t p-5"><button className="dc-btn" onClick={close}>取消</button><button className="dc-btn-primary" onClick={commit}>确认并生效</button></footer></>}</DeviceControlLayer>}
     {history && <DeviceControlLayer labelId="borrow-history" onClose={() => setHistory(false)}>{close => <><header className="flex items-center justify-between border-b p-6"><h2 id="borrow-history" className="text-xl font-bold">借用管控操作记录</h2><button aria-label="关闭操作记录" onClick={close}><X size={20} /></button></header><div className="dc-panel-body space-y-4"><p className="text-xs text-slate-500">仅记录教师端学校管理员的操作，每个模块显示近100条记录。</p>{state.history.map(record => <section key={record.id} className="rounded-xl border p-4"><h3 className="font-bold">{record.title}</h3><p className="mt-2 text-sm">操作对象：{record.scope || '未记录'}</p><p className="mt-2 text-xs text-slate-500">{record.operator} · {record.at}</p><details className="mt-3 text-sm"><summary>查看修改前后</summary><p className="mt-2 whitespace-pre-line">修改前：{record.before.join('\n') || '无规则'}</p><p className="mt-2 whitespace-pre-line">修改后：{record.after.join('\n') || '无规则'}</p></details></section>)}{!state.history.length && <p className="py-10 text-center text-slate-500">暂无操作记录</p>}</div></>}</DeviceControlLayer>}
     {notice && <ControlToast message={notice.text} tone={notice.tone} onClose={() => setNotice(null)} />}
   </>;

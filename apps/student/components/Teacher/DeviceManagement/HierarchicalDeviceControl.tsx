@@ -955,7 +955,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
         aria-labelledby={`control-tab-${tab}`}
         className="dc-workspace min-h-0 flex-1 overflow-y-auto"
       >
-        <div className={`dc-content mx-auto space-y-5 ${tab !== "borrowing" ? "dc-unified-panels" : ""}`}>
+        <div className={`dc-content mx-auto space-y-5 ${tab === "borrowing" ? "dc-borrowing-content" : "dc-unified-panels"}`}>
           {tab === "borrowing" ? <SchoolBorrowingControl currentUser={currentUser} initialGrade={grade} onGradeChange={value => { setGrade(value); setClassId(null); }} demoScenario={demoScenario?.module === 'borrowing' ? demoScenario : undefined} /> : <>
           <div className="dc-breadcrumb flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-4">
