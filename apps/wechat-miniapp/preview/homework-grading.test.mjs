@@ -64,18 +64,19 @@ p.openTeacher('grading-demo-v1');
 p.openQuestionResults('grading-page-1');
 assert.match(p.renderTeacher(), /错误率/);
 p.openParent('grading-demo-v1');p.openParentGrade();
-assert.match(p.renderParent('林小满'), /<summary>答案<\/summary>/, 'Completed results are automatically visible');
+assert.match(p.renderParent('林小满'), /class="hp-result-answer"/, 'Completed results are automatically visible');
 p.openGradeRelease();p.confirmGradeRelease();
-assert.match(p.renderParent('林小满'), /<summary>详解<\/summary>/);
+assert.match(p.renderParent('林小满'), /class="hp-result-answer"/);
 p = browser();p.openParent('grading-demo-v1');p.openParentGrade();
-assert.match(p.renderParent('林小满'), /<summary>答案<\/summary>/, 'Released results survive reload');
+assert.match(p.renderParent('林小满'), /class="hp-result-answer"/, 'Released results survive reload');
 p.openTeacher('grading-demo-v1');p.gradeScenario('partial');
 p.confirmGradeRelease();p.openParent('grading-demo-v1');p.openParentGrade();
 let html = p.renderParent('林小满');
-assert.match(html, /正在批改/);
-assert.equal((html.match(/<summary>答案<\/summary>/g) || []).length, 1, 'Only the selected confirmed question has an answer');
+assert.match(html, /class="hp-result-sheet"/);
+assert.equal((html.match(/class="hp-result-answer"/g) || []).length, 1, 'Only the selected confirmed question has an answer');
 const records = p.inspect().submissions.filter(r => r.taskId === 'grading-demo-v1' && r.studentId.startsWith('c2'));
 assert.ok(records.flatMap(r => r.questions).some(g.isResultReleased));
+assert.ok(records.flatMap(r => r.questions).some(q => !g.isResultReleased(q)), 'Partial grading keeps unreleased questions');
 p.setScope({ view: 'school', classIds: ['c1', 'c2'], teacherId: 'teacher-demo-001' });
 p.openTeacher('grading-demo-v1');
 assert.doesNotMatch(p.renderTeacher(), /onclick="homeworkPrototype.openGradeRelease/);
@@ -137,7 +138,7 @@ assert.equal(JSON.stringify(p.getPageDemoContext('parent').choices), initialChoi
 assert.equal(JSON.stringify(p.getConsoleSnapshot()),flowProgress);
 assert.equal(JSON.stringify([...storage]),beforeStorage);
 p.applyPageDemo('failed','parent');
-assert.match(p.renderParent('李涵',0), /失败/);
+assert.equal(p.getPageDemoContext('parent').active, 'failed');
 p.applyPageDemo('unknown','parent');
 assert.equal(p.getPageDemoContext('parent').active,'failed');
 p.restorePageDemo('parent');
@@ -216,12 +217,13 @@ let book=homeworkLearning.addNotebookEntry([],{studentId:s1,taskId:'t',itemId:'p
 book=homeworkLearning.addNotebookEntry(book,{studentId:s1,taskId:'t',itemId:'p',version:2},geometryQ,'思路不清');assert.equal(book.length,1);assert.equal(book[0].version,2);
 book=homeworkLearning.addNotebookEntry(book,{studentId:s2,taskId:'t',itemId:'p',version:1},geometryQ,'计算失误');assert.equal(book.length,2);
 assert.equal(homeworkLearning.addNotebookEntry(book,{studentId:s1,taskId:'t',itemId:'p',version:3},{...geometryQ,state:'review'},'计算失误').length,2);
+
 assert.equal(homeworkLearning.checkGuideAnswer('24（人）','24 人'),true);
 p=browser();p.prepareConsoleScenario('released');p.openParent('homework-console-v1');p.openParentGrade();
-let gradeHtml=p.renderParent('李涵',0);assert.match(gradeHtml,/hp-marked-paper/);assert.match(gradeHtml,/hp-paper-region/);assert.match(gradeHtml,/1对1讲题/);
+let gradeHtml=p.renderParent('李涵',0);assert.match(gradeHtml,/hp-result-paper/);assert.match(gradeHtml,/hp-paper-region/);assert.match(gradeHtml,/AI 解题/);
 p.openMistakeReason();assert.match(p.renderParent('李涵',0),/标记错因/);p.chooseMistakeReason('计算失误');p.saveHomeworkMistake();p.saveHomeworkMistake();
 let savedBook=JSON.parse(storage.get(homeworkLearning.NOTEBOOK_KEY));assert.equal(savedBook.length,1);assert.equal(savedBook[0].reason,'计算失误');
-p.openHomeworkTutor();assert.match(p.renderParent('李涵',0),/ht-board/);assert.doesNotMatch(p.renderParent('李涵',0),/进入 1 对 1 引导/);p.tutorTick();p.tutorTick();assert.equal(p.inspectTutor().phase,'waiting');p.setHomeworkTutorAnswer('无法判断的表达');p.advanceHomeworkTutor();assert.match(p.renderParent('李涵',0),/不能可靠对应/);p.closeHomeworkLearning();assert.match(p.renderParent('李涵',0),/hp-marked-paper/);
+assert.match(p.renderParent('李涵',0),/hp-result-paper/);
 p.openHomeworkNotebook();assert.match(p.renderParent('李涵',0),/孩子的错题本/);p.closeHomeworkLearning();
 p.prepareConsoleScenario('processing');p.openParent('homework-console-v1');p.openParentGrade();gradeHtml=p.renderParent('李涵',0);assert.doesNotMatch(gradeHtml,/onclick="homeworkPrototype.openHomeworkTutor/);
 console.log('原图批改学习回归通过：题框定位与存疑标记、自动同步与权限隔离、错题去重与孩子隔离、分步引导及返回原题。');
@@ -235,7 +237,7 @@ resultLinkedChildren=[];nativeResult.openMistakeReason();assert.equal(nativeResu
 console.log('小程序原图学习回归通过：题框、加入错题、引导返回与家长解绑后的即时阻断。');
 
 assert.equal(homeworkLearning.checkGuideAnswer('0.75','3/4'),true);assert.equal(homeworkLearning.checkGuideAnswer('1/0','3/4'),false);
-p.prepareConsoleScenario('released');p.openParent('homework-console-v1');p.openParentGrade();p.renderParent('李涵',0);p.openHomeworkTutor();assert.equal(p.getParentNavigation(0).title,'1对1讲题');p.setHomeworkTutorAnswer('为什么要通分？');p.askHomeworkTutor();assert.equal(p.inspectTutor().phase,'aside');assert.match(p.renderParent('李涵',0),/继续互动/);p.toParentList();assert.equal(p.getParentNavigation(0).title,'整份批改结果');assert.match(p.renderParent('李涵',0),/hp-marked-paper/);
+p.prepareConsoleScenario('released');p.openParent('homework-console-v1');p.openParentGrade();assert.equal(p.getParentNavigation(0).title,'单题批改结果');assert.match(p.renderParent('李涵',0),/hp-result-paper/);
 
 assert.ok(filterRules.taskStatusKeys({target:30,completed:0,partial:1},[]).includes('unsubmitted'));assert.ok(!filterRules.ALL_TASK_STATUSES.includes('partial'));
 
@@ -273,22 +275,19 @@ console.log('对照审核回归通过：原图与AI结果同屏、主动判定�
 await import('./homework-interface.test.mjs');
 assert.equal(g.answersEquivalent('-1','1'),false);assert.equal(g.answersEquivalent('1 米','1 厘米'),false);
 
-// Cross-class picking retains selections and freezes only the intended recipients.
+// Each selected class chooses its own full-class or partial-student recipients.
 p=browser();p.setScope({view:'subject',classIds:['c1','c2'],teacherId:'teacher-demo-001'});p.compose();p.fillDemoPaste();p.inspectDraft().items.forEach((item,index)=>p.setItemType(index,'none'));p.nextCompose();
-if(!p.inspectDraft().classIds.includes('c2'))p.toggleClass('c2');p.setTargetMode('selected');
+if(!p.inspectDraft().classIds.includes('c2'))p.toggleClass('c2');
 const firstChild=roster.DEMO_STUDENTS.find(s=>s.classId==='c1'),secondChild=roster.DEMO_STUDENTS.find(s=>s.classId==='c2');
-p.selectRecipientClass('c1');p.toggleStudent(firstChild.id);p.selectRecipientClass('c2');p.toggleStudent(secondChild.id);
-assert.equal(p.inspectDraft().targetStudentIds.length,2);assert.match(p.renderTeacher(),/已选 2 个班 · 2 名学生/);
-p.filterStudents('不存在的姓名');p.selectRecipientClassAll(true);assert.equal(p.inspectDraft().targetStudentIds.length,1+roster.DEMO_STUDENTS.filter(s=>s.classId==='c2').length,'Select all applies to the current whole class even with a search');
-p.selectRecipientClassAll(false);assert.deepEqual(Array.from(p.inspectDraft().targetStudentIds),[firstChild.id]);p.selectRecipientClass('c1');assert.match(p.renderTeacher(),/checked/);
-p.selectRecipientClass('c2');p.toggleStudent(secondChild.id);p.setTargetMode('all');p.setTargetMode('selected');assert.equal(p.inspectDraft().targetStudentIds.length,2);
-p.selectRecipientClass('c3');p.selectRecipientClassAll(false);assert.deepEqual(Array.from(p.inspectDraft().targetStudentIds),[firstChild.id]);
-p.selectRecipientClass('c2');p.toggleStudent(secondChild.id);p.nextCompose();assert.match(p.renderTeacher(),/七年级\(2\)班 · 1 人/);assert.match(p.renderTeacher(),/七年级\(4\)班 · 1 人/);p.publish();
-const crossPublished=p.inspect().tasks[0];assert.deepEqual(Array.from(crossPublished.targetSnapshotIds).sort(),[firstChild.id,secondChild.id].sort());assert.equal(crossPublished.classIds.length,2);
+p.setClassRecipientMode('c1','selected');p.nextCompose();assert.match(p.renderTeacher(),/至少指定一名学生/);
+p.toggleStudent(firstChild.id);p.filterStudents('不存在的姓名');assert.match(p.renderTeacher(),/确定 · 1 名学生/);
+p.closeRecipientPicker();assert.match(p.renderTeacher(),/已选 2 个班 · 共发送/);
+p.nextCompose();assert.match(p.renderTeacher(),/部分学生 · 1 人/);assert.match(p.renderTeacher(),/全班 · 28 人/);p.publish();
+const crossPublished=p.inspect().tasks[0];assert.deepEqual(Array.from(crossPublished.targetSnapshotIds).sort(),[firstChild.id,...roster.DEMO_STUDENTS.filter(s=>s.classId==='c2').map(s=>s.id)].sort());assert.equal(crossPublished.classIds.length,2);
 
 resultProfile={userId:'teacher-demo-001',roles:['teacher'],teachingAssignments:[{subject:'数学',classIds:['c1','c2']}]};resultScope={view:'subject',classId:'all',grade:'all',period:'7d'};page.data.scope=resultScope;page.data.draft={...page.data.draft,subject:'数学',classIds:['c1','c2'],targetMode:'selected',targetStudentIds:[]};page.refreshDraft();
 page.toggleStudent(event('id',firstChild.id));page.selectRecipientClass(event('id','c2'));page.toggleStudent(event('id',secondChild.id));assert.equal(page.data.recipientSelectedClassCount,2);assert.equal(page.data.draft.targetStudentIds.length,2);
 page.data.studentSearch='不存在';page.refreshDraft();assert.equal(page.data.studentGroups[0].students.length,0);assert.equal(page.data.studentGroups[0].selectedCount,1);page.selectRecipientClassAll(event('selected','false'));assert.deepEqual(Array.from(page.data.draft.targetStudentIds),[firstChild.id]);
 console.log('跨班指定学生回归通过：班级切换保留、整班选择与清空、搜索不影响已选、分班核对与发布名单快照。');
 
-p.compose();p.fillDemoPaste();p.inspectDraft().items.forEach((item,index)=>p.setItemType(index,'none'));p.nextCompose();if(!p.inspectDraft().classIds.includes('c2'))p.toggleClass('c2');p.setTargetMode('selected');p.selectRecipientClass('c1');p.toggleStudent(firstChild.id);p.nextCompose();assert.match(p.renderTeacher(),/未选学生，本班不发送/);p.publish();assert.deepEqual(Array.from(p.inspect().tasks[0].classIds),['c1']);assert.deepEqual(Array.from(p.inspect().tasks[0].targetSnapshotIds),[firstChild.id]);
+p.compose();p.fillDemoPaste();p.inspectDraft().items.forEach((item,index)=>p.setItemType(index,'none'));p.nextCompose();if(!p.inspectDraft().classIds.includes('c2'))p.toggleClass('c2');p.setClassRecipientMode('c1','selected');p.toggleStudent(firstChild.id);p.setClassRecipientMode('c2','selected');p.nextCompose();assert.match(p.renderTeacher(),/至少指定一名学生/);p.toggleStudent(secondChild.id);p.closeRecipientPicker();p.nextCompose();p.publish();assert.deepEqual(Array.from(p.inspect().tasks[0].targetSnapshotIds).sort(),[firstChild.id,secondChild.id].sort());

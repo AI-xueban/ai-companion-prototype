@@ -19,7 +19,7 @@ send({type:'skip'});assert.equal(state.evidence[0].status,'仍需巩固','Skip d
 assert.equal(state.cursor,2);
 send({type:'restart'});send({type:'tick'});send({type:'tick'});send({type:'hint'});send({type:'tick'});send({type:'answer',text:'2'});assert.equal(state.phase,'feedback');assert.equal(state.evidence[0].status,'有帮助完成');
 send({type:'tick'});send({type:'tick'});send({type:'tick'});assert.equal(state.phase,'waiting');
-send({type:'answer',text:'这是另一种说法'});send({type:'answer',text:'还不确定'});assert.equal(state.phase,'choice','Ambiguous answers have a finite exit instead of being marked wrong');
+send({type:'answer',text:'这是另一种说法'});send({type:'answer',text:'还不确定'});assert.equal(state.phase,'waiting','Repeated clarification remains available without marking the answer wrong');
 send({type:'skip'});send({type:'tick'});assert.equal(state.phase,'done');assert.equal(t.tutorSummary(state,plan).length,2);
 assert.equal(JSON.stringify(source),original,'Tutoring never changes the source grade or response');
 const originalEvidence=JSON.stringify(state.evidence);
@@ -32,6 +32,11 @@ assert.equal(t.createTutor({...source,question:{...source.question,stem:'未知�
 const product=t.tutorPlan({...source.question,stem:'探索3/7×2/5，画图表示',answer:'6/35'});
 const diagram=product.find(a=>a.id==='second').board,cells=t.tutorCells(diagram);
 assert.equal(cells.length,35);assert.equal(cells.filter(c=>c.color==='orange').length,6);assert.equal(cells.filter(c=>c.color==='green').length,9);
-state=t.createTutor(source);send({type:'pause'});send({type:'ask',text:'查看别的作业答案'});assert.match(state.detail,/尚未接入真实AI/);send({type:'back'});assert.equal(state.phase,'paused');
-state=t.createTutor(source);send({type:'tick'});send({type:'tick'});send({type:'answer',text:'1'});send({type:'tick'});send({type:'answer',text:'1'});send({type:'tick'});send({type:'answer',text:'1'});assert.equal(state.phase,'choice');assert.equal(state.rounds,3);
-console.log('PASS: teaching branches, evidence, pause/aside, stale callbacks, finite help, resume/version/account isolation and exact diagram areas.');
+state=t.createTutor(source);send({type:'pause'});send({type:'ask',text:'查看别的作业答案'});assert.match(state.detail,/暂时无法回答/);send({type:'back'});assert.equal(state.phase,'paused');
+state=t.createTutor(source);send({type:'tick'});send({type:'tick'});send({type:'answer',text:'1'});send({type:'tick'});send({type:'answer',text:'1'});send({type:'tick'});send({type:'answer',text:'1'});assert.equal(state.phase,'remedial');assert.equal(state.rounds,3);for(let i=0;i<7;i++){send({type:'tick'});send({type:'hint'});}assert.equal(state.phase,'remedial');assert.equal(state.rounds,10);
+console.log('PASS: teaching branches, evidence, pause/aside, stale callbacks, unlimited user-requested help, resume/version/account isolation and exact diagram areas.');
+
+// Resume must preserve the original checkpoint even if the source was opened first.
+state=t.createTutor(source);send({type:'tick'});send({type:'tick'});state=t.createTutor(source,state);assert.equal(state.phase,'resume');send({type:'original'});send({type:'closeOriginal'});send({type:'resume'});assert.equal(state.phase,'waiting');
+send({type:'pause'});send({type:'hint'});assert.equal(state.phase,'remedial','A deliberate hint can continue a paused checkpoint');send({type:'tick'});send({type:'pause'});send({type:'answer',text:'2'});assert.equal(state.phase,'feedback','Answering a paused checkpoint must expose the feedback action');
+console.log('PASS: original expansion before resume and paused answer/help transitions.');

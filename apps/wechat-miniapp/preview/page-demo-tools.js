@@ -34,7 +34,7 @@ window.pageDemoTools = (() => {
     context=getContext();
     const old=document.getElementById('page-demo-tools-host');
     window.demoWorkspace?.setState(context);
-    if(!context?.choices.length){old?.remove();menuOpen=false;previousKey='';return;}
+    if(!context?.choices.length){old?.remove();menuOpen=false;previousKey='';document.body.classList.remove('dw-state-open');return;}
     if(context.key!==previousKey&&!changingState)menuOpen=false;
     previousKey=context.key;
     const screen=document.querySelector('#app .screen'); if(!screen)return;
@@ -45,21 +45,22 @@ window.pageDemoTools = (() => {
     if(context.kind==='homework')screen.querySelectorAll(':scope > .parent-demo-toolbar, :scope > .parent-exception-mask').forEach(el=>el.remove());
     host.innerHTML=render({...context,open:menuOpen,select:id=>'pageDemoTools.select('+JSON.stringify(id)+')',show:'pageDemoTools.open()',close:'pageDemoTools.close()',restore:'pageDemoTools.restore()'});
     document.getElementById('dw-state-toggle')?.setAttribute('aria-expanded',String(menuOpen));
+    document.body.classList.toggle('dw-state-open',Boolean(menuOpen&&external));
     positionPicker();
   }
   function positionPicker(){
     if(!menuOpen||!window.demoWorkspace?.enabled)return;
-    const panel=document.querySelector('#dw-state .parent-exception-mask'),anchor=document.querySelector('.dw-state-heading');
-    if(!panel||!anchor)return;
-    const bounds=anchor.getBoundingClientRect(),gap=12,width=Math.min(414,innerWidth-gap*2);
-    panel.style.width=width+'px';
+    const panel=document.querySelector('#dw-state .parent-exception-mask'),canvas=document.getElementById('dw-canvas'),toolbar=document.querySelector('#dw-state .dw-state-heading');
+    if(!panel||!canvas||!toolbar)return;
+    const bounds=canvas.getBoundingClientRect(),anchor=toolbar.getBoundingClientRect(),gap=16;
+    panel.style.width='320px';
     const height=panel.getBoundingClientRect().height;
-    let left,top;
-    if(bounds.right+gap+width<=innerWidth-gap){left=bounds.right+gap;top=bounds.top;}
-    else{left=bounds.right-width;top=bounds.bottom+gap+height<=innerHeight-gap?bounds.bottom+gap:bounds.top-gap-height;}
-    panel.style.left=Math.max(gap,Math.min(left,innerWidth-width-gap))+'px';
-    panel.style.top=Math.max(gap,Math.min(top,innerHeight-height-gap))+'px';
+    // Reserve a right-hand column; never fall back over the phone canvas.
+    panel.style.left=(bounds.right+gap)+'px';
+    // Align the picker bottom with the state toolbar, keeping it inside the viewport.
+    panel.style.top=Math.max(66,Math.min(anchor.bottom-height,innerHeight-height-12))+'px';
   }
+
   function open(){menuOpen=true;sync();document.querySelector('#page-demo-tools-host .parent-exception-close')?.focus({preventScroll:true});}
   function close(){menuOpen=false;sync();(document.getElementById('dw-state-toggle')||document.querySelector('#page-demo-tools-host .parent-demo-open'))?.focus({preventScroll:true});}
   function select(id){const c=getContext();if(!c?.choices.some(choice=>choice.id===id))return;changingState=Boolean(window.demoWorkspace?.enabled);if(!changingState)menuOpen=false;try{if(c.kind==='homework')window.homeworkPrototype.applyPageDemo(id,c.role);else if(c.kind==='parent')window.parentPrototype.exception(id);else if(c.kind==='learning')window.learningPageDemo.select(id);else setTeacherBranch(id);sync();}finally{changingState=false;}}

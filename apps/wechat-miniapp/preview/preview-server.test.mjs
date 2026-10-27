@@ -27,3 +27,13 @@ assert.match((await request('/learning-data.js')).body, /window\.learningData/);
 console.log('Passed: exact page contents, encoded Chinese URL, query parameters, no-store headers, missing routes, traversal rejection, malformed URL and dynamic learning data.');
 
 for(const [name,mime] of [['homework-real-page-1.jpg','image/jpeg'],['homework-real-page-2.png','image/png']]){const result=await request('/miniprogram/assets/'+name);assert.equal(result.status,200);assert.equal(result.headers['Content-Type'],mime);}
+
+for (const path of [
+  '/assets/homework-demo-files/campus-intro-pages/page-1.jpg',
+  '/assets/homework-demo-files/exercise-paper-pages/page-01.jpg'
+]) {
+  const result = await request(path);
+  assert.equal(result.status, 200, path);
+  assert.equal(result.headers['Content-Type'], 'image/jpeg', path);
+  assert.ok(result.body.length > 0, path);
+}

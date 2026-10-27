@@ -10,7 +10,10 @@ window.demoWorkspace = (() => {
   const catalog = [
     {id:'login',label:'登录与绑定',roles:[{id:'parent',label:'家长',items:parentLogin},{id:'teacher',label:'教师',items:teacherLogin}]},
     {id:'learning',label:'学情',items:[entry('learn-parent','孩子学情','parentTab','learning'),entry('learn-subject','任教学情','learning','subject'),entry('learn-class','班主任学情','learning','homeroom'),entry('learn-school','学校学情','learning','school'),entry('learn-students','学生学情','learning','students')]},
-    {id:'homework',label:'作业与打卡',items:[entry('hw-new-flow','新版作业批改体验','homeworkExperience','new'),entry('hw-new-teacher','继续教师处理','homeworkCurrent','teacher'),entry('hw-new-parent','查看家长同步结果','homeworkCurrent','parent'),entry('hw-list','教师作业列表','homework','teacher'),entry('hw-publish','发布作业／打卡','homework','publish'),entry('hw-parent','家长提交与结果','homework','parent'),entry('hw-answers','参考答案独立维护','homeworkState','answerConflict'),entry('hw-answer-review','修改参考答案','homeworkState','answerChanged'),entry('hw-review','批改与复核','homeworkState','review'),entry('hw-release','结果同步与查看','homeworkState','unreleased'),entry('hw-flow','体验完整流程','flow','homework'),entry('hw-lab','专项参考：独立全流程','reference','homework-flow-lab.html')]},
+    {id:'homework',label:'作业与打卡',roles:[
+      {id:'teacher',label:'教师',items:[entry('hw-list','作业列表','homework','teacher'),entry('hw-publish','发布作业／打卡','homework','publish'),entry('hw-answers','维护参考答案','homeworkState','answerConflict'),entry('hw-review','批改与复核','homeworkState','review'),entry('hw-release','发布与同步结果','homeworkState','unreleased'),entry('hw-flow','完整流程（从发布开始）','flow','homework')]},
+      {id:'parent',label:'家长',items:[entry('hw-parent','作业待办与提交','homework','parent'),entry('hw-parent-result','查看批改结果','homeworkState','released',{role:'parent'}),entry('hw-parent-tutor','1对1讲题','homeworkState','released',{role:'parent'})]}
+    ]},
     {id:'control',label:'管控',items:[entry('ctl-teacher','教师管控','control','teacher'),entry('ctl-admin','学校管理员管控','control','admin'),...Object.entries({borrowing:'借用管控',duration:'使用时长管控',homework:'智阅作业权限',world:'万象视界',lock:'锁屏'}).map(([key,label])=>entry('ctl-'+key,label,'controlModule',key))]},
     {id:'mine',label:'我的',roles:[{id:'parent',label:'家长',items:[entry('mine-parent','我的首页','parentTab','mine'),entry('mine-children','孩子与绑定关系','parentChildren','mine'),entry('mine-unbind','解绑孩子','parent','wrong'),entry('mine-two','两个孩子','parent','twoChildren'),entry('mine-family','家长管理','parent','familyManage'),entry('mine-ordinary','普通家长权限','parent','ordinary'),entry('mine-security','账号与安全','parentSecurity','mine')]},{id:'teacher',label:'教师',items:[entry('mine-teacher','我的首页','teacherTab','mine'),entry('mine-teacher-security','账号与安全','teacherSecurity','mine')]}]}
   ];
@@ -39,13 +42,14 @@ window.demoWorkspace = (() => {
     else if(item.kind==='homework'){if(item.value==='parent'){parentReady();homeworkPrototype.resetParentView();parentPrototype.tab('homework');}else if(item.value==='publish')startHomeworkPublishDemo();else showHomeworkTeacherDemo();}
     else if(item.kind==='homeworkCurrent'){activeFlow='homework';homeworkDemoConsole.role(item.value,true,item.value==='parent');}
     else if(item.kind==='homeworkExperience'){activeFlow='homework';homeworkDemoConsole.role('teacher',false);homeworkPrototype.prepareWorkflowExperience();}
-    else if(item.kind==='homeworkState'){activeFlow='homework';homeworkDemoConsole.role('teacher',false);homeworkDemoConsole.start(item.value);}
+    else if(item.kind==='homeworkState'){activeFlow='homework';homeworkDemoConsole.role(item.role||'teacher',false);homeworkDemoConsole.start(item.value);if(item.role==='parent')homeworkDemoConsole.role('parent',true,true);}
     else if(item.kind==='flow'){activeFlow='homework';flowRole='teacher';homeworkDemoConsole.publish();if(innerWidth>1000)document.body.classList.add('dw-flow-open');}
     else if(item.kind==='reference'){location.assign(new URL(item.value,location.href));return;}
     else if(item.kind==='control'||item.kind==='controlModule'){
       if(!isControl()){const url=new URL('control-prototype.html',location.href);url.search='?review=1&page=teacherDesk&tab=control&identity=all';url.searchParams.set('demo',id);location.assign(url.href);return;}
       if(item.kind==='control')switchControlDemoRole(item.value);else{teacherTab='control';stage='teacherDesk';openControlModule(item.value);}
     }
+    if(id==='hw-parent-tutor')homeworkPrototype.openHomeworkTutor();
     revealEntry(id);sync();
   }
   function syncFlow(){

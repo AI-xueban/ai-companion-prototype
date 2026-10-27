@@ -1,7 +1,7 @@
 /* 教职员工统一工作台：演示常见的双重职责，菜单只列出当前账号获授权的视角。 */
 window.workbenchPrototype = (() => {
   const learning = window.learningData, roster = window.schoolDemoRoster;
-  const state = { view: 'school', grade: 'all', classId: 'all', period: '7d', tab: 'overview', studentId: '', knowledge: '', questionId: '', activityId: '', rankingBy: 'people' };
+  const state = { view: 'homeroom', grade: 'all', classId: 'c1', period: '7d', tab: 'overview', studentId: '', knowledge: '', questionId: '', activityId: '', rankingBy: 'people' };
   let granted = ['school', 'homeroom', 'subject'];
   const names = { school: '学校管理员', homeroom: '班主任', subject: '任课老师' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -36,7 +36,7 @@ window.workbenchPrototype = (() => {
     const scopeFilter = grades || classRow ? `<details class="wb-scope-details"><summary aria-label="调整查看范围，当前${esc(selectedScope)}"><span class="wb-scope-key">范围</span><strong>${esc(selectedScope)}</strong><span class="wb-chevron" aria-hidden="true"></span></summary><div class="wb-scope-options">${grades}${classRow}</div></details>` : `<div class="wb-scope-static"><span class="wb-scope-key">范围</span><strong>${esc(selectedScope)}</strong></div>`;
     const detailTitle = title === '学情' || title === '作业与打卡' ? '' : `<h1>${title}</h1>`;
     const overviewHeader = domain === 'learning' && !state.studentId ? `<div class="lp-hero teacher wb-hero"><div class="wb-heading"><div class="wb-greeting"><strong>陈老师，你好</strong><small>${roster.SCHOOL_NAME} · ${designation}</small>${detailTitle}</div>${role}</div></div>` : '';
-    const controls = domain === 'homework' ? showControls ? `<div class="wb-condition-row wb-homework-toolbar">${state.view==='school'?scopeFilter:''}<div class="wb-homework-identity">${state.view === 'school' ? '<span>只读</span>' : ''}${role}</div></div>` : '' : state.studentId ? '' : `<div class="wb-condition-row">${scopeFilter}${period}</div>`;
+    const controls = domain === 'homework' ? showControls ? `<div class="wb-condition-row wb-homework-toolbar">${state.view==='school'?scopeFilter:''}<div class="wb-homework-identity">${state.view === 'school' ? '<span>只读</span>' : ''}${role||'<span>'+designation+'</span>'}</div>${state.view!=='school'?'<button class="hp-my-drafts-entry" onclick="homeworkPrototype.openTeacherDrafts()"><span class="hp-draft-entry-icon" aria-hidden="true"></span>我的草稿<span class="hp-draft-count">'+(window.homeworkPrototype?.getTeacherDraftCount?.()||0)+'</span><span aria-hidden="true">›</span></button>':''}</div>` : '' : state.studentId ? '' : `<div class="wb-condition-row">${scopeFilter}${period}</div>`;
     return `<div class="lp-page wb-page${domain === 'homework' ? ' wb-homework-page' : ''}">${overviewHeader}${controls}`;
   };
   const timeline = data => panel('学习轨迹', learning.timelineRows(data).slice(0, 20).map(item => `<button class="lp-evidence-entry" onclick="workbenchPrototype.activity('${item.id}')"><div><strong>${esc(item.subject)} · ${esc(item.feature)}</strong><b>${item.minutes} 分钟 ›</b></div><small>${item.date} ${item.start} · ${esc(item.title)} · ${item.status}</small></button>`).join(''));
