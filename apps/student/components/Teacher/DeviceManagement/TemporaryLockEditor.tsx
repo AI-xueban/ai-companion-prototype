@@ -36,6 +36,7 @@ export const TemporaryLockEditor: React.FC<{
             </span>
           </label>)}
         </fieldset>
+        {value === false && <p className="mt-4 text-sm leading-6 text-slate-600">解除后执行当前日常锁屏设置，恢复所选班级老师的锁屏管控权限；其他班级不受影响。</p>}
         {value !== null && <div role="status" className="mt-5 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600"><p>{changed ? changed === count ? `${changed} 名学生将全部${actionState}。` : `其中 ${changed} 名学生将${actionState}，其余 ${count - changed} 名学生保持不变。` : `所选学生均已${value ? "开启" : "解除"}临时锁屏，无需修改。`}</p>{changed > 0 && <p className="mt-2 max-h-32 overflow-y-auto text-xs leading-6">本次涉及班级：{(value ? lockClassNames : unlockClassNames).join("、")}</p>}</div>}
       </div>
       {error && <ControlValidationNotice message={error} onClose={() => setError("")} />}

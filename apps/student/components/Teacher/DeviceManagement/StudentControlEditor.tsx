@@ -26,9 +26,10 @@ export const StudentControlEditor: React.FC<{
   homework?: Pick<StudentControl, "answer" | "explanation">;
   requireApplyScope?: boolean;
   batchDefaults?: boolean;
+  activeDateEdit?: boolean;
   onClose: () => void;
   onSave: (value: ControlEditorValue) => void;
-}> = ({ initialApplyScope, targetLabel, count, selectedObjects, schedule, homework, requireApplyScope, batchDefaults, onClose, onSave }) => {
+}> = ({ initialApplyScope, targetLabel, count, selectedObjects, schedule, homework, requireApplyScope, batchDefaults, activeDateEdit = false, onClose, onSave }) => {
   const [draft, setDraft] = useState(schedule);
   const [answer, setAnswer] = useState(homework?.answer ?? false);
   const [explanation, setExplanation] = useState(
@@ -46,7 +47,7 @@ export const StudentControlEditor: React.FC<{
   };
   const submit = () => {
     if (draft) {
-      const problem = validateSchedule(draft);
+      const problem = validateSchedule(draft, new Date(), activeDateEdit ? schedule?.startDate : undefined);
       if (problem) {
         setError(problem);
         return;
@@ -139,6 +140,7 @@ export const StudentControlEditor: React.FC<{
                           type="date"
                           aria-label="开始日期"
                           min={today}
+                          disabled={activeDateEdit}
                           value={draft.startDate}
                           onChange={(e) =>
                             update({ startDate: e.target.value })
@@ -155,13 +157,11 @@ export const StudentControlEditor: React.FC<{
                           className={inputClass}
                         />
                       </div>
-                      <p className="mt-2 text-xs leading-5 text-slate-500">
-                        生效日期只能选择当天及之后，包含起止日期。到期后按剩余规则执行；无每周规则时默认可借。已失效规则仅支持删除。
-                      </p>
+                      <p className="mt-2 text-xs leading-5 text-slate-500">{activeDateEdit ? '规则已生效，开始日期和借用方式保持不变，仅可调整结束日期。' : '生效日期只能选择当天及之后，包含起止日期。到期后按剩余规则执行；无每周规则时默认可借。已失效规则仅支持删除。'}</p>
                     </>
                   )}
                 </div>
-                {draft.mode === "dates" && (
+                {draft.mode === "dates" && !activeDateEdit && (
                   <div>
                     <h3 className="mb-3 text-sm font-bold text-slate-800">
                       借用方式
@@ -181,7 +181,7 @@ export const StudentControlEditor: React.FC<{
                     </div>
                   </div>
                 )}
-                {!(draft.mode === "dates" && draft.deny) && (
+                {!activeDateEdit && !(draft.mode === "dates" && draft.deny) && (
                   <div>
                     <h3 className="mb-3 text-sm font-bold text-slate-800">
                       <span className="mr-1 text-red-500">*</span>借用时段
@@ -317,13 +317,13 @@ export const StudentControlEditor: React.FC<{
             )}
             {error && <ControlValidationNotice message={error} onClose={() => setError("")} />}
           </div>
-          {restoreNotice > 0 && <ControlToast key={restoreNotice} message="已恢复默认规则" tone="success" duration={3000} onClose={() => setRestoreNotice(0)} />}
+          {restoreNotice > 0 && <ControlToast key={restoreNotice} message="已填入默认设置，保存后生效" tone="success" duration={3000} onClose={() => setRestoreNotice(0)} />}
       <footer className="flex justify-end gap-3 border-t p-5">
             {!draft && <button type="button" className="dc-btn mr-auto" onClick={() => { setAnswer(false); setExplanation(false); setError(""); setRestoreNotice((value) => value + 1); }}>恢复全校默认规则</button>}
             <button type="button" onClick={close} className="dc-btn">
               取消
             </button>
-            <button type="button" onClick={submit} className="dc-btn-primary">
+            <button type="button" onClick={submit} disabled={activeDateEdit && draft?.endDate === schedule?.endDate} className="dc-btn-primary">
               {!draft || draft.mode === "dates" ? "保存" : "保存并生效"}
             </button>
           </footer>

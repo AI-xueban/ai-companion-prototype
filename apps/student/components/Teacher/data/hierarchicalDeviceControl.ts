@@ -44,12 +44,13 @@ export const borrowScheduleStatus = (s: BorrowSchedule, now = new Date()): '待�
   if (date > s.endDate) return '已失效';
   return '生效中';
 };
-export const validateSchedule = (s: BorrowSchedule, now = new Date()): string => {
+export const validateSchedule = (s: BorrowSchedule, now = new Date(), preservedStartDate?: string): string => {
   if (s.mode === 'weekly' && !s.weekdays.length) return '请至少选择一个星期';
   if (s.mode === 'dates' && (!s.startDate || !s.endDate)) return '请选择开始和结束日期';
   if (s.mode === 'dates' && s.startDate > s.endDate) return '结束日期不能早于开始日期';
   const today = schoolDate(now);
-  if (s.mode === 'dates' && s.startDate < today) return '生效日期只能选择当天及之后';
+  if (s.mode === 'dates' && s.startDate < today && s.startDate !== preservedStartDate) return '生效日期只能选择当天及之后';
+  if (s.mode === 'dates' && s.endDate < today) return '结束日期不能早于今天';
   if (s.mode === 'dates' && s.deny) return '';
   if (!s.periods.length || s.periods.some(p => !p.start || !p.end)) return '请填写完整的借用时段';
   if (s.periods.some(p => p.start >= p.end)) return '结束时间须晚于开始时间，暂不支持跨日';
@@ -70,6 +71,14 @@ export const mergeBorrowSchedule = (existing: BorrowSchedule[], next: BorrowSche
     return pieces;
   });
   return [...retained, { ...next, weekdays: [...next.weekdays], periods: next.periods.map(p => ({ ...p })) }];
+};
+// Display equality concerns effective values only; ownership and save history still
+// participate separately in the optimistic-concurrency signature below.
+export const policyDisplaySignature = (s: StudentControl, module: ControlModule) => {
+  if (module === 'homework') return JSON.stringify([s.answer, s.explanation]);
+  if (module === 'world') return String(s.world);
+  if (module === 'lock') return String(s.locked);
+  return JSON.stringify((module === 'duration' ? s.durationRules : s.schedules).map(({ id: _id, ...rule }) => rule).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))));
 };
 const policyContentSignature = (s: StudentControl, module: ControlModule) => {
   if (module === 'duration') return JSON.stringify(s.durationTeacherWeekdays ?? []) + JSON.stringify(s.durationRules.map(({ id: _id, ...rule }) => rule).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))));

@@ -6,6 +6,7 @@
 .borrow-scope-description { margin-top: 5px; line-height: 1.5; }
 .borrow-scope-overview > div + .borrow-scope-description { margin-top: 10px; }
 .borrow-list-heading { padding: 13px 18px; }
+.borrow-priority-note { display: inline-block; margin-top: 6px; border: 1px solid #c7d2fe; border-radius: 6px; padding: 4px 8px; background: #e0e7ff; color: #3730a3; font-size: 12px; font-weight: 600; line-height: 18px; }
 .borrow-list-heading .borrow-batch-toggle { border-color: #4f46e5; background: #4f46e5; color: #fff; }
 .borrow-list-heading .borrow-batch-toggle:hover:not(:disabled) { border-color: #4338ca; background: #4338ca; color: #fff; }
 .borrow-list-heading .borrow-batch-toggle[aria-pressed="true"] { border-color: #312e81; background: #312e81; color: #fff; }
@@ -64,3 +65,4 @@
   .borrow-batch-bar { padding: 12px; }
   .borrow-batch-actions { margin-left: 0; }
 }
+.borrow-stage-heading { grid-column: 1 / -1; margin: 0 0 -20px; color: #64748b; font-size: 14px; font-weight: 600; line-height: 20px; }

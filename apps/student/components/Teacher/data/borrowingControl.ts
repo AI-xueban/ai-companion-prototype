@@ -39,6 +39,17 @@ export const saveClassBorrowingRule = (state: BorrowingState, classIds: string[]
   ...state,
   classRules: { ...state.classRules, ...Object.fromEntries(classIds.map(id => [id, mergeBorrowSchedule(state.classRules[id] ?? [], rule, editingId)])) },
 });
+export type BorrowingRuleEntry = { classId: string; ruleId: string };
+export const saveGroupedBorrowingRule = (state: BorrowingState, entries: BorrowingRuleEntry[], rule: BorrowSchedule): BorrowingState => ({
+  ...state,
+  classRules: { ...state.classRules, ...Object.fromEntries(entries.map(({ classId, ruleId }) => [classId,
+    mergeBorrowSchedule(state.classRules[classId] ?? [], { ...rule, id: ruleId }, ruleId)])) },
+});
+export const deleteGroupedBorrowingRule = (state: BorrowingState, entries: BorrowingRuleEntry[]): BorrowingState => ({
+  ...state,
+  classRules: { ...state.classRules, ...Object.fromEntries(entries.map(({ classId, ruleId }) => [classId,
+    (state.classRules[classId] ?? []).filter(item => item.id !== ruleId)])) },
+});
 export const borrowingResult = (state: BorrowingState, student: { id: string; classId: string }, now = new Date()) => {
   if (classTemporarilyDenied(state, student.classId)) return '学校临时禁止借用';
   if (state.studentBans[student.id]) return '班主任已禁止借用';
@@ -53,18 +64,29 @@ export const borrowingResult = (state: BorrowingState, student: { id: string; cl
   return rule.periods.some(period => period.start <= parts && parts < period.end) ? '当前可借用' : '当前不在借用时段';
 };
 
+export const borrowingRuleSignature = (rule: BorrowSchedule) => JSON.stringify({
+  mode: rule.mode,
+  days: rule.mode === 'weekly' ? [...rule.weekdays].sort() : [rule.startDate, rule.endDate],
+  deny: rule.mode === 'dates' && rule.deny,
+  periods: rule.mode === 'dates' && rule.deny ? [] : rule.periods.map(p => p.start + '-' + p.end).sort(),
+});
+export const groupBorrowingRules = (state: BorrowingState, classIds: string[], mode: BorrowSchedule['mode']) => {
+  const groups = new Map<string, { key: string; rule: BorrowSchedule; entries: BorrowingRuleEntry[] }>();
+  classIds.forEach(classId => (state.classRules[classId] ?? []).filter(rule => rule.mode === mode).forEach(rule => {
+    const key = borrowingRuleSignature(rule);
+    const group = groups.get(key) ?? { key, rule, entries: [] };
+    group.entries.push({ classId, ruleId: rule.id });
+    groups.set(key, group);
+  }));
+  return [...groups.values()];
+};
 // Compare configuration content independently of rule IDs and creation order.
-export const borrowingListSummary = (state: BorrowingState, classIds: string[], mode: BorrowSchedule['mode']) => {
-  const configurations = classIds.map(id => (state.classRules[id] ?? []).filter(rule => rule.mode === mode));
+export const borrowingListSummary = (state: BorrowingState, classIds: string[], mode: BorrowSchedule['mode'], includeRule: (rule: BorrowSchedule) => boolean = () => true) => {
+  const configurations = classIds.map(id => (state.classRules[id] ?? []).filter(rule => rule.mode === mode && includeRule(rule)));
   const configured = configurations.filter(rules => rules.length);
   if (!configured.length) return { rules: [] as BorrowSchedule[], note: '未设置规则' };
   if (configured.length !== configurations.length) return { rules: [] as BorrowSchedule[], note: '部分班级未设置规则' };
-  const signature = (rules: BorrowSchedule[]) => JSON.stringify(rules.map(rule => JSON.stringify({
-    mode: rule.mode,
-    days: rule.mode === 'weekly' ? [...rule.weekdays].sort() : [rule.startDate, rule.endDate],
-    deny: rule.mode === 'dates' && rule.deny,
-    periods: rule.mode === 'dates' && rule.deny ? [] : rule.periods.map(p => p.start + '-' + p.end).sort(),
-  })).sort());
+  const signature = (rules: BorrowSchedule[]) => JSON.stringify(rules.map(borrowingRuleSignature).sort());
   const first = signature(configured[0]);
   return configured.every(rules => signature(rules) === first)
     ? { rules: configured[0], note: '—' }

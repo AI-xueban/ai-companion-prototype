@@ -31,8 +31,8 @@ export const inheritTemporaryLocksByClass = (
   return ids.length ? { students: { key: 'students', label: '管理员临时锁屏', ids } } : {};
 };
 
-export const teacherMayModifyLock = (session: SchoolTemporaryLockSession, locks: TemporaryLocks, ids: string[]) =>
-  !session.active && !ids.some((id) => temporaryLockedStudentIds(locks).has(id));
+export const teacherMayModifyLock = (_session: SchoolTemporaryLockSession, locks: TemporaryLocks, ids: string[]) =>
+  !ids.some((id) => temporaryLockedStudentIds(locks).has(id));
 
 export const updateTemporaryLocks = (current: TemporaryLocks, scopes: TemporaryLockScope[], enabled: boolean): TemporaryLocks => {
   // 兼容旧的范围数据，但统一按学生保存；上级解除也清除范围内原先的下级锁屏。

@@ -29,6 +29,7 @@ import {
   newBorrowSchedule,
   newDurationRule,
   policySignature,
+  policyDisplaySignature,
   scheduleDateText,
   schedulePeriodText,
   schedulesConflict,
@@ -52,6 +53,9 @@ import {
 import { DeviceControlLayer } from "./DeviceControlLayer";
 import { applySchoolDurationRule, durationUpdateDays } from "../data/durationApplyScope";
 import { DurationRuleEditor } from "./DurationRuleEditor";
+import { ControlScopeCards } from "./ControlScopeCards";
+import { DurationRulesDrawer } from "./DurationRulesDrawer";
+import { DurationRuleGroup, removeDurationRule } from "../data/durationRuleGroups";
 import { WorldUsageEditor } from "./WorldUsageEditor";
 import { TemporaryLockEditor } from "./TemporaryLockEditor";
 import { applyTemporaryLocks, updateTemporaryLocks, temporaryLockedStudentIds, TemporaryLocks, TemporaryLockScope, updateSchoolTemporaryLockSession, SchoolTemporaryLockSession, SCHOOL_TEMPORARY_LOCK_NOTICE, TemporaryLockClassStates, inheritTemporaryLocksByClass, teacherMayModifyLock } from "../data/temporaryDeviceLock";
@@ -212,7 +216,8 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
     ids: string[];
   } | null>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
-  const [durationEditor, setDurationEditor] = useState<{ ids: string[]; label: string; rule: DurationRule; isDefault?: boolean; editingId?: string; requireApplyScope?: boolean; selectedObjects?: string[]; baseSignatures: Record<string, string> } | null>(null);
+  const [durationOverview, setDurationOverview] = useState<{ ids: string[]; label: string } | null>(null);
+  const [durationEditor, setDurationEditor] = useState<{ ids: string[]; label: string; rule: DurationRule; isDefault?: boolean; editingId?: string; originalRule?: DurationRule; requireApplyScope?: boolean; selectedObjects?: string[]; baseSignatures: Record<string, string> } | null>(null);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [worldEditor, setWorldEditor] = useState<{ ids: string[]; label: string; value: null; baseSignatures: Record<string, string> } | null>(null);
   const [lockEditor, setLockEditor] = useState<{ ids: string[]; label: string } | null>(null);
@@ -304,7 +309,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
       values(ids).map((s) =>
         tab === "borrowing"
           ? borrowingConfigurationKey(s.schedules, borrowMode)
-          : policySignature(s, tab),
+          : policyDisplaySignature(s, tab),
       ),
     ).size > 1;
   const status = (ids: string[]) => {
@@ -566,7 +571,17 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
     });
   };
   const openDurationEditor = (ids: string[], label: string, rule?: DurationRule, isDefault = false) => {
-    setDurationEditor({ ids, label, selectedObjects: label.startsWith("已选") ? [...selectedObjectNames] : [label], rule: rule ?? newDurationRule(), isDefault, editingId: rule?.id, requireApplyScope: !classId && ids.length > 1 && !isDefault, baseSignatures: Object.fromEntries(ids.map((id) => [id, policySignature(durationControls[id], "duration")])) });
+    setDurationEditor({ ids, label, selectedObjects: label.startsWith("已选") ? [...selectedObjectNames] : [label], rule: rule ?? newDurationRule(), isDefault, editingId: rule?.id, originalRule: rule, requireApplyScope: !classId && ids.length > 1 && !isDefault, baseSignatures: Object.fromEntries(ids.map((id) => [id, policySignature(durationControls[id], "duration")])) });
+  };
+  const requestDurationDelete = (group: DurationRuleGroup) => {
+    const signatures = Object.fromEntries(group.ids.map(id => [id, policySignature(durationControls[id], "duration")]));
+    setConfirmation({ title: "确认删除使用时长规则？", scope: actualScope(group.ids), count: group.ids.length,
+      description: `${weekdayRangeText(group.rule.weekdays)}：${durationRuleText(group.rule)}。删除本条规则后，对应星期执行默认设置；其他规则保持不变。`,
+      action: "确认删除", danger: true, run: () => {
+        if (hasConflict(group.ids, "duration", signatures)) return;
+        writeControls(group.ids, control => removeDurationRule(control, group.rule), "删除使用时长规则");
+      },
+    });
   };
   const saveDurationRule = (rule: DurationRule, applyScope?: "all" | "unmodified") => {
     if (!durationEditor) return;
@@ -584,18 +599,18 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
       }])));
       setMessage({ text: "默认使用时长规则已保存", tone: "success" });
     } else {
-      const { ids, label, editingId, baseSignatures } = durationEditor;
+      const { ids, label, originalRule, baseSignatures } = durationEditor;
       const scope = applyScope ?? "all";
-      const updateIds = ids.filter((id) => durationUpdateDays(durationControls[id], rule, scope).length > 0);
+      const updateIds = ids.filter((id) => durationUpdateDays(durationControls[id], rule, scope).length > 0 || (!!originalRule && durationUpdateDays(durationControls[id], originalRule, scope).length > 0));
       setConfirmation({
         title: "确认保存使用时长规则？", scope: label,
         selectedObjects: durationEditor.selectedObjects,
         count: updateIds.length,
-        description: `${weekdayRangeText(rule.weekdays)}：${durationRuleText(rule)}`,
+        description: `${weekdayRangeText(rule.weekdays)}：${durationRuleText(rule)}。${originalRule ? "替换本条原规则；移除的星期执行默认规则。" : "覆盖所选星期已有规则，其他星期保留。"}${scope === "unmodified" ? "保留班主任已设置的星期。" : "修改本次范围全部学生，包括班主任设置。"}`,
         action: "确认并生效",
         run: () => {
           if (hasConflict(ids, "duration", baseSignatures)) { setMessage({ text: "相关设置已被其他人修改，本次未保存，请重新设置。", tone: "warning" }); return; }
-          if (updateIds.length) writeControls(updateIds, (control) => applySchoolDurationRule(control, rule, scope), "保存使用时长规则");
+          if (updateIds.length) writeControls(updateIds, (control) => applySchoolDurationRule(control, rule, scope, originalRule), "保存使用时长规则");
           else setMessage({ text: "全部所选星期均为班主任配置，本次保留原规则", tone: "success" });
         },
       });
@@ -759,7 +774,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
       count: ids.length,
       description: enabled
         ? schoolAction ? "全校进入临时锁屏管控。期间老师不能修改锁屏状态，管理员可单独解除年级或班级的临时锁屏。" : "临时锁定所选范围的学生设备，保留老师原有的锁屏设置。"
-        : schoolAction ? "结束本次全校临时锁屏管控，所有年级、班级恢复原有日常锁屏状态，老师恢复锁屏操作权限。" : `解除临时锁屏后，恢复原有日常锁屏状态。${schoolTemporaryLockSession.active ? "全校临时锁屏管控尚未结束，老师仍不可修改锁屏。" : ""}`,
+        : schoolAction ? "结束本次全校临时锁屏管控，所有年级、班级执行当前日常锁屏设置，老师恢复锁屏操作权限。" : "解除临时锁屏后，执行当前日常锁屏设置，恢复所选班级老师的锁屏管控权限；其他班级不受影响。",
       action: enabled ? "开启临时锁屏" : "解除临时锁屏",
       danger: enabled,
       run: () => {
@@ -773,7 +788,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
         setOperationRecords((records) => limitHistoryByModule([{ id: `record-${Date.now()}`, module: "lock", title: enabled ? "开启临时锁屏" : "解除临时锁屏", scope: schoolAction ? "全校" : actualScope(scopes.flatMap((scope) => scope.ids)), time: at, operator: operatorLabel, source: "teacher-portal", operatorRole: currentUser.role, before: summarize(effectiveTemporaryLocks), after: summarize(nextLocks), ids, snapshot }, ...records]));
         setSelected([]);
         setBatchMode(false);
-        setMessage({ text: enabled ? "临时锁屏已开启" : "已解除临时锁屏，恢复原有日常锁屏状态。", tone: "success" });
+        setMessage({ text: enabled ? "临时锁屏已开启" : "已解除临时锁屏，执行当前日常锁屏设置，所选班级老师恢复锁屏管控权限。", tone: "success" });
       },
     };
     if (confirmed) confirmation.run();
@@ -955,7 +970,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
         aria-labelledby={`control-tab-${tab}`}
         className="dc-workspace min-h-0 flex-1 overflow-y-auto"
       >
-        <div className={`dc-content mx-auto space-y-5 ${tab === "borrowing" ? "dc-borrowing-content" : "dc-unified-panels"}`}>
+        <div className="dc-content dc-borrowing-content mx-auto space-y-5">
           {tab === "borrowing" ? <SchoolBorrowingControl currentUser={currentUser} initialGrade={grade} onGradeChange={value => { setGrade(value); setClassId(null); }} demoScenario={demoScenario?.module === 'borrowing' ? demoScenario : undefined} /> : <>
           <div className="dc-breadcrumb flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-4">
@@ -982,7 +997,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
               </button>
             )}
           </div>
-          <section className="dc-scope-card">
+          <section className="dc-scope-card borrow-scope-overview">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="dc-scope-heading">
                 <div>
@@ -1012,15 +1027,15 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
                       : tab === "homework"
                         ? "设置学生查看答案、详解的权限，默认均不允许。"
                         : tab === "lock"
-                          ? <>可对全校、年级或班级临时锁屏，解除后执行当前日常锁屏设置。<strong className="ml-1 font-bold">临时锁屏老师不可操作</strong></>
+                          ? <>可对全校、年级或班级临时锁屏，解除后执行当前日常锁屏设置。<strong className="ml-1 font-bold">仍处于临时锁屏的班级，老师暂不能调整日常锁屏。</strong></>
                           : "可统一设置全校学生是否允许使用万象视界，也可在下方按年级、班级设置。"}
                     {grade && ` 当前 ${currentStudents.length} 名学生。`}
                   </p>
                 </div>
               </div>
-              {!grade && (tab === "world" || tab === "lock") && (
+              {!grade && tab === "lock" && (
                 <div className="flex flex-wrap items-center gap-3">
-                  {tab === "world" ? <button type="button" className={primary} onClick={() => openWorldEditor(schoolStudentIds, "全校")}>设置全校使用状态</button> : <button type="button" className={primary} onClick={() => requestTemporaryLock([{ key: "school", label: "全校", ids: schoolStudentIds }], !schoolTemporaryLockSession.active)}>{schoolTemporaryLockSession.active ? "解除临时锁屏" : "全校临时锁屏"}</button>}
+                  {tab === "lock" && <button type="button" className={primary} onClick={() => requestTemporaryLock([{ key: "school", label: "全校", ids: schoolStudentIds }], !schoolTemporaryLockSession.active)}>{schoolTemporaryLockSession.active ? "解除临时锁屏" : "全校临时锁屏"}</button>}
                 </div>
               )}
             </div>
@@ -1031,263 +1046,23 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
               <div className="flex flex-wrap gap-3"><button type="button" className={button} onClick={() => setConfirmation({ title: durationTeacherCanEdit ? "关闭班主任调整权限？" : "开放班主任调整权限？", scope: "全校", count: schoolStudentIds.length, description: durationTeacherCanEdit ? "关闭后班主任只能查看使用时长，现有规则继续生效。" : "开放后，班主任可调整本班学生的使用时长，已有设置保持不变。", action: "确认", run: () => { changeDurationPermission(!durationTeacherCanEdit); setMessage({ text: durationTeacherCanEdit ? "已关闭班主任调整权限，现有规则保持不变" : "已开放班主任调整权限，当前规则保持不变", tone: "success" }); } })}>{durationTeacherCanEdit ? "关闭调整权限" : "开放调整权限"}</button></div>
             </div>
           </section>}
-          {(!isScheduleTab || scheduleEnabled) && (
-          <section className="dc-list-card overflow-hidden">
-            <div className="dc-list-heading flex flex-wrap items-center justify-between gap-3 border-b border-slate-100">
-              <div>
-                <h3 className="font-bold text-slate-900">{rowType}列表</h3>
-              </div>
-              <div className="dc-actions">
-                {tab === "duration" || tab === "homework" ? (
-                  !batchMode && <button type="button" disabled={!rows.length} className={button} onClick={() => { setBatchMode(true); setSelected([]); setMessage({ text: `请选择要设置的${rowType}`, tone: "info" }); }}>批量操作</button>
-                ) : tab === "world" ? (
-                  !batchMode && <button type="button" className={button} onClick={() => { setBatchMode(true); setSelected([]); setMessage({ text: `请选择要设置的${rowType}`, tone: "info" }); }}>批量操作</button>
-                ) : (
-                  !batchMode && <button type="button" className={button} onClick={() => {
-                    setBatchMode(true);
-                    setSelected([]);
-                    setMessage({ text: `请选择需要锁屏或解除临时锁屏的${rowType}`, tone: "info" });
-                  }}>批量操作</button>
-                )}
-              </div>
-            </div>
-            {batchMode && (
-              <div className="dc-selection-bar flex items-center justify-between gap-3">
-                <span>
-                  {selected.length
-                    ? `已选 ${selected.length} ${classId ? "名学生" : `个${rowType}`}，共 ${targetIds.length} 名学生`
-                    : tab === "lock" ? `请选择需要锁屏或解除临时锁屏的${rowType}` : `请选择要设置的${rowType}`}
-                </span>
-                <div className="flex items-center gap-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelected([]);
-                    setBatchMode(false);
-                    setMessage(null);
-                  }}
-                  className="shrink-0 font-bold"
-                >
-                  取消
-                </button>
-                {tab === "duration" && <button type="button" className={primary} disabled={!targetIds.length} onClick={() => openDurationEditor(targetIds, targetLabel)}>设置使用时长</button>}
-                {tab === "homework" && <button type="button" className={primary} disabled={!targetIds.length} onClick={() => openEditor(targetIds, targetLabel, undefined, undefined, selectedObjectNames)}>设置查看权限</button>}
-                {tab === "world" && <button type="button" className={primary} disabled={!targetIds.length} onClick={() => openWorldEditor([...new Set(targetIds)], selectedObjectNames.join("、"))}>设置使用状态</button>}
-                {tab === "lock" && <button type="button" className={primary} disabled={!targetIds.length} onClick={() => openLockAction([...new Set(targetIds)], selectedObjectNames.join("、"))}>{targetIds.length ? lockActionLabel(targetIds) : "设置临时锁屏"}</button>}
-                </div>
-              </div>
-            )}
-            <div className="dc-table-hint">
-              <ArrowLeftRight size={14} />
-              左右滑动查看完整字段
-            </div>
-            <div className="dc-table-scroll">
-              <table className="dc-data-table text-left">
-                <thead className="bg-slate-50 text-slate-500">
-                  <tr>
-                    {batchMode && (
-                      <th className="w-12 px-5 py-3">
-                        <input
-                          type="checkbox"
-                          aria-label={`选择本页${rowType}`}
-                          checked={checkedAll}
-                          onChange={() =>
-                            setSelected(
-                              checkedAll
-                                ? selected.filter(
-                                    (id) => !pageRows.some((r) => r.id === id),
-                                  )
-                                : [
-                                    ...new Set([
-                                      ...selected,
-                                      ...pageRows.map((r) => r.id),
-                                    ]),
-                                  ],
-                            )
-                          }
-                        />
-                      </th>
-                    )}
-                    <th className="min-w-32 py-3 font-medium">
-                      {rowType}
-                      {classId ? " / 编号" : ""}
-                    </th>
-                    <ControlConfigurationHeaders
-                      module={tab}
-                      student={!!classId}
-                      mode={borrowMode}
-                    />
-                    <th className="sticky right-0 min-w-32 bg-slate-50 px-5 py-3 font-medium">
-                      操作
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pageRows.map((row) => (
-                    <tr
-                      key={row.id}
-                      data-selected={selected.includes(row.id)}
-                      className="border-t border-slate-100"
-                    >
-                      {batchMode && (
-                        <td className="px-5 py-4 align-top">
-                          <input
-                            type="checkbox"
-                            aria-label={`选择${row.label}`}
-                            checked={selected.includes(row.id)}
-                            onChange={() =>
-                              setSelected(
-                                selected.includes(row.id)
-                                  ? selected.filter((id) => id !== row.id)
-                                  : [...selected, row.id],
-                              )
-                            }
-                          />
-                        </td>
-                      )}
-                      <td className="py-4 align-top">
-                        {row.classId ? <span className="font-bold text-slate-900">{row.label}</span> : <button
-                          type="button"
-                          onClick={() =>
-                            row.student
-                              ? setDetailId(row.student.id)
-                              : navigate(row.grade!, row.classId ?? null)
-                          }
-                          className="inline-flex items-center gap-2 font-bold text-indigo-600"
-                        >
-                          {row.label}<ChevronRight size={15} />
-                        </button>}
-                        {row.student && row.subtitle && (
-                          <p className="mt-1 text-xs text-slate-400">
-                            {row.subtitle}
-                          </p>
-                        )}
-                      </td>
-                      <ControlConfigurationCells
-                        module={tab}
-                        student={!!row.student}
-                        mode={borrowMode}
-                        ids={row.ids}
-                        controls={controls}
-                        temporaryLockState={temporaryState(row.ids)}
-                        defaultDurationEnabled={defaultDurationEnabled}
-                        defaultDurationRule={defaultDuration}
-                        onBorrowOverview={() => showBorrowOverview(row)}
-                      />
-                      <td className="dc-row-actions sticky right-0 px-5 py-4 align-top">
-                        <div className="flex flex-col items-start gap-3">
-                          {tab === "duration" && (
-                            <button type="button" className="dc-btn whitespace-nowrap" onClick={() => openDurationEditor(row.ids, row.label)}>
-                              设置使用时长
-                            </button>
-                          )}
-                          {tab === "homework" && (
-                            <button type="button" className="dc-btn whitespace-nowrap" onClick={() => openEditor(row.ids, row.label, undefined, undefined, [row.label])}>
-                              设置权限
-                            </button>
-                          )}
-                          {tab === "world" && <button type="button" className="dc-btn whitespace-nowrap" onClick={() => openWorldEditor(row.ids, row.label)}>设置使用状态</button>}
-                          {tab === "lock" && <button type="button" className="dc-btn whitespace-nowrap" onClick={() => openLockAction(row.ids, row.label)}>{lockActionLabel(row.ids)}</button>}
-                          {!row.classId && <button
-                            type="button"
-                            onClick={() =>
-                              row.student
-                                ? setDetailId(row.student.id)
-                                : navigate(row.grade!, row.classId ?? null)
-                            }
-                            className="dc-link flex items-center gap-1 whitespace-nowrap"
-                          >
-                            {row.student
-                              ? "查看详情"
-                              : grade
-                                ? "查看学生"
-                                : "查看班级"}
-                            <ChevronRight size={15} />
-                          </button>}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {!pageRows.length && (
-                    <tr>
-                      <td
-                        colSpan={
-                          2 +
-                          (batchMode ? 1 : 0) +
-                          configurationColumnCount({
-                            module: tab,
-                            student: !!classId,
-                            mode: borrowMode,
-                          })
-                        }
-                      >
-                        <div className="dc-empty">
-                          <span>
-                            <Info size={23} strokeWidth={1.5} />
-                          </span>
-                          <p>{listEmpty ? emptyState?.title : `暂无${rowType}`}</p>
-                          <small>{listEmpty ? emptyState?.description : "当前范围暂无数据"}</small>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            {pageCount > 1 && <div className="dc-pagination flex flex-wrap items-center justify-between gap-3 border-t border-slate-100">
-              <span>
-                共 {rows.length} {classId ? "名学生" : `个${rowType}`} ·
-                第 {currentPage} / {pageCount} 页
-              </span>
-              <div className="flex flex-wrap items-center gap-2">
-                <label htmlFor="control-page-size">每页</label>
-                <select
-                  id="control-page-size"
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value));
-                    setPage(1);
-                  }}
-                  className="rounded-lg border px-2 py-1.5"
-                >
-                  {[10, 20, 40].map((size) => (
-                    <option key={size} value={size}>
-                      {size} 条
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  disabled={currentPage === 1}
-                  onClick={() => setPage(currentPage - 1)}
-                  className="rounded-lg border px-3 py-1.5 disabled:opacity-30"
-                >
-                  上一页
-                </button>
-                {Array.from({ length: pageCount }, (_, i) => i + 1).map((n) => (
-                  <button
-                    type="button"
-                    key={n}
-                    aria-label={`第${n}页`}
-                    aria-current={n === currentPage ? "page" : undefined}
-                    onClick={() => setPage(n)}
-                    className={`rounded-lg border px-3 py-1.5 ${n === currentPage ? "border-indigo-600 bg-indigo-600 text-white" : "border-slate-200"}`}
-                  >
-                    {n}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  disabled={currentPage === pageCount}
-                  onClick={() => setPage(currentPage + 1)}
-                  className="rounded-lg border px-3 py-1.5 disabled:opacity-30"
-                >
-                  下一页
-                </button>
-              </div>
-            </div>}
-          </section>
-          )}
+          <ControlScopeCards module={tab} rows={rows} rowType={rowType} controls={controls}
+            batch={batchMode} selected={selected} onBatch={() => { setBatchMode(!batchMode); setSelected([]); }} onSelect={setSelected}
+            onNavigate={row => navigate(row.grade!, null)}
+            onSettings={row => {
+              if (tab === "duration") setDurationOverview({ ids: row.ids, label: row.label });
+              else if (tab === "homework") openEditor(row.ids, row.label, undefined, undefined, [row.label]);
+              else if (tab === "world") openWorldEditor(row.ids, row.label);
+              else openLockAction(row.ids, row.label);
+            }}
+            onBatchSettings={() => {
+              if (tab === "duration") openDurationEditor(targetIds, targetLabel);
+              else if (tab === "homework") openEditor(targetIds, targetLabel, undefined, undefined, selectedObjectNames);
+              else if (tab === "world") openWorldEditor(targetIds, selectedObjectNames.join("、"));
+              else openLockAction(targetIds, selectedObjectNames.join("、"));
+            }} lockState={temporaryState} lockAction={lockActionLabel}
+            recentOperation={ids => { const record = visibleOperationRecords.find(item => item.ids?.some(id => ids.includes(id))); return record ? { title: record.title, operator: record.operator, at: record.time } : undefined; }}
+            emptyTitle={listEmpty ? emptyState?.title : undefined} emptyDescription={listEmpty ? emptyState?.description : undefined} />
           {message && <ControlToast duration={demoScenario && (exception === "conflict" || exception === "scope-changed" || exception === "save-failed") ? 12000 : undefined} message={message.text} tone={message.tone} onClose={() => setMessage(null)} />}
           </>}
         </div>
@@ -1359,6 +1134,9 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
           onSave={saveEditor}
         />
       )}
+      {durationOverview && tab === "duration" && <DurationRulesDrawer ids={durationOverview.ids} label={durationOverview.label} controls={durationControls}
+        onClose={() => setDurationOverview(null)} onAdd={() => openDurationEditor(durationOverview.ids, durationOverview.label)}
+        onEdit={group => openDurationEditor(group.ids, actualScope(group.ids), group.rule)} onDelete={requestDurationDelete} />}
       {durationEditor && <DurationRuleEditor
         initialApplyScope={(exception === "save-failed" || exception === "conflict") ? "all" : undefined}
         key={`${durationEditor.isDefault ? "default" : durationEditor.label}-${durationEditor.rule.id}`}

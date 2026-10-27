@@ -1,4 +1,5 @@
 import { DurationRule, StudentControl } from './hierarchicalDeviceControl';
+import { durationRuleKey, removeDurationRule } from './durationRuleGroups';
 
 export type DurationApplyScope = 'all' | 'unmodified';
 
@@ -13,14 +14,23 @@ export const durationUpdateDays = (control: StudentControl, rule: DurationRule, 
   return rule.weekdays.filter((day) => !protectedDays.has(day));
 };
 
-export const applySchoolDurationRule = (control: StudentControl, rule: DurationRule, scope: DurationApplyScope): StudentControl => {
+export const applySchoolDurationRule = (control: StudentControl, rule: DurationRule, scope: DurationApplyScope, original?: DurationRule): StudentControl => {
   const days = durationUpdateDays(control, rule, scope);
-  if (!days.length) return control;
+  const originalDays = original ? durationUpdateDays(control, original, scope) : [];
+  if (!days.length && !originalDays.length) return control;
+  // Editing replaces the selected rule, including weekdays removed from its form.
+  const base = original && originalDays.length
+    ? { ...removeDurationRule(control, original), durationRules: control.durationRules.flatMap(existing => {
+      if (durationRuleKey(existing) !== durationRuleKey(original)) return [existing];
+      const retained = existing.weekdays.filter(day => !originalDays.includes(day));
+      return retained.length ? [{ ...existing, weekdays: retained }] : [];
+    }) }
+    : control;
   return {
-    ...control,
-    durationTeacherWeekdays: teacherDurationWeekdays(control).filter((day) => !days.includes(day)),
+    ...base,
+    durationTeacherWeekdays: teacherDurationWeekdays(control).filter((day) => !days.includes(day) && !originalDays.includes(day)),
     durationRules: [
-      ...control.durationRules.map((existing) => ({ ...existing, weekdays: existing.weekdays.filter((day) => !days.includes(day)) })).filter((existing) => existing.weekdays.length),
+      ...base.durationRules.map((existing) => ({ ...existing, weekdays: existing.weekdays.filter((day) => !days.includes(day)) })).filter((existing) => existing.weekdays.length),
       ...(rule.useDefault ? [] : [{ ...rule, source: 'school' as const, weekdays: days, periods: rule.periods.map((period) => ({ ...period })) }]),
     ],
   };

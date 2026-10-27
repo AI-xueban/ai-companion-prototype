@@ -50,6 +50,7 @@ export const DurationRuleEditor: React.FC<Props> = ({ initialApplyScope, label, 
     {(close) => <>
       <header className="flex items-center justify-between border-b p-6"><h2 id="duration-rule-editor-title" className="text-xl font-bold text-slate-900">{isDefault ? "设置默认使用时长规则" : "设置使用时长规则"}</h2><button type="button" aria-label="关闭设置" onClick={close} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X size={20} /></button></header>
       <div className="dc-panel-body space-y-6">
+        <div className="rounded-xl bg-indigo-50 p-4 text-sm text-indigo-800"><p className="font-bold">{label}</p><p className="mt-1">本次设置范围共 {count} 名学生</p></div>
         {!isDefault && <fieldset><legend className="mb-3 text-sm font-bold text-slate-800"><span className="mr-1 text-red-500">*</span>使用星期</legend><div className="dc-weekdays">{weekdayNames.map((day, index) => <label key={day} className="dc-choice"><input type="checkbox" checked={draft.weekdays.includes(index)} onChange={() => setDraft((current) => ({ ...current, weekdays: current.weekdays.includes(index) ? current.weekdays.filter((value) => value !== index) : [...current.weekdays, index].sort() }))} />{day}</label>)}</div></fieldset>}
         <fieldset  className="space-y-4 rounded-xl bg-slate-50 p-4 disabled:opacity-60">{numberInput("continuousMinutes", "连续使用时长")}{numberInput("restMinutes", "休息时间")}{numberInput("dailyMinutes", "每日累计时长")}</fieldset>
         <fieldset  className="disabled:opacity-60">
