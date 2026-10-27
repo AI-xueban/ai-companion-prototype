@@ -87,7 +87,7 @@ const ROUTE_META = {
   'third-party-apps': { title: '第三方应用', breadcrumb: ['第三方应用'] },
   'app-library': { title: '第三方应用', breadcrumb: ['第三方应用'] },
   'school-apps': { title: '学校应用', breadcrumb: ['第三方应用', '学校应用'] },
-  'face-sync-status': { title: '同步状态', breadcrumb: ['用户管理','人脸信息管理','同步状态'] },
+  'face-sync-status': { title: '同步记录', breadcrumb: ['用户管理','人脸信息管理','同步记录'] },
   'face-sync-detail': { title: '同步状态详情', breadcrumb: ['用户管理','人脸信息管理','同步状态','详情'] },
   'face-library': { title: '人脸信息管理', breadcrumb: ['用户管理', '人脸信息管理'] },
 };
@@ -180,8 +180,15 @@ function closeTab(tabId, e) {
   const activeTabId = current.params?._tabId ||
     openTabs.find(t => t.route === current.route && JSON.stringify(t.params || null) === JSON.stringify(current.params || null))?.id ||
     current.route;
+  const closingTab = openTabs.find(t => t.id === tabId);
   openTabs = openTabs.filter(t => t.id !== tabId);
   if (tabId === activeTabId) {
+    if (closingTab?.route === 'face-sync-status') {
+      const parent = openTabs.find(t => t.route === 'face-library');
+      if (parent) navigate(parent.route, parent.params);
+      else openTab('face-library');
+      return;
+    }
     const last = openTabs[openTabs.length - 1];
     navigate(last.route, last.params);
   } else {
