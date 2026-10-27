@@ -4,6 +4,11 @@ import type { GradeQuestion } from './homeworkMock';
 export interface QuestionRegion { x: number; y: number; width: number; height: number }
 export const NOTEBOOK_KEY = 'demo_homework_notebook_v1';
 export const MISTAKE_REASONS = ['知识点不熟', '思路不清', '计算失误', '审题疏漏', '其他'];
+export const CUSTOM_MISTAKE_REASON_LIMIT = 10;
+export const normalizeMistakeReason = (value:string) => String(value || '').replace(/\s/gu, '');
+export const mistakeReasonLength = (value:string) => Array.from(normalizeMistakeReason(value)).length;
+export const isValidMistakeReason = (value:string) => mistakeReasonLength(value) > 0 && mistakeReasonLength(value) <= CUSTOM_MISTAKE_REASON_LIMIT;
+
 export interface NotebookEntry {
   key: string; studentId: string; taskId: string; itemId: string; questionId: string;
   imagePath?: string; taskTitle?: string; version: number; reason: string; addedAt: string; question: GradeQuestion;
@@ -14,13 +19,14 @@ export function questionRegion(question: GradeQuestion, index: number, mock = fa
   return region;
 }
 export function questionMark(question: GradeQuestion, parent = true) {
-  if (question.state === 'confirmed' && (!parent || isResultReleased(question))) return { mark: question.correct ? '✓' : '×', tone: question.correct ? 'correct' : 'wrong', label: question.correct ? '正确' : '错误' };
+  if (question.state === 'confirmed' && (!parent || isResultReleased(question))) return { mark: question.correct ? '✓' : '×', tone: question.correct ? 'correct' : 'wrong', label: question.correct ? '答对' : '答错' };
   const labels: Record<string, string> = { review: '待复核', unreadable: '识别存疑', 'no-answer': '答案存疑', failed: '批改失败', queued: '等待批改', processing: '正在批改', confirmed: '待教师开放' };
   return { mark: ['queued', 'processing'].includes(question.state) ? '…' : question.state === 'confirmed' ? '待开放' : '?', tone: 'pending', label: labels[question.state] || parentGradeLabel(question) };
 }
 export function notebookKey(studentId: string, taskId: string, itemId: string, questionId: string) { return JSON.stringify([studentId, taskId, itemId, questionId]); }
 export function addNotebookEntry(entries: NotebookEntry[], source: { studentId: string; taskId: string; itemId: string; version: number; imagePath?: string; taskTitle?: string }, question: GradeQuestion, reason: string): NotebookEntry[] {
-  if (!isResultReleased(question) || !MISTAKE_REASONS.includes(reason)) return entries;
+  if (!isResultReleased(question) || !isValidMistakeReason(reason)) return entries;
+  reason = normalizeMistakeReason(reason);
   const key = notebookKey(source.studentId, source.taskId, source.itemId, question.id);
   const entry: NotebookEntry = { ...source, questionId: question.id, key, reason, addedAt: new Date().toISOString(), question: JSON.parse(JSON.stringify(question)) };
   if(!canUseAIExplanation(question)){entry.question.answer='';entry.question.analysis='';entry.question.explanation='';entry.question.keyPoint='';entry.question.knowledgeVideoUrl='';entry.question.aiAnswer='';entry.question.aiExplanation='';}

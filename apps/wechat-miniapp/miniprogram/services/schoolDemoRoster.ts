@@ -43,3 +43,20 @@ export const reportDate = (day: number) => {
   date.setUTCDate(date.getUTCDate() - day);
   return date.toISOString().slice(0, 10);
 };
+
+/** Only retire redundant built-in completed-list examples; keep task/submission history intact. */
+export function isRedundantCompletedHomeworkDemo(taskId:string,completedTaskIds:readonly string[]=[]):boolean {
+  return ['teacher-history-completed','teacher-history-pending','guardian-demo-status-v1-completed-english','guardian-demo-status-v1-completed-read','demo-read-cycle-2','demo-read-cycle-3'].includes(taskId)
+    || taskId==='grading-demo-v1'&&completedTaskIds.includes('homework-console-v1');
+}
+
+export interface IncompleteHomeworkDemoEntry {id:string;kind:string;completed:boolean;closed:boolean;completedCount:number;endedByDeadline:boolean}
+/** Curate only known seed IDs and only when an equivalent scenario remains visible. */
+export function isRedundantIncompleteHomeworkDemo(entry:IncompleteHomeworkDemoEntry,entries:readonly IncompleteHomeworkDemoEntry[]):boolean {
+  if(entry.completed)return false;
+  const peers=entries.filter(other=>other.id!==entry.id&&!other.completed&&other.kind===entry.kind&&other.closed===entry.closed&&other.completedCount===entry.completedCount);
+  if(['guardian-demo-status-v1-pending-math','guardian-demo-status-v1-pending-read'].includes(entry.id)&&!entry.closed&&entry.completedCount===0)return peers.length>0;
+  if(['guardian-demo-status-v1-ended-math','guardian-demo-status-v1-ended-english'].includes(entry.id)&&entry.closed&&entry.endedByDeadline)return peers.some(other=>other.endedByDeadline&&!other.id.startsWith('guardian-demo-status-v1-ended-')&&!/cycle-[23]$/.test(other.id));
+  const base=entry.id.match(/^(demo-read|task-demo-2)-cycle-[23]$/)?.[1];
+  return Boolean(base&&peers.some(other=>other.id===base&&(!entry.closed||other.endedByDeadline===entry.endedByDeadline)));
+}

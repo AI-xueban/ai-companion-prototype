@@ -4,7 +4,7 @@
 
     <view class="learning-inline-periods"><button class="{{period === 'day' ? 'active' : ''}}" data-period="day" bindtap="changePeriod">今日</button><button class="{{period === '7d' ? 'active' : ''}}" data-period="7d" bindtap="changePeriod">近 7 天</button><button class="{{period === '30d' ? 'active' : ''}}" data-period="30d" bindtap="changePeriod">近 30 天</button></view>
   </view>
-  <view class="learning-brief"><view class="learning-brief-label">本期摘要</view><view>{{summaryLine}}</view></view>
+  <view class="learning-brief"><view class="learning-brief-label">{{summaryTitle}}</view><view>{{summaryLine}}</view></view>
   <view class="learning-section"><view class="learning-section-title">最近学习记录</view><view class="learning-section-note">{{timeline.length ? '点开查看内容与结果' : ''}}</view></view>
   <view wx:if="{{visibleTimeline.length}}" class="learning-card learning-timeline-card"><view wx:for="{{visibleTimeline}}" wx:key="id" class="learning-event" data-id="{{item.id}}" bindtap="openActivity"><view class="learning-event-top"><view class="learning-strong">{{item.subject}} · {{item.feature}}</view><view class="learning-time">{{item.minutes}} 分钟 ›</view></view><view class="learning-muted">{{item.date}} {{item.start}} · {{item.title}}</view><view class="learning-muted">{{item.status}}{{item.answers ? ' · 首次作答 ' + item.answers + ' 题' : ''}}</view></view></view>
   <view wx:else class="learning-empty">本期暂无学习活动记录。</view>

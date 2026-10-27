@@ -1,5 +1,5 @@
 Component({
-  properties: { title: { type: String, value: '' }, back: { type: Boolean, value: false }, home: { type: Boolean, value: false }, homeLabel: { type: String, value: '回到模块首页' } },
+  properties: { title: { type: String, value: '' }, titleSize:{type:Number,value:0}, actionSize:{type:Number,value:0},back: { type: Boolean, value: false }, home: { type: Boolean, value: false }, homeLabel: { type: String, value: '回到模块首页' } },
   data: { statusHeight: 20, barHeight: 44, sideWidth: 96 },
   lifetimes: {
     attached() {
