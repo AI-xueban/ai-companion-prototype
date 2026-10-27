@@ -19,6 +19,43 @@ window.demoWorkspace = (() => {
   const uiKey='twj-review-ui-mode';
   let uiMode=(()=>{try{return sessionStorage.getItem(uiKey)==='legacy'?'legacy':'new';}catch{return 'new';}})();
   const isControl = () => location.pathname.endsWith('control-prototype.html');
+  let controlFrame=null,controlPending=null;
+  function controlUrl(){
+    const url=new URL('control-prototype.html',location.href),scope=workbenchPrototype.getScope();
+    url.search='';
+    Object.entries({review:'1',embed:'1',page:'teacherDesk',tab:'control',availability:teacherAvailability,workView:scope.view,classId:scope.classId,identity:'all'}).forEach(([key,value])=>url.searchParams.set(key,value));
+    return url.href;
+  }
+  function ensureControlFrame(){
+    if(controlFrame)return controlFrame;
+    controlFrame=document.createElement('iframe');controlFrame.id='dw-control-frame';controlFrame.className='dw-control-frame';controlFrame.title='管控页面';controlFrame.hidden=true;
+    controlFrame.addEventListener('load',()=>{controlFrame.dataset.ready='1';if(controlPending!==null)showControlFrame();});
+    document.body.append(controlFrame);
+    window.addEventListener('message',event=>{
+      if(event.origin!==location.origin||event.source!==controlFrame.contentWindow)return;
+      if(event.data?.type==='dw-teacher-tab'&&['learning','homework','mine'].includes(event.data.tab)){
+        controlFrame.hidden=true;controlPending=null;document.body.classList.remove('dw-control-active');setUiMode(sessionStorage.getItem(uiKey)==='legacy'?'legacy':'new');switchTeacherTab(event.data.tab);const url=new URL(location.href);url.searchParams.set('tab',event.data.tab);history.replaceState(null,'',url);sync();
+      }else if(event.data?.type==='dw-select-entry'&&entries.some(item=>item.id===event.data.id)){
+        controlFrame.hidden=true;controlPending=null;document.body.classList.remove('dw-control-active');setUiMode(sessionStorage.getItem(uiKey)==='legacy'?'legacy':'new');select(event.data.id);
+      }
+    });
+    controlFrame.dataset.route=controlUrl();controlFrame.src=controlFrame.dataset.route;
+    return controlFrame;
+  }
+  function showControlFrame(){
+    if(controlPending===null||controlFrame?.dataset.ready!=='1')return;
+    const child=controlFrame.contentWindow;
+    child.demoWorkspace?.setUiMode(uiMode);
+    if(controlPending)child.demoWorkspace?.select(controlPending);else child.openControlTab?.();
+    controlFrame.hidden=false;document.body.classList.add('dw-control-active');controlPending=null;
+    const url=new URL(location.href);url.searchParams.set('tab','control');history.replaceState(null,'',url);
+  }
+  function openControl(id=''){
+    if(isControl())return;
+    const frame=ensureControlFrame(),route=controlUrl();controlPending=id;
+    if(frame.dataset.route!==route){frame.hidden=true;frame.dataset.ready='0';frame.dataset.route=route;frame.src=route;}
+    else showControlFrame();
+  }
   const get = id => document.getElementById(id);
   const button = item => `<button data-dw-entry="${item.id}" class="${item.kind==='flow'?'dw-full-flow':''}" type="button">${esc(item.label)}</button>`;
   function revealEntry(id){const target=document.querySelector(`[data-dw-entry="${id}"]`);for(let node=target?.parentElement;node&&node.id!=='demo-workspace';node=node.parentElement)if(node.tagName==='DETAILS')node.open=true;}
@@ -27,7 +64,7 @@ window.demoWorkspace = (() => {
   function teacherReady(){if(teacherAvailability!=='normal')setTeacherAvailability('normal');teacherBranch='normal';go('teacherDesk');}
   function select(id){
     const item=entries.find(e=>e.id===id);if(!item)return;
-    if(isControl()&&!['control','controlModule'].includes(item.kind)){mainRoute(id);return;}
+    if(isControl()&&!['control','controlModule'].includes(item.kind)){if(query.get('embed')==='1'&&window.parent!==window){window.parent.postMessage({type:'dw-select-entry',id},location.origin);return;}mainRoute(id);return;}
     window.pageDemoTools?.restore();selected=id;activeFlow='';flowRole='';document.body.classList.remove('dw-flow-open');
     if(item.kind==='parent'){activeFlow='parent';flowRole='parent';parentPrototype.scenario(item.value);if(item.id==='mine-two')parentPrototype.tab('mine');if(innerWidth>1000)document.body.classList.add('dw-flow-open');}
     else if(item.kind==='teacher'){activeFlow='teacher';flowRole='teacher';startTeacherFlow(item.value);if(innerWidth>1000)document.body.classList.add('dw-flow-open');}
@@ -43,7 +80,7 @@ window.demoWorkspace = (() => {
     else if(item.kind==='flow'){activeFlow='homework';flowRole='teacher';homeworkDemoConsole.publish();if(innerWidth>1000)document.body.classList.add('dw-flow-open');}
     else if(item.kind==='reference'){location.assign(new URL(item.value,location.href));return;}
     else if(item.kind==='control'||item.kind==='controlModule'){
-      if(!isControl()){const url=new URL('control-prototype.html',location.href);url.search='?review=1&page=teacherDesk&tab=control&identity=all';url.searchParams.set('demo',id);location.assign(url.href);return;}
+      if(!isControl()){openControl(id);return;}
       if(item.kind==='control')switchControlDemoRole(item.value);else{teacherTab='control';stage='teacherDesk';openControlModule(item.value);}
     }
     revealEntry(id);sync();
@@ -97,8 +134,12 @@ window.demoWorkspace = (() => {
     document.querySelectorAll('#app .parent-demo-toolbar,#app .parent-exception-mask,#app #page-demo-tools-host').forEach(e=>e.remove());
     const requested=query.get('demo');if(entries.some(e=>e.id===requested)){root.querySelectorAll('.dw-sidebar details').forEach(d=>d.open=false);select(requested);}else if(typeof teacherScenario!=='undefined'&&teacherScenario){activeFlow='teacher';flowRole='teacher';}else if(typeof stage!=='undefined'&&stage==='parent'){activeFlow='parent';flowRole='parent';}
     window.pageDemoTools?.sync();sync();if(query.get('demoState'))window.pageDemoTools?.select(query.get('demoState'));
+    if(!isControl()&&typeof stage!=='undefined'&&stage==='teacherDesk'){
+      ensureControlFrame();
+      if(query.get('tab')==='control')openControl();
+    }
   }
-  const api={enabled,catalog,entries,select,sync,syncFlow,setState,setUiMode,restart,copyLink,init,toggleFlow(){if(window.homeworkDemoConsole?.isActive())activeFlow='homework';document.body.classList.toggle('dw-flow-open');document.querySelector('.dw-flow-toggle')?.setAttribute('aria-expanded',String(document.body.classList.contains('dw-flow-open')));syncFlow();},focus(){const on=document.body.classList.toggle('dw-focus');get('dw-focus').textContent=on?'退出专注':'专注预览';},availability(value){if(isControl()){const url=new URL('index.html',location.href);url.search='?review=1&availability='+value;location.assign(url.href);return;}window.pageDemoTools?.restore();setTeacherAvailability(value);sync();}};
+  const api={enabled,catalog,entries,select,sync,syncFlow,setState,setUiMode,restart,copyLink,init,openControl,toggleFlow(){if(window.homeworkDemoConsole?.isActive())activeFlow='homework';document.body.classList.toggle('dw-flow-open');document.querySelector('.dw-flow-toggle')?.setAttribute('aria-expanded',String(document.body.classList.contains('dw-flow-open')));syncFlow();},focus(){const on=document.body.classList.toggle('dw-focus');get('dw-focus').textContent=on?'退出专注':'专注预览';},availability(value){if(isControl()){const url=new URL('index.html',location.href);url.search='?review=1&availability='+value;location.assign(url.href);return;}window.pageDemoTools?.restore();setTeacherAvailability(value);sync();}};
   return api;
 })();
 window.demoWorkspace.init();

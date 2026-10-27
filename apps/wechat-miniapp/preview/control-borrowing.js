@@ -16,7 +16,13 @@
     }
     return data;
   }
-  const state = () => latest().schoolSettings.borrowing;
+  const state = () => {
+    const current = latest().schoolSettings.borrowing;
+    if (!['temporary-notice','temporary-blocked'].includes(ui.demo)) return current;
+    const preview = R.copy(current);
+    preview.temporaryClasses[selectedTeacherClass] = ui.demo === 'temporary-blocked';
+    return preview;
+  };
   const names = () => ui.scope || (adminLevel === 'class' ? [selectedTeacherClass] : adminLevel === 'grade' ? schoolControlClasses.filter(n => n.startsWith(adminSelectedGrade)) : [...schoolControlClasses]);
   const count = list => list.reduce((total, name) => total + (controlData[name]?.length || 0), 0);
   const scopeText = list => list.length === schoolControlClasses.length ? '全校' : schoolGrades().flatMap(grade => {
@@ -28,12 +34,16 @@
     app.innerHTML = `<main class="screen control-screen borrowing-mobile ${extraClass}">${top}<section class="control-content">${content}</section>${footer}<div id="control-overlay"></div><div id="control-toast" role="status"></div></main>`;
     syncReview();
   }
-  function ruleOptions() {
-    return `<div class="borrowing-rule-options" role="group" aria-label="规则类型">${[['weekly','每周固定借用规则'],['dates','指定日期借用规则']].map(([mode,label]) => `<button type="button" aria-pressed="${ui.mode === mode}" onclick="borrowing.mode('${mode}')">${label}</button>`).join('')}</div>`;
+  function ruleIcon(kind, action) {
+    const edit = kind === 'edit', label = edit ? '编辑规则' : '删除规则';
+    const path = edit ? '<path d="m15 4 5 5M4 20l5-1L21 7a2.1 2.1 0 0 0-5-5L4 14z"/>' : '<path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/>';
+    return `<button type="button" class="parity-rule-icon ${edit ? '' : 'parity-danger'}" aria-label="${label}" title="${label}" onclick="${action}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${path}</svg></button>`;
   }
   function rulePanel(s, list) {
-    ui.groups = M.groups(s, list, ui.mode);
-    return `<p class="parity-note">选择规则类型，查看当前配置或新增规则。指定日期内按日期规则执行。</p>${ruleOptions()}${ui.groups.map((group,i) => `<article class="parity-rule"><b>${esc(R.borrowText(group.rule))}</b>${group.rule.mode === 'dates' ? `<p>${R.borrowStatus(group.rule)}</p>` : ''}<p>适用范围：${esc(scopeText(group.names))}</p><div class="control-actions">${R.borrowStatus(group.rule) !== '已失效' ? button('编辑', `borrowing.edit(${i})`) : ''}${button('删除', `borrowing.remove(${i})`)}</div></article>`).join('') || `<div class="control-empty">尚未设置${ui.mode === 'weekly' ? '每周固定' : '指定日期'}借用规则</div>`}`;
+    const weekly = M.groups(s, list, 'weekly'), dates = M.groups(s, list, 'dates');
+    ui.groups = [...weekly, ...dates];
+    const section = (title, groups, offset) => `<section class="borrowing-rule-section"><h3>${title}</h3>${groups.map((group,i) => `<article class="parity-rule borrowing-rule-item"><div class="borrowing-rule-copy"><b>${esc(R.borrowText(group.rule))}</b>${group.rule.mode === 'dates' ? `<p>${R.borrowStatus(group.rule)}</p>` : ''}<p>适用范围：${esc(scopeText(group.names))}</p></div><div class="parity-rule-actions">${R.borrowStatus(group.rule) !== '已失效' ? ruleIcon('edit', `borrowing.edit(${offset+i})`) : ''}${ruleIcon('delete', `borrowing.remove(${offset+i})`)}</div></article>`).join('') || `<div class="control-empty">尚未设置${title}</div>`}</section>`;
+    return `<p class="parity-note">指定日期内按日期规则执行；没有指定日期规则时，按每周规则执行。</p>${section('每周固定借用规则',weekly,0)}${section('指定日期借用规则',dates,weekly.length)}`;
   }
   function temporaryAction(s, list) {
     const denied = list.filter(name => M.denied(s, name)).length, mixed = denied > 0 && denied < list.length;
@@ -43,13 +53,13 @@
     const rows = adminLevel === 'school' ? schoolGrades().map(label => ({ label, names: schoolControlClasses.filter(name => name.startsWith(label)) })) : names().map(label => ({ label, names:[label] }));
     return rows.map(row => {
       const preview = M.preview(s,row.names), denied = row.names.filter(name => M.denied(s,name)).length;
-      return `<article class="borrowing-scope-card"><div class="borrowing-card-head">${ui.batch ? `<input type="checkbox" class="admin-level-check" aria-label="选择${esc(row.label)}" ${ui.selected.has(row.label) ? 'checked' : ''} onchange="borrowing.select(${js(row.label)},this.checked)">` : ''}${adminLevel === 'school' ? `<button class="borrowing-grade-link" onclick="borrowing.go(${js(row.label)})">${esc(row.label)} <span aria-hidden="true">›</span></button>` : `<b>${esc(row.label)}</b>`}${denied ? `<span class="borrowing-denied-badge">${denied === row.names.length ? '已禁止借用' : '部分禁止借用'}</span>` : ''}</div><p class="borrowing-card-count">${count(row.names)}名学生</p><div class="borrowing-card-rules">${preview.rules.map(rule => `<p>${esc(R.borrowText(rule))}${rule.mode === 'dates' ? `<small>${R.borrowStatus(rule)}</small>` : ''}</p>`).join('')}${preview.notes.map(note => `<p class="parity-note">${esc(note)}</p>`).join('')}${!ui.batch && preview.more ? `<button class="borrowing-card-more" onclick="borrowing.manage(${js(row.names)},'${preview.moreMode}')">还有 ${preview.more} 条，查看全部</button>` : ''}</div>${!ui.batch ? `<div class="borrowing-card-actions">${button('设置规则', `borrowing.manage(${js(row.names)})`, true, !count(row.names))}${temporaryAction(s,row.names)}</div>` : ''}</article>`;
+      return `<article class="borrowing-scope-card ${ui.batch ? 'borrowing-selectable' : ''}" ${ui.batch ? `role="checkbox" tabindex="0" aria-label="选择${esc(row.label)}" aria-checked="${ui.selected.has(row.label)}" data-borrow-key="${esc(row.label)}" onclick="borrowing.select(${js(row.label)},this.getAttribute('aria-checked')!=='true')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"` : ''}><div class="borrowing-card-head">${ui.batch ? `<span class="borrowing-card-check" aria-hidden="true">${ui.selected.has(row.label) ? '✓' : ''}</span>` : ''}${adminLevel === 'school' && !ui.batch ? `<button class="borrowing-grade-link" onclick="borrowing.go(${js(row.label)})">${esc(row.label)} <span aria-hidden="true">›</span></button>` : `<b>${esc(row.label)}</b>`}${denied ? `<span class="borrowing-denied-badge">${denied === row.names.length ? '已临时禁止借用' : '部分临时禁止借用'}</span>` : ''}</div><p class="borrowing-card-count">${count(row.names)}名学生</p><div class="borrowing-card-rules">${preview.rules.map(rule => `<p>${esc(R.borrowText(rule))}${rule.mode === 'dates' ? `<small>${R.borrowStatus(rule)}</small>` : ''}</p>`).join('')}${preview.notes.map(note => `<p class="parity-note">${esc(note)}</p>`).join('')}${!ui.batch && preview.more ? `<button class="borrowing-card-more" onclick="borrowing.manage(${js(row.names)},'${preview.moreMode}')">还有 ${preview.more} 条，查看全部</button>` : ''}</div>${!ui.batch ? `<div class="borrowing-card-actions">${button('设置规则', `borrowing.manage(${js(row.names)})`, true, !count(row.names))}${temporaryAction(s,row.names)}</div>` : ''}</article>`;
     }).join('') || '<div class="control-empty">暂无班级</div>';
   }
   function adminPage() {
     const s = state(), list = names(), selected = selectedClasses();
-    const body = ui.scope ? rulePanel(s,list) : `<div class="admin-scope-summary"><b>${adminLevel === 'school' ? '年级' : '班级'}借用规则</b>${button(ui.batch ? '退出设置' : '批量设置','borrowing.batch()')}</div>${ui.batch ? `<label class="borrowing-select-all"><input type="checkbox" ${list.length && selected.length === list.length ? 'checked' : ''} onchange="borrowing.selectAll(this.checked)">全选 · 已选${ui.selected.size}项</label>` : ''}<div class="borrowing-scope-cards">${scopeRows(s)}</div>`;
-    const footer = ui.scope ? `<footer class="borrowing-footer">${button('新增' + (ui.mode === 'weekly' ? '每周固定' : '指定日期') + '借用规则','borrowing.edit()',false,!count(list))}</footer>` : ui.batch ? `<footer class="borrowing-footer">${button('设置规则','borrowing.batchRule()',false,selected.length > 0 && !count(selected))}${temporaryAction(s,selected)}</footer>` : '';
+    const body = ui.scope ? rulePanel(s,list) : `<div class="admin-scope-summary"><b>${adminLevel === 'school' ? '年级' : '班级'}借用规则</b>${button(ui.batch ? '退出设置' : '批量设置','borrowing.batch()')}</div>${ui.batch ? `<label class="borrowing-select-all"><input id="borrowing-select-all" type="checkbox" ${list.length && selected.length === list.length ? 'checked' : ''} onchange="borrowing.selectAll(this.checked)"><span id="borrowing-selected-count">全选 · 已选${ui.selected.size}项</span></label>` : ''}<div class="borrowing-scope-cards">${scopeRows(s)}</div>`;
+    const footer = ui.scope ? `<footer class="borrowing-footer borrowing-rule-footer">${button('新增每周固定规则',"borrowing.edit(undefined,'weekly')",false,!count(list))}${button('新增指定日期规则',"borrowing.edit(undefined,'dates')",true,!count(list))}</footer>` : ui.batch ? `<footer class="borrowing-footer"><button type="button" class="control-primary" onclick="borrowing.batchRule()">新增借用规则</button><button type="button" class="control-secondary" onclick="borrowing.batchTemporary()">设置临时禁借</button></footer>` : '';
     shell(ui.scope ? '设置借用规则' : '柜机借用管控', `<p class="parity-context">${esc(scopeText(list))}</p>${!ui.scope ? thisScopeCard(s,list) : ''}${body}`,footer);
   }
   const borrowingDescription = () => '<details class="control-description-fold"><summary aria-label="柜机借用管控说明"><span>管控说明</span><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary><div class="control-description-body"><p class="parity-note">未设置借用时间时，学生可随时借用；设置后，按规定时间借用。学校或班主任禁借的学生除外。</p><p class="parity-note">解除学校临时禁借后，按当前借用安排执行；班主任单独设置的禁借仍需班主任解除。</p></div></details>';
@@ -119,18 +129,55 @@
     },
     reset() { Object.assign(ui, { temporaryDraft: null, mode: 'weekly', scope: null, batch: false, selected: new Set(), editor: null, pending: null, query: '', filter: 'all' }); },
     back() { if (ui.batch && controlDemoRole !== 'admin') { this.batch(); return; } if (ui.editor) return this.cancelEditor(); if (ui.scope) { ui.scope = null; } else if (adminLevel === 'grade' && controlDemoRole === 'admin' && adminModuleRoot === 'school') { adminLevel = 'school'; adminSelectedGrade = ''; } else { this.reset(); controlView = 'entry'; renderControl(); return; } ui.batch = false; ui.selected.clear(); this.render(); },
-    mode(mode) { if (!ui.scope || mode === ui.mode) return; ui.mode = mode; this.render(); },
     go(label) { if (adminLevel !== 'school') return this.manage([label]); adminLevel = 'grade'; adminSelectedGrade = label; ui.selected.clear(); ui.batch = false; this.render(); },
-    manage(list, mode = 'weekly') { if (!list.length) return controlToast('请选择设置对象'); if (!count(list)) return; ui.scope = [...list]; ui.mode = mode; ui.batch = false; ui.selected.clear(); this.render(); },
-    batchRule() { const list = selectedClasses(); if (!list.length) return controlToast('请选择设置对象'); if (!count(list)) return; this.manage(list); },
+    manage(list) { if (!list.length) return controlToast('请选择设置对象'); if (!count(list)) return; ui.scope = [...list]; ui.batch = false; ui.selected.clear(); this.render(); },
+    batchRule() { const list = selectedClasses(); if (!list.length) return controlToast('请选择设置对象'); if (!count(list)) return; controlOverlay('新增借用规则', `<p class="control-scope">${esc(scopeText(list))} · ${count(list)}名学生</p><p class="parity-note">选择规则类型后填写新规则，保存前会核对已有设置。</p>`, button('每周固定规则', "borrowing.batchCreate('weekly')") + button('指定日期规则', "borrowing.batchCreate('dates')")); },
+    batchCreate(mode) { const list = selectedClasses(); if (!list.length) return controlToast('请选择设置对象'); closeControlOverlay(); ui.mode = mode; this.edit(undefined, mode, list); },
+    batchTemporary() { const list = selectedClasses(); if (!list.length) return controlToast('请选择设置对象'); if (!count(list)) return; const denied = list.filter(name => M.denied(state(),name)).length; if (denied && denied < list.length) this.temporaryChoice(list); else this.temporary(list,!denied); },
     batch() { ui.batch = !ui.batch; ui.selected.clear(); this.render(); },
-    select(id, checked) { if (controlDemoRole !== 'admin') { checked ? ui.selected.add(id) : ui.selected.delete(id); refreshTeacherRows(); return; } const top = document.querySelector('.control-content')?.scrollTop || 0; checked ? ui.selected.add(id) : ui.selected.delete(id); this.render(); document.querySelector('.control-content').scrollTop = top; },
-    selectAll(checked) { const keys = controlDemoRole === 'admin' ? adminLevel === 'school' ? schoolGrades() : names() : studentRows().map(s => s.id); keys.forEach(id => checked ? ui.selected.add(id) : ui.selected.delete(id)); if (controlDemoRole !== 'admin') refreshTeacherRows(); else this.render(); },
+    refreshAdminSelection() { const total = adminLevel === 'school' ? schoolGrades().length : names().length; document.querySelectorAll?.('.borrowing-selectable').forEach(card => { const checked = ui.selected.has(card.dataset.borrowKey); card.setAttribute('aria-checked',String(checked)); card.classList.toggle('is-selected',checked); card.querySelector('.borrowing-card-check').textContent = checked ? '✓' : ''; }); const all = document.getElementById?.('borrowing-select-all'); if (all) { all.checked = total > 0 && ui.selected.size === total; all.indeterminate = ui.selected.size > 0 && ui.selected.size < total; } const counter = document.getElementById?.('borrowing-selected-count'); if (counter) counter.textContent = `全选 · 已选${ui.selected.size}项`; },
+    select(id, checked) { checked ? ui.selected.add(id) : ui.selected.delete(id); if (controlDemoRole !== 'admin') refreshTeacherRows(); else this.refreshAdminSelection(); },
+    selectAll(checked) { const keys = controlDemoRole === 'admin' ? adminLevel === 'school' ? schoolGrades() : names() : studentRows().map(s => s.id); keys.forEach(id => checked ? ui.selected.add(id) : ui.selected.delete(id)); if (controlDemoRole !== 'admin') refreshTeacherRows(); else this.refreshAdminSelection(); },
     search(value) { ui.query = value; refreshTeacherRows(); }, filter(value) { ui.filter = value; refreshTeacherRows(); },
     roster() { const selected = (controlData[selectedTeacherClass] || []).filter(s => ui.selected.has(s.id)); controlOverlay('所选学生', `<div class="borrowing-roster">${selected.map(s => `<span>${esc(s.name)}</span>`).join('')}</div>`, button('关闭', 'closeControlOverlay()')); },
     showTimes() {
       const rules = state().classRules[selectedTeacherClass] || [];
-      controlOverlay('学校借用时间', `<p>${esc(selectedTeacherClass)}</p>${[['weekly','每周借用时间'],['dates','指定日期借用时间']].map(([mode,title]) => `<h3>${title}</h3>${rules.filter(r => r.mode === mode).map(r => `<p>${esc(R.borrowText(r))}${mode === 'dates' ? ' · ' + R.borrowStatus(r) : ''}</p>`).join('') || '<p>未设置</p>'}`).join('')}<p class="parity-note">未设置借用时间，默认随时可借；被学校或班主任禁借的学生除外。</p>`, button('关闭', 'closeControlOverlay()'));
+      const shown = ui.demo === 'times-updated' ? [...rules.filter(rule => rule.mode === 'weekly'), {id:'demo-school-time',mode:'dates',startDate:R.today(),endDate:R.today(),deny:false,periods:[{start:'08:00',end:'18:00'}]}] : rules;
+      controlOverlay('学校借用时间', `<p>${esc(selectedTeacherClass)}</p>${ui.demo === 'times-updated' ? '<p class="parity-note">学校借用时间已更新。</p>' : ''}${[['weekly','每周借用时间'],['dates','指定日期借用时间']].map(([mode,title]) => `<h3>${title}</h3>${shown.filter(r => r.mode === mode).map(r => `<p>${esc(R.borrowText(r))}${mode === 'dates' ? ' · ' + R.borrowStatus(r) : ''}</p>`).join('') || '<p>未设置</p>'}`).join('')}<p class="parity-note">未设置借用时间，默认随时可借；被学校或班主任禁借的学生除外。</p>`, button('关闭', 'closeControlOverlay()'));
+    },
+    demoStart(kind) {
+      ui.demoPrevious = {role:controlDemoRole,work:controlWorkView,selectedClass:selectedTeacherClass,module:controlModule,view:controlView};
+      controlDemoRole = 'teacher'; controlWorkView = 'homeroom'; selectedTeacherClass = controlClasses[0];
+      controlModule = 'borrowing'; controlView = 'module'; this.reset();
+      ui.demo = kind === 'temporary' ? 'temporary-notice' : 'times-notice';
+      this.render();
+      if (kind === 'temporary') {
+        controlOverlay('学校已开启临时禁借', `<p>${esc(selectedTeacherClass)}</p><p>学校管理员已临时禁止该班借用，现在不能修改学生的借用状态。</p>`, button('知道了', 'controlPageDemo.dismiss()', false));
+      } else {
+        controlOverlay('借用时间已更新', `<p>${esc(selectedTeacherClass)}</p><p>学校管理员刚修改了本班借用时间，是否立即查看？</p>`, button('暂不查看', 'controlPageDemo.defer()') + button('立即查看', 'controlPageDemo.dismiss()', false));
+      }
+      const shade = document.querySelector?.('#control-overlay .control-shade');
+      const closeAction = kind === 'temporary' ? 'controlPageDemo.dismiss()' : 'controlPageDemo.defer()';
+      shade?.setAttribute('onclick',`if(event.target===this)${closeAction}`);
+      shade?.querySelector('.control-sheet-head button')?.setAttribute('onclick',closeAction);
+    },
+    demoAcknowledge() {
+      if (ui.demo === 'temporary-notice') { ui.demo = 'temporary-blocked'; this.render(); }
+      else if (ui.demo === 'times-notice') { ui.demo = 'times-updated'; this.render(); this.showTimes(); }
+    },
+    demoDefer() {
+      if (ui.demo !== 'times-notice') return;
+      ui.demo = 'times-updated';
+      this.render();
+      closeControlOverlay();
+    },
+    demoRestore() {
+      if (!ui.demo) return;
+      const previous = ui.demoPrevious;
+      ui.demo = null; ui.demoPrevious = null; ui.pending = null;
+      controlDemoRole = previous.role; controlWorkView = previous.work; selectedTeacherClass = previous.selectedClass;
+      controlModule = previous.module; controlView = previous.view;
+      this.reset(); renderControl();
     },
     temporaryChoice(list) {
       if (controlDemoRole !== 'admin') return;
@@ -157,10 +204,11 @@
     },
     temporary(list, value, school = false) { if (controlDemoRole !== 'admin') return; const target = list || names(); if (!target.length) return controlToast('请选择设置对象'); confirm(operation({ type: 'temporary', names: target, value, school }), value ? '确认临时禁止借用？' : school ? '确认结束全校临时禁借？' : '确认解除临时禁借？', `<p>${value ? '所选班级暂停新借出，班主任暂时不能修改借用状态。不影响已经借出的设备。' : '解除临时禁借后，按当前有效的借用规则执行，保留已有的学生禁借。'}</p>`); },
     student(ids, value) {
+      if (ui.demo) return controlToast('当前为异常场景预览，请恢复正常后操作');
       if (controlWorkView !== 'homeroom' || !isHeadTeacherClass()) return;
       if (M.denied(state(), selectedTeacherClass)) return controlToast('学校正在临时禁止借用，暂时无法修改');
       const selected = ids || [...ui.selected]; if (!selected.length) return controlToast('请选择设置对象');
-      confirm(operation({ type: 'student', names: [selectedTeacherClass], ids: selected, value }), value ? '确认禁止借用？' : '确认解除禁借？', `<p>${value ? '禁借立即生效，直到班主任手动解除。不影响已借出设备的使用和归还。' : '解除后按学校借用时间借用，不代表现在一定可借。'}</p>`);
+      confirm(operation({ type: 'student', names: [selectedTeacherClass], ids: selected, value }), value ? '确认禁止借用？' : '确认解除禁借？', `<p>${value ? '禁借立即生效，直到班主任手动解除。不影响已借出设备的使用和归还。' : '解除后按学校借用时间借用。'}</p>`);
     },
     edit(index, mode = ui.mode, targets = names()) {
       if (controlDemoRole !== 'admin') return;
@@ -185,6 +233,7 @@
       confirm(operation({ type: 'delete', names: group.names, editingIds: group.ids }), '确认删除借用规则？', `<p>${esc(R.borrowText(group.rule))}</p><p>${esc(text)}</p>`);
     },
     commit() {
+      if (ui.demo) return controlToast('当前为异常场景预览，请恢复正常后操作');
       if (!ui.pending) return;
       let data, next;
       try { data = latest(); next = M.commit(data.schoolSettings.borrowing, ui.pending, data, controlWorkView, [controlClasses[0]]); }

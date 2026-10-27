@@ -436,7 +436,7 @@
       target.searchParams.set('identity','all');
       target.searchParams.set('workView',controlWorkView);if(params.get('review')==='1')target.searchParams.set('review','1');return target;
     }
-    function switchTeacherTab(tab){if(teacherTab===tab&&stage==='teacherDesk')return;if(tab!=='control'){location.assign(teacherWorkbenchUrl(tab).href);return}teacherTab=tab;teacherDesk()}
+    function switchTeacherTab(tab){if(teacherTab===tab&&stage==='teacherDesk')return;if(tab!=='control'){if(params.get('embed')==='1'&&window.parent!==window){window.parent.postMessage({type:'dw-teacher-tab',tab},location.origin);return}location.assign(teacherWorkbenchUrl(tab).href);return}teacherTab=tab;teacherDesk()}
     // 跳转后由管控页展示账号和名单状态，不在来源页拦截导航。
     function renderControlAvailability(){
       if(localStorage.getItem('ai_companion_demo_teacher_deleted')==='1'||params.get('availability')==='deleted'){
