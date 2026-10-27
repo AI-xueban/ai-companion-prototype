@@ -8,6 +8,8 @@ window.controlPageDemo = (() => {
     '操作期间权限变化': [
       ['durationRevoked', '编辑时使用时长权限被关闭', '编辑页弹出权限关闭通知，点“知道了”后只能查看。'],
       ['lockStarted', '操作时管理员开启临时锁屏', '锁屏页弹出通知，点弹窗外或“知道了”后禁止操作。'],
+      ['borrowTemporaryStarted', '操作时学校开启临时禁借', '进入班主任借用页查看通知；点“知道了”后学生借用设置变为只读。'],
+      ['borrowTimesChanged', '查看时学校修改借用时间', '进入班主任借用页查看更新通知；可暂不查看，或点“立即查看”查看新时间。'],
       ['accountRemoved', '操作期间账号被删除', '查看账号被删除的通知，点“知道了”关闭弹窗。']
     ],
     '加载异常': [
@@ -26,6 +28,8 @@ window.controlPageDemo = (() => {
     noStudents: ['管控', '当前班级暂无学生', '班级加入学生后，可在这里查看和设置管控。'],
     durationRevoked: ['使用时长管控', '使用时长修改权限已关闭', '学校管理员已关闭使用时长修改权限，现在只能查看。'],
     lockStarted: ['锁屏', '临时锁屏管控中', '学校管理员已开启临时锁屏，老师暂不可修改锁屏。'],
+    borrowTemporaryStarted: ['柜机借用管控', '学校已开启临时禁借', '现在不能修改学生的借用状态。'],
+    borrowTimesChanged: ['柜机借用管控', '借用时间已更新', '是否立即查看学校最新借用时间？'],
     accountRemoved: ['账号不可用', '账号已被学校删除', '暂时无法使用管控，请联系学校管理员。'],
     loadFailed: ['管控', '加载失败，请重试', '暂时无法获取班级和管控数据，请检查网络后重试。'],
     changed: ['保存设置', '其他老师已修改设置', '本次修改未保存，请刷新后重新操作。'],
@@ -33,6 +37,11 @@ window.controlPageDemo = (() => {
     saveFailed: ['保存设置', '保存失败，请重试', '网络或服务异常，原设置未改变。']
   };
   function render(feedback = '') {
+    if (active === 'borrowTemporaryStarted' || active === 'borrowTimesChanged') {
+      window.borrowing?.demoStart(active === 'borrowTemporaryStarted' ? 'temporary' : 'times');
+      app.querySelector('.screen')?.setAttribute('data-control-demo', active);
+      return;
+    }
     if (active === 'noStudents' && window.parity?.showEmptyClassDemo) {
       window.parity.showEmptyClassDemo(); return;
     }
@@ -76,12 +85,18 @@ window.controlPageDemo = (() => {
     },
     select(id) {
       if (!screens[id]) return;
+      if (['borrowTemporaryStarted','borrowTimesChanged'].includes(active)) window.borrowing?.demoRestore();
       if (!savedNodes) savedNodes = Array.from(app.childNodes);
       emptyClassName = id === 'noStudents' && typeof selectedTeacherClass !== 'undefined' ? selectedTeacherClass : '';
       active = id; render();
     },
     emptyClass() { return active === 'noStudents' ? emptyClassName : ''; },
     dismiss() {
+      if (active === 'borrowTemporaryStarted' || active === 'borrowTimesChanged') {
+        window.borrowing?.demoAcknowledge();
+        window.pageDemoTools?.sync();
+        return;
+      }
       if (active === 'lockStarted') {
         try {
           window.parity.acknowledgeTemporaryLock();
@@ -102,6 +117,11 @@ window.controlPageDemo = (() => {
       }
       const overlay = document.getElementById('control-overlay'); if(overlay) overlay.innerHTML = '';
     },
+    defer() {
+      if (active !== 'borrowTimesChanged') return;
+      window.borrowing?.demoDefer();
+      window.pageDemoTools?.sync();
+    },
     retry() { if(active) {
       if (window.parity?.renderDemoPage && ['saveFailed', 'changed', 'removed'].includes(active)) {
         controlToast({saveFailed: '保存失败，请重试', changed: '规则已更新，请刷新后重试', removed: '所选学生信息有变化，请刷新后重新选择'}[active]);
@@ -110,6 +130,7 @@ window.controlPageDemo = (() => {
     } },
     isActive() { return Boolean(active); },
     restore() {
+      if (active === 'borrowTemporaryStarted' || active === 'borrowTimesChanged') window.borrowing?.demoRestore();
       if (active === 'noStudents' && window.parity?.showEmptyClassDemo) {
         active = ''; emptyClassName = ''; savedNodes = null;
         window.parity.showEmptyClassDemo(); return;

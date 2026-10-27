@@ -45,19 +45,27 @@ test('关闭权限每轮首次进入提醒，开启时不提醒', () => {
 });
 test('仅保留当前原型不能直接演示的异常，切换及恢复不修改业务数据', () => {
   const original = {page: 'original'};
-  const app = {childNodes: [original], innerHTML: '', replaceChildren(...nodes) { this.childNodes = nodes; }};
-  const context = vm.createContext({window: {}, app, header: title => `<header>${title}</header>`, teacherTabBar: () => '<nav>tabs</nav>', stage: 'teacherDesk', teacherTab: 'control'});
+  const app = {childNodes: [original], innerHTML: '', querySelector() { return {setAttribute() {}}; }, replaceChildren(...nodes) { this.childNodes = nodes; }};
+  const borrowingCalls = [];
+  const context = vm.createContext({window: {borrowing: {demoStart(kind) { borrowingCalls.push('start:'+kind); app.innerHTML = '<main class="screen"></main>'; }, demoAcknowledge() { borrowingCalls.push('ack'); }, demoRestore() { borrowingCalls.push('restore'); }}}, app, header: title => `<header>${title}</header>`, teacherTabBar: () => '<nav>tabs</nav>', stage: 'teacherDesk', teacherTab: 'control'});
   vm.runInContext(fs.readFileSync(__dirname + '/control-page-demo.js', 'utf8'), context);
   const demo = context.window.controlPageDemo;
   const initial = demo.context();
   assert.equal(initial.title, '管控');
   assert.equal(new Set(initial.choices.map(item => item.id)).size, initial.choices.length);
   assert.equal(new Set(initial.choices.map(item => item.group)).size, 4);
-  assert.equal(initial.choices.map(item => item.id).join(','), 'noClasses,noStudents,durationRevoked,lockStarted,accountRemoved,loadFailed,changed,removed,saveFailed');
+  assert.equal(initial.choices.map(item => item.id).join(','), 'noClasses,noStudents,durationRevoked,lockStarted,borrowTemporaryStarted,borrowTimesChanged,accountRemoved,loadFailed,changed,removed,saveFailed');
   assert.equal(initial.choices.find(item => item.id === 'noClasses').label, '老师未分配班级');
   assert.equal(initial.choices.find(item => item.id === 'saveFailed').label, '保存时网络或服务异常');
   for (const choice of initial.choices) {
     assert.ok(choice.hint);
+    if (choice.id.startsWith('borrow')) {
+      demo.select(choice.id);
+      assert.equal(demo.context().active, choice.id);
+      demo.dismiss();
+      demo.restore();
+      continue;
+    }
     demo.select(choice.id);
     assert.equal(demo.context().active, choice.id);
     assert.ok(app.innerHTML.includes(`data-control-demo="${choice.id}"`));
@@ -65,6 +73,7 @@ test('仅保留当前原型不能直接演示的异常，切换及恢复不修�
     demo.retry();
     assert.ok(app.innerHTML.includes('当前异常仍未解除'));
   }
+  assert.deepEqual(borrowingCalls, ['start:temporary','ack','restore','start:times','ack','restore']);
   demo.restore();
   assert.equal(demo.context().active, '');
   assert.equal(app.childNodes[0], original);

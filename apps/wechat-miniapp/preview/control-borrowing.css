@@ -8,9 +8,14 @@
 .borrowing-detail-link { border:0; background:transparent; color:#168fce; padding:8px 0 8px 12px; white-space:nowrap; font-size:14px; }
 .borrowing-list-actions { flex-direction:column; gap:8px; flex-shrink:0; }
 .borrowing-list-actions button { min-width:96px; padding:9px 12px; font-size:14px; }
-.borrowing-rule-options { display:flex; gap:8px; margin:12px 0; }
-.control-screen .borrowing-rule-options button { flex:1; width:0; min-width:0; min-height:44px; padding:10px 6px; border:1px solid #dcebf2; border-radius:10px; background:#fff; color:#6c8395; font-size:12px; }
-.control-screen .borrowing-rule-options button[aria-pressed=true] { border-color:#168fe0; background:#edf8ff; color:#087fc5; font-weight:700; }
+.borrowing-rule-section { margin-top:18px; }
+.borrowing-rule-section + .borrowing-rule-section { padding-top:18px; border-top:1px solid #dce9f3; }
+.borrowing-rule-section > h3 { margin:0 0 10px; color:#193349; font-size:15px; }
+.borrowing-rule-item { display:flex; align-items:flex-start; gap:8px; }
+.borrowing-rule-copy { flex:1; min-width:0; }
+.borrowing-rule-item .parity-rule-actions { flex:none; gap:2px; margin-top:0; }
+.borrowing-rule-footer { flex-wrap:nowrap; }
+.borrowing-rule-footer button { min-width:0; padding:10px 6px; font-size:12px; white-space:normal; line-height:1.25; }
 .borrowing-scope-cards { display:grid; gap:12px; }
 .borrowing-scope-card { padding:16px; border:1px solid #e2ebf1; border-radius:17px; background:#fff; }
 .borrowing-card-head { display:flex; flex-wrap:wrap; align-items:center; gap:8px; color:#193349; font-size:14px; }
@@ -21,6 +26,15 @@
 .borrowing-card-rules { margin:10px 0; color:#53718b; font-size:12px; line-height:1.7; overflow-wrap:anywhere; }
 .borrowing-card-rules > p { margin:0; padding:8px 0; border-bottom:1px solid #edf2f6; }
 .borrowing-card-rules > p:last-of-type { border-bottom:0; }
+.borrowing-card-rules > p { line-height:1.5; }
+.borrowing-card-rules > p.parity-note { padding:6px 0; }
+.borrowing-scope-card.borrowing-selectable { cursor:pointer; outline:none; }
+.borrowing-scope-card.borrowing-selectable:focus-visible { outline:2px solid #287cca; outline-offset:2px; }
+.borrowing-scope-card.borrowing-selectable.is-selected,
+.borrowing-scope-card.borrowing-selectable[aria-checked=true] { border-color:#287cca; background:#eaf5ff; }
+.borrowing-card-check { display:grid; place-items:center; width:22px; height:22px; flex:none; border:1px solid #b8cddd; border-radius:6px; color:#fff; font-size:15px; line-height:1; }
+.borrowing-selectable[aria-checked=true] .borrowing-card-check { border-color:#287cca; background:#287cca; }
+.borrowing-selectable .borrowing-card-head { min-height:24px; }
 .borrowing-card-rules small { display:block; color:#8196a8; font-size:10px; }
 .control-screen .borrowing-card-more { display:block; width:100%; margin-top:4px; padding:6px; border:0; background:transparent; color:#6c8395; font-size:11px; }
 .borrowing-card-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
@@ -35,7 +49,7 @@
 .borrowing-footer button { flex:1; min-width:90px; }
 .borrowing-footer label { align-self:center; white-space:nowrap; }
 .borrowing-roster { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:15px; max-height:50vh; overflow:auto; }
-.borrowing-select-all { display:block; padding:12px; }
+.borrowing-select-all { display:flex; align-items:center; gap:7px; min-height:44px; padding:8px 12px; }
 .borrowing-form label { display:block; margin:12px 0; color:#54718d; }
 .borrowing-form input[type=date], .borrowing-form select { width:100%; padding:12px; margin-top:6px; border:1px solid #dce9f3; border-radius:10px; background:white; color:#19384e; }
 .borrowing-form fieldset { border:0; padding:0; }
@@ -45,3 +59,13 @@
 .borrowing-period button { padding:10px 8px; }
 .borrowing-conflicts { max-height:180px; overflow:auto; background:#f4f9fc; padding:8px; }
 .borrowing-mobile .control-student-row input[type=checkbox] { width:22px; height:22px; accent-color:#1296df; }
+
+/* Borrowing uses the same role tokens and card/form treatment as the other modules. */
+body.dw-ui-new #app .control-screen .borrowing-scope-card { border-color:var(--control-line); border-radius:16px; background:#ffffffed; box-shadow:0 8px 23px var(--dw-shadow,#4b85b81a); }
+body.dw-ui-new #app .control-screen :is(.borrowing-grade-link,.borrowing-card-head) { color:var(--control-ink); }
+body.dw-ui-new #app .control-screen :is(.borrowing-card-count,.borrowing-card-rules,.borrowing-card-rules small,.borrowing-card-more) { color:var(--control-muted); }
+body.dw-ui-new #app .control-screen :is(.borrowing-times-link,.borrowing-roster-link) { color:var(--accent); }
+body.dw-ui-new #app .control-screen :is(.borrowing-form input[type=date],.borrowing-form select,.borrowing-period input) { border-color:var(--control-line); border-radius:12px; background:#fff; color:var(--control-ink); font:inherit; }
+body.dw-ui-new #app .control-screen .borrowing-form label { color:var(--control-muted); font-size:12px; }
+body.dw-ui-new #app .control-screen .borrowing-footer { border-color:var(--control-line); background:#ffffffeb; box-shadow:0 -5px 18px var(--dw-shadow,#4b85b81a); }
+body.dw-ui-new #app .control-screen .borrowing-conflicts { border-radius:12px; background:var(--control-soft); }
