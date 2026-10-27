@@ -36,6 +36,7 @@
   const classRefs = () => controlStudents().map(s => ({ className: selectedTeacherClass, id: s.id }));
   const targetRefs = target => target === 'school' ? allRefs() : target === 'adminSelected' ? R.copy(adminBulkRefs) : classRefs().filter(ref => target === 'all' || target === 'selected' && controlSelected.has(ref.id) || target === ref.id);
   const scopeRefs = key => (adminLevel === 'school' ? schoolControlClasses.filter(name => name.startsWith(key)) : [key]).flatMap(className => controlData[className].map(s => ({ className, id: s.id })));
+  const stageOf = label => /^[一二三四五六]年级/.test(label) ? '小学' : /^[七八九]年级/.test(label) ? '初中' : '';
   const activeRefs = () => controlDemoRole === 'admin' ? adminLevel === 'school' ? allRefs() : adminLevel === 'grade' ? schoolControlClasses.filter(name => name.startsWith(adminSelectedGrade)).flatMap(className => controlData[className].map(s => ({ className, id: s.id }))) : classRefs() : classRefs();
   const scopeLabel = () => controlDemoRole !== 'admin' || adminLevel === 'class' ? selectedTeacherClass : adminLevel === 'grade' ? adminSelectedGrade : '全校';
   const needScope = (refs, module = controlModule) => controlDemoRole === 'admin' && refs.length > 1 && ['duration', 'homework', 'world'].includes(module);
@@ -178,7 +179,7 @@
     if (controlModule === 'homework') return card('学生权限', '<p>默认所有学生不能查看答案和详解。</p>');
     const students = R.resolve(controlData, activeRefs()).map(row => row.student), count = students.filter(s => controlModule === 'world' ? s.world : isLocked(s)).length;
     if (controlModule === 'lock' && controlDemoRole === 'admin') return temporaryLockScopeCard();
-    return card(scopeLabel() + '当前状态', `<p>${count}人${controlModule === 'world' ? '允许使用' : '已锁屏'} · ${students.length - count}人${controlModule === 'world' ? '禁止使用' : '未锁屏'}</p>${controlDemoRole === 'admin' && controlModule === 'world' && adminLevel === 'school' ? button('设置全校使用状态', "parity.schoolWorld()") : ''}`);
+    return card(scopeLabel() + '当前状态', `<p>${count}人${controlModule === 'world' ? '允许使用' : '已锁屏'} · ${students.length - count}人${controlModule === 'world' ? '禁止使用' : '未锁屏'}</p>`);
   }
   const temporaryLockDescription = () => '<details class="control-description-fold"><summary aria-label="临时锁屏说明"><span>管控说明</span><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary><div class="control-description-body"><p class="parity-note">临时锁屏期间，相关班级的老师不能修改锁屏。解除后恢复日常锁屏状态和老师原有操作权限。</p></div></details>';
   function temporaryLockScopeCard() {
@@ -234,12 +235,16 @@
   }
   function scopeRows() {
     const keys = adminLevel === 'class' ? [selectedTeacherClass] : adminVisibleScopeKeys();
+    let previousStage = '';
     return keys.map(key => {
       const refs = scopeRefs(key), students = R.resolve(controlData, refs).map(row => row.student);
+      const empty = students.length === 0, stage = adminLevel === 'school' ? stageOf(key) : '';
+      const heading = stage && stage !== previousStage ? `<div class="control-grade-group-title">${stage}</div>` : '';
+      if (stage) previousStage = stage;
       const next = adminLevel === 'school' ? `enterAdminGrade('${key}')` : '';
       const count = students.filter(s => controlModule === 'duration' ? s.durationRules.length : controlModule === 'borrowing' ? s.schedules.length : controlModule === 'homework' ? s.answer || s.explanation : controlModule === 'world' ? s.world : isLocked(s)).length;
       const direct = controlModule === 'world' || controlModule === 'lock', on = students.every(s => controlModule === 'world' ? s.world : isLocked(s));
-      return `<div class="admin-level-row">${adminBatchMode ? `<label><input class="admin-level-check" type="checkbox" aria-label="选择${key}" ${adminSelectedScopes.has(key) ? 'checked' : ''} onchange="parity.selectScope('${key}',this.checked)"></label>` : ''}<button class="admin-level-link" ${!adminBatchMode && adminLevel !== 'school' ? 'disabled' : ''} onclick="${adminBatchMode ? `parity.selectScope('${key}',!adminSelectedScopes.has('${key}'))` : next}"><span class="admin-level-copy"><b>${key}</b><small>${students.length}名学生${controlModule === 'lock' ? ' · ' + (refs.every(ref => refLocked(ref)) ? '已开启临时锁屏' : refs.some(ref => refLocked(ref)) ? '部分开启临时锁屏' : '未开启临时锁屏') : ''}</small>${scopeModifiedInfo(students)}</span>${adminLevel === 'school' ? '<i>›</i>' : ''}</button>${!adminBatchMode ? `<div class="parity-scope-actions">${controlModule === 'lock' ? button(refs.every(ref => refLocked(ref)) ? '解除临时锁屏' : refs.some(ref => refLocked(ref)) ? '设置临时锁屏' : '临时锁屏', `parity.scopeBoolean('${key}',null)`, true) : direct ? lockToggle(controlModule, on, `parity.scopeBoolean('${key}',${!on})`, (on ? '关闭' : '开启') + key + controlLabels[controlModule]) : `<button onclick="parity.editScope('${key}')">设置</button>`}</div>` : ''}</div>`;
+      return `${heading}<div class="admin-level-row">${adminBatchMode && !empty ? `<label><input class="admin-level-check" type="checkbox" aria-label="选择${key}" ${adminSelectedScopes.has(key) ? 'checked' : ''} onchange="parity.selectScope('${key}',this.checked)"></label>` : ''}<button class="admin-level-link" ${adminBatchMode && empty || !adminBatchMode && adminLevel !== 'school' ? 'disabled' : ''} onclick="${adminBatchMode ? `parity.selectScope('${key}',!adminSelectedScopes.has('${key}'))` : next}"><span class="admin-level-copy"><b>${key}</b><small>${students.length}名学生${controlModule === 'lock' ? ' · ' + (refs.length && refs.every(ref => refLocked(ref)) ? '已开启临时锁屏' : refs.some(ref => refLocked(ref)) ? '部分开启临时锁屏' : '未开启临时锁屏') : ''}</small>${empty ? '<small>暂无学生，暂不能设置</small>' : scopeModifiedInfo(students)}</span>${adminLevel === 'school' ? '<i>›</i>' : ''}</button>${!adminBatchMode && !empty ? `<div class="parity-scope-actions">${controlModule === 'lock' ? button(refs.every(ref => refLocked(ref)) ? '解除临时锁屏' : refs.some(ref => refLocked(ref)) ? '设置临时锁屏' : '临时锁屏', `parity.scopeBoolean('${key}',null)`, true) : direct ? lockToggle(controlModule, on, `parity.scopeBoolean('${key}',${!on})`, (on ? '关闭' : '开启') + key + controlLabels[controlModule]) : `<button onclick="parity.editScope('${key}')">设置</button>`}</div>` : ''}</div>`;
     }).join('') || '<div class="control-empty">没有符合条件的年级或班级</div>';
   }
   function selectionFooter(admin = false) {
@@ -511,7 +516,13 @@
           const rules = result.data.schoolSettings?.borrowingRules || [];
           result.data.schoolSettings = { ...result.data.schoolSettings, borrowingRules: operation.kind === 'save' ? R.mergeBorrow(rules, operation.value, operation.editingId) : rules.filter(rule => rule.id !== operation.ruleId) };
         }
-        persist(result.data);
+        try { persist(result.data); }
+        catch {
+          ui.pending = null;
+          if (ui.editor) renderEditor(); else renderControl();
+          controlToast('保存失败，请重试');
+          return;
+        }
       }
       const returnView = ui.editor?.returnView;
       ui.pending = null; ui.editor = null; ui.boolean = null;
@@ -529,8 +540,8 @@
   function visibleScopeKeys() {
     const container = document.getElementById('parity-scope-rows');
     const keys = adminLevel === 'class' ? [selectedTeacherClass] : adminVisibleScopeKeys();
-    if (!container) return keys;
-    return keys.filter(key => [...container.querySelectorAll('.admin-level-copy b')].some(node => node.textContent === key));
+    if (!container) return keys.filter(key => scopeRefs(key).length);
+    return keys.filter(key => scopeRefs(key).length && [...container.querySelectorAll('.admin-level-copy b')].some(node => node.textContent === key));
   }
   window.parity = {
     dismissDurationNotice() {
@@ -544,7 +555,15 @@
       controlView = 'entry'; controlBatch = false;
       renderControl();
     },
-    renderDemoPage(kind) {
+    renderEmptyAdminDemo(kind) {
+      const grade = schoolGrades()[0] || '五年级';
+      const school = kind === 'adminNoGrades';
+      const priorModule = controlModule;
+      controlModule = 'borrowing';
+      shell('柜机借用管控', `<p class="parity-context">${school ? '全校' : esc(grade)}</p>${card((school ? '全校' : esc(grade)) + '柜机借用管控', '<p class="parity-note">未开启临时禁借</p>')}<div class="admin-scope-summary"><b>${school ? '年级' : '班级'}借用规则</b></div><div class="control-empty">${school ? '暂无年级，请联系学校管理员配置。' : '该年级暂无班级，添加班级后可设置管控。'}</div>`, 'controlPageDemo.restore()');
+      controlModule = priorModule;
+    },
+    renderDemoPage(kind, closeEditor = false) {
       const saved = {data: controlData, role: controlDemoRole, work: controlWorkView, module: controlModule, view: controlView, batch: controlBatch, editor: ui.editor, pending: ui.pending};
       try {
         renderingDemo = true;
@@ -560,7 +579,7 @@
           controlData.schoolSettings.temporaryClassStates = {};
         }
         renderControl();
-        if (['saveFailed', 'changed', 'removed', 'durationRevoked'].includes(kind)) {
+        if (!closeEditor && ['saveFailed', 'changed', 'removed', 'durationRevoked'].includes(kind)) {
           // Demo editor opens against the copied permission-enabled state.
           openEditor(classRefs(), selectedTeacherClass);
         }
@@ -615,13 +634,12 @@
     },
     cancelBoolean() { closeControlOverlay(true); },
     selectedRefs: currentSelectedRefs,
-    schoolWorld() { this.booleanEditor(allRefs(), '全校'); },
     fillDefault() {
       collectEditor();
       if (controlModule === 'duration' && durationIsDefault(ui.editor.rule)) return;
       if (controlModule === 'duration') Object.assign(ui.editor.rule, R.copy(R.defaultDuration), { id: ui.editor.rule.id, useDefault: false, fixed: false });
       else ui.editor.value = { answer: 'false', explanation: 'false' };
-      renderEditor(); controlToast(controlModule === 'duration' ? '已填入默认设置，保存后生效' : '已恢复默认规则');
+      renderEditor(); controlToast('已填入默认设置，保存后生效');
     },
     durationPermission(value) {
       if (controlDemoRole !== 'admin') return;
@@ -724,7 +742,7 @@
     back() { if (controlView === 'students') { controlView = 'module'; controlSelected.clear(); return renderControl(); } if (controlDemoRole === 'admin') return adminBack(); leaveControlCenter(); },
     startSelection() { adminBatchMode = true; adminSelectedScopes.clear(); renderControl(); },
     cancelSelection() { adminBatchMode = false; controlSelected.clear(); adminSelectedScopes.clear(); controlView = 'module'; renderControl(); },
-    selectScope(key, value) { value ? adminSelectedScopes.add(key) : adminSelectedScopes.delete(key); renderControl(); },
+    selectScope(key, value) { if (!scopeRefs(key).length) return; value ? adminSelectedScopes.add(key) : adminSelectedScopes.delete(key); renderControl(); },
     selectStudent(id) { controlSelected.has(id) ? controlSelected.delete(id) : controlSelected.add(id); renderControl(); },
     selectAll(value) { const admin = controlDemoRole === 'admin', set = admin ? adminSelectedScopes : controlSelected; (admin ? visibleScopeKeys() : filteredControlStudents().map(s => s.id)).forEach(key => value ? set.add(key) : set.delete(key)); renderControl(); },
     studentFilter(query, filter) { if (query !== null) controlQuery = query; if (filter !== null) controlFilter = filter; controlSelected.clear(); this.renderRows(); },

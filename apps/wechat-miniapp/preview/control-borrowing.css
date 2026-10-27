@@ -17,6 +17,7 @@
 .borrowing-rule-footer { flex-wrap:nowrap; }
 .borrowing-rule-footer button { min-width:0; padding:10px 6px; font-size:12px; white-space:normal; line-height:1.25; }
 .borrowing-scope-cards { display:grid; gap:12px; }
+.control-grade-group-title { margin:10px 2px 0; color:#59738c; font-size:13px; font-weight:700; }
 .borrowing-scope-card { padding:16px; border:1px solid #e2ebf1; border-radius:17px; background:#fff; }
 .borrowing-card-head { display:flex; flex-wrap:wrap; align-items:center; gap:8px; color:#193349; font-size:14px; }
 .control-screen .borrowing-grade-link { display:inline-flex; align-items:center; gap:8px; width:auto; padding:0; border:0; background:transparent; color:#193349; font-size:14px; font-weight:700; }
