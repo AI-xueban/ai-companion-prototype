@@ -540,7 +540,6 @@
     function returnToControlModuleHome(){controlView='entry';controlBatch=false;controlSelected.clear();controlQuery='';controlFilter='all';adminLevel='school';adminSelectedGrade='';adminBatchMode=false;adminSelectedScopes.clear();renderControl()}
     function controlNavigateBack(){if(controlDemoRole==='admin'){adminBack();return}if(controlView==='studentDetail'){openControlModule(controlModule);return}if(controlView==='students'){backControlHome();return}leaveControlCenter()}
     function openControlTab(){
-      if(window.demoWorkspace?.enabled){window.demoWorkspace.openControl();return}
       const target=new URL('control-prototype.html',location.href),scope=workbenchPrototype.getScope();
       target.searchParams.set('page','teacherDesk');target.searchParams.set('tab','control');
       target.searchParams.set('availability',teacherAvailability);target.searchParams.set('workView',scope.view);target.searchParams.set('classId',scope.classId);
