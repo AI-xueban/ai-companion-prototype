@@ -36,10 +36,26 @@ export function gradingSignature(q: GradingQuestion): string {
 export function isFormalGrade(q:GradingQuestion){return q.state==='confirmed'&&!q.reviewReason;}
 // Compatibility name: eligible current results are now visible without a release action.
 export function isResultReleased(q:GradingQuestion){return isFormalGrade(q);}
+/** Display stage does not change the effective submission or completion count. */
+export function hasPendingHomeworkContent(pending?:{photos?:unknown[];path?:string}|null){return Boolean(pending&&(Array.isArray(pending.photos)?pending.photos.length:pending.path));}
+export function homeworkItemDisplayStatus(input:{submitted:boolean;pending:boolean;gradingEnabled:boolean;questions?:GradingQuestion[];gradingError?:string;gradingComplete?:boolean}){
+  if(!input.submitted)return input.pending?'待提交':'未提交';
+  if(!input.gradingEnabled)return '已提交';
+  const questions=input.questions||[];
+  if((input.gradingError&&!/未接入|等待|已重试/.test(input.gradingError))||questions.some(q=>q.state==='failed'))return '批改失败';
+  return (questions.length>0?questions.every(isResultReleased)&&input.gradingComplete!==false:input.gradingComplete===true)?'已批改':'待批改';
+}
+/** Supporting copy follows the same item stage as the badge in both clients. */
+export function homeworkGradingNotice(status:string,error?:string):string {
+  if(status==='已批改'||status==='已提交'||status==='未提交'||status==='待提交')return '';
+  if(status==='批改失败')return error||'批改失败，请稍后重试';
+  return status==='待批改'?(error||'已提交，批改结果尚未全部完成'):'';
+}
+
 export function canUseAIExplanation(q:GradingQuestion){return isFormalGrade(q)&&!q.explanationInvalidated&&!(q.decisionSource==='teacher'&&typeof q.aiCorrect==='boolean'&&q.aiCorrect!==q.correct);}
 export function releaseQuestion(q:GradingQuestion,at:string){if(!isFormalGrade(q))return false;q.releasedSignature=gradingSignature(q);q.releasedAt=at;return true;}
 export function gradeLabel(q:GradingQuestion):string {
-  return ({queued:'等待批改',processing:'正在批改',failed:'批改失败',review:'待核对',unreadable:'无法批改','no-answer':'暂无答案',unanswered:'未作答'} as Record<string,string>)[q.state]||(isFormalGrade(q)?q.correct?'正确':'错误':'待核对');
+  return ({queued:'等待批改',processing:'正在批改',failed:'批改失败',review:'待核对',unreadable:'无法批改','no-answer':'暂无答案',unanswered:'未作答'} as Record<string,string>)[q.state]||(isFormalGrade(q)?q.correct?'答对':'答错':'待核对');
 }
 export function parentGradeLabel(q:GradingQuestion){return gradeLabel(q);}
 export function gradingProgress(questions:GradingQuestion[],_parent=false){
@@ -120,4 +136,102 @@ export function holdManualResult(q:GradingQuestion,at:string){preserveAI(q);q.st
 export function gradingStatistics(questions:GradingQuestion[]){
   const valid=questions.filter(isFormalGrade),wrong=valid.filter(q=>!q.correct).length;
   return {ratePending:false,wrongRate:valid.length?Math.round(wrong/valid.length*100):null,correctness:valid.length?Math.round((valid.length-wrong)/valid.length*100):null};
+}
+// Shared publishing and submission rules used by the native pages and web preview.
+export const HOMEWORK_MAX_PHOTOS = 9;
+export const homeworkChangeLabel = (action:string) => ({withdraw:'撤回任务',extend:'延长截止',reopen:'重新开放补交',correct:'更正文字说明',stop:'终止连续打卡'} as Record<string,string>)[action] || '更新任务';
+export function homeworkSnapshotText(snapshot:string):string {
+  try {
+    const value=JSON.parse(snapshot) as {description?:string;deadline?:string;submitDeadline?:string;items?:Array<{title:string;instruction:string}>};
+    return [`老师的要求：${value.description||'无'}`,`正常截止：${value.deadline||'无'}`,`补交截止：${value.submitDeadline||'无'}`,...(value.items||[]).map((item,index)=>`第 ${index+1} 项：${item.title}\n${item.instruction}`)].join('\n');
+  } catch { return '历史变更内容暂不可用，请查看变更原因。'; }
+}
+export const homeworkTime = (value: string) => new Date((value || '').replace(' ', 'T')).getTime();
+export const homeworkClosed = (task: { withdrawnAt?: string; stoppedAt?: string; submitDeadline: string }, now = Date.now()) => Boolean(task.withdrawnAt || task.stoppedAt || !Number.isFinite(homeworkTime(task.submitDeadline)) || now > homeworkTime(task.submitDeadline));
+export const homeworkFileExtensions = (graded: boolean) => graded ? ['pdf', 'doc', 'docx'] : ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt'];
+export function homeworkFileError(name: string, size: number, type: string, graded: boolean): string {
+  if (!size || size < 0) return '文件为空，请重新选择。';
+  if (size > (type === 'photo' ? 20 : type === 'video' ? 200 : 50) * 1024 * 1024) return `文件过大，${type === 'photo' ? '每张图片上限 20MB' : type === 'video' ? '视频上限 200MB' : '文件上限 50MB'}。`;
+  const ext = name.split('.').pop()?.toLowerCase() || '';
+  const allowed = type === 'file' ? homeworkFileExtensions(graded) : type === 'photo' ? ['jpg','jpeg','png','webp','heic','heif'] : type === 'video' ? ['mp4','mov','webm'] : ['mp3','m4a','wav'];
+  return allowed.includes(ext) ? '' : graded && type === 'file' ? '本项需自动批改，仅支持 PDF、Word。' : '文件格式不支持，请按本项要求重新选择。';
+}
+export function homeworkDocumentError(name: string, bytes: Uint8Array): string {
+  const ext = name.split('.').pop()?.toLowerCase();
+  const signature = String.fromCharCode(...Array.from(bytes.slice(0, 8)));
+  // Validate containers locally; document conversion/recognition remains a service concern.
+  let text='';for(let i=0;i<bytes.length;i+=16384)text+=String.fromCharCode(...Array.from(bytes.slice(i,i+16384)));
+  if (ext === 'pdf') {
+    if (!signature.startsWith('%PDF-') || !text.includes('%%EOF')) return 'PDF 损坏或实际格式不符，请重新导出。';
+    if (/\/Encrypt\b/.test(text)) return '文档已加密，请导出为无需密码的 PDF。';
+  }
+  if (ext === 'docx' && (!signature.startsWith('PK') || !text.includes('word/'))) return 'Word 文档损坏、加密或实际格式不符，请重新导出。';
+  if (ext === 'doc' && ![208,207,17,224,161,177,26,225].every((c,i)=>bytes[i]===c)) return 'Word 实际格式不符，请重新导出。';
+  if (text.includes('EncryptionInfo') || text.includes('EncryptedPackage')) return '文档已加密，请导出为无需密码的 Word 或 PDF。';
+  return '';
+}
+export function homeworkPublishError(task: {title:string;description:string;attachments?:unknown[];allowSupplement?:boolean;deadline:string;submitDeadline:string;items:Array<{title:string;type?:string;submitType?:string;expectedPages?:number}>}, now=Date.now()): string {
+  if (!task.title.trim()) return '请填写作业标题。';
+  if (!task.description.trim() && !task.attachments?.length) return '请填写老师的要求或添加附件。';
+  if (!task.items.length || task.items.some(i=>!i.title.trim() || !(i.type || i.submitType))) return '请补全每项要求和提交方式。';
+  if (task.items.some(i=>i.expectedPages !== undefined && (!Number.isInteger(i.expectedPages) || i.expectedPages < 0 || i.expectedPages > 9))) return '预计页数请填写 1—9，留空表示不限。';
+  if (!(homeworkTime(task.deadline)>now)) return '截止时间已过，请重新设置。';
+  if (!(task.allowSupplement===false?homeworkTime(task.submitDeadline)===homeworkTime(task.deadline):homeworkTime(task.submitDeadline)>homeworkTime(task.deadline))) return '请调整补交时间：开启补交时须晚于正常截止，关闭时与正常截止一致。';
+  return '';
+}
+export type HomeworkManagementAction = 'withdraw'|'extend'|'reopen'|'correct'|'stop';
+export interface HomeworkChangeInput { reason:string; deadline?:string; submitDeadline?:string; description?:string; itemTexts?:Array<{id:string;title:string;instruction:string}>; fromCycle?:number }
+export interface ManagedHomework {
+  title:string; description:string; allowSupplement?:boolean; deadline:string; submitDeadline:string; publishedBy?:string; classIds:string[]; kind:string; cycleId?:string; seriesId?:string;
+  items:Array<{id:string;title:string;instruction:string}>;
+  revision?:number; withdrawnAt?:string; stoppedAt?:string; managementReason?:string;
+  changes?:Array<{at:string;action:string;reason:string;before:string;after:string;by:string}>;
+  notification?:{status:'pending'|'failed'|'sent';message:string;attempts:number};
+}
+export function validateHomeworkChange(task:ManagedHomework, action:HomeworkManagementAction, input:HomeworkChangeInput, actor:string, allowed:string[], now=Date.now()):string {
+  if (task.publishedBy!==actor || !task.classIds.length || !task.classIds.every(id=>allowed.includes(id))) return '权限已变化，请返回任务列表重新进入。';
+  if(!['withdraw','extend','reopen','correct','stop'].includes(action))return '不支持的任务操作。';
+  if (!input.reason.trim()) return '请填写本次变更的原因。';
+  if (task.withdrawnAt || task.stoppedAt) return '任务已撤回或终止，不能继续修改；可复制重发。';
+  if (action==='extend' || action==='reopen') {
+    const due=homeworkTime(input.deadline || task.deadline), end=homeworkTime(input.submitDeadline || '');
+    if (!Number.isFinite(due)||!Number.isFinite(end)||due<homeworkTime(task.deadline)||end<homeworkTime(task.submitDeadline)||end<due||end<=now) return '只允许延长时间，补交截止须晚于当前时间且不早于正常截止。';
+    if(action==='extend'&&homeworkClosed(task,now))return '任务已结束，请使用“重新开放补交”。';
+    if(action==='reopen'&&!homeworkClosed(task,now))return '任务尚未结束，请使用“延长截止”。';
+    if(due===homeworkTime(task.deadline)&&end===homeworkTime(task.submitDeadline))return '请设置比原来更晚的截止时间。';
+  }
+  if(action==='stop' && (task.kind!=='checkin'||!Number.isInteger(input.fromCycle)||Number(input.fromCycle)<1)) return '请选择有效的终止期次。';
+  if(action==='correct' && (!input.description?.trim() || task.items.some(i=>!input.itemTexts?.some(row=>row.id===i.id&&row.title.trim())) || input.itemTexts?.length!==task.items.length))return '请填写完整的总说明与各项文字，不能增删项目。';
+  return '';
+}
+export function applyHomeworkChange(task:ManagedHomework, action:HomeworkManagementAction, input:HomeworkChangeInput, actor:string, at:string):void {
+  const before=JSON.stringify({description:task.description,items:task.items.map(i=>({id:i.id,title:i.title,instruction:i.instruction})),deadline:task.deadline,submitDeadline:task.submitDeadline});
+  if(action==='withdraw')task.withdrawnAt=at;
+  if(action==='stop')task.stoppedAt=at;
+  if(action==='extend'||action==='reopen'){task.deadline=input.deadline||task.deadline;task.submitDeadline=input.submitDeadline!;task.allowSupplement=homeworkTime(task.submitDeadline)>homeworkTime(task.deadline);}
+  if(action==='correct'){task.description=input.description!;task.items.forEach(i=>{const text=input.itemTexts!.find(row=>row.id===i.id)!;i.title=text.title;i.instruction=text.instruction;});}
+  task.revision=(task.revision||0)+1;task.managementReason=input.reason.trim();
+  const after=JSON.stringify({description:task.description,items:task.items.map(i=>({id:i.id,title:i.title,instruction:i.instruction})),deadline:task.deadline,submitDeadline:task.submitDeadline});
+  task.changes=[...(task.changes||[]),{at,action,reason:input.reason.trim(),before,after,by:actor}];
+  task.notification={status:'pending',message:'本地演示：变更已保存，通知待服务接入后发送。',attempts:0};
+}
+
+/** Returned correction images belong to one effective submission version; never derive marks from demo questions. */
+export interface SubmissionGradingImages { submissionVersion:number; complete?:boolean; photos:Array<{pageIndex:number;path:string}> }
+export interface SubmissionImagePage {originalPath:string;gradedPath:string;path:string;showOriginal:boolean;page:number;imageError?:string}
+/** Completion is an explicit result fact, independent of available image count. */
+export function submissionGradingComplete(record?:{version?:number;gradingResult?:SubmissionGradingImages}|null):boolean|undefined {
+  const result=record?.gradingResult;
+  return result?.submissionVersion===(record?.version||1)&&typeof result?.complete==='boolean'?result.complete:undefined;
+}
+/** Fall back once; an unavailable original becomes a visible error, without retry loops. */
+export function submissionImageFailure<T extends {path:string;originalPath?:string;gradedPath?:string;showOriginal?:boolean}>(page:T):T & {imageError:string} {
+  if(!page.showOriginal&&page.gradedPath&&page.path===page.gradedPath&&page.originalPath){
+    return {...page,path:page.originalPath,showOriginal:true,imageError:'批改图加载失败，已显示原图'};
+  }
+  return {...page,path:'',showOriginal:true,imageError:'原图加载失败，请关闭后重新打开'};
+}
+export function submissionImagePages(record:{version?:number;gradingResult?:SubmissionGradingImages}|null|undefined,originals:string[],showOriginal=false):SubmissionImagePage[]{
+  const result=record?.gradingResult,valid=result&&result.submissionVersion===(record?.version||1)&&Array.isArray(result.photos)?result.photos:[];
+  return originals.filter(Boolean).map((originalPath,page)=>{const returnedPath=valid.find(image=>image?.pageIndex===page)?.path;const gradedPath=typeof returnedPath==='string'?returnedPath.trim():'';return {originalPath,gradedPath,path:showOriginal||!gradedPath?originalPath:gradedPath,showOriginal:showOriginal||!gradedPath,page};});
 }

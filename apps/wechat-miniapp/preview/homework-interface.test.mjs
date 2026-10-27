@@ -36,9 +36,11 @@ let p=browser();p.openTeacher('grading-demo-v1');
 assert.equal((p.renderTeacher().match(/查看批改 ›/g)||[]).length,2,'Each graded item has its own result entry');
 assert.doesNotMatch(p.renderTeacher(),/AI 批改统计|查看逐题结果 ›|核对统计并开放|确认一致答案/);
 const gradedDemo=p.inspect().tasks.find(t=>t.id==='grading-demo-v1');
+p.openQuestionResults('grading-page-2');assert.match(p.renderTeacher(),/作业提交项/);assert.match(p.renderTeacher(),/第 2 页练习/);p.openTeacher('grading-demo-v1');
+p.openItemStudents('grading-page-2');p.openStudent(roster.GUARDIAN_STUDENT_ID);const submissionOnly=p.renderTeacher();assert.doesNotMatch(submissionOnly,/hp-question-results|正确答案|改判记录：/,'Submission records must not render grading summaries');assert.match(submissionOnly,/hp-record-overview/);assert.doesNotMatch(submissionOnly,/查看批改 ›/);p.openStudentGrade('grading-page-2');assert.equal(p.getTeacherMode(),'student');assert.match(p.renderTeacher(),/第 2 页练习/,'Legacy grade entry stays in the matching submission item');p.openTeacher('grading-demo-v1');
 gradedDemo.items[0].gradingEnabled=false;
 assert.equal((p.renderTeacher().match(/查看批改 ›/g)||[]).length,1,'An image-only item does not inherit another item’s grade entry');
-assert.match(p.renderTeacher(),/仅收集图片/);
+assert.match(p.renderTeacher(),/仅收集，不批改/);p.openQuestionResults('grading-page-2');assert.doesNotMatch(p.renderTeacher(),/hp-result-item-picker/,'A single eligible item has no redundant switcher');p.openTeacher('grading-demo-v1');
 gradedDemo.items[1].gradingEnabled=false;
 assert.doesNotMatch(p.renderTeacher(),/查看批改 ›|AI 批改统计/,'No graded items means no grade entry');
 gradedDemo.items.forEach(item=>item.gradingEnabled=true);
@@ -62,7 +64,7 @@ p.chooseInlineGrade('grading-demo-v1',q.id,child,original?'right':'wrong');p.sav
 assert.equal(q.correct,original);
 p.review('grading-demo-v1',q.id,undefined,child);assert.match(p.renderTeacher(),/当前复核学生的题目原图|当前复核学生的作业原图/);
 p.setGradeReviewDecision(!original);p.confirmGradeReview();assert.equal(q.correct,!original);assert.equal(q.decisionSource,'teacher');
-p.openParent('grading-demo-v1');p.openParentGrade();assert.match(p.renderParent('林小满'),/教师已复核/);assert.doesNotMatch(p.renderParent('林小满'),/待教师开放|确认有效并开放/);
+p.openParent('grading-demo-v1');p.openParentGrade();assert.match(p.renderParent('林小满'),/判定已更新，解析暂未更新/,'Changed verdict must hide the stale explanation');assert.doesNotMatch(p.renderParent('林小满'),/class="hp-result-answer"|待教师开放|确认有效并开放/);
 p.openTeacher('grading-demo-v1');p.review('grading-demo-v1',q.id,undefined,child);p.holdGradeReview();assert.equal(q.state,'review');assert.equal(g.isResultReleased(q),false);
 p=browser();p.openTeacher('grading-demo-v1');assert.ok(p.inspect().submissions.some(r=>r.questions.some(v=>v.id===q.id&&v.reviewReason==='manual-hold')));
 // Stale dialogs and read-only roles must not mutate results.
@@ -75,19 +77,14 @@ assert.equal(native.confirmMockReview(nt.id,nq.id,!nq.correct,'原图核实',nt.
 assert.equal(native.confirmMockReview(nt.id,nq.id,true,'过期弹窗',nt.publishedBy,[child],expected),false);
 console.log('PASS: independent references, AI statistics, scoped correction/hold, family sync, persistence, stale guards and role boundaries.');
 
-// New workflow: explicit reference mapping, scoped batch review, parent feedback and stale explanation guards.
+// New workflow: explicit question mapping, scoped batch review, parent feedback and stale explanation guards.
 p.setScope({view:'subject',classIds:['c1','c2'],teacherId:'teacher-demo-001'});
 p.prepareWorkflowExperience();
 let demo=p.inspect().tasks.find(t=>t.id==='homework-console-v1');
 let demoRows=p.inspect().submissions.filter(r=>r.taskId===demo.id);
 const firstQuestion=demo.items[0].id+'-q1';
-const beforeReference=JSON.stringify(demoRows);
-p.editReference(demo.id);p.referenceField('name','教师自行提供的答案');p.referenceField('text','先看条件，再列算式');p.saveReference();
-let material=demo.referenceMaterials.find(f=>f.name==='教师自行提供的答案');
-assert.ok(material);assert.equal(material.questionId,'');assert.equal(JSON.stringify(demoRows),beforeReference);
-p.editReference(demo.id,material.id);p.referenceField('questionId',firstQuestion);p.saveReference();
-material=demo.referenceMaterials.find(f=>f.id===material.id);assert.equal(material.questionId,firstQuestion);
-assert.equal(JSON.stringify(demoRows),beforeReference,'Reference association does not regrade students');
+assert.equal(typeof p.editReference,'undefined');
+assert.doesNotMatch(p.renderTeacher(),/教师参考资料|查看原资料|参考资料标题/);
 const unknownRow=demoRows.find(r=>r.questions.some(q=>q.mappingConfirmed===false)),unknown=unknownRow.questions.find(q=>q.mappingConfirmed===false);
 const unknownId=unknown.id,unknownCorrect=unknown.correct;
 p.chooseQuestionMapping(unknownRow.studentId,unknownRow.itemId,unknownId,demo.items[0].id+'-q2');p.saveQuestionMapping(unknownRow.studentId,unknownId);
@@ -100,17 +97,16 @@ p.saveBatch();assert.ok(batchRows.every(r=>r.questions[0].correct&&r.questions[0
 const childRow=demoRows.find(r=>r.studentId===child&&r.itemId===demo.items[0].id),childQuestion=childRow.questions[0];
 assert.equal(childQuestion.explanationInvalidated,true);assert.equal(childQuestion.parentFeedback.status,'resolved');
 p.openParent(demo.id);p.openParentGrade();
-let parentHTML=p.renderParent('李涵');assert.match(parentHTML,/判定已更新，解析暂未更新/);assert.match(parentHTML,/disabled[^>]*onclick="homeworkPrototype.openHomeworkTutor/);
+let parentHTML=p.renderParent('李涵');assert.match(parentHTML,/判定已更新，解析暂未更新/);assert.doesNotMatch(parentHTML,/onclick="homeworkPrototype.openHomeworkTutor/);
 p.openHomeworkTutor();assert.doesNotMatch(p.renderParent('李涵'),/hp-homework-tutor/);
 p.reportGradeIssue();assert.equal(childQuestion.parentFeedback.status,'pending');assert.equal(childQuestion.correct,true);
-demo.deadline='2099-01-01 20:00';assert.doesNotMatch(p.renderParent('李涵'),/先看条件，再列算式/);
-demo.deadline='2000-01-01 20:00';assert.match(p.renderParent('李涵'),/先看条件，再列算式/);
+assert.doesNotMatch(p.renderParent('李涵'),/教师参考资料|查看原资料|参考资料标题/);
 p.openTeacher(demo.id);p.openGradeQuestion(firstQuestion);p.toggleBatchStudent(child);p.chooseBatch('wrong');childRow.version=(childRow.version||1)+1;p.saveBatch();assert.equal(childQuestion.correct,true,'A stale batch cannot overwrite a newer submission');
 p.clearBatch();p.toggleBatchStudent(child);p.chooseBatch('hold');p.saveBatch();assert.equal(childQuestion.reviewReason,'manual-hold');
-p.openTeacher(demo.id);assert.match(p.renderTeacher(),/继续上次查看的题目/);
-p=browser();p.openTeacher(demo.id);assert.match(p.renderTeacher(),/继续上次查看的题目/);p.resumeReview();assert.equal(p.getTeacherMode(),'question');
-p.setScope({view:'school',classIds:['c1','c2'],teacherId:'teacher-demo-001'});p.openTeacher(demo.id);p.editReference(demo.id);p.referenceField('text','unauthorized');p.saveReference();assert.doesNotMatch(p.renderTeacher(),/参考答案内容/);
-console.log('PASS: teacher materials, explicit question mapping, batch/stale guards, resume, parent feedback, and invalidated analysis/tutor.');
+p.openTeacher(demo.id);assert.doesNotMatch(p.renderTeacher(),/hp-resume/);p.openQuestionResults(demo.items[0].id);assert.match(p.renderTeacher(),/上次查看：/);assert.doesNotMatch(p.renderTeacher(),/继续上次查看的题目/);
+p=browser();p.openTeacher(demo.id);p.openQuestionResults(demo.items[0].id);assert.match(p.renderTeacher(),/上次查看：/);assert.match(p.renderTeacher(),/全部班级/);p.resumeReview();assert.equal(p.getTeacherMode(),'question');
+p.setScope({view:'school',classIds:['c1','c2'],teacherId:'teacher-demo-001'});p.openTeacher(demo.id);assert.doesNotMatch(p.renderTeacher(),/教师参考资料|查看原资料|参考资料标题/);
+console.log('PASS: removed teacher-material interactions, explicit question mapping, batch/stale guards, resume, parent feedback, and invalidated analysis/tutor.');
 p.setScope({view:'subject',classIds:['c1'],teacherId:'teacher-demo-001'});p.openTeacher(demo.id);p.openGradeQuestion(firstQuestion);
 const currentBefore=JSON.stringify(p.inspect().submissions);
 p.holdCurrentScope();p.chooseBatch('right');assert.equal(JSON.stringify(p.inspect().submissions),currentBefore,'Selecting a scope does not save; it cannot imply correct judgments');
@@ -129,3 +125,21 @@ assert.equal(missingFor(multi.targetSnapshotIds[2]).map(i=>i.type).join(','),'vi
 assert.equal(missingFor(multi.targetSnapshotIds[3]).length,4);
 assert.ok(multiRows.filter(r=>r.itemId!=='multi-photo').every(r=>r.questions.length===0));
 console.log('PASS: four-item demo has 2 complete, 1 missing video/file, 1 unsubmitted; non-photo items have no grades.');
+
+const combinations = [
+  ['shared-combo-math-v1', 'photo,video,file,none', 'teacher-demo-001', 1],
+  ['shared-combo-english-v1', 'photo,file', 'teacher-demo-001', 0],
+  ['shared-combo-reading-v1', 'video,none', 'other-teacher-demo', 1],
+];
+for (const [id, types, publisher, guardianDone] of combinations) {
+  const webTask=p.inspect().tasks.find(t=>t.id===id),nativeTask=native.getHomeworkTask(id);
+  assert.ok(webTask&&nativeTask,`${id} exists in teacher and guardian stores`);
+  assert.equal(webTask.items.map(i=>i.type).join(','),types);
+  assert.equal(nativeTask.items.map(i=>i.submitType).join(','),types);
+  assert.equal(webTask.publishedBy,publisher);
+  assert.equal(nativeTask.publishedBy,publisher);
+  assert.ok(webTask.targetSnapshotIds.includes(child)&&nativeTask.targetSnapshotIds.includes(child));
+  assert.equal(p.inspect().submissions.filter(r=>r.taskId===id&&r.studentId===child).length,guardianDone);
+  assert.equal(native.getStudentSubmissions(id,child).length,guardianDone);
+}
+console.log('PASS: teacher and guardian share photo/video/file/confirmation combinations with matching pending progress.');

@@ -12,7 +12,7 @@ Page({
     children: [] as Array<{ id: string; name: string; className: string; selected: boolean }>, childPickerOpen: false,
     used: false, learned: false, minutes: 0, days: 0, firstCount: 0, firstWrong: 0,
     subjects: [] as ReturnType<typeof subjectRows>,
-    timeline: [] as ReturnType<typeof timelineRows>, visibleTimeline: [] as ReturnType<typeof timelineRows>, summaryLine: '', showAllTimeline: false, featureOpen: false,
+    timeline: [] as ReturnType<typeof timelineRows>, visibleTimeline: [] as ReturnType<typeof timelineRows>, summaryTitle: '今日学习概况', summaryLine: '', showAllTimeline: false, featureOpen: false,
     selectedActivity: null as ReturnType<typeof activityEvidence>,
     chatCount: 0, solveCount: 0, solveProblems: 0, solveQuestions: 0,
   },
@@ -72,7 +72,7 @@ Page({
       dateLabel: this.data.period === 'day' ? '' : `统计截至 ${REPORT_END}`,
       used: summary.used, learned: summary.learned, minutes: summary.minutes, days: summary.days,
       firstCount: summary.firstCount, firstWrong: summary.firstWrong,
-      subjects: subjectRows(data), timeline: rows, visibleTimeline: this.data.showAllTimeline ? rows : rows.slice(0, 3), summaryLine,
+      subjects: subjectRows(data), timeline: rows, visibleTimeline: this.data.showAllTimeline ? rows : rows.slice(0, 3), summaryTitle: this.data.period === 'day' ? '今日学习概况' : this.data.period === '7d' ? '近 7 天学习概况' : '近 30 天学习概况', summaryLine,
       chatCount: chat?.count || 0,
       solveCount: solve?.count || 0, solveProblems: solve?.problems || 0, solveQuestions: solve?.questions || 0,
     });

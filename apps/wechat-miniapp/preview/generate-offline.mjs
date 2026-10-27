@@ -27,7 +27,8 @@ const grading = await compile('homeworkGrading.ts');
 const filters = await compile('homeworkFilters.ts');
 const homeworkLearning = await compile('homeworkLearning.ts');
 const homeworkTutor = await compile('homeworkTutor.ts');
-const dataScript = `(function(){const sources={roster:${JSON.stringify(roster)},learning:${JSON.stringify(learning)},grading:${JSON.stringify(grading)},filters:${JSON.stringify(filters)},homeworkLearning:${JSON.stringify(homeworkLearning)},homeworkTutor:${JSON.stringify(homeworkTutor)}};const cache={};function load(name){if(cache[name])return cache[name];const exports={};cache[name]=exports;new Function('require','exports',sources[name])((path)=>load(path==='./schoolDemoRoster'?'roster':path==='./homeworkGrading'?'grading':path),exports);return exports}window.schoolDemoRoster=load('roster');window.learningData=load('learning');window.homeworkGrading=load('grading');window.homeworkFilters=load('filters');window.homeworkLearning=load('homeworkLearning');window.homeworkTutor=load('homeworkTutor')})();`;
+const homeworkWorksheets = await compile('homeworkWorksheets.ts');
+const dataScript = `(function(){const sources={roster:${JSON.stringify(roster)},learning:${JSON.stringify(learning)},grading:${JSON.stringify(grading)},filters:${JSON.stringify(filters)},homeworkLearning:${JSON.stringify(homeworkLearning)},homeworkTutor:${JSON.stringify(homeworkTutor)},homeworkWorksheets:${JSON.stringify(homeworkWorksheets)}};const cache={};function load(name){if(cache[name])return cache[name];const exports={};cache[name]=exports;new Function('require','exports',sources[name])((path)=>load(path==='./schoolDemoRoster'?'roster':path==='./homeworkGrading'?'grading':path),exports);return exports}window.schoolDemoRoster=load('roster');window.learningData=load('learning');window.homeworkGrading=load('grading');window.homeworkFilters=load('filters');window.homeworkLearning=load('homeworkLearning');window.homeworkTutor=load('homeworkTutor');window.homeworkWorksheets=load('homeworkWorksheets')})();`;
 await saveOrCheck('learning-data.js', dataScript);
 
 const index = await readFile(join(root, 'index.html'), 'utf8');
@@ -65,6 +66,27 @@ for (const name of sharedNames) {
 }
 specialist = specialist.replace(/function syncReview\(\)\{(?!\s*window\.homeworkDemoConsole)/, 'function syncReview(){\n      window.homeworkDemoConsole?.sync();').replace("function chooseDemoDomain(domain){if(domain==='parent')", "function chooseDemoDomain(domain){if(window.homeworkDemoConsole?.isActive()){window.homeworkDemoConsole.role(domain);return;}if(domain==='parent')");
 specialist = specialist.replace(/    function injectTeacherExceptionPanel\(\)\{[^\n]+/, '    function injectTeacherExceptionPanel(){window.pageDemoTools?.sync();}');
+const roleEntry = index.match(/    function enterDemoRole\(role\)\{[\s\S]*?\n    \}/)?.[0];
+if (!roleEntry) throw new Error('无法定位默认已登录角色入口');
+specialist = specialist.includes('function enterDemoRole(role)')
+  ? specialist.replace(/    function enterDemoRole\(role\)\{[\s\S]*?\n    \}/, () => roleEntry)
+  : specialist.replace('    function saveDemoTeacherSession()', () => roleEntry + '\n    function saveDemoTeacherSession()');
+specialist = specialist
+  .replace('class="role-card role-teacher" onclick="go(\'teacherLogin\')"', 'class="role-card role-teacher" onclick="enterDemoRole(\'teacher\')"')
+  .replace('class="role-card role-parent" onclick="parentPrototype.start()"', 'class="role-card role-parent" onclick="enterDemoRole(\'parent\')"')
+  .replace("stage='parent';restoreDemoTeacherOnLaunch();", "stage='parent';if(params.get('page')!=='home')restoreDemoTeacherOnLaunch();")
+  .replace('else parentPrototype.start();', "else enterDemoRole('parent');");
+for (const name of ['switchToParentRole', 'switchToTeacherRole']) {
+  const pattern = new RegExp(`    function ${name}\\(\\)\\{[^\\n]+`);
+  const source = index.match(pattern)?.[0];
+  if (!source || !pattern.test(specialist)) throw new Error(`无法定位角色切换：${name}`);
+  specialist = specialist.replace(pattern, () => source);
+}
+const reloadPattern = /    function restoreDefaultTeacherPageOnReload\(\)\{[\s\S]*?\n    \}/;
+const reloadSource = index.match(reloadPattern)?.[0];
+if (!reloadSource) throw new Error('无法定位教师刷新默认入口');
+if (reloadPattern.test(specialist)) specialist = specialist.replace(reloadPattern, () => reloadSource);
+else specialist = specialist.replace("    if(params.has('workView'))", () => reloadSource + "\n    restoreDefaultTeacherPageOnReload();\n    if(params.has('workView'))");
 await saveOrCheck(specialistName, specialist);
 if (checkOnly) {
   if (outdated.length) {

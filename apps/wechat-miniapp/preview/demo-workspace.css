@@ -34,22 +34,24 @@ body.dw-ui-new .home-content{background:radial-gradient(circle at 82% 4%,#dceeff
 body.dw-ui-new .home-hero h1{color:#23466c}body.dw-ui-new .role-card{border:1px solid #e4ecf4;border-radius:18px;box-shadow:0 9px 24px #476b981a}
 body.dw-ui-new .role-parent{background:linear-gradient(125deg,#fffdf9,#ffeddc)}body.dw-ui-new .role-teacher{background:linear-gradient(125deg,#fcfeff,#e7f3ff)}
 body.dw-ui-new .role-parent .role-icon{background:linear-gradient(145deg,#dc773b,#f0a45e)}body.dw-ui-new .role-teacher .role-icon{background:linear-gradient(145deg,#2879ca,#62a9ec)}
-body.dw-ui-new #app .parent-screen{--dw-accent:#d9783e;--dw-accent-soft:#fff0e4;--dw-border:#f1dfce;--dw-shadow:#9d6d4217}
-body.dw-ui-new #app .teacher-screen,body.dw-ui-new #app .control-screen{--dw-accent:#287cca;--dw-accent-soft:#eaf5ff;--dw-border:#dbeaf7;--dw-shadow:#4b85b81a}
-body.dw-ui-new #app .parent-screen:has(.ht-root){--dw-accent:#7661cf;--dw-accent-soft:#f2edff;--dw-border:#e6dcf9;--dw-shadow:#7967b41c}
-body.dw-ui-new .parent-screen:not(.parent-login-screen):not(:has(.ht-root)){background:radial-gradient(circle at 94% 7%,#ffe6ca,transparent 33%),linear-gradient(175deg,#fffaf5,#fff4e9 54%,#fffaf6)}
-body.dw-ui-new .teacher-screen:not(.teacher-login-screen){background:radial-gradient(circle at 94% 7%,#d4eaff,transparent 32%),linear-gradient(175deg,#f8fcff,#edf6ff 55%,#f9fcff)}
+body.dw-ui-new #app .parent-screen{--dw-accent:#d96f32;--dw-accent-strong:#b95825;--dw-accent-soft:#fff2e8;--dw-ink:#3f2b20;--dw-heading:#4f321f;--dw-muted:#7d6553;--dw-border:#efddce;--dw-shadow:#a66a3822}
+body.dw-ui-new #app .teacher-screen,body.dw-ui-new #app .control-screen{--dw-accent:#1687df;--dw-accent-strong:#086dbd;--dw-accent-soft:#e9f5ff;--dw-ink:#142f48;--dw-heading:#071a38;--dw-muted:#607991;--dw-border:#d9e9f6;--dw-shadow:#4b83b524}
+body.dw-ui-new #app .parent-screen:has(.ht-root){--dw-accent:#735fd0;--dw-accent-strong:#5943b4;--dw-accent-soft:#f1edff;--dw-ink:#29314b;--dw-heading:#202944;--dw-muted:#74758d;--dw-border:#e4ddf7;--dw-shadow:#7461b52b}
+body.dw-ui-new .parent-screen:not(.parent-login-screen):not(:has(.ht-root)){background:radial-gradient(circle at 94% 7%,#ffecdc,transparent 34%),linear-gradient(175deg,#fffdfb,#fff8f2 54%,#fffdfb)}
+body.dw-ui-new .teacher-screen:not(.teacher-login-screen){background:radial-gradient(circle at 94% 7%,#cfe8ff,transparent 34%),linear-gradient(175deg,#f8fcff,#edf7ff 55%,#f9fcff)}
 body.dw-ui-new .control-screen{background:linear-gradient(170deg,#f7fbff,#ebf4ff 48%,#f8fbff)}
-body.dw-ui-new .parent-screen:not(:has(.ht-root)) .lp-page{background:#fff9f3}body.dw-ui-new .teacher-screen .lp-page{background:#f3f9ff}
-body.dw-ui-new .parent-screen .lp-hero{background:linear-gradient(130deg,#ffe9d3,#fffaf3)}body.dw-ui-new .teacher-screen .lp-hero{background:linear-gradient(130deg,#ddecff,#f8fcff)}
-body.dw-ui-new .parent-screen .hp-parent-hero{background:linear-gradient(130deg,#ffe7d3,#fff8ef)}
+body.dw-ui-new .parent-screen:not(:has(.ht-root)) .lp-page{background:#fffdfb}body.dw-ui-new .teacher-screen .lp-page{background:#f3f9ff}
+body.dw-ui-new .parent-screen .pr-report{background:transparent!important}
+body.dw-ui-new .parent-screen .lp-hero{background:linear-gradient(130deg,#fff2e7,#fffdfb)}body.dw-ui-new .teacher-screen .lp-hero{background:linear-gradient(130deg,#ddecff,#f8fcff)}
+body.dw-ui-new .parent-screen .hp-parent-hero{background:linear-gradient(130deg,#fff1e5,#fffdf9)}
 body.dw-ui-new .parent-screen .hp-parent-hero h1,body.dw-ui-new .parent-screen .hp-section{color:#744b2f}
 body.dw-ui-new .teacher-screen .hp-hero h1,body.dw-ui-new .teacher-screen .hp-section{color:#234e78}
-body.dw-ui-new #app :is(.parent-card,.hp-card,.lp-card,.lp-stat,.teacher-auth-card,.teacher-class,.teacher-module,.control-entry-card,.control-card,.control-current){border:1px solid var(--dw-border,#e4ebf3);border-radius:16px;background:#ffffffed;box-shadow:0 8px 23px var(--dw-shadow,#5b7b9b12)}
-body.dw-ui-new #app :is(.parent-primary,.teacher-primary,.hp-primary,.control-primary){border-radius:12px;background:var(--dw-accent,#287cca);box-shadow:0 7px 15px var(--dw-shadow,#5b7b9b20);color:#fff}
-body.dw-ui-new #app :is(.parent-secondary,.teacher-wechat-entry,.hp-secondary,.control-secondary){border-radius:12px;border-color:var(--dw-border,#dce8f5);background:#ffffffc9;color:var(--dw-accent,#287cca)}
-body.dw-ui-new #app :is(.parent-field input,.teacher-field-input,.hp-field input:not([type=file]),.hp-field textarea,.hp-field select,.control-search input){border-color:var(--dw-border,#dce8f5);border-radius:12px;background:#fff}
-body.dw-ui-new #app :is(.parent-tabbar,.teacher-tabbar){border-color:var(--dw-border,#e4ebf3);background:#ffffffeb;box-shadow:0 -5px 18px var(--dw-shadow,#5b7b9b12)}
+body.dw-ui-new #app :is(.parent-card,.hp-card,.lp-card,.lp-stat,.teacher-auth-card,.teacher-class,.teacher-module,.control-entry-card,.control-card,.control-current){border:1px solid var(--dw-border,#e4ebf3);border-radius:19px;background:#fff;box-shadow:0 10px 28px var(--dw-shadow,#5b7b9b18)}
+body.dw-ui-new #app :is(.parent-primary,.teacher-primary,.hp-primary,.control-primary){border-radius:14px;background:linear-gradient(135deg,var(--dw-accent,#1687df),var(--dw-accent-strong,#086dbd));box-shadow:0 8px 18px var(--dw-shadow,#5b7b9b2b);color:#fff;font-weight:700}
+body.dw-ui-new #app .parent-screen:not(:has(.ht-root)) .parent-primary{background:linear-gradient(105deg,#f8a56a,#f49355);box-shadow:0 8px 18px #ed8b4a24}
+body.dw-ui-new #app :is(.parent-secondary,.teacher-wechat-entry,.hp-secondary,.control-secondary){border-radius:14px;border-color:var(--dw-border,#dce8f5);background:#fff;color:var(--dw-accent-strong,#287cca);font-weight:650}
+body.dw-ui-new #app :is(.parent-field input,.teacher-field-input,.hp-field input:not([type=file]),.hp-field textarea,.hp-field select,.control-search input){border-color:var(--dw-border,#dce8f5);border-radius:14px;background:#fff;color:var(--dw-ink,#193349);font-weight:500}
+body.dw-ui-new #app :is(.parent-tabbar,.teacher-tabbar){border-color:var(--dw-border,#e4ebf3);background:#fffffff5;box-shadow:0 -7px 22px var(--dw-shadow,#5b7b9b18)}
 body.dw-ui-new #app :is(.parent-tabbar,.teacher-tabbar) button[aria-selected="true"]{background:var(--dw-accent-soft,#eaf5ff);color:var(--dw-accent,#287cca)}
 body.dw-ui-new #app :is(.lp-chip.active,.hp-tabs button.active,.hp-chips button.active){border-color:var(--dw-border,#dce8f5);background:var(--dw-accent-soft,#eaf5ff);color:var(--dw-accent,#287cca)}
 body.dw-ui-new #app :is(.hp-line b,.hp-top button,.hp-text-button,.lp-link,.lp-back){color:var(--dw-accent,#287cca)}
@@ -86,7 +88,7 @@ body.dw-ui-new #app :is(.lp-switch,.lp-class-switch,.wb-period){background:var(-
 body.dw-ui-new #app .lp-chip.active{background:#fff;color:var(--dw-accent,#287cca);box-shadow:0 2px 9px var(--dw-shadow,#5b7b9b20)}
 body.dw-ui-new #app .lp-tabs button.active{border-color:var(--dw-accent,#287cca);color:var(--dw-accent,#287cca)}
 body.dw-ui-new #app .lp-link{background:var(--dw-accent-soft,#eaf5ff)}
-body.dw-ui-new #app :is(.hp-card,.lp-card,.parent-card){margin-bottom:12px}
+body.dw-ui-new #app :is(.hp-card,.lp-card,.parent-card){margin-bottom:14px}
 body.dw-ui-new #app .hp-hero h1{color:var(--dw-accent,#287cca)}
 body.dw-ui-new #app .hp-tabs button.active{border-color:var(--dw-border,#dce8f5);background:var(--dw-accent-soft,#eaf5ff)}
 body.dw-ui-new #app .hp-steps span.active{background:var(--dw-accent-soft,#eaf5ff);color:var(--dw-accent,#287cca)}
@@ -95,6 +97,26 @@ body.dw-ui-new #app :is(.hp-tag-done,.hp-done){color:#18734d!important}
 body.dw-ui-new #app :is(.hp-pending,.hp-share-warning){border-color:#efd6b2;background:#fff8eb;color:#80551a}
 body.dw-ui-new .teacher-screen .teacher-desk{background:transparent}
 body.dw-ui-new .teacher-screen .teacher-greeting h1{color:#234e78}
+/* 新版界面的正文层级：辅助信息保持可读，重点数据继续由原有强调色承担。 */
+body.dw-ui-new #app :is(.parent-screen,.teacher-screen,.control-screen){color:var(--dw-ink,#193349);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body.dw-ui-new #app :is(.hp-hero h1,.hp-top h1,.lp-hero h1,.wb-heading h1,.pl-heading h1,.parent-hero h1,.teacher-hero h1,.teacher-greeting h1){color:var(--dw-heading,#071a38);font-weight:750;letter-spacing:-.02em}
+body.dw-ui-new #app :is(.hp-section,.lp-title h3,.pr-section-heading h3,.wb-focus-heading h2,.control-card-title,.control-entry-card h3){color:var(--dw-heading,#071a38);font-weight:700}
+body.dw-ui-new #app :is(.hp-card strong,.lp-card strong,.parent-card strong,.teacher-module b,.control-card strong){color:var(--dw-ink,#193349);font-weight:700}
+body.dw-ui-new #app :is(.wb-focus-list .lp-list-button span small,.lp-row span small,.lp-event small,.lp-evidence-entry small,.lp-stat span,.hp-parent-task small,.hp-muted){color:var(--dw-muted,#607991);font-size:12px;font-weight:500;line-height:1.55}
+body.dw-ui-new #app :is(.pr-overview>p,.pr-attention-row small,.pr-subject>p,.pr-record small,.pr-section-heading>small,.pr-subject-heading>span){color:var(--dw-muted,#607991);font-size:12px;font-weight:500;line-height:1.6}
+body.dw-ui-new #app :is(.hp-task-bottom,.lp-row+.lp-row,.lp-event+.lp-event,.lp-list-button+.lp-list-button,.parent-list-button+.parent-list-button){border-color:color-mix(in srgb,var(--dw-border,#d9e9f6) 76%,white)}
+body.dw-ui-new #app :is(.hp-tabs button,.hp-chips button,.lp-chip,.wb-period,.teacher-class,.control-class-option){border-radius:12px;font-weight:600}
+body.dw-ui-new #app :is(.wx-nav,.parent-detail-nav){border-color:var(--dw-border,#d9e9f6);background:#fffffff2;color:var(--dw-heading,#071a38)}
+body.dw-ui-new #app .parent-screen:not(:has(.ht-root)) :is(.wx-nav,.parent-detail-nav){background:transparent}
+body.dw-ui-new #app .teacher-login-screen .wx-nav{border-bottom:0;background:transparent}
+body.dw-ui-new #app .screen:has(>.home-content){background:radial-gradient(circle at 82% 4%,#dceeff,transparent 36%),linear-gradient(180deg,#f5faff,#eef4fa 65%,#f7f9fc)}
+body.dw-ui-new #app .screen:has(>.home-content) :is(.wx-header,.wx-nav,.home-content){background:transparent}
+body.dw-ui-new #app .wx-title{color:var(--dw-heading,#071a38);font-weight:750;letter-spacing:-.01em}
+body.dw-ui-new #app :is(.parent-tabbar,.teacher-tabbar) button{font-weight:600}
+body.dw-ui-new #app :is(.parent-tabbar,.teacher-tabbar) button[aria-selected="true"]{font-weight:750}
+body.dw-ui-new #app :is(.hp-section,.hp-requirement-heading>strong){display:flex;align-items:center;gap:9px}
+body.dw-ui-new #app :is(.hp-section,.hp-requirement-heading>strong)::before{content:"";flex:none;width:4px;height:20px;border-radius:4px;background:var(--dw-accent,#1687df);box-shadow:0 3px 8px var(--dw-shadow,#4b83b52b)}
+body.dw-ui-new #app :is(.wb-page>.lp-primary.full span,.wb-page>.lp-primary.full small,.hp-parent-task .hp-task-bottom){font-weight:600}
 body.dw-ui-new #app :is(.teacher-class.active,.control-class-option.active){border-color:#9ac7ed;background:#eff7ff}
 body.dw-ui-new #app :is(.teacher-module b,.control-entry-card h3,.control-card-title){color:#285e90}
 body.dw-ui-new #app :is(.control-entry-card,.control-card,.security-card){border:1px solid var(--dw-border,#dbeaf7);border-radius:16px;background:#ffffffed;box-shadow:0 8px 23px var(--dw-shadow,#4b85b81a)}
@@ -115,7 +137,7 @@ body.dw-ui-new .teacher-login-screen .teacher-actions{padding-top:18px}
 body.dw-ui-new .teacher-login-screen .teacher-primary{height:49px;border-radius:12px;background:linear-gradient(105deg,#2778cd,#4d9ce5);box-shadow:0 8px 16px #2778cd29}
 body.dw-ui-new .teacher-login-screen .teacher-wechat-entry{height:46px;margin-top:9px;border-color:#bed8f1;background:#ffffffb8;color:#2e6eb0;font-size:14px}
 body.dw-ui-new .teacher-login-screen .teacher-agreement-row{margin-top:11px}
-/* The picker floats outside normal flow; opening it never changes the canvas layout. */
+/* Review states float beside the phone without moving the product canvas. */
 .dw-state .parent-exception-mask{position:fixed;inset:auto;z-index:20;width:min(414px,calc(100vw - 24px));pointer-events:none}
 .dw-state .parent-exception-sheet{margin:0;max-height:calc(100dvh - 24px);overflow:hidden;pointer-events:auto;overscroll-behavior:contain;box-shadow:0 12px 32px #0005}
 .dw-state .parent-exception-sheet>header,.dw-state .parent-exception-sheet>p,.dw-state .parent-exception-sheet>footer{flex:none}
@@ -123,3 +145,16 @@ body.dw-ui-new .teacher-login-screen .teacher-agreement-row{margin-top:11px}
 .dw-state .parent-exception-close{width:26px;height:26px;min-height:0;padding:0;border-radius:4px;background:transparent;color:#9eacbd;font-size:18px}
 .dw-state .parent-exception-sheet footer{padding:12px 0 0;border-color:#354151}
 .dw-state .parent-exception-sheet footer button{min-height:34px;border-radius:5px}
+
+/* Parent primary actions use the same coral as the upload-file button. */
+body.dw-ui-new #app .parent-screen:not(:has(.ht-root)) :is(.parent-primary,.hp-primary,.hp-upload-primary){background:#ef795a;color:#fff;box-shadow:0 8px 18px #ef795a24}
+body.dw-ui-new #app .parent-screen:not(:has(.ht-root)) :is(.parent-primary,.hp-primary,.hp-upload-primary):hover{background:#e96f50}
+body.dw-ui-new #app .parent-screen:not(:has(.ht-root)) :is(.parent-primary,.hp-primary,.hp-upload-primary):disabled{background:#e5d9d4;color:#786861;box-shadow:none}
+
+/* Approved tutoring screen takes priority over the old global purple skin. */
+body.dw-ui-new #app .parent-screen:has(.ht-simple),body.dw-ui-new #app .parent-screen:has(.ht-simple) .parent-main,body.dw-ui-new #app .ht-root.ht-simple{background:#fff}
+body.dw-ui-new #app .ht-simple .ht-board{border:0;box-shadow:none;background:#fff}
+body.dw-ui-new #app .ht-simple .ht-dock,body.dw-ui-new #app .ht-simple .ht-caption{background:#fff;border:0;box-shadow:none}
+.ht-simple .ht-caption-head .ht-button.primary{width:auto;min-width:110px;min-height:38px;padding:6px 14px}.ht-simple .ht-caption-label{white-space:nowrap}
+
+.dw-state-open .dw-flow,.dw-state-open .dw-flow-toggle{display:none}.dw-state .parent-exception-mask{width:320px}.dw-state .parent-exception-sheet{display:flex;flex-direction:column;max-height:calc(100dvh - 78px)}

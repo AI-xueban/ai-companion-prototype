@@ -23,15 +23,17 @@ page {
 
 .page-desc {
   margin-top: 12rpx;
-  color: #888888;
+  color: #5f7080;
   font-size: 28rpx;
+  font-weight: 500;
   line-height: 1.65;
 }
 
 .section-label {
   padding: 40rpx 32rpx 16rpx;
-  color: #888888;
+  color: #5f7080;
   font-size: 24rpx;
+  font-weight: 500;
 }
 
 .cell-list {
@@ -49,8 +51,8 @@ page {
 .cell:last-child { border-bottom: 0; }
 .cell-main { flex: 1; min-width: 0; }
 .cell-title { color: #191919; font-size: 30rpx; }
-.cell-desc { margin-top: 6rpx; color: #888888; font-size: 24rpx; }
-.cell-extra { margin-left: 20rpx; color: #888888; font-size: 26rpx; }
+.cell-desc { margin-top: 6rpx; color: #5f7080; font-size: 24rpx; font-weight: 500; }
+.cell-extra { margin-left: 20rpx; color: #5f7080; font-size: 26rpx; font-weight: 500; }
 .cell-arrow { margin-left: 16rpx; color: #c7c7c7; font-size: 34rpx; }
 
 .form-input {
@@ -73,8 +75,9 @@ page {
 
 .page-note {
   padding: 20rpx 32rpx 0;
-  color: #999999;
+  color: #647789;
   font-size: 24rpx;
+  font-weight: 500;
   line-height: 1.6;
 }
 

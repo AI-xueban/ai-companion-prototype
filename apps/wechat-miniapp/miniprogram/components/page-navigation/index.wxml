@@ -2,9 +2,9 @@
 <view class="page-navigation" style="padding-top:{{statusHeight}}px;">
   <view class="page-navigation-bar" style="height:{{barHeight}}px;">
     <view class="page-navigation-actions">
-      <view wx:if="{{back}}" class="page-navigation-back" hover-class="page-navigation-pressed" bindtap="navigateBack" role="button" aria-label="返回上一级"><view class="page-navigation-chevron"></view></view>
-      <view wx:if="{{home}}" class="page-navigation-home" hover-class="page-navigation-pressed" bindtap="navigateHome" role="button" aria-label="{{homeLabel}}"><view class="page-navigation-house"><view class="page-navigation-house-door"></view></view></view>
+      <view wx:if="{{back}}" class="page-navigation-back" style="{{actionSize ? 'width:'+actionSize+'px;' : ''}}" hover-class="page-navigation-pressed" bindtap="navigateBack" role="button" aria-label="返回上一级"><view class="page-navigation-chevron"></view></view>
+      <view wx:if="{{home}}" class="page-navigation-home" style="{{actionSize ? 'width:'+actionSize+'px;' : ''}}" hover-class="page-navigation-pressed" bindtap="navigateHome" role="button" aria-label="{{homeLabel}}"><view class="page-navigation-house"><view class="page-navigation-house-door"></view></view></view>
     </view>
-    <view class="page-navigation-title" style="left:{{sideWidth}}px;right:{{sideWidth}}px;"><text class="page-navigation-title-text">{{title}}</text></view>
+    <view class="page-navigation-title" style="left:{{sideWidth}}px;right:{{sideWidth}}px;{{titleSize ? 'font-size:'+titleSize+'px;' : ''}}"><text class="page-navigation-title-text">{{title}}</text></view>
   </view>
 </view>

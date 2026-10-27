@@ -27,6 +27,9 @@ try{
   for(const state of baseline.availability)assert.equal(await page.locator('[data-availability="'+state+'"]').count(),1);
   for(const e of entries.filter(e=>!['control','controlModule','reference'].includes(e.kind))){await choose(e.id);assert.ok((await page.locator('#app .screen').count())>0,e.id);await externalState();results.push({entry:e.id,title:await page.locator('#app .wx-title').textContent()});}
   // Actual directory clicks, independent role groups and search results.
+  const homeworkGroups=await page.locator('[data-dw-group="homework"]>.dw-role>summary').allTextContents();
+  assert.deepEqual(homeworkGroups,['教师','家长'],'Homework entries are grouped by role');
+  for(const removed of ['hw-new-flow','hw-new-teacher','hw-new-parent','hw-answer-review','hw-lab'])assert.equal(await page.locator('[data-dw-entry="'+removed+'"]').count(),0,'Removed low-value homework entry '+removed);
   await page.locator('[data-dw-group="login"]>summary').click();
   await page.locator('[data-dw-group="login"]>summary').click();
   await page.locator('[data-dw-entry="p-first"]').click();
@@ -37,7 +40,7 @@ try{
   assert.ok((await page.locator('#dw-state-active').textContent()).includes('微信登录失败'));
   await page.locator('#dw-state-restore').click();
   assert.equal(await page.locator('#dw-state-active').textContent(),'正常');
-  await page.locator('#dw-search').fill('家长提交');
+  await page.locator('#dw-search').fill('作业待办');
   assert.equal(await page.locator('[data-dw-entry]:visible').count(),1);
   await page.locator('#dw-search').fill('');
   // Page-only learning previews cannot mutate persisted source data or leak into another role.
@@ -71,6 +74,8 @@ try{
   const localChoices=await page.evaluate(()=>pageDemoTools.getContext().choices.map(x=>x.id));
   for(const id of localChoices){await page.evaluate(id=>pageDemoTools.select(id),id);await page.evaluate(()=>pageDemoTools.restore());}
   await choose('hw-list');assert.equal(await page.locator('.dw-flow').isVisible(),false);
+  await choose('hw-parent-result');assert.equal(await page.evaluate(()=>stage),'parent');assert.equal(await page.evaluate(()=>homeworkPrototype.getConsoleSnapshot().scenario),'released');
+  await choose('hw-list');
   const countBefore=await page.evaluate(()=>homeworkPrototype.getFilteredTaskIds().length);
   for(const id of ['empty','load-failed']){await page.evaluate(id=>pageDemoTools.select(id),id);await page.evaluate(()=>pageDemoTools.restore());}
   assert.equal(await page.evaluate(()=>homeworkPrototype.getFilteredTaskIds().length),countBefore);

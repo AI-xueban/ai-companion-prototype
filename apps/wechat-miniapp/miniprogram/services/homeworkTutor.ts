@@ -21,6 +21,27 @@ const board = (lines:string[], columns=0, rows=0, fillColumns=0, fillRows=0, cap
 const action = (id:string,title:string,speech:string,b:TutorBoard,extra:Partial<TutorAction>={}):TutorAction => ({id,title,speech,board:b,tag:'分步讲解',...extra});
 export function tutorPlan(q:TutorQuestion):TutorAction[] {
   const stem=(q.stem||'').replace(/\s/g,''), answer=clean(q.answer);
+  const scenario=/^tutor-scenario-(\d+)-q1$/.exec(q.id);
+  if(scenario){
+    const cases:[string,string,string,string,string,string,string,string,string,string][]=[
+      ['比多比少','24张是小明的张数；“小红比小明多8张”说明要在24上增加。','小红有多少张？','32张','16张','24 + 8 = 32（张）','再画两条线段：小红那条比小明多出8格。','若小明有20张，小红多5张，小红有多少张？','25张','小红=小明+多出的张数。'],
+      ['分数应用题','女生12人是男生人数的3/4；男生人数才是这里的整体。','12人对应几份？','3份','4份','12÷3=4人/份，男生有4份，所以4×4=16人。','先把男生画成4个相同的小格，女生占其中3格。','女生15人是男生的3/5，男生有多少人？','25人','15÷3×5=25人。'],
+      ['组合图形面积','大长方形中缺去一个小长方形，实际图形要扣除缺口。','应计算哪部分面积？','大长方形减缺口','只算大长方形','8×6−3×2=42（平方厘米）。','先用笔圈出不属于图形的3×2缺口。','8×5的长方形挖去2×2，余下面积是多少？','36平方厘米','40−4=36。'],
+      ['去括号方程','3乘的是整个(x−2)，括号里两项都要乘3。','去括号后左边是什么？','3x−6','3x−2','3x−6=12，3x=18，x=6。','代回：3×(6−2)=12。','2(y−3)=10，y是多少？','8','2y−6=10，y=8。'],
+      ['几何证明','图上看着相等还不够；需要写出可用于证明的已知条件。','由D是BC中点，可以得到什么？','BD=DC','AB=AC','AB=AC、BD=DC、AD公共，△ABD≅△ACD，所以∠BAD=∠CAD。','把两边三角形共有的AD也标出来。','两三角形三边对应相等，可以判定什么？','全等','用SSS判定全等。'],
+      ['阅读理解','“好孩子”是感受，回答还要指出文中的具体动作和它表现的品质。','哪句动作最能支持你的判断？','把伞向同学那边倾斜','他是好孩子','小宇把伞向同学那边倾斜，表现他关心同学、愿意照顾别人。','按“文中动作→人物品质”组织答案。','人物把座位让给老人，表现什么？','关心他人','用让座动作支撑判断。'],
+      ['英语时态','Look! 提醒我们动作正在发生；Tom是单数不能单独决定时态。','这里应选择什么形式？','is playing','plays','Look! Tom is playing football in the playground.','先找时间信号词，再看主语决定be动词。','Listen! She ___ a song.','is singing','Listen! 提示现在进行时。'],
+      ['猜对但理由错','结论“两个负数相乘为正”是对的，但“乘法总让数变大”不是普遍规律。','2×0.5 会让数变大吗？','不会','会','乘法可能变大也可能变小；本题依据是负负得正。','用反例检查自己说的“总是”。','−3×−2 的符号是什么？','正','负负得正。']
+    ];
+    const c=cases[Number(scenario[1])-1];if(!c)return [];
+    const prefix='scenario-'+scenario[1]+'-';
+    return [
+      action(prefix+'read','先读懂题目',c[1],board([c[0],c[1]],0,0,0,0,'从学生原题出发')),
+      action(prefix+'check','先判断关键一步','别急着看完整答案，先说说这一步。',board([c[2]],0,0,0,0,'轮到你判断'),{tag:'敲重点',prompt:c[2],options:[c[3],c[4]],accepted:[c[3]],rejected:[c[4]],hint:c[6],explanation:c[9]}),
+      action(prefix+'solve','把理由讲完整',c[5],board([c[5]],0,0,0,0,'对照原题核查'),{tag:'难点步骤'}),
+      action(prefix+'method','带走这道题的方法',c[9],board([c[9],c[7]],0,0,0,0,'再试一个同类判断'),{tag:'本题方法'})
+    ];
+  }
   if(stem.includes('3/7')&&stem.includes('2/5')&&answer==='6/35')return [
     action('whole','先确定整体','这个长方形代表单位“1”。我们先表示七分之三，再理解它的五分之二。',board(['整个长方形 = 单位“1”'],1,1,0,0,'先看整体')),
     action('first','表示七分之三','把同一个长方形平均分成七列，取其中三列。绿色部分是整体的七分之三。',board(['平均分成7列，取3列'],7,1,3,0,'绿色表示 3/7')),
@@ -79,10 +100,21 @@ export function tutorText(s:TutorSession,p:TutorAction[]) {
   if(s.phase==='paused'&&['feedback','remedial'].includes(s.returnPhase))return s.feedback;
   if(s.phase==='remedial'||s.phase==='feedback'||s.phase==='choice')return s.feedback;
   if(s.phase==='done')return '本次讲解已结束。回答表现仅记录在本次会话，原作业判分与提交状态保持不变。';
-  if(s.phase==='resume')return '上次讲到“'+(a?.title||'当前步骤')+'”，选择继续或从头讲。';
+  if(s.phase==='resume')return '上次讲到“'+(a?.title||'当前步骤')+'”，可以继续讲解。';
   return a?.speech||'';
 }
 export function tutorTransfer(p:TutorAction[]) {
+  const scenario=p.find(a=>/^scenario-\d+-read$/.test(a.id));
+  if(scenario){const index=Number(scenario.id.split('-')[1])-1;const cases:[string,string[],string,string][]=[
+    ['若小明有20张，小红多5张，小红有多少张？',['25张','15张'],'25张','小红=小明+多出的张数。'],
+    ['女生15人是男生的3/5，男生有多少人？',['25人','9人'],'25人','15÷3×5=25人。'],
+    ['8×5的长方形挖去2×2，余下面积是多少？',['36平方厘米','40平方厘米'],'36平方厘米','40−4=36。'],
+    ['2(y−3)=10，y是多少？',['8','5'],'8','2y−6=10，y=8。'],
+    ['两三角形三边对应相等，可以判定什么？',['全等','不能判断'],'全等','用SSS判定全等。'],
+    ['人物把座位让给老人，表现什么？',['关心他人','跑得快'],'关心他人','用让座动作支撑判断。'],
+    ['Listen! She ___ a song.',['is singing','sings'],'is singing','Listen! 提示现在进行时。'],
+    ['−3×−2 的符号是什么？',['正','负'],'正','负负得正。']
+  ];const c=cases[index];return {prompt:c[0],options:c[1],answer:c[2],explanation:c[3]};}
   if(p.some(a=>a.id==='area'))return {prompt:'变式：求2/3的3/4，这里的3/4从哪里取？',options:['2/3所表示的部分','整个长方形'],answer:'2/3所表示的部分',explanation:'先表示整体的2/3，再在这部分里取3/4。整体仍是原长方形。'};
   if(p.some(a=>a.id==='unit'))return {prompt:'变式：1/3 + 1/6，先把1/3改写成多少？',options:['2/6','1/6','3/6'],answer:'2/6',explanation:'把1/3的分子、分母同时乘2，得到2/6，再合并同单位的份数。'};
   if(p.some(a=>a.id==='convert'))return {prompt:'变式：上午走1/4，下午走1/8，已经走了多少？',options:['3/8','2/12','2/8'],answer:'3/8',explanation:'把1/4改写为2/8，下午的1/8不变，合计3/8。'};
@@ -96,33 +128,35 @@ export function tutorReduce(session:TutorSession,plan:TutorAction[],event:TutorE
   const a=tutorCurrent(s,plan);if(!a&&event.type!=='pause')return s;
   const saveEvidence=(status:TutorEvidence['status'])=>{const existing=s.evidence.find(e=>e.objective===a.id);if(existing){existing.status=status;existing.helped=s.helped;existing.attempts++;}else s.evidence.push({objective:a.id,status,helped:s.helped,attempts:1});};
   const next=()=>{s.cursor++;s.epoch++;s.draft='';s.detail='';s.feedback='';s.helped=false;s.rounds=0;s.clarifications=0;s.phase=s.cursor>=plan.length?'done':'playing';if(s.phase==='done')s.cursor=plan.length-1;};
-  const pause=()=>{if(s.phase!=='paused'&&s.phase!=='done'&&s.phase!=='unsupported'){s.returnPhase=s.phase;s.phase='paused';s.epoch++;}};
+  const pause=()=>{if(s.phase!=='paused'&&s.phase!=='done'&&s.phase!=='unsupported'){if(s.phase!=='resume')s.returnPhase=s.phase;s.phase='paused';s.epoch++;}};
   switch(event.type){
     case 'pause':if(!event.input)s.hold=true;pause();break;
     case 'draft':s.draft=event.text.slice(0,500);break;
-    case 'resume':if(s.phase==='paused'||s.phase==='resume'){s.hold=false;s.phase=s.returnPhase==='aside'?'aside':s.returnPhase==='done'?'done':s.returnPhase;s.epoch++;}break;
+    case 'resume':if(s.phase==='paused'||s.phase==='resume'){s.hold=false;s.phase=s.returnPhase==='resume'?'playing':s.returnPhase;s.epoch++;}break;
     case 'tick':
       if(s.phase==='playing'){if(a.prompt&&!s.direct&&!s.parentMode)s.phase='waiting';else next();}
       else if(s.phase==='feedback')next();
-      else if(s.phase==='remedial'){s.phase='waiting';s.feedback='请再试着说明当前关系；提示后的回答会保留帮助记录。';}
+      else if(s.phase==='remedial'){s.phase='waiting';s.feedback='再选一次试试。';}
       break;
     case 'skip':if(s.phase==='transfer'||s.phase==='paused'&&s.returnPhase==='transfer'){s.phase='done';s.transferStatus=s.transferStatus||'迁移未验证';s.epoch++;s.feedback='';break;}if(s.phase==='waiting'||s.phase==='choice'||s.phase==='remedial'||s.phase==='paused'&&s.returnPhase==='waiting'){if(!s.evidence.some(e=>e.objective===a.id))saveEvidence('未验证');next();}break;
     case 'hint':
+      if(s.phase==='paused'&&s.returnPhase==='waiting')s.hold=false;
       if(s.phase==='transfer'||s.phase==='paused'&&s.returnPhase==='transfer'){s.transferHelped=true;s.transferStatus='迁移仍需帮助';s.feedback=tutorTransfer(plan).explanation;s.epoch++;break;}
       if(s.phase==='done'||s.phase==='unsupported')break;
       s.helped=true;s.epoch++;
       if(s.phase!=='waiting'&&!(s.phase==='paused'&&s.returnPhase==='waiting')){s.asideReturn=s.phase==='aside'?s.asideReturn:s.phase;s.detail=a.explanation||a.hint||a.speech;s.phase='aside';}
-      else {s.rounds++;s.feedback=s.rounds===1?(a.hint||a.explanation||a.speech):(a.explanation||a.speech);s.phase=s.rounds>2?'choice':'remedial';if(s.rounds>2)s.feedback='我们已经用提示和补讲尝试了两轮。你可以换方式查看、先继续讲，或返回原题。';}
+      else {s.rounds++;s.feedback=s.rounds===1?(a.hint||a.explanation||a.speech):(a.explanation||a.speech);s.phase='remedial';}
       break;
     case 'answer':{
       if(s.phase==='transfer'||s.phase==='paused'&&s.returnPhase==='transfer'){const quiz=tutorTransfer(plan);s.epoch++;s.draft=event.text.slice(0,500);if(clean(event.text)===clean(quiz.answer)){s.transferStatus=s.transferHelped?'变式在帮助下完成':'本次变式判断符合';s.phase='done';s.feedback='';}else if(quiz.options.some(v=>clean(v)===clean(event.text))){s.transferHelped=true;s.transferStatus='迁移仍需帮助';s.feedback=quiz.explanation+' 可以再选一次，或结束变式。';}else s.feedback='这段表达暂时不能可靠判断。请选择一个选项或跳过变式，不把你判错。';break;}
       if(!(s.phase==='waiting'||s.phase==='paused'&&s.returnPhase==='waiting'))break;
+      if(s.phase==='paused'&&s.returnPhase==='waiting')s.hold=false;
       const text=clean(event.text);if(!text){s.feedback='还没有收到回答，请填写或选择一个选项。';break;}
       s.draft=event.text.slice(0,500);s.epoch++;
       const accepted=(a.accepted||[]).some(v=>clean(v)===text),wrong=(a.rejected||[]).some(v=>clean(v)===text);
-      if(accepted){saveEvidence(s.helped?'有帮助完成':'本次回答符合判据');s.feedback='你找对了当前关系。'+(s.helped?'这次是在帮助下完成，我们接着看下一步。':'我们继续用它完成下一步。');s.phase='feedback';}
-      else if(wrong){saveEvidence('仍需巩固');s.helped=true;s.rounds++;s.feedback=s.rounds>2?'这一步仍需巩固。你可以换个方式、先继续讲或返回原题。':(a.explanation||'我们把当前关系拆开看。');s.phase=s.rounds>2?'choice':'remedial';}
-      else {s.clarifications++;s.feedback=s.clarifications>=2?'当前演示暂时无法可靠判断这段表达。可选择一个选项、看提示或先继续；不会把你判错。':'这段表达还不能可靠对应当前判据。请用题目里的量简短说明，也可以选择一个选项。';s.phase=s.clarifications>=2?'choice':'waiting';}
+      if(accepted){saveEvidence(s.helped?'有帮助完成':'本次回答符合判据');s.feedback='答对了。';s.phase='feedback';}
+      else if(wrong){saveEvidence('仍需巩固');s.helped=true;s.rounds++;s.feedback=a.explanation||'我们把当前关系拆开看。';s.phase='remedial';}
+      else {s.clarifications++;s.feedback=s.clarifications>=2?'当前演示暂时无法可靠判断这段表达。可选择一个选项、看提示或先继续；不会把你判错。':'这段表达还不能可靠对应当前判据。请用题目里的量简短说明，也可以选择一个选项。';s.phase='waiting';}
       break;
     }
     case 'ask':{
@@ -133,15 +167,15 @@ export function tutorReduce(session:TutorSession,plan:TutorAction[],event:TutorE
       if(/回原题|不用讲这个/.test(text)&&s.phase==='aside')return tutorReduce(s,plan,{type:'back'});
       s.asideReturn=s.phase==='aside'?s.asideReturn:s.phase==='paused'&&!s.hold?s.returnPhase:s.phase;s.epoch++;s.draft='';
       if(s.asideReturn==='transfer'){s.transferHelped=true;s.transferStatus='迁移仍需帮助';s.detail=tutorTransfer(plan).explanation;}
-      else s.detail=/这一步|这步|分母|分子|整体|绿色|蓝紫色|通分|相加|横|份|方程|合计|路程/.test(text)?(a.explanation||a.speech)+'\n'+(a.followup||'可以回到当前步骤，再试着完成其中一个小动作。'):'这条自由追问尚未接入真实AI服务，当前演示无法可靠回答。可查看“当前步骤怎么理解”，或回到原流程继续。';s.phase='aside';break;
+      else s.detail=/关键|思路|易错|列式|这一步|这步|为什么|怎么|除以|乘以|分母|分子|整体|绿色|蓝紫色|通分|相加|横|份|方程|合计|路程/.test(text)?(a.explanation||a.speech)+(a.followup?'\n'+a.followup:''):'暂时无法回答这个问题，可以查看当前步骤的讲解。';s.phase='aside';break;
     }
     case 'back':if(s.phase==='aside'){s.phase=s.asideReturn||'paused';s.detail='';s.draft='';s.epoch++;}break;
-    case 'restart':s.cursor=0;s.phase='playing';s.returnPhase='playing';s.epoch++;s.draft='';s.feedback='';s.detail='';s.helped=false;s.rounds=0;s.clarifications=0;s.hold=false;break;
+    case 'restart':s.cursor=0;s.phase='playing';s.returnPhase='playing';s.epoch++;s.draft='';s.feedback='';s.detail='';s.helped=false;s.rounds=0;s.clarifications=0;s.hold=false;s.transferStatus='';s.transferHelped=false;break;
     case 'direct':s.direct=!s.direct;s.epoch++;if(s.direct&&['waiting','choice','remedial'].includes(s.phase)){if(!s.evidence.some(e=>e.objective===a.id))saveEvidence('未验证');next();}break;
     case 'parent':s.parentMode=!s.parentMode;s.direct=s.parentMode;s.epoch++;if(s.parentMode&&['waiting','choice','remedial'].includes(s.phase))next();break;
     case 'original':s.hold=true;pause();s.originalOpen=true;break;
     case 'closeOriginal':s.originalOpen=false;break;
-    case 'transfer':if(s.phase==='done'){s.phase='transfer';s.feedback='';s.draft='';s.hold=false;s.epoch++;}break;
+    case 'transfer':if(s.phase==='done'){s.transferStatus='';s.transferHelped=false;s.phase='transfer';s.feedback='';s.draft='';s.hold=false;s.epoch++;}break;
   }
   if(s.hold&&['playing','feedback','remedial'].includes(s.phase)){s.returnPhase=s.phase;s.phase='paused';}
   return s;

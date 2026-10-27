@@ -47,3 +47,6 @@
 
 
 .learning-inline-periods{display:flex;gap:8rpx;padding:8rpx;border-radius:22rpx;background:#fff4ef}.learning-inline-periods button{flex:1;min-width:0;margin:0;padding:16rpx 8rpx;border:0;border-radius:16rpx;background:transparent;color:#657789;font-size:24rpx;line-height:1.5}.learning-inline-periods button::after{border:0}.learning-inline-periods button.active{background:#fff;color:#dc6a4d;font-weight:700}
+
+/* 报告中的说明与记录信息使用统一的可读辅助层级。 */
+.learning-muted,.learning-date,.learning-section-note,.learning-tail,.learning-footnote{color:#647789;font-size:24rpx;font-weight:500;line-height:1.5}
