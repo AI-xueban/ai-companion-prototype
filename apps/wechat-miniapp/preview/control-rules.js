@@ -95,11 +95,17 @@
     if (error) return error;
     return '';
   }
-  function signature(student, module) {
-    const value = module === 'borrowing' ? student.schedules || [] : module === 'duration' ? student.durationRules || [] : module === 'homework' ? [student.answer, student.explanation] : student[module === 'lock' ? 'locked' : 'world'];
-    return JSON.stringify([value, student.updated?.[module]?.version || 0, module === 'duration' ? student.durationTeacherWeekdays || [] : module === 'world' ? student.worldSource : null]);
+  function homeworkValue(student, subject) {
+    return student.homeworkSubjects?.[subject] || { answer: Boolean(student.answer), explanation: Boolean(student.explanation) };
   }
-  const modified = (student, module) => module === 'world' && student.worldSource !== undefined ? student.worldSource === 'teacher' : Boolean(student.teacherModified?.[module]) && (module === 'borrowing' ? prune(student.schedules || []).length > 0 : module === 'duration' ? (student.durationRules || []).length > 0 : true);
+  function signature(student, module) {
+    const subject = module.startsWith('homework:') ? module.slice('homework:'.length) : null;
+    const homework = subject ? homeworkValue(student, subject) : null;
+    const value = module === 'borrowing' ? student.schedules || [] : module === 'duration' ? student.durationRules || [] : module === 'homework' ? [student.answer, student.explanation] : subject ? [homework.answer, homework.explanation] : student[module === 'lock' ? 'locked' : 'world'];
+    const subjectVersions = module === 'homework' ? Object.keys(student.homeworkSubjects || {}).sort().map(key => [key, student.homeworkSubjects[key], student.updated?.['homework:' + key]?.version || 0]) : null;
+    return JSON.stringify([value, student.updated?.[module]?.version || 0, module === 'duration' ? student.durationTeacherWeekdays || [] : module === 'world' ? student.worldSource : subject ? student.updated?.homework?.version || 0 : subjectVersions]);
+  }
+  const modified = (student, module) => module === 'world' && student.worldSource !== undefined ? student.worldSource === 'teacher' : module === 'homework' ? Object.entries(student.teacherModified || {}).some(([key, value]) => value && (key === 'homework' || key.startsWith('homework:'))) : Boolean(student.teacherModified?.[module] ?? (module.startsWith('homework:') ? student.teacherModified?.homework : false)) && (module === 'borrowing' ? prune(student.schedules || []).length > 0 : module === 'duration' ? (student.durationRules || []).length > 0 : true);
   function resolve(data, refs) {
     const seen = new Set();
     return refs.filter(ref => { const key = ref.className + ':' + ref.id; if (seen.has(key)) return false; seen.add(key); return true; }).map(ref => {
@@ -142,7 +148,7 @@
     });
     return { data: next, count };
   }
-  const api = { copy, today, defaultDuration, normalize, periods, prune, overlap, mergeBorrow, mergeDuration, effectiveBorrow, effectiveDuration, dayText, periodText, borrowText, borrowStatus, durationText, durationGroups, validatePeriods, validateBorrow, signature, modified, resolve, prepare, durationDays, deletionPreview, transaction };
+  const api = { copy, today, defaultDuration, normalize, periods, prune, overlap, mergeBorrow, mergeDuration, effectiveBorrow, effectiveDuration, dayText, periodText, borrowText, borrowStatus, durationText, durationGroups, validatePeriods, validateBorrow, homeworkValue, signature, modified, resolve, prepare, durationDays, deletionPreview, transaction };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.controlRules = api;
 })(typeof window !== 'undefined' ? window : globalThis);
