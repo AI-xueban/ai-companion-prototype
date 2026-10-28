@@ -408,3 +408,31 @@ for(const [state,copy] of [['pending','已提交，预览生成中'],['failed','
 }
 p.restorePageDemo('parent');assert.equal(p.inspect().tasks.find(task=>task.id===filePreviewTask.id).attachments[0].previewState,'pending');assert.equal(p.inspect().submissions.find(r=>r.taskId===filePreviewTask.id).previewState,'pending');
 console.log('PASS preview-state gallery: pending/failed/ready UI, submission preservation, no persistence and restore.');
+
+// Completion estimates are current-version service data, not QPS arithmetic or per-question seeds.
+const waitNow=Date.now(),unknownWait='正在排队批改，完成时间暂无法估算';
+const waitingRecord={taskId:'t',itemId:'i',studentId:'s',version:1,questions:[{state:'queued',estimatedMinutes:2}]};
+const estimate=(record,min=3,max=5)=>({taskId:record.taskId,itemId:record.itemId,studentId:record.studentId,submissionVersion:record.version||1,minMinutes:min,maxMinutes:max,expiresAt:new Date(waitNow+60000).toISOString()});
+assert.equal(rules.gradingWaitNotice([waitingRecord],waitNow),unknownWait,'Old 2-minute question seeds cannot promise completion');
+const reliable={...waitingRecord,gradingWaitEstimate:estimate(waitingRecord)};
+assert.equal(rules.gradingWaitNotice([reliable],waitNow),'批改预计还需3—5分钟完成');
+assert.equal(rules.gradingWaitNotice([{...reliable,gradingWaitEstimate:estimate(reliable,10,15)}],waitNow),'批改预计还需10—15分钟完成');
+for(const invalid of [{...reliable,version:2},{...reliable,studentId:'another'},{...reliable,itemId:'other'},{...reliable,gradingWaitEstimate:{...estimate(reliable),minMinutes:0}},{...reliable,gradingWaitEstimate:{...estimate(reliable),minMinutes:10,maxMinutes:3}},{...reliable,gradingWaitEstimate:{...estimate(reliable),expiresAt:new Date(waitNow-1).toISOString()}}])assert.equal(rules.gradingWaitNotice([invalid],waitNow),unknownWait);
+assert.equal(rules.gradingWaitNotice([reliable,{...waitingRecord,studentId:'unknown'}],waitNow),unknownWait,'Unknown remaining work cannot be hidden by a known estimate');
+for(const state of ['confirmed','review','unreadable','no-answer','failed'])assert.equal(rules.gradingWaitNotice([{...reliable,questions:[{state}]}],waitNow),'','No wait hint after automatic processing stops');
+assert.equal(rules.gradingWaitNotice([{...reliable,questions:[],gradingQueueState:'processing'}],waitNow),'批改预计还需3—5分钟完成','Queue receipt can precede question extraction');
+assert.equal(rules.gradingWaitNotice([{...reliable,questions:[],gradingQueueState:'processing',gradingError:'批改处理失败'}],waitNow),'');
+assert.equal(rules.gradingWaitNotice([{...reliable,questions:[],gradingQueueState:'processing',gradingResult:{submissionVersion:1,complete:true,photos:[]}}],waitNow),'');
+
+profile=teacher;view={view:'subject',classId:'c1',period:'7d',grade:'all'};
+const etaTask=native.publishHomework(input());native.submitHomeworkItem(etaTask.id,'photo',child,{path:'/saved/eta.jpg',name:'等待时间验收'});
+const etaPage=page('teacher/homework');etaPage.data.scope=view;etaPage.data.readOnly=false;
+for(const [min,max,copy] of [[3,5,'批改预计还需3—5分钟完成'],[10,15,'批改预计还需10—15分钟完成'],[null,null,unknownWait]]){
+  const stored=storage.get('demo_homework_v1'),record=stored.submissions.find(r=>r.taskId===etaTask.id&&r.studentId===child);
+  record.questions.forEach(q=>{q.state='queued';});record.gradingWaitEstimate=min?estimate(record,min,max):undefined;
+  etaPage.openTask(etaTask.id);assert.equal(etaPage.data.gradingWaitText,copy,'Native task overview');
+  etaPage.showStudent(child);assert.equal(etaPage.data.studentItems[0].gradingWaitText,copy,'Native student submission');
+}
+const completedEta=storage.get('demo_homework_v1').submissions.find(r=>r.taskId===etaTask.id&&r.studentId===child);completedEta.questions.forEach(q=>{q.state='confirmed';delete q.reviewReason;});
+etaPage.openTask(etaTask.id);assert.equal(etaPage.data.gradingWaitText,'');etaPage.showStudent(child);assert.equal(etaPage.data.studentItems[0].gradingWaitText,'');
+console.log('PASS grading wait: three states, task/student bindings, version/expiry guards, unknown aggregation, completion hiding and native/browser shared rules.');

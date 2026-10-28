@@ -52,6 +52,35 @@ export function homeworkGradingNotice(status:string,error?:string):string {
   return status==='待批改'?(error||'已提交，批改结果尚未全部完成'):'';
 }
 
+/** Server estimates include queueing and processing until this submission completes. */
+export interface GradingWaitEstimate {
+  taskId:string; itemId:string; studentId:string; submissionVersion:number;
+  minMinutes:number; maxMinutes:number; expiresAt:string;
+}
+export interface GradingWaitRecord {
+  taskId:string; itemId:string; studentId:string; version?:number;
+  questions?:Array<{state:string}>; gradingQueueState?:'queued'|'processing';
+  gradingWaitEstimate?:GradingWaitEstimate; gradingError?:string; gradingResult?:SubmissionGradingImages;
+}
+export function gradingWaitNotice(records:GradingWaitRecord[],now=Date.now()):string {
+  const waiting=records.filter(record=>{
+    const questions=record.questions||[];
+    if(submissionGradingComplete(record)===true||record.gradingError&&!/未接入|等待|已重试/.test(record.gradingError))return false;
+    if(questions.some(q=>q.state==='failed'))return false;
+    return questions.some(q=>['queued','processing'].includes(q.state))||(!questions.length&&['queued','processing'].includes(record.gradingQueueState||''));
+  });
+  if(!waiting.length)return '';
+  const estimates=waiting.map(record=>{
+    const e=record.gradingWaitEstimate;
+    return e&&e.taskId===record.taskId&&e.itemId===record.itemId&&e.studentId===record.studentId&&e.submissionVersion===(record.version||1)
+      &&Number.isFinite(e.minMinutes)&&Number.isFinite(e.maxMinutes)&&e.minMinutes>0&&e.maxMinutes>=e.minMinutes
+      &&Date.parse(e.expiresAt)>now?e:null;
+  });
+  if(estimates.some(e=>!e))return '正在排队批改，完成时间暂无法估算';
+  const min=Math.ceil(Math.max(...estimates.map(e=>e!.minMinutes))),max=Math.ceil(Math.max(...estimates.map(e=>e!.maxMinutes)));
+  return `批改预计还需${min===max?min:min+'—'+max}分钟完成`;
+}
+
 export function canUseAIExplanation(q:GradingQuestion){return isFormalGrade(q)&&!q.explanationInvalidated&&!(q.decisionSource==='teacher'&&typeof q.aiCorrect==='boolean'&&q.aiCorrect!==q.correct);}
 export function releaseQuestion(q:GradingQuestion,at:string){if(!isFormalGrade(q))return false;q.releasedSignature=gradingSignature(q);q.releasedAt=at;return true;}
 export function gradeLabel(q:GradingQuestion):string {
