@@ -6,6 +6,75 @@ const dates = (id, startDate, endDate, deny = false) => ({ id, mode: 'dates', we
 const student = id => ({ id, name: '学生' + id, schedules: [], durationRules: [], answer: false, explanation: false, world: true, locked: false, updated: {}, teacherModified: {} });
 const actor = { by: '管理员', phone: '13800138000', role: 'school' };
 
+test('智阅作业按学生和科目分别保存，最后一次成功操作决定该科目状态', () => {
+  const data = { A: [student(1)] }, refs = [{ className: 'A', id: 1 }];
+  const teacher = { by: '数学老师', role: 'subject' };
+  const first = R.transaction(data, refs, 'homework:数学', null, 'all', row => {
+    row.homeworkSubjects = { ...row.homeworkSubjects, 数学: { answer: true, explanation: false } };
+  }, teacher);
+  assert.deepEqual(R.homeworkValue(first.data.A[0], '数学'), { answer: true, explanation: false });
+  assert.deepEqual(R.homeworkValue(first.data.A[0], '语文'), { answer: false, explanation: false });
+  assert.equal(R.modified(first.data.A[0], 'homework:数学'), true);
+  assert.equal(R.modified(first.data.A[0], 'homework:语文'), false);
+  const mathBase = R.signature(first.data.A[0], 'homework:数学');
+  const chineseBase = R.signature(first.data.A[0], 'homework:语文');
+  const second = R.transaction(first.data, refs, 'homework:语文', null, 'all', row => {
+    row.homeworkSubjects = { ...row.homeworkSubjects, 语文: { answer: false, explanation: true } };
+  }, { by: '班主任', role: 'homeroom' });
+  assert.equal(R.signature(second.data.A[0], 'homework:数学'), mathBase);
+  assert.notEqual(R.signature(second.data.A[0], 'homework:语文'), chineseBase);
+  const latest = R.transaction(second.data, refs, 'homework:数学', null, 'all', row => {
+    row.homeworkSubjects = { ...row.homeworkSubjects, 数学: { answer: false, explanation: true } };
+  }, actor);
+  assert.deepEqual(R.homeworkValue(latest.data.A[0], '数学'), { answer: false, explanation: true });
+  assert.equal(latest.data.A[0].updated['homework:数学'].role, 'school');
+  assert.equal(R.modified(latest.data.A[0], 'homework:数学'), false);
+  assert.throws(() => R.prepare(latest.data, refs, 'homework:数学', { 'A:1': mathBase }), /其他老师修改/);
+});
+
+test('智阅作业学生页用科目 Tab 替换搜索筛选，任课老师只管理自己的科目', () => {
+  const fs = require('node:fs'), vm = require('node:vm');
+  let stored, toast;
+  const context = {
+    controlRules: R, closeControlOverlay() {}, addEventListener() {}, setInterval() {}, crypto: { randomUUID() { return 'test-rule-id'; } },
+    schoolControlClasses: ['A'], controlClasses: ['A'], selectedTeacherClass: 'A',
+    controlData: { A: [student(1), student(2)], schoolSettings: { homeroomDurationEnabled: true } },
+    controlStudents() { return context.controlData.A; },
+    controlDemoRole: 'teacher', controlWorkView: 'homeroom', controlModule: 'homework', controlView: 'module',
+    controlLabels: { homework: '智阅作业' }, controlQuery: '', controlFilter: 'all',
+    controlSelected: new Set(), adminSelectedScopes: new Set(), adminLevel: 'class', adminBatchMode: false,
+    schoolBorrowingEnabled: true, stage: 'other', app: { innerHTML: '' },
+    header(title) { return '<span></span><h2>' + title + '</h2>'; }, syncReview() {},
+    binaryToggleButton() { return ''; }, document: { getElementById() { return null; } },
+    localStorage: { getItem(key) { return key === 'teacher-control-prototype-v1' ? stored || null : null; }, setItem(key, value) { if (key === 'teacher-control-prototype-v1') stored = value; } },
+    controlToast(message) { toast = message; }, controlOverlay() {},
+  };
+  context.window = context;
+  vm.runInNewContext(fs.readFileSync(require.resolve('./control-parity.js'), 'utf8'), context);
+  context.renderControl();
+  assert.match(context.app.innerHTML, /aria-label="智阅作业科目"/);
+  assert.match(context.app.innerHTML, /语文.*数学.*英语/);
+  assert.doesNotMatch(context.app.innerHTML, /搜索学生姓名或编号|筛选学生规则状态/);
+  assert.ok(context.app.innerHTML.indexOf('aria-label="智阅作业科目"') < context.app.innerHTML.indexOf('>批量设置</button>'));
+  context.parity.homeworkSubject('语文');
+  context.toggleHomeworkPermission(1, 'answer', true);
+  assert.equal(R.homeworkValue(JSON.parse(stored).A[0], '语文').answer, true);
+  assert.equal(R.homeworkValue(JSON.parse(stored).A[0], '数学').answer, false);
+  context.controlWorkView = 'subject';
+  context.renderControl();
+  assert.doesNotMatch(context.app.innerHTML, /role="tab"[^>]*>语文|role="tab"[^>]*>英语/);
+  assert.match(context.app.innerHTML, /role="tab"[^>]*>数学/);
+  context.parity.homeworkSubject('语文');
+  assert.match(context.app.innerHTML, /role="tab"[^>]*>数学/);
+  context.toggleHomeworkPermission(1, 'explanation', true);
+  assert.equal(R.homeworkValue(JSON.parse(stored).A[0], '数学').explanation, true);
+  assert.equal(R.homeworkValue(JSON.parse(stored).A[0], '语文').explanation, false);
+  assert.equal(toast, '权限已开启');
+  context.openControlEditor(1);
+  assert.match(context.app.innerHTML, /A · 学生1 · 数学/);
+  assert.match(context.app.innerHTML, /name="parity-explanation" value="true" checked/);
+});
+
 test('时长按显式星期来源保留，恢复默认标记也受保护，编辑保留其他星期', () => {
   const s = student(1);
   s.durationTeacherWeekdays = [0];
