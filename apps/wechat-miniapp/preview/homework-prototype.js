@@ -1,5 +1,8 @@
 /* 教师发布—家长逐项提交—教师统计的浏览器演示。数据只保存在当前浏览器。 */
 window.homeworkPrototype = (() => {
+  const documentationMode=typeof location!=='undefined'&&new URLSearchParams(location.search).get('review')==='1'&&new URLSearchParams(location.search).get('documentation')==='1';
+  const documentationStorage=new Map();let documentationFault='';
+  const previewStorage={getItem(key){if(documentationMode){if(documentationFault==='read')throw Error('Documentation read failure');return documentationStorage.get(key)||null;}return localStorage.getItem(key);},setItem(key,value){if(documentationMode){if(documentationFault==='save'||documentationFault==='pending'&&key.startsWith('homework-pending-v2'))throw Error('Documentation storage failure');documentationStorage.set(key,String(value));return;}localStorage.setItem(key,value);},removeItem(key){if(documentationMode){documentationStorage.delete(key);return;}localStorage.removeItem(key);}};
   const worksheetLibrary = window.homeworkWorksheets?.HOMEWORK_WORKSHEET_LIBRARY || [];
   const worksheetAsset = path => (typeof location !== 'undefined' && location.protocol === 'file:' ? '../miniprogram' : 'miniprogram') + path;
   const demoMaterialFiles = [
@@ -28,8 +31,8 @@ window.homeworkPrototype = (() => {
   const familyAccount=()=>window.parentPrototype?.getTutorAccount?.()||'guardian-demo-001';
   const pendingKey = () => 'homework-pending-v2:'+familyAccount()+':'+guardianId;
   let pendingLastId='';
-  const pendingMap=()=>{try{const data=JSON.parse(localStorage.getItem(pendingKey())||'{}');return data.taskId?{[data.taskId+':'+data.itemId]:data}:data;}catch{return {};}};
-  const persistPending = () => { try {const all=pendingMap();if(pendingUpload){pendingLastId=pendingUpload.taskId+':'+pendingUpload.itemId;all[pendingLastId]=pendingUpload;}else if(pendingLastId)delete all[pendingLastId];localStorage.setItem(pendingKey(),JSON.stringify(all));return true;}catch { uploadMessage='当前选择暂存失败，请勿关闭页面；可移除部分文件后重试。'; return false; } };
+  const pendingMap=()=>{try{const data=JSON.parse(previewStorage.getItem(pendingKey())||'{}');return data.taskId?{[data.taskId+':'+data.itemId]:data}:data;}catch{return {};}};
+  const persistPending = () => { try {const all=pendingMap();if(pendingUpload){pendingLastId=pendingUpload.taskId+':'+pendingUpload.itemId;all[pendingLastId]=pendingUpload;}else if(pendingLastId)delete all[pendingLastId];previewStorage.setItem(pendingKey(),JSON.stringify(all));return true;}catch { uploadMessage='当前选择暂存失败，请勿关闭页面；可移除部分文件后重试。'; return false; } };
   const restorePending = () => { if(pendingUpload?.studentId===guardianId&&pendingUpload.taskId===parentTaskId&&(!pendingUpload.accountId||pendingUpload.accountId===familyAccount()))return;pendingUpload=Object.values(pendingMap()).find(p=>p.taskId===parentTaskId&&p.studentId===guardianId)||null;pendingLastId=pendingUpload?pendingUpload.taskId+':'+pendingUpload.itemId:''; };
   const photoPath = (record,q) => (record.photos?.[q?.pageIndex||0]?resolvePhoto(record.photos[q?.pageIndex||0]):'') || (record.mock?samplePhoto(record):mediaFor(record));
   const DRAFT_KEY = 'ai_companion_teacher_homework_preview_draft_v1:';
@@ -146,12 +149,7 @@ window.homeworkPrototype = (() => {
   const publishTypes = ['file', 'photo', 'video', 'audio', 'none'];
   const gradingEligible = type => type === 'photo' || type === 'file';
   const accept = { file: '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt', photo: 'image/*', video: 'video/*', audio: 'audio/*' };
-  const fileLimits = {
-    file: { bytes: 50 * 1024 * 1024, label: '50MB' },
-    photo: { bytes: 20 * 1024 * 1024, label: '20MB' },
-    video: { bytes: 200 * 1024 * 1024, seconds: 5 * 60, label: '200MB、5分钟' },
-    audio: { bytes: 50 * 1024 * 1024, seconds: 10 * 60, label: '50MB、10分钟' }
-  };
+
   const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
   const toDate = value => new Date(String(value || '').replace(' ', 'T'));
   const formatDate = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -211,7 +209,7 @@ window.homeworkPrototype = (() => {
   }
   let localPageDemo = null;
   let store;
-  try { const saved = JSON.parse(localStorage.getItem(KEY) || 'null'); store = saved?.tasks && saved?.submissions ? saved : seed(); } catch { store = seed(); }
+  try { const saved = JSON.parse(previewStorage.getItem(KEY) || 'null'); store = saved?.tasks && saved?.submissions ? saved : seed(); } catch { store = seed(); }
   // 仅补充专用演示任务，不覆盖老师已发布的任务或提交记录。
   for (const completed of [true, false]) {
     const id = completed ? 'teacher-history-completed' : 'teacher-history-pending';
@@ -366,7 +364,7 @@ window.homeworkPrototype = (() => {
    }));
    const currentSample=store.tasks.find(t=>t.id==='grading-demo-v1');if(currentSample)currentSample.needsAnswerConfirmation=true;
   store.tasks.filter(t=>t.needsAnswerConfirmation).forEach(t=>{const records=latestRows(store.submissions.filter(r=>r.taskId===t.id));grading.initializeAnswerStandards(t,records);});
-  const save = () => { if(localPageDemo?.snapshot)return; try { localStorage.setItem(KEY, JSON.stringify(store)); } catch { /* 大图片超过浏览器本地容量时仍保留本次演示状态 */ } };
+  const save = () => { if(localPageDemo?.snapshot)return; try { previewStorage.setItem(KEY, JSON.stringify(store)); } catch { /* 大图片超过浏览器本地容量时仍保留本次演示状态 */ } };
   const sessionMedia = new Map();
   const mediaKey = row => `${row.taskId}:${row.itemId}:${row.studentId}`;
   const mediaFor = row => row.media || sessionMedia.get(mediaKey(row)) || '';
@@ -441,27 +439,27 @@ window.homeworkPrototype = (() => {
   let draftStorageError='',draftNotice='',draftMenu=null,draftDelete=null,composeOrigin='list',draftListScroll=0;
   const draftArchiveKey = () => DRAFT_KEY + workScope.teacherId + ':archive';
   const readDraftArchive = () => {
-    const value=JSON.parse(localStorage.getItem(draftArchiveKey())||'[]');
+    const value=JSON.parse(previewStorage.getItem(draftArchiveKey())||'[]');
     if(!Array.isArray(value)||value.some(row=>!row?.id||!row.saved?.draft||!Array.isArray(row.saved.draft.items)||!Array.isArray(row.saved.draft.classIds)))throw Error('草稿数据无法读取，请重试；原内容仍保留。');
     return value;
   };
   const draftArchive = () => {try{const rows=readDraftArchive();draftStorageError='';return rows;}catch{draftStorageError='草稿暂时无法读取，请重试；原内容仍保留。';return [];}};
   const saveTeacherDraft = () => {
     if(workScope.view==='school'||!hasTeacherDraft())return true;
-    try{const old=JSON.parse(localStorage.getItem(DRAFT_KEY+workScope.teacherId)||'null');const saved={draft,composeStep,settingMode,uniformType,recognizedCount,recognitionStale,subjectTouched};
+    try{const old=JSON.parse(previewStorage.getItem(DRAFT_KEY+workScope.teacherId)||'null');const saved={draft,composeStep,settingMode,uniformType,recognizedCount,recognitionStale,subjectTouched};
       saved.updatedAt=old&&JSON.stringify(old.draft)===JSON.stringify(draft)?old.updatedAt||0:Date.now();
-      localStorage.setItem(DRAFT_KEY+workScope.teacherId,JSON.stringify(saved));return true;
+      previewStorage.setItem(DRAFT_KEY+workScope.teacherId,JSON.stringify(saved));return true;
     }catch{composeError='草稿保存失败，请保留当前页面，移除部分附件后重试。';draftNotice=composeError;return false;}
   };
   const archiveCurrentDraft = () => {
     if(!hasTeacherDraft())return true;
     if(!saveTeacherDraft())return false;
-    try{const rows=readDraftArchive(),saved=JSON.parse(localStorage.getItem(DRAFT_KEY+workScope.teacherId));rows.unshift({id:'draft-'+Date.now()+'-'+Math.random().toString(36).slice(2),saved});localStorage.setItem(draftArchiveKey(),JSON.stringify(rows));return true;}
+    try{const rows=readDraftArchive(),saved=JSON.parse(previewStorage.getItem(DRAFT_KEY+workScope.teacherId));rows.unshift({id:'draft-'+Date.now()+'-'+Math.random().toString(36).slice(2),saved});previewStorage.setItem(draftArchiveKey(),JSON.stringify(rows));return true;}
     catch{draftNotice='草稿保存失败，请重试；当前内容仍保留。';return false;}
   };
   const teacherDraftRows = () => {
     const rows=draftArchive().map(row=>({id:row.id,saved:row.saved}));
-    if(hasTeacherDraft()){let saved;try{saved=JSON.parse(localStorage.getItem(DRAFT_KEY+workScope.teacherId)||'null');}catch{draftStorageError='草稿暂时无法读取，请重试；原内容仍保留。';}rows.push({id:'current',saved:{draft,updatedAt:saved?.updatedAt||0}});}
+    if(hasTeacherDraft()){let saved;try{saved=JSON.parse(previewStorage.getItem(DRAFT_KEY+workScope.teacherId)||'null');}catch{draftStorageError='草稿暂时无法读取，请重试；原内容仍保留。';}rows.push({id:'current',saved:{draft,updatedAt:saved?.updatedAt||0}});}
     return rows.sort((a,b)=>(b.saved.updatedAt||0)-(a.saved.updatedAt||0));
   };
   const draftEditLabel = at => at?'最近编辑 '+formatDate(new Date(at)):'历史草稿 · 编辑时间未记录';
@@ -484,14 +482,14 @@ window.homeworkPrototype = (() => {
   function requestDraftDelete(id){
     if(workScope.view==='school')return;
     const row=findDraft(id);if(!row||draftStorageError){draftNotice='草稿已变化或无法读取，请重试。';teacherRefresh();return;}
-    const snapshot=id==='current'?localStorage.getItem(DRAFT_KEY+workScope.teacherId):JSON.stringify(row.saved);
+    const snapshot=id==='current'?previewStorage.getItem(DRAFT_KEY+workScope.teacherId):JSON.stringify(row.saved);
     draftDelete={id,title:row.saved.draft.title||'未命名作业',teacherId:workScope.teacherId,snapshot,error:''};draftMenu=null;teacherRefresh();
     document.getElementById('hp-draft-cancel')?.focus?.({preventScroll:true});
   }
   const restoreTeacherDraft = () => {
     if (workScope.view === 'school') return;
     try {
-      const saved = JSON.parse(localStorage.getItem(DRAFT_KEY + workScope.teacherId) || 'null');
+      const saved = JSON.parse(previewStorage.getItem(DRAFT_KEY + workScope.teacherId) || 'null');
       if (!saved?.draft || !Array.isArray(saved.draft.items) || !Array.isArray(saved.draft.classIds) || !saved.draft.classIds.every(id => publishingClassIds().includes(id))) return;
       draft = saved.draft; draft.attachments = materialAttachments(draft); draft.photo = ''; composeStep = saved.composeStep === 1 ? 1 : 0; settingMode = saved.settingMode === 'individual' ? 'individual' : 'uniform'; uniformType = publishTypes.includes(saved.uniformType) ? saved.uniformType : ''; recognizedCount = saved.recognizedCount || 0; recognitionStale = Boolean(saved.recognitionStale);
       draft.attachments.forEach(file => { if (file.uploadState === 'optimizing' || file.uploadState === 'uploading') { file.uploadState = 'failed'; file.uploadError = '上传已中断，请重新上传'; } });
@@ -511,7 +509,7 @@ window.homeworkPrototype = (() => {
       if (!file) { stopMaterialUpload(id); return; }
       if (file.uploadState === 'optimizing') {
         file.optimizedFrom = file.type === 'image' ? file.size || 0 : 0;
-        file.uploadSize = file.type === 'image' && file.size > 1024 * 1024 ? Math.max(120 * 1024, Math.round(file.size * 0.42)) : file.size;
+        file.uploadSize = file.size; // No real encoder is connected; never invent a compressed size.
         file.uploadState = 'uploading';
         file.uploadProgress = 8;
       } else if (file.uploadState === 'uploading') {
@@ -621,7 +619,7 @@ window.homeworkPrototype = (() => {
       const hasResults=store.submissions.some(r=>r.taskId===task.id&&r.questions?.length);
       if(role==='parent'&&mode==='detail'&&(materialAttachments(task).some(file=>file.type==='file')||store.submissions.some(r=>r.taskId===task.id&&r.studentId===guardianId&&task.items.some(item=>item.id===r.itemId&&item.type==='file'))))cases.push(['upload-preview-ready','预览已就绪','原件与预览分别就绪，不改变提交或批改状态。','业务状态'],['upload-preview-pending','预览生成中','保留可用原件和已成功的提交，允许继续发布或提交。','业务状态'],['upload-preview-failed','预览生成失败','保留原件打开入口和成功记录，不当作上传或提交失败。','异常情况']);
       if(hasResults)cases.push(...[['queued','等待批改','提交成功，等待后台处理。'],['processing','正在批改','展示后台预估等待时间。'],['partialGrade','部分批改完成','已完成题与处理中题分别显示。'],['failed','批改失败','保留已完成结果，失败题不计错。'],['review','待教师复核','低把握判定等待教师核对。'],['unreleased','结果已同步','当前已有结果自动同步。'],['partialRelease','部分结果可见','已完成结果可见，其他题继续处理。'],['released','全部批改完成','查看当前学生整份已开放结果。'],['resubmit','重新提交后批改中','新版本不继承旧版开放状态。'],['changed','人工纠正已同步','人工新判定自动同步。']].map(([id,title,hint])=>[id,title,hint,id==='failed'?'异常情况':'业务状态']));
-      if(role==='parent'&&mode==='detail'&&!closed){const uploads=task.items.filter(i=>i.type!=='none');if(uploads.length)cases.push(['upload-format','格式不支持','保留已选文件，提示重新选择。','异常情况'],['upload-size','文件过大','提示当前提交类型大小限制。','异常情况']);if(uploads.some(i=>i.type==='video'))cases.push(['upload-duration','视频时长超限','提示视频时长不能超过 5 分钟。','异常情况']);cases.push(['upload-network','提交时网络中断','当前选择保留，恢复后可重试。','异常情况']);}
+      if(role==='parent'&&mode==='detail'&&!closed){const uploads=task.items.filter(i=>i.type!=='none');if(uploads.length)cases.push(['upload-format','格式不支持','保留已选文件，提示重新选择。','异常情况'],['upload-size','文件过大','提示当前提交类型大小限制。','异常情况']);if(uploads.some(i=>i.type==='video'))cases.push(['upload-duration','视频时长超限','提示视频时长不能超过 3 分钟。','异常情况']);cases.push(['upload-network','提交时网络中断','当前选择保留，恢复后可重试。','异常情况']);}
     }
     if(role==='teacher'&&mode==='question'){const allowed=['queued','processing','partialGrade','failed','review'];for(let i=cases.length-1;i>=0;i--)if(!allowed.includes(cases[i][0]))cases.splice(i,1);}
     if(role==='teacher'){const index=cases.findIndex(c=>c[0]==='partial');if(index>=0)cases.splice(index,1);}
@@ -644,7 +642,7 @@ window.homeworkPrototype = (() => {
   let workflowNotice='',batchReview={key:'',selected:{},choice:''},mappingChoice=null;
   function workflowCommit(change){
     const snapshot=JSON.stringify(store);
-    try{change();if(!localPageDemo?.snapshot)localStorage.setItem(KEY,JSON.stringify(store));return true;}
+    try{change();if(!localPageDemo?.snapshot)previewStorage.setItem(KEY,JSON.stringify(store));return true;}
     catch{store=JSON.parse(snapshot);workflowNotice='保存失败，尚未更新。请重试。';return false;}
   }
   function batchContext(studentId){
@@ -801,7 +799,7 @@ window.homeworkPrototype = (() => {
   }
   const focusResultPhotoSoon=()=>{if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>window.homeworkPrototype?.focusResultPhoto());};
   const learning=()=>window.homeworkLearning;
-  function readNotebook(){try{const entries=JSON.parse(localStorage.getItem(learning().NOTEBOOK_KEY)||'[]');return Array.isArray(entries)?entries:[];}catch{return [];}}
+  function readNotebook(){try{const entries=JSON.parse(previewStorage.getItem(learning().NOTEBOOK_KEY)||'[]');return Array.isArray(entries)?entries:[];}catch{return [];}}
   function parentQuestionContext(){const task=taskById(parentTaskId);if(!gradeUI.parentOpen||!task||!targetIds(task).includes(guardianId))return null;const records=latestRows(store.submissions.filter(row=>row.taskId===task.id&&row.studentId===guardianId)).filter(row=>row.questions?.length),record=records[gradeUI.page],q=record?.questions.find(question=>question.id===gradeUI.q);return q&&grading.isResultReleased(q)&&(learningUI.mode!=='tutor'||grading.canUseAIExplanation(q))?{task,record,q,studentId:guardianId}:null;}
   function parentTutorContext(){const context=parentQuestionContext();return context&&grading.canUseAIExplanation(context.q)?context:null;}
   function gradePaper(record,selected,parent){const src=photoPath(record,selected);if(!src)return '<p class="hp-muted">原图暂不可用，仍可从下方题目入口查看结果。</p>';const regions=record.questions.map((q,i)=>({q,region:learning().questionRegion(q,i,record.mock)})).filter(item=>item.region&&(!record.photos||(item.q.pageIndex||0)===(selected?.pageIndex||0)));return (record.mock?'<small>共用作业样张 · 班级统计为模拟数据</small>':'')+'<div class="hp-marked-paper"><img src="'+escape(src)+'" alt="学生作业原图">'+regions.map(({q,region:r})=>{const mark=learning().questionMark(q,parent);return '<button class="hp-paper-region '+mark.tone+(q.id===selected?.id?' selected':'')+'" aria-label="'+escape(q.label+'，'+mark.label+'，查看题目')+'" style="left:'+r.x*100+'%;top:'+r.y*100+'%;width:'+r.width*100+'%;height:'+r.height*100+'%" onclick="homeworkPrototype.selectGradeQuestion(&quot;'+q.id+'&quot;,'+parent+')"><span>'+escape(mark.mark)+'</span></button>';}).join('')+'</div><small>✓ 答对　× 答错　? 待复核或存疑；点击题框查看单题。</small>'+(!regions.length?'<p class="hp-muted">题目区域暂未定位，可通过下方题目入口查看。</p>':'')+'<a class="hp-text-button" href="'+escape(src)+'" target="_blank" rel="noopener">查看原图</a>';}
@@ -823,7 +821,7 @@ window.homeworkPrototype = (() => {
     const title=question=>question.label.match(/第\s*[^题]+题/)?.[0].replace(/\s/g,'')||question.label;
     const nav='<div class="hp-result-question-nav" aria-label="切换题目">'+released.map(({row,question})=>{const mark=learning().questionMark(question,true);return '<button class="'+(question.id===q.id?'active':'')+'" aria-label="'+escape(title(question)+'，'+grading.parentGradeLabel(question))+'" aria-current="'+(question.id===q.id)+'" onclick="homeworkPrototype.openParentQuestion(&quot;'+row.itemId+'&quot;,&quot;'+question.id+'&quot;)"><span>'+escape(title(question))+'</span><i class="grade-'+mark.tone+'" aria-hidden="true">'+escape(mark.mark)+'</i></button>';}).join('')+'</div>';
     const source={accountId:window.parentPrototype?.getTutorAccount?.()||'guardian-demo-001',studentId:guardianId,taskId:task.id,itemId:record.itemId,submissionVersion:record.version||1,question:q};
-    let previous;try{if(window.homeworkTutor)previous=JSON.parse(localStorage.getItem(window.homeworkTutor.TUTOR_STORAGE_KEY)||'{}')[window.homeworkTutor.tutorKey(source)];}catch{}
+    let previous;try{if(window.homeworkTutor)previous=JSON.parse(previewStorage.getItem(window.homeworkTutor.TUTOR_STORAGE_KEY)||'{}')[window.homeworkTutor.tutorKey(source)];}catch{}
     const completed=Boolean(window.homeworkTutor&&previous?.fingerprint===window.homeworkTutor.tutorFingerprint(source)&&previous.phase==='done'),resumed=Boolean(window.homeworkTutor&&previous?.fingerprint===window.homeworkTutor.tutorFingerprint(source)&&previous.phase!=='done');
     const tutorButton='<button class="hp-primary" '+(!ready?'disabled':'')+(ready?' onclick="homeworkPrototype.openHomeworkTutor()"':'')+'>'+(!ready?'解析更新后可解题':'AI 解题')+'</button>';
     const history='';
@@ -1139,7 +1137,7 @@ window.homeworkPrototype = (() => {
       else if (pending?.photos) upload = renderPendingPhotos(pending,item,record);
       else if (pending) upload = `<div class="hp-pending hp-single-selection"><strong>待提交</strong>${item.type!=='file'?`<small>${escape(pending.name)}</small>`:''}${pendingPreview}${record ? '<small>重新提交后，新版本成为当前提交，历史版本保留。</small>' : ''}${pending.transient ? '<small>大文件只在本次预览中保留，刷新后需重新选择。</small>' : ''}<div class="hp-single-submit-actions"><button class="hp-single-reselect" ${uploadBusy?'disabled':''} onclick="homeworkPrototype.reselectPendingUpload()">重新选择</button><button class="hp-primary" ${uploadBusy?'disabled':''} onclick="homeworkPrototype.${uploadMessage.includes('已有新版本')?'acknowledgePendingVersion':'confirmUpload'}()">${uploadBusy?'正在处理…':uploadMessage.includes('已有新版本')?'使用当前文件':record?'确认重新提交':'提交本项'}</button></div></div>`;
       else if (item.type === 'photo') upload = `<button class="${record ? 'hp-resubmit-button' : 'hp-primary hp-item-action'}" onclick="homeworkPrototype.openParentPhotoSource('${task.id}','${item.id}')">${record ? '重新提交整项' : '上传图片／多页照片'}</button><input id="hp-parent-photo-${escape(item.id)}" class="hp-hidden-file" type="file" accept="image/*" multiple onchange="homeworkPrototype.submitFile('${task.id}','${item.id}',this)">${record ? `<button class="hp-secondary" onclick="homeworkPrototype.appendPhotos('${task.id}','${item.id}')">补充照片</button>` : `<button type="button" class="hp-photo-demo-link" onclick="homeworkPrototype.fillParentDemoPhoto('${task.id}','${item.id}')">填入演示内容 ›</button><small class="hp-item-hint">图片≤20MB；选择后预览核对，再确认提交。</small>`}`;
-      else upload = `<label class="hp-upload ${record ? 'hp-resubmit-button' : 'hp-upload-primary'}">${record ? '重新提交' : '上传' + types[item.type]}<input id="hp-parent-single-${escape(item.id)}" type="file" accept="${item.type==='file'&&item.gradingEnabled?'.pdf,.doc,.docx':accept[item.type]}" onchange="homeworkPrototype.submitFile('${task.id}','${item.id}',this)"></label>${record ? '' : `<small class="hp-item-hint">${item.type === 'file' ? item.gradingEnabled?'仅支持 PDF、Word，≤50MB；已提交与批改状态分别展示。':'支持 PDF、Word、PPT、Excel、TXT，≤50MB；仅收集，不批改。' : item.type==='video'?'视频≤200MB且≤5分钟。':'录音≤50MB且≤10分钟。'}</small>`}`;
+      else upload = `<label class="hp-upload ${record ? 'hp-resubmit-button' : 'hp-upload-primary'}">${record ? '重新提交' : '上传' + types[item.type]}<input id="hp-parent-single-${escape(item.id)}" type="file" accept="${item.type==='file'&&item.gradingEnabled?'.pdf,.doc,.docx':accept[item.type]}" onchange="homeworkPrototype.submitFile('${task.id}','${item.id}',this)"></label>${record ? '' : `<small class="hp-item-hint">${item.type === 'file' ? item.gradingEnabled?'仅支持 PDF、Word，≤50MB；已提交与批改状态分别展示。':'支持 PDF、Word、PPT、Excel、TXT，≤50MB；仅收集，不批改。' : item.type==='video'?'视频≤100MB且≤3分钟。':'录音≤20MB且≤5分钟。'}</small>`}`;
       const history = store.submissions.filter(row => row.taskId === task.id && row.itemId === item.id && row.studentId === guardianId).sort((a, b) => (b.version || 1) - (a.version || 1));
       return `<section class="hp-card hp-parent-item"><div class="hp-item-head"><span class="hp-item-number">${String(index + 1).padStart(2, '0')}</span><strong>${escape(item.title)}</strong><span class="hp-item-badges"><em class="${displayStatus==='已提交'||displayStatus==='已批改'?'hp-tag-done':'hp-tag-pending'}">${displayStatus}</em><em>${typeLabel(item.type)}</em></span></div>${item.instruction && !['拍摄清晰完整的答题页','按上述要求完成','按要求完成','按任务要求完成'].includes(item.instruction.trim()) ? `<p class="hp-item-instruction">${escape(item.instruction)}</p>` : ''}${record ? `${item.type === 'file' ? '' : `<small class="hp-item-submitted">${item.type === 'none' ? '已确认' : '已提交'} · ${escape(record.submittedAt || '已完成')}${record.late ? ' · 补交' : ''}</small>`}${record.transient && !submittedMedia ? '<small class="hp-item-note">原文件已失效，请重新选择。</small>' : ''}${submittedPreview}${studentSubmissionHistory(task,item,guardianId)}` : ''}${gradeNotice}${upload}${pending&&!pending.photos?`<input id="hp-parent-single-${escape(item.id)}" class="hp-hidden-file" type="file" accept="${item.type==='file'&&item.gradingEnabled?'.pdf,.doc,.docx':accept[item.type]}" onchange="homeworkPrototype.submitFile('${task.id}','${item.id}',this)">`:''}</section>`;
     }).join('');
@@ -1192,22 +1190,26 @@ window.homeworkPrototype = (() => {
     if(item.type==='file'&&item.gradingEnabled){record.questions=[];record.gradingError='当前演示未接入文档转页与批改服务；提交已保留。';}
     if(photos){record.photos=photos;record.media=photos[0]?.path||'';record.questions=photos.flatMap((photo,page)=>{const demo=Number.isInteger(photo.demoPhotoIndex),base=task.kind==='homework'&&item.gradingEnabled!==false?(demo?grading.realPhotoQuestions('page-'+photo.demoPhotoIndex,item.id+'-'+page+'-'):seedQuestions(task,item,guardianId)):[];return base.map(q=>({...q,id:page===0?q.id:q.id+'-page-'+page,label:'第 '+(page+1)+' 页 · '+q.label,pageIndex:page,demoFinalState:demo?q.state:undefined,state:demo?'processing':'queued',estimatedMinutes:2}));});if(photos.some(p=>Number.isInteger(p.demoPhotoIndex))){record.mock=true;record.demoGradeReadyAt=Date.now()+1200;}}
     store.submissions.push(record);if(task.needsAnswerConfirmation){syncAnswerWorkflow(task);grading.startStandardGrading(workflowTask(task),standardRecords(task));}
-    try{localStorage.setItem(KEY,JSON.stringify(store));}catch{Object.assign(store,JSON.parse(beforeSubmission));throw new Error('保存失败，当前选择已保留，请释放存储空间后重试。');} parentRefresh();
+    try{previewStorage.setItem(KEY,JSON.stringify(store));}catch{Object.assign(store,JSON.parse(beforeSubmission));throw new Error('保存失败，当前选择已保留，请释放存储空间后重试。');} parentRefresh();
   };
   const recoverPendingSubmission=()=>{const pending=pendingUpload;if(!pending?.requestId||pending.studentId!==guardianId)return false;const saved=store.submissions.find(r=>r.taskId===pending.taskId&&r.itemId===pending.itemId&&r.studentId===guardianId&&r.requestId===pending.requestId);if(!saved)return false;pendingUpload=null;persistPending();uploadMessage='本项已提交。';parentRefresh();return true;};
+  async function validateSelectedMedia(file,type){
+    const url=URL.createObjectURL(file);
+    try{await new Promise((resolve,reject)=>{const media=document.createElement(type);let finished=false;const finish=error=>{if(finished)return;finished=true;clearTimeout(timer);media.removeAttribute('src');media.load?.();error?reject(error):resolve();};const timer=setTimeout(()=>finish(new Error('无法读取文件时长，请重新选择。')),4000);media.preload='metadata';media.onloadedmetadata=()=>{const error=grading.homeworkMediaDurationError(type,media.duration);finish(error?new Error(error):null);};media.onerror=()=>finish(new Error('无法读取文件时长，请重新选择。'));media.src=url;});}finally{URL.revokeObjectURL(url);}
+  }
   const stageUpload = async (task,item,file) => {
     const child=guardianId,version=latestVersion(task.id,item.id),error=grading.homeworkFileError(file.name,file.size,item.type,item.gradingEnabled===true);if(error){uploadMessage=error;parentRefresh();return;}
     uploadBusy=true;uploadMessage='正在检查并暂存文件…';parentRefresh();
     try{
       if(item.type==='file'){const invalid=grading.homeworkDocumentError(file.name,new Uint8Array(await file.arrayBuffer()));if(invalid)throw new Error(invalid);}
       const id='submission-file-'+child+'-'+Date.now(),url=URL.createObjectURL(file);
-      if(item.type==='video'||item.type==='audio')await new Promise((resolve,reject)=>{const media=document.createElement(item.type==='video'?'video':'audio');media.preload='metadata';media.src=url;media.onloadedmetadata=()=>{if(media.duration>fileLimits[item.type].seconds)reject(new Error('时长超限，请剪辑后重新选择。'));else resolve();};media.onerror=()=>reject(new Error('无法读取文件时长，请重新选择。'));});
+      if(item.type==='video'||item.type==='audio')await validateSelectedMedia(file,item.type);
       await storeMaterialFile(id,file);materialUrls.set(id,url);
       if(guardianId!==child)return;
       pendingUpload={taskId:task.id,itemId:item.id,studentId:child,accountId:familyAccount(),name:file.name,type:item.type,uploadState:'complete',previewState:item.type==='file'?'pending':'ready',expectedVersion:version,media:url,path:url,id,transient:false,saved:true};persistPending();uploadMessage='文件已暂存，尚未提交。';
     }catch(error){uploadMessage=error.message||'文件暂存失败，原选择保留，请重试。';}finally{uploadBusy=false;parentRefresh();}
   };
-  if(typeof window.addEventListener==='function')window.addEventListener('storage',event=>{if(event.key!==KEY||!event.newValue||localPageDemo?.snapshot)return;try{const remote=JSON.parse(event.newValue);if(Array.isArray(remote.tasks)&&Array.isArray(remote.submissions)){Object.assign(store,remote);refreshMaterialView();}}catch{}});
+  if(typeof window.addEventListener==='function')window.addEventListener('storage',event=>{if(documentationMode||event.key!==KEY||!event.newValue||localPageDemo?.snapshot)return;try{const remote=JSON.parse(event.newValue);if(Array.isArray(remote.tasks)&&Array.isArray(remote.submissions)){Object.assign(store,remote);refreshMaterialView();}}catch{}});
   const latestVersion=(taskId,itemId)=>latestRows(store.submissions.filter(r=>r.taskId===taskId&&r.itemId===itemId&&r.studentId===guardianId))[0]?.version||0;
   const resolvePhoto=photo=>{restoreMaterialFile(photo);return photo.unavailable?'':photo.path;};
   const renderTeacherInstructions=(task,compact=false)=>`${task.description?.trim()?compact?`<div class="hp-inline-instructions"><p>${escape(task.description)}</p></div>`:`<div class="${compact?'hp-inline-instructions':'hp-card hp-teacher-instructions'}"><details><summary>老师的要求<span class="hp-requirement-expand">展开</span><span class="hp-requirement-collapse">收起</span></summary><p>${escape(task.description)}</p></details></div>`:''}${task.changes?.length?`<details class="hp-card"><summary>老师已更新任务 · 查看变更记录</summary>${task.changes.map(c=>`<p>${escape(new Date(c.at).toLocaleString('zh-CN',{hour12:false}))} · ${escape(grading.homeworkChangeLabel(c.action))} · ${escape(c.reason)}</p><details><summary>变更前后</summary><pre>${escape(grading.homeworkSnapshotText(c.before))}</pre><pre>${escape(grading.homeworkSnapshotText(c.after))}</pre></details>`).join('')}</details>`:''}`;
@@ -1253,15 +1255,205 @@ window.homeworkPrototype = (() => {
     const history=changes.length?`<details class="hp-management-history"><summary><span>变更记录</span><span class="hp-management-history-meta">${changes.length} 条<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 4 4 4-4 4"/></svg></span></summary><ol>${changes.map(c=>`<li><div class="hp-management-event"><strong>${escape(grading.homeworkChangeLabel(c.action))}</strong><time>${escape(new Date(c.at).toLocaleString('zh-CN',{hour12:false}))}</time></div><p>${escape(c.reason||'未填写变更原因')}</p><details class="hp-management-diff"><summary>查看变更前后</summary><div><h4>变更前</h4><pre>${escape(grading.homeworkSnapshotText(c.before))}</pre><h4>变更后</h4><pre>${escape(grading.homeworkSnapshotText(c.after))}</pre></div></details></li>`).join('')}</ol></details>`:'';
     return `<section class="hp-card hp-management-card" aria-label="任务状态与管理"><header class="hp-management-header"><span class="hp-management-status${inactive?' is-inactive':''}">${inactive?'<span aria-hidden="true">−</span>':''}${status}</span>${own?`<button class="hp-management-action" onclick="homeworkPrototype.openTaskManagement(${inactive?"'copy'":''})">${inactive?'<svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7" y="6" width="10" height="11" rx="2"/><path d="M12 6V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h3"/></svg>再发一份':'管理任务'}</button>`:''}</header>${task.managementReason?.trim()?`<div class="hp-management-reason"><span>${task.withdrawnAt?'撤回原因':task.stoppedAt?'终止原因':'变更原因'}</span><p>${escape(task.managementReason)}</p></div>`:''}${inactive?'<p class="hp-management-preserved"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3 8 3 3 7-7"/></svg>已有提交记录和批改结果已保留</p>':''}${own&&original.notification?.status==='failed'?'<div class="hp-management-notification" role="status"><span>任务已保存，通知发送失败</span><button onclick="homeworkPrototype.retryNotification()">重试通知</button></div>':''}${history}</section>`;
   }
-  function renderFamilyPreview(){return familyPreview?`<div class="hp-filter-mask"><section class="hp-filter-sheet" role="dialog" aria-modal="true" aria-label="家长内容预览"><header><h2>${escape(draft.title)}</h2><button onclick="homeworkPrototype.closeFamilyPreview()">关闭预览</button></header><p>仅预览，不会发送或提交。</p>${renderTeacherInstructions(draft)}${renderMaterialAttachments(draft)}${draft.items.map(i=>`<section class="hp-card"><strong>${escape(i.title)}</strong><p>${escape(i.instruction)}</p><small>${escape(typeLabel(i.type))} · ${i.gradingEnabled?'自动批改':'仅收集，不批改'}${i.expectedPages?' · 预计 '+i.expectedPages+' 页':''}</small></section>`).join('')}<p>正常截止 ${escape(draft.deadline)}<br>补交截止 ${escape(draft.submitDeadline)}</p></section></div>`:'';}
+  function renderFamilyPreview(){return familyPreview?`<div class="hp-filter-mask"><section class="hp-filter-sheet" role="dialog" aria-modal="true" aria-label="家长内容预览"><header><h2>${escape(draft.title)}</h2><button class="hp-sheet-text-action" onclick="homeworkPrototype.closeFamilyPreview()">关闭预览</button></header><p>仅预览，不会发送或提交。</p>${renderTeacherInstructions(draft)}${renderMaterialAttachments(draft)}${draft.items.map(i=>`<section class="hp-card"><strong>${escape(i.title)}</strong><p>${escape(i.instruction)}</p><small>${escape(typeLabel(i.type))} · ${i.gradingEnabled?'自动批改':'仅收集，不批改'}${i.expectedPages?' · 预计 '+i.expectedPages+' 页':''}</small></section>`).join('')}<p>正常截止 ${escape(draft.deadline)}<br>补交截止 ${escape(draft.submitDeadline)}</p></section></div>`:'';}
   const managementLabels={withdraw:'撤回任务',extend:'延长截止',reopen:'重新开放补交',correct:'更正文字说明',stop:'终止连续打卡',copy:'再发一份'};
+  function renderManagementActions(task){
+    const available=Object.entries(managementLabels).filter(([id])=>id==='copy'||(!task.withdrawnAt&&!task.stoppedAt&&(id!=='stop'||task.kind==='checkin')&&(id!=='extend'||!closedTask(task))&&(id!=='reopen'||closedTask(task))));
+    const hints={extend:'调整截止时间，已有提交保持不变',reopen:'为未完成的学生重新开放补交',correct:'修改任务要求和文字说明',copy:'复制到新草稿，编辑后再发布',withdraw:'停止接收提交，已有记录保留',stop:'终止指定期次及后续打卡，保留已有记录'};
+    const row=([id,label])=>`<button type="button" class="hp-management-menu-item${['withdraw','stop'].includes(id)?' is-destructive':''}" onclick="homeworkPrototype.chooseManagement('${id}')"><span><strong>${label}</strong><small>${hints[id]}</small></span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 4 4 4-4 4"/></svg></button>`;
+    const normal=available.filter(([id])=>!['withdraw','stop'].includes(id)),destructive=available.filter(([id])=>['withdraw','stop'].includes(id));
+    return `<p class="hp-management-menu-note">选择要进行的操作</p><div class="hp-management-menu">${normal.map(row).join('')}</div>${destructive.length?`<div class="hp-management-menu hp-management-menu-danger">${destructive.map(row).join('')}</div>`:''}`;
+  }
   function renderManagementDialog(){
     if(!management)return '';const task=taskById(management.taskId);if(!task)return '';const m=management;
-    let body=!m.action?Object.entries(managementLabels).filter(([id])=>id==='copy'||(!task.withdrawnAt&&!task.stoppedAt&&(id!=='stop'||task.kind==='checkin')&&(id!=='extend'||!closedTask(task))&&(id!=='reopen'||closedTask(task)))).map(([id,label])=>`<button class="hp-secondary" onclick="homeworkPrototype.chooseManagement('${id}')">${label}</button>`).join(''):`<h3>${managementLabels[m.action]}</h3><p>已有 ${studentRows(task).filter(s=>s.records.length).length} 人提交；历史提交和结果保留。</p>${['extend','reopen'].includes(m.action)?`<label>正常截止<input aria-label="新的正常截止" type="datetime-local" value="${escape(m.input.deadline.replace(' ','T'))}" onchange="homeworkPrototype.setManagementField('deadline',this.value.replace('T',' '))"></label><label>补交截止<input aria-label="新的补交截止" type="datetime-local" value="${escape(m.input.submitDeadline.replace(' ','T'))}" onchange="homeworkPrototype.setManagementField('submitDeadline',this.value.replace('T',' '))"></label>`:''}${m.action==='correct'?`<label>老师的要求<textarea aria-label="更正总说明" oninput="homeworkPrototype.setManagementField('description',this.value)">${escape(m.input.description)}</textarea></label>${m.input.itemTexts.map((i,n)=>`<label>第 ${n+1} 项标题<input aria-label="更正第 ${n+1} 项标题" value="${escape(i.title)}" oninput="homeworkPrototype.setManagementItem(${n},'title',this.value)"></label><label>第 ${n+1} 项说明<textarea aria-label="更正第 ${n+1} 项说明" oninput="homeworkPrototype.setManagementItem(${n},'instruction',this.value)">${escape(i.instruction)}</textarea></label>`).join('')}`:''}${m.action==='stop'?`<label>从第几期起终止<input type="number" min="1" max="${task.cycleCount||30}" aria-label="终止起始期次" value="${m.input.fromCycle}" onchange="homeworkPrototype.setManagementField('fromCycle',Number(this.value))"></label><p>将终止第 ${m.input.fromCycle} 期起的后续期次，已有记录保留。</p>`:''}<label>变更原因<textarea aria-label="变更原因" oninput="homeworkPrototype.setManagementField('reason',this.value)">${escape(m.input.reason)}</textarea></label>${m.error?`<p class="hp-error" role="alert">${escape(m.error)}</p>`:''}<button class="hp-primary" onclick="homeworkPrototype.saveTaskManagement()">${m.confirm?'确认执行，保留历史记录':'核对本次变更'}</button>`;
-    return `<div class="hp-filter-mask"><section class="hp-filter-sheet" role="dialog" aria-modal="true" aria-label="管理任务"><header><h2>管理任务</h2><button onclick="homeworkPrototype.closeTaskManagement()">取消</button></header>${body}</section></div>`;
+    let body=!m.action?renderManagementActions(task):`<p class="hp-management-form-note">已有 ${studentRows(task).filter(s=>s.records.length).length} 人提交；历史提交和结果保留。</p>${['extend','reopen'].includes(m.action)?`<label>正常截止<input aria-label="新的正常截止" type="datetime-local" value="${escape(m.input.deadline.replace(' ','T'))}" onchange="homeworkPrototype.setManagementField('deadline',this.value.replace('T',' '))"></label><label>补交截止<input aria-label="新的补交截止" type="datetime-local" value="${escape(m.input.submitDeadline.replace(' ','T'))}" onchange="homeworkPrototype.setManagementField('submitDeadline',this.value.replace('T',' '))"></label>`:''}${m.action==='correct'?`<label>老师的要求<textarea aria-label="更正总说明" oninput="homeworkPrototype.setManagementField('description',this.value)">${escape(m.input.description)}</textarea></label>${m.input.itemTexts.map((i,n)=>`<label>第 ${n+1} 项标题<input aria-label="更正第 ${n+1} 项标题" value="${escape(i.title)}" oninput="homeworkPrototype.setManagementItem(${n},'title',this.value)"></label><label>第 ${n+1} 项说明<textarea aria-label="更正第 ${n+1} 项说明" oninput="homeworkPrototype.setManagementItem(${n},'instruction',this.value)">${escape(i.instruction)}</textarea></label>`).join('')}`:''}${m.action==='stop'?`<label>从第几期起终止<input type="number" min="1" max="${task.cycleCount||30}" aria-label="终止起始期次" value="${m.input.fromCycle}" onchange="homeworkPrototype.setManagementField('fromCycle',Number(this.value))"></label><p>将终止第 ${m.input.fromCycle} 期起的后续期次，已有记录保留。</p>`:''}<label>变更原因<textarea aria-label="变更原因" oninput="homeworkPrototype.setManagementField('reason',this.value)">${escape(m.input.reason)}</textarea></label>${m.error?`<p class="hp-error" role="alert">${escape(m.error)}</p>`:''}<button class="hp-primary" onclick="homeworkPrototype.saveTaskManagement()">${m.confirm?'确认执行，保留历史记录':'核对本次变更'}</button>`;
+    return `<div class="hp-filter-mask"><section class="hp-filter-sheet hp-task-management-sheet" role="dialog" aria-modal="true" aria-labelledby="hp-management-dialog-title"><header><h2 id="hp-management-dialog-title">${escape(managementLabels[m.action]||'管理任务')}</h2><button type="button" class="hp-sheet-text-action" onclick="homeworkPrototype.closeTaskManagement()">取消</button></header>${body}</section></div>`;
   }
 
-  return {
+  // Documentation fixtures use the production prototype renderers and an isolated in-memory store.
+  const documentationScenes = [
+    ['teacher-home','教师首页与同排筛选','正常首页，包含草稿入口、任务数量和筛选。'],
+    ['draft-list','草稿列表','两份独立草稿；不是同一草稿的覆盖副本。'],
+    ['draft-delete','删除草稿确认','实际删除确认弹窗；截图不执行删除。'],
+    ['draft-read-error','草稿读取失败','注入本地读取异常，走现有失败分支。'],
+    ['draft-save-error','草稿保存失败','注入本地存储失败，原内容保留。','bottom'],
+    ['draft-expired','过期草稿','实际时间校验阻止继续。'],
+    ['compose-uniform','统一设置图片与默认批改','多个图片项统一设置；自动批改默认选中。','settings'],
+    ['compose-file-no-grading','文件项设为无需批改','同一作业可按项关闭批改，不影响其他图片项。','settings'],
+    ['compose-mixed','逐项提交和批改设置','图片、视频、文件、线下确认；非批改项不进入自动批改。','bottom'],
+    ['compose-required','必填错误定位','清空详情且没有附件后点击下一步，走实际校验。','bottom'],
+    ['compose-no-supplement','关闭补交与截止','关闭补交后两个截止一致。','bottom'],
+    ['recipients-mixed','逐班全班与部分','当前原型有两个授权班级样例，不作为三班真机验收。'],
+    ['recipients-picker','选择本班学生','实际学生选择层及人数。'],
+    ['recipients-empty-search','搜索无结果','无匹配不清除已选择学生。'],
+    ['recipients-zero','部分0人','实际下一步校验，停留问题班级。'],
+    ['publish-review','最终核对','内容、双截止、逐班接收范围；可向下查看。'],
+    ['publish-review-roster','核对接收人明细','核对页下半屏，展示逐班范围和人数。','bottom'],
+    ['publish-network','发布失败保留内容','现有发布网络异常演示；没有真实发送请求。','bottom'],
+    ['publish-roster','发布时名单变化','现有名单变化拦截，不伪造服务器鉴权。','bottom'],
+    ['publish-success','发布成功回执','实际本地保存成功；不代表通知已送达。'],
+    ['management-menu','任务管理入口','仅本人仍有权的任务显示管理操作。'],
+    ['management-withdraw-confirm','撤回确认','实际原因、影响与最终确认界面。'],
+    ['management-withdraw-parent','家长查看已撤回任务','保留已有提交，停止新增提交。'],
+    ['management-extend-confirm','延长截止确认','实际校验只允许延长。'],
+    ['management-extend-parent','家长查看延期与变更','展开要求可见最新双截止；历史提交保留。'],
+    ['management-reopen-confirm','重新开放补交确认','已结束任务设置未来截止。'],
+    ['management-reopen-parent','家长重新获得补交入口','原提交及历史保留。'],
+    ['management-correct-confirm','更正要求确认','只更正文字，不新增提交方式。'],
+    ['management-correct-parent','家长查看更正要求','实际修订记录与最新文字。'],
+    ['management-stop-confirm','终止连续打卡确认','指定从哪一期终止，说明已有历史保留。'],
+    ['management-stop-parent','终止期次只读','实际终止状态与原因。'],
+    ['management-save-error','任务变更保存失败','注入本地保存失败；未应用更改。'],
+    ['management-stale','任务变更版本冲突','模拟其他操作更新修订号，实际旧版本校验拦截。'],
+    ['parent-child-one','孩子一的待提交内容','双孩子演示：李涵的待提交选择。'],
+    ['parent-child-two','切到另一个孩子','实际切换到王博，不带入李涵的选择。'],
+    ['parent-child-return','切回原孩子恢复选择','实际往返切换，恢复原孩子的待提交内容。'],
+    ['parent-binding-removed','绑定解除后的权限反馈','隔离演示绑定解除，不等同服务器旧链接鉴权验收。'],
+    ['parent-pending','家长待完成列表','未提交、部分完成和补交样例。'],
+    ['parent-completed','家长已完成列表','完成分组不受批改是否结束影响。'],
+    ['parent-ended','家长已结束列表','已结束或撤回的只读样例。'],
+    ['parent-empty','家长无作业','现有空列表演示。'],
+    ['parent-load-error','家长列表查询失败','现有列表失败演示，与空列表分开。'],
+    ['parent-expanded','要求与截止展开','实际展开区，保留教师真实填写说明。'],
+    ['parent-closed','补交已结束只读','保留原提交，隐藏提交入口。'],
+    ['photo-pending','多图待提交','真实样图、累计数量、移除及提交。'],
+    ['photo-overlimit','添加超过9张','调用实际添加逻辑；拒绝第10张，保留已有9张。'],
+    ['photo-last-removed','移除最后一张','移除后仍可添加，不能提交空集合。'],
+    ['photo-one-failed','单张照片暂存失败','隔离失败文件状态，保留另一成功图片。'],
+    ['photo-network','待提交照片网络中断','替换旧图3；画面必须同时看到待提交选择。'],
+    ['photo-resubmit','旧提交与新选择并存','新版本提交成功前旧版本继续有效。'],
+    ['photo-resubmit-pending','重交的新选择核对区','接上一屏查看新选择；提交成功前旧版本不替换。','selection'],
+    ['photo-version-conflict','多家长重交冲突','实际版本检查，展示合并/替换选择。'],
+    ['photo-version-conflict-actions','冲突后的合并与替换','接上一屏向下查看实际核对操作。','selection'],
+    ['file-version-conflict','文件重交冲突','实际版本检查，使用当前文件需再次核对。'],
+    ['file-conflict-resolved','冲突核对后保存新版本','实际使用当前文件并确认，旧版进入历史。'],
+    ['file-save-error','重交保存失败保留旧版','注入本地提交保存失败，旧版仍有效，新选择保留。'],
+    ['pending-save-error','离开时暂存失败','本地暂存失败，阻止离开并保留选择。'],
+    ['video-pending','视频待提交','使用真实演示视频，可播放后确认提交。'],
+    ['video-submitted','视频提交成功','仅记录提交，不生成对错。'],
+    ['offline-pending','线下完成确认入口','实际家长确认入口，不生成媒体。'],
+    ['offline-submitted','线下确认完成','实际确认时间和完成状态。'],
+    ['student-first','教师学生浏览首位','当前姓名、班级、位置及首位箭头边界。'],
+    ['student-next','教师切到下一位','同一名单下一学生，身份、位置和内容同步。'],
+    ['student-media','本人照片与视频','向下浏览同一学生其他作业项。','bottom'],
+    ['student-question-filter','题目答错筛选','当前题目筛选结果，不复用完整班级人数。','bottom'],
+    ['student-question-detail','从答错题进入学生记录','沿用本题答错名单，不复用完整班级人数。'],
+    ['student-preview-photo','教师连续媒体预览','媒体人数与完整班级名单人数分别计数。'],
+    ['student-preview-next','预览切至下一学生','进入下一学生首份可用内容，身份与计数同步。'],
+    ['student-preview-video','同一学生内切至视频','只在本人媒体范围切换，首尾停止；原视频需暂停。'],
+    ['review-dialog','教师实际复核操作','原图与AI判定对照；判对、判错、暂缓和保存。'],
+    ['review-save-error','复核保存失败','注入本地保存失败，原判定不被改写。'],
+    ['review-version-conflict','复核旧版本冲突','模拟家长已重交，实际版本/签名检查拦截。','bottom'],
+    ['review-unreadable','识别不清','现有待处理题目状态，不伪造题框。','bottom'],
+    ['review-no-answer','无答案待处理','切到另一题查看无答案状态，不计作错误。','bottom'],
+    ['student-not-submitted','教师查看未提交学生','家长本地待提交不计入教师已交数据。'],
+    ['grading-queued','照片已提交等待批改','提交已完成，批改尚未完成，不回退为未提交。'],
+    ['stats-overview','任务概况与名单入口','目标人数、交齐和未交齐可继续查看名单。'],
+    ['stats-no-valid','没有有效判定','有效分母为0，正确率显示横线。'],
+    ['stats-unknown','无可靠批改数据','无来源的概览统计不显示。'],
+    ['school-readonly','学校视角只读','不提供发布、草稿编辑和任务管理。'],
+    ['school-no-media','学校视角不展示原件','学生统计可见，原始媒体与改判入口隐藏。'],
+    ['parent-not-assigned','孩子不在接收范围','只展示当前孩子有权任务；不等同服务端旧链接鉴权。'],
+    ['attachment-optimizing','图片准备与优化中','隔离演示优化阶段，不能冒充真实上传进度。'],
+    ['attachment-uploading','原件上传中','隔离模拟进度；不代表OSS实际网络上传。'],
+    ['attachment-partial-failed','附件部分上传失败','成功文件保留，失败项可重传/移除。'],
+    ['file-encrypted','加密PDF校验失败','调用实际本地加密检测，旧提交不撤销。'],
+    ['file-size','文件超过演示大小限制','按现有演示参数校验；不作为上线额度。'],
+    ['file-invalid','损坏PDF校验失败','使用坏文件样例调用本地容器校验，未调用后端。'],
+    ['file-format','文件类型不符合要求','调用实际格式校验，保留已有提交。'],
+    ['video-duration','视频时长超限','已确认视频上限3分钟；异常在隔离会话中演示。'],
+    ['temporary-file-expired','临时文件已失效','现有不可用图片反馈，需重选。'],
+  ];
+  function prepareDocumentationScene(id) {
+    if(!documentationMode||!documentationScenes.some(row=>row[0]===id))return false;
+    documentationFault='';documentationStorage.clear();restoreLocalDemo();management=null;gradeReviewDraft=null;materialPreview=null;materialListTaskId='';parentPhotoSource=null;pendingUpload=null;pendingLastId='';uploadMessage='';uploadBusy=false;draftNotice='';draftStorageError='';draftDelete=null;draftMenu=null;recipientPickerOpen=false;recipientSearch='';composeError='';rosterReviewRequired=false;publishDemoBranch='normal';gradeUI={page:0,q:'',wrongOnly:false,parentOpen:false,origin:'detail'};questionBrowseIds=null;rosterItemId='';teacherStudentId='';teacherFilter='all';detailClassId='c1';parentTaskId='';parentTaskTab='pending';
+    draft=newDraft();composeStep=0;settingMode='uniform';uniformType='';
+    store=seed();window.workbenchPrototype.demoIdentity('all');window.workbenchPrototype.view('subject');window.workbenchPrototype.class('c1');teacherTab='homework';go('teacherDesk');
+    api.prepareConsoleScenario('released');const task=taskById('homework-console-v1'),child=schoolDemoRoster.GUARDIAN_STUDENT_ID;
+    guardianId=child;task.title='周三分数练习';task.description='完成练习第3页，拍清完整作答过程；订正后再提交订正页。';task.items[0].title='完成第3页练习';task.items[1].title='提交订正页';
+    const current=()=>latestRows(store.submissions.filter(r=>r.taskId===task.id&&r.studentId===child));
+    const first=()=>current().find(r=>r.itemId===task.items[0].id);
+    const photo=(n=0)=>({id:'documentation-photo-'+n,path:demoPhotoAsset(parentDemoPhotos[n]),name:'第'+(n+1)+'页.jpg',saved:true});
+    const parent=()=>{go('parent');window.parentPrototype.scenario?.('twoChildren');window.parentPrototype.tab('homework');api.openParent(task.id);};
+    const teacher=()=>{teacherTab='homework';go('teacherDesk');api.openTeacher(task.id);};
+    const pending=(count=2)=>{pendingUpload=newPhotoPending(task,task.items[0],Array.from({length:count},(_,n)=>photo(n%2)));persistPending();};
+    const fillDraft=()=>{draft={...newDraft(),title:'周三分数练习',titleCustomized:true,description:task.description,items:task.items.map(i=>({...i})),classIds:['c1','c2'],recipientModes:{c1:'all',c2:'selected'},targetStudentIds:students.filter(s=>s.classId==='c2').slice(0,2).map(s=>s.id)};settingMode='individual';uniformType='photo';composeStep=0;teacherMode='compose';saveTeacherDraft();};
+    const docFile=()=>({id:'documentation-pdf',type:'file',name:'练习要求.pdf',path:'assets/homework-demo-files/campus-intro.pdf',size:55331,source:'文档演示样例',uploadState:'complete',previewState:'ready'});
+    const makeVideo=()=>{task.items=[{id:'documentation-video',title:'口述解题过程',instruction:'录制解题讲解视频。',type:'video',required:true,gradingEnabled:false}];store.submissions=store.submissions.filter(r=>r.taskId!==task.id);};
+    if(id.startsWith('draft-')||id.startsWith('compose-')||id.startsWith('recipients-')||id.startsWith('publish-')||id.startsWith('attachment-')){
+      fillDraft();
+      if(id==='draft-list'||id==='draft-delete'||id==='draft-read-error'){api.newTeacherDraft();draft.title='阅读记录补充';draft.description='阅读20分钟后记录收获。';saveTeacherDraft();api.openTeacherDrafts();if(id==='draft-delete')api.deleteTeacherDraft();if(id==='draft-read-error'){documentationFault='read';teacherRefresh();}}
+      if(id==='draft-save-error'){documentationFault='save';api.setTitle('草稿内容继续保留');}
+      if(id==='draft-expired'){draft.deadline=addDays(formatDate(new Date()),-1);teacherMode='compose';}
+      if(id==='compose-uniform'){settingMode='uniform';uniformType='photo';}if(id==='compose-file-no-grading'){draft.items[0].type='file';draft.items[0].gradingEnabled=false;expandedItemIndex=0;}
+      if(id==='compose-mixed'){draft.items=[...draft.items,{id:'doc-v',title:'录制一道题的解题视频',instruction:'',type:'video',required:true,gradingEnabled:false},{id:'doc-f',title:'填写练习文档',instruction:'',type:'file',required:true,gradingEnabled:true},{id:'doc-n',title:'完成20分钟课外阅读',instruction:'',type:'none',required:true,gradingEnabled:false}];}
+      if(id==='compose-required'){draft.description='';api.nextCompose();}
+      if(id==='compose-no-supplement')api.setAllowSupplement(false);
+      if(id.startsWith('recipients-')){composeStep=1;if(id==='recipients-picker'||id==='recipients-empty-search'){recipientClassId='c2';recipientPickerOpen=true;if(id==='recipients-empty-search')recipientSearch='不存在的姓名';}if(id==='recipients-zero'){draft.targetStudentIds=[];api.nextCompose();}}
+      if(id.startsWith('publish-')){teacherMode='preview';composeStep=1;if(id==='publish-network'||id==='publish-roster'){publishDemoBranch=id==='publish-network'?'network':'roster';api.publish();}if(id==='publish-success')api.publish();}
+      if(id.startsWith('attachment-')){draft.attachments=[docFile(),{...docFile(),id:'doc-failed',name:'补充说明.pdf',uploadState:id==='attachment-uploading'?'uploading':'failed',uploadProgress:38,uploadError:'上传中断，请重新上传'}];if(id==='attachment-optimizing')draft.attachments=[{...docFile(),type:'image',name:'练习页.jpg',path:photo().path,uploadState:'optimizing'}];}
+      teacherRefresh(true);
+    } else if(id.startsWith('management-')){
+      const keep=task.items[0];task.title='课外阅读记录';task.description='完成20分钟课外阅读，由家长确认。';task.items=[{...keep,title:'完成20分钟课外阅读',instruction:'阅读后确认已完成。',type:'none',gradingEnabled:false}];store.submissions=store.submissions.filter(r=>r.taskId!==task.id||r.itemId===keep.id);store.submissions.filter(r=>r.taskId===task.id).forEach(r=>{r.questions=[];r.media='';r.mock=false;r.label='家长确认已完成';});if(id.includes('reopen'))store.submissions=store.submissions.filter(r=>r.taskId!==task.id||r.studentId!==child);
+      if(id.includes('reopen'))task.deadline=task.submitDeadline=addDays(formatDate(new Date()),-1);
+      if(id.includes('stop')){task.kind='checkin';task.seriesId='documentation-series';task.cycleId='cycle-2';task.cycleCount=3;task.title='课外阅读记录 · 第2期';store.tasks.unshift({...JSON.parse(JSON.stringify(task)),id:task.id+'-cycle-3',cycleId:'cycle-3',title:'课外阅读记录 · 第3期',deadline:addDays(task.deadline,1),submitDeadline:addDays(task.submitDeadline,1)});}
+      teacher();api.openTaskManagement();
+      if(id!=='management-menu'){
+        const action=id.includes('withdraw')?'withdraw':id.includes('reopen')?'reopen':id.includes('correct')?'correct':id.includes('stop')?'stop':'extend';api.chooseManagement(action);api.setManagementField('reason',action==='withdraw'?'本次练习调整，保留已提交记录。':action==='stop'?'课程调整，从本期起停止打卡。':'按课堂安排更新要求与截止。');
+        if(action==='extend'||action==='reopen'){api.setManagementField('deadline',addDays(formatDate(new Date()),4));api.setManagementField('submitDeadline',addDays(formatDate(new Date()),12));}
+        if(action==='correct')api.setManagementField('description','阅读范围更正为课本第12—15页，完成20分钟阅读后由家长确认。');
+        api.saveTaskManagement();
+        if(id==='management-stale'){task.revision=(task.revision||0)+1;api.saveTaskManagement();}
+        else if(id==='management-save-error'){documentationFault='save';api.saveTaskManagement();}
+        else if(id.endsWith('-parent')){api.saveTaskManagement();parent();requestAnimationFrame(()=>{document.querySelectorAll('.hp-record-task-details,.parent-main > details').forEach(d=>d.open=true);});}
+      }
+    } else if(id.startsWith('parent-')){
+      parent();
+      if(['parent-pending','parent-completed','parent-ended','parent-empty','parent-load-error','parent-not-assigned'].includes(id)){parentTaskId='';parentTaskTab=id==='parent-completed'?'completed':id==='parent-ended'?'ended':'pending';if(id==='parent-pending'){const a={...task,id:'documentation-today',title:'今日计算练习',deadline:formatDate(new Date(new Date().setHours(20,0,0,0))),submitDeadline:addDays(formatDate(new Date()),7)};const b={...task,id:'documentation-partial',title:'阅读与订正',deadline:addDays(formatDate(new Date()),1)};const c={...task,id:'documentation-late',title:'周一练习补交',deadline:addDays(formatDate(new Date()),-1)};store.tasks=[a,b,c];store.submissions=[{...first(),taskId:b.id}];}if(id==='parent-not-assigned'){store.tasks=[{...task,targetSnapshotIds:students.filter(s=>s.id!==child).map(s=>s.id)}];}parentRefresh(true);if(id==='parent-empty'||id==='parent-load-error')api.applyPageDemo(id==='parent-empty'?'empty':'load-failed','parent');}
+      if(id.startsWith('parent-child-')){store.submissions=store.submissions.filter(r=>r.taskId!==task.id||r.studentId!==child);pending(1);if(id!=='parent-child-one'){window.parentPrototype.selectChild(1);if(id==='parent-child-return')window.parentPrototype.selectChild(0);api.openParent(task.id);}parentRefresh(true);}if(id==='parent-binding-removed')window.parentPrototype.exception('bindingRemoved');
+      if(id==='parent-expanded')requestAnimationFrame(()=>{const d=document.querySelector('.hp-record-task-details');if(d)d.open=true;});
+      if(id==='parent-closed'){task.deadline=task.submitDeadline=addDays(formatDate(new Date()),-1);parentRefresh(true);}
+    } else if(id==='grading-queued'){api.prepareConsoleScenario('queued');parent();
+    } else if(id.startsWith('photo-')||id==='pending-save-error'||id==='temporary-file-expired'){
+      parent();if(!['photo-resubmit','photo-resubmit-pending','photo-version-conflict','photo-version-conflict-actions'].includes(id))store.submissions=store.submissions.filter(r=>r.taskId!==task.id||r.studentId!==child);
+      pending(id==='photo-overlimit'?9:id==='photo-last-removed'?1:2);
+      if(id==='photo-overlimit'){parentPhotoSource={taskId:task.id,itemId:task.items[0].id,chat:true};api.useParentChatDemoPhoto(0);parentPhotoSource=null;}
+      if(id==='photo-last-removed')api.removePendingPhoto(0);
+      if(id==='photo-one-failed'){pendingUpload.photos[1].saved=false;pendingUpload.photos[1].error='本张暂存失败，请重试或移除';}
+      if(id==='temporary-file-expired'){pendingUpload.photos[1].unavailable=true;pendingUpload.photos[1].error='临时文件已失效，请移除后重新选择';}
+      if(id.startsWith('photo-version-conflict')){pendingUpload.expectedVersion=0;api.confirmUpload();}
+      if(id==='pending-save-error'){documentationFault='pending';api.toParentList();}
+      if(id==='photo-network')api.applyPageDemo('upload-network','parent');parentRefresh(true);
+    } else if(id==='file-version-conflict'||id.startsWith('file-')||id==='video-duration'){
+      task.items=[{id:'documentation-file',title:'上传练习文档',instruction:'提交PDF或Word文档。',type:'file',required:true,gradingEnabled:true}];store.submissions=store.submissions.filter(r=>r.taskId!==task.id);store.submissions.push({taskId:task.id,itemId:task.items[0].id,studentId:child,submittedAt:formatDate(new Date()),version:1,label:'练习.pdf',media:'assets/homework-demo-files/campus-intro.pdf',questions:[]});parent();pendingUpload={taskId:task.id,itemId:task.items[0].id,studentId:child,accountId:familyAccount(),type:'file',path:'assets/homework-demo-files/campus-intro.pdf',media:'assets/homework-demo-files/campus-intro.pdf',name:'新练习.pdf',saved:true,expectedVersion:['file-version-conflict','file-conflict-resolved'].includes(id)?0:1};persistPending();
+      if(id==='file-version-conflict'||id==='file-conflict-resolved'){api.confirmUpload();if(id==='file-conflict-resolved'){api.acknowledgePendingVersion();api.confirmUpload();}}if(id==='file-save-error'){documentationFault='save';api.confirmUpload();}
+      if(id==='file-encrypted')uploadMessage=grading.homeworkDocumentError('加密.pdf',new Uint8Array(Array.from('%PDF-1.7 /Encrypt 1 %%EOF').map(c=>c.charCodeAt(0))));
+      if(id==='file-size')uploadMessage=grading.homeworkFileError('过大.pdf',51*1024*1024,'file',true);
+      if(id==='file-invalid')uploadMessage=grading.homeworkDocumentError('损坏.pdf',new Uint8Array([1,2,3,4]));
+      if(id==='file-format')uploadMessage=grading.homeworkFileError('练习.xlsx',100,'file',true);
+      if(id==='video-duration'){task.items[0].type='video';task.items[0].title='口述解题过程';task.items[0].instruction='录制解题讲解视频。';store.submissions=store.submissions.filter(r=>r.taskId!==task.id);pendingUpload.type='video';pendingUpload.media=pendingUpload.path='assets/homework-demo-files/promo-video-30s.mp4';pendingUpload.name='原已选择的30秒视频.mp4';pendingUpload.expectedVersion=0;uploadMessage='新选视频时长超限，请剪辑后重新选择。原选择保留。';persistPending();}parentRefresh(true);
+    } else if(id.startsWith('video-')){
+      makeVideo();parent();pendingUpload={taskId:task.id,itemId:task.items[0].id,studentId:child,accountId:familyAccount(),type:'video',path:'assets/homework-demo-files/promo-video-30s.mp4',media:'assets/homework-demo-files/promo-video-30s.mp4',name:'讲题视频.mp4',saved:true,expectedVersion:0};persistPending();if(id==='video-submitted')api.confirmUpload();else parentRefresh(true);
+    } else if(id.startsWith('offline-')){
+      task.items=[{id:'documentation-offline',title:'完成20分钟课外阅读',instruction:'家长确认已完成阅读。',type:'none',required:true,gradingEnabled:false}];store.submissions=store.submissions.filter(r=>r.taskId!==task.id);parent();if(id==='offline-submitted')api.submit(task.id,task.items[0].id);else parentRefresh(true);
+    } else if(id.startsWith('student-')||id.startsWith('stats-')||id.startsWith('school-')||id.startsWith('review-')){
+      teacher();
+      if(id.startsWith('student-')){task.items.push({id:'documentation-video',title:'讲解解题过程',instruction:'',type:'video',required:true,gradingEnabled:false});store.submissions.filter(r=>r.taskId===task.id&&r.itemId===task.items[0].id).forEach(r=>{r.photos=[photo(0),photo(1)];store.submissions.push({taskId:task.id,itemId:'documentation-video',studentId:r.studentId,label:'讲题视频.mp4',media:'assets/homework-demo-files/promo-video-30s.mp4',submittedAt:r.submittedAt,version:1,questions:[]});});if(id==='student-not-submitted'){store.submissions=store.submissions.filter(r=>r.taskId!==task.id||r.studentId!==child);pending();}api.openStudents('all');api.openStudent(child);if(id==='student-next')api.changeStudent(1);if(id==='student-question-filter'||id==='student-question-detail'){const r=current().find(r=>r.questions.some(q=>!q.correct)),q=r.questions.find(q=>!q.correct);api.openGradeQuestion(q.id);api.filterGradeStudents('wrong');if(id==='student-question-detail')api.openGradedStudent(child);}if(id.startsWith('student-preview-'))requestAnimationFrame(()=>{const button=document.querySelector('.hp-student-browse .hp-paper-preview');if(button){api.openPaper(button);if(id==='student-preview-next')api.changePaperStudent(1);if(id==='student-preview-video'){api.changePaperMedia(1);api.changePaperMedia(1);api.changePaperMedia(1);}}});}
+      if(id.startsWith('review-')){const r=first();r.questions[0].state=id==='review-unreadable'?'unreadable':'review';if(id==='review-no-answer')r.questions[1].state='no-answer';api.openGradeQuestion(r.questions[id==='review-no-answer'?1:0].id);api.filterGradeStudents('pending');if(id==='review-unreadable'||id==='review-no-answer'){api.filterGradeStudents('pending');}else{api.review(task.id,r.questions[0].id,undefined,child,id==='review-version-conflict');if(id==='review-save-error'){api.setGradeReviewDecision(true);documentationFault='save';api.confirmGradeReview();}if(id==='review-version-conflict'){gradeReviewDraft.choice='right';r.version=2;api.saveInlineGrade();}}}
+      if(id==='stats-no-valid'){store.submissions.filter(r=>r.taskId===task.id).forEach(r=>r.questions.forEach(q=>q.state='review'));api.openQuestionResults(task.items[0].id);}
+      if(id==='stats-unknown'){store.submissions.filter(r=>r.taskId===task.id).forEach(r=>{r.questions=[];delete r.gradingResult;});api.openStudents('all');api.openStudent(child);}
+      if(id.startsWith('school-')){window.workbenchPrototype.view('school');teacherTab='homework';go('teacherDesk');if(id==='school-readonly')api.toTeacherList();else{api.openTeacher(task.id);api.openStudents('all');api.openStudent(child);}}
+    } else {api.toTeacherList();}
+    if(typeof history!=='undefined'){const url=new URL(location.href);url.searchParams.set('documentation','1');history.replaceState(null,'',url);}
+    const row=documentationScenes.find(row=>row[0]===id);requestAnimationFrame(()=>{const panel=document.querySelector('#teacher-tab-panel')||document.querySelector('.parent-main');if(panel){panel.scrollTop=row[3]==='bottom'?panel.scrollHeight:0;if(row[3]==='selection'||row[3]==='settings'){const area=panel.querySelector(row[3]==='settings'?'.hp-submit-settings':'.hp-photo-selection');if(area)panel.scrollTop=area.getBoundingClientRect().top-panel.getBoundingClientRect().top+panel.scrollTop-20;}}const host=document.getElementById('documentation-capture-controls');if(host){host.querySelector('select').value=id;host.querySelector('[data-note]').textContent=row[2];host.dataset.scene=id;}});return true;
+  }
+  if(documentationMode&&typeof document!=='undefined')requestAnimationFrame(()=>{
+    const host=document.createElement('section');host.id='documentation-capture-controls';host.style.cssText='position:fixed;left:12px;top:70px;width:260px;z-index:3000;background:#192838;color:#eaf5ff;border:1px solid #46657e;border-radius:12px;padding:14px;box-sizing:border-box;font:13px/1.6 sans-serif';
+    host.innerHTML='<strong>需求截图 · 隔离演示会话</strong><p>画布使用当前原型组件。所有作业/草稿变动仅在内存；未接真实上传、通知或鉴权服务。</p><label>选择截图场景<select aria-label="文档截图场景" style="width:100%;margin:8px 0;padding:9px" onchange="homeworkPrototype.prepareDocumentationScene(this.value)"><option value="">请选择</option>'+documentationScenes.map(([id,label],i)=>'<option value="'+id+'">'+(i+1)+'. '+label+'</option>').join('')+'</select></label><p data-note></p>';document.body.append(host);
+  });
+
+  const api = {
+    prepareDocumentationScene, getDocumentationSceneOptions:()=>documentationMode?documentationScenes:[],
     ...workflowActions,
     resumePending(taskId,itemId){persistPending();pendingUpload=pendingMap()[taskId+':'+itemId]||null;pendingLastId=taskId+':'+itemId;parentRefresh();},
     previewFamily(){familyPreview=true;teacherRefresh();},closeFamilyPreview(){familyPreview=false;teacherRefresh();},
@@ -1271,7 +1463,7 @@ window.homeworkPrototype = (() => {
     closeTaskManagement(){management=null;teacherRefresh();},
     chooseManagement(action){if(!management)return;const task=taskById(management.taskId);if(action==='copy'){if(!archiveCurrentDraft())return;draft={...newDraft(),...JSON.parse(JSON.stringify(task)),titleCustomized:true,title:task.title+'（副本）',deadline:defaultDeadline(),submitDeadline:addDays(defaultDeadline(),7),classIds:task.classIds.filter(id=>subjectClassIds(task.subject).includes(id)),recipientModes:Object.fromEntries(task.classIds.map(id=>[id,'all'])),targetStudentIds:[]};delete draft.withdrawnAt;delete draft.stoppedAt;delete draft.changes;delete draft.notification;delete draft.revision;management=null;teacherMode='compose';composeStep=0;recognitionStale=false;settingMode='individual';saveTeacherDraft();teacherRefresh(true);return;}management.action=action;management.input={reason:'',deadline:task.deadline,submitDeadline:task.submitDeadline,description:task.description,itemTexts:task.items.map(i=>({id:i.id,title:i.title,instruction:i.instruction})),fromCycle:Number(task.cycleId?.replace('cycle-',''))||1};management.error='';management.confirm=false;teacherRefresh();},
     setManagementField(key,value){if(management){management.input[key]=value;management.confirm=false;management.error='';}},setManagementItem(n,key,value){if(management){management.input.itemTexts[n][key]=value;management.confirm=false;management.error='';}},
-    saveTaskManagement(){if(!management)return;const m=management,task=taskById(m.taskId),allowed=subjectClassIds(task.subject);const error=(task.revision||0)!==m.revision?'任务已更新，请重新进入后核对。':grading.validateHomeworkChange(task,m.action,m.input,workScope.view==='school'?'':workScope.teacherId,allowed);if(error){m.error=error;teacherRefresh();return;}const affected=m.action==='stop'?store.tasks.filter(t=>t.seriesId===task.seriesId&&Number(t.cycleId?.replace('cycle-',''))>=m.input.fromCycle):[task];if(!affected.length||affected.some(t=>grading.validateHomeworkChange(t,m.action,m.input,workScope.teacherId,allowed))){m.error='部分期次状态或权限已变化，请重新选择。';teacherRefresh();return;}if(!m.confirm){m.error='';m.confirm=true;teacherRefresh();return;}const before=JSON.stringify(store);affected.forEach(t=>grading.applyHomeworkChange(t,m.action,m.input,workScope.teacherId,new Date().toISOString()));try{localStorage.setItem(KEY,JSON.stringify(store));management=null;teacherRefresh(true);}catch{Object.assign(store,JSON.parse(before));m.error='保存失败，尚未应用变更，请重试。';teacherRefresh();}},
+    saveTaskManagement(){if(!management)return;const m=management,task=taskById(m.taskId),allowed=subjectClassIds(task.subject);const error=(task.revision||0)!==m.revision?'任务已更新，请重新进入后核对。':grading.validateHomeworkChange(task,m.action,m.input,workScope.view==='school'?'':workScope.teacherId,allowed);if(error){m.error=error;teacherRefresh();return;}const affected=m.action==='stop'?store.tasks.filter(t=>t.seriesId===task.seriesId&&Number(t.cycleId?.replace('cycle-',''))>=m.input.fromCycle):[task];if(!affected.length||affected.some(t=>grading.validateHomeworkChange(t,m.action,m.input,workScope.teacherId,allowed))){m.error='部分期次状态或权限已变化，请重新选择。';teacherRefresh();return;}if(!m.confirm){m.error='';m.confirm=true;teacherRefresh();return;}const before=JSON.stringify(store);affected.forEach(t=>grading.applyHomeworkChange(t,m.action,m.input,workScope.teacherId,new Date().toISOString()));try{previewStorage.setItem(KEY,JSON.stringify(store));management=null;teacherRefresh(true);}catch{Object.assign(store,JSON.parse(before));m.error='保存失败，尚未应用变更，请重试。';teacherRefresh();}},
     retryItemGrading(taskId,itemId){const r=latestRows(store.submissions.filter(r=>r.taskId===taskId&&r.itemId===itemId&&r.studentId===guardianId))[0];if(!r)return;r.gradingError='已重试，等待文档转页与批改服务接入；提交状态保持已完成。';save();parentRefresh();},
     retryNotification(failed=false){const task=taskById(teacherTaskId);if(!task||workScope.view==='school'||task.publishedBy!==workScope.teacherId)return;task.notification={status:failed?'failed':'pending',message:failed?'模拟通知失败，任务已保存，可重试。':'本地演示：已重新排队，尚未实际发送。',attempts:(task.notification?.attempts||0)+1};save();teacherRefresh();},
     appendPhotos(taskId,itemId){const task=taskById(taskId),item=task?.items.find(i=>i.id===itemId);if(!item||closedTask(task))return;const r=latestRows(store.submissions.filter(r=>r.taskId===taskId&&r.itemId===itemId&&r.studentId===guardianId))[0];const photos=r?.photos?.map(p=>({...p}))||(r?[{id:'legacy-'+taskId+'-'+itemId,name:r.label,path:mediaFor(r)||samplePhoto(r),saved:true}]:[]);pendingUpload=newPhotoPending(task,item,photos);persistPending();parentRefresh();},
@@ -1294,8 +1486,8 @@ window.homeworkPrototype = (() => {
     openMistakeReason(){if(!parentQuestionContext())return;learningUI.reasonOpen=true;learningUI.feedback='';parentRefresh();},
     closeMistakeReason(){learningUI.reasonOpen=false;parentRefresh();},
     chooseMistakeReason(reason){if(learning().MISTAKE_REASONS.includes(reason))learningUI.reason=reason;parentRefresh();},
-    saveHomeworkMistake(reason){const c=parentQuestionContext();if(!c)return false;if(typeof reason==='string')learningUI.reason=learning().normalizeMistakeReason(reason);if(!learning().isValidMistakeReason(learningUI.reason)){learningUI.feedback='错因须为1至10字，空格不计';return false;}const entries=learning().addNotebookEntry(readNotebook(),{studentId:c.studentId,taskId:c.task.id,itemId:c.record.itemId,version:c.record.version||1,imagePath:photoPath(c.record,c.q),taskTitle:c.task.title},c.q,learningUI.reason);try{localStorage.setItem(learning().NOTEBOOK_KEY,JSON.stringify(entries));learningUI.reasonOpen=false;learningUI.feedback='';}catch{learningUI.feedback='保存失败，请稍后重试';}parentRefresh();},
-    removeHomeworkMistake(){const c=parentQuestionContext();if(!c)return false;const key=learning().notebookKey(c.studentId,c.task.id,c.record.itemId,c.q.id);try{localStorage.setItem(learning().NOTEBOOK_KEY,JSON.stringify(readNotebook().filter(entry=>entry.key!==key)));parentRefresh();return true;}catch{return false;}},
+    saveHomeworkMistake(reason){const c=parentQuestionContext();if(!c)return false;if(typeof reason==='string')learningUI.reason=learning().normalizeMistakeReason(reason);if(!learning().isValidMistakeReason(learningUI.reason)){learningUI.feedback='错因须为1至10字，空格不计';return false;}const entries=learning().addNotebookEntry(readNotebook(),{studentId:c.studentId,taskId:c.task.id,itemId:c.record.itemId,version:c.record.version||1,imagePath:photoPath(c.record,c.q),taskTitle:c.task.title},c.q,learningUI.reason);try{previewStorage.setItem(learning().NOTEBOOK_KEY,JSON.stringify(entries));learningUI.reasonOpen=false;learningUI.feedback='';}catch{learningUI.feedback='保存失败，请稍后重试';}parentRefresh();},
+    removeHomeworkMistake(){const c=parentQuestionContext();if(!c)return false;const key=learning().notebookKey(c.studentId,c.task.id,c.record.itemId,c.q.id);try{previewStorage.setItem(learning().NOTEBOOK_KEY,JSON.stringify(readNotebook().filter(entry=>entry.key!==key)));parentRefresh();return true;}catch{return false;}},
     openHomeworkNotebook(){if(!parentQuestionContext())return;learningUI.mode='notebook';parentRefresh(true);},
 
     openHomeworkTutor(){
@@ -1369,7 +1561,7 @@ window.homeworkPrototype = (() => {
       localPageDemo={key:context.key,id,label:choice[1],composeError:composeError||'',choices:context.choices,snapshot:old?.snapshot||(task?{task:JSON.parse(JSON.stringify(task)),submissions:JSON.parse(JSON.stringify(store.submissions.filter(r=>r.taskId===task.id)))}:null)};
       if(id==='publish-network'||id==='publish-roster'){publishDemoBranch=id==='publish-network'?'network':'roster';composeError=id==='publish-network'?'发布失败：网络暂不可用。内容已保留，请恢复正常后重试。':'发布前接收名单发生变化，请返回核对布置对象。';}
       else if(id.startsWith('upload-preview-')&&task){const previewState=id.slice('upload-preview-'.length);materialAttachments(task).filter(file=>file.type==='file'&&!grading.homeworkOriginalError(file)).forEach(file=>{file.previewState=previewState;});latestRows(store.submissions.filter(r=>r.taskId===task.id&&r.studentId===guardianId)).filter(r=>task.items.some(item=>item.id===r.itemId&&item.type==='file')).forEach(r=>{r.previewState=previewState;r.uploadState='complete';});}
-      else if(id.startsWith('upload-'))localPageDemo.message=({ 'upload-format':'文件格式不支持，请选择老师要求的文件类型。','upload-size':'文件超过大小限制，请压缩后重新选择。','upload-duration':'视频不能超过 5 分钟，请剪辑后重新选择。','upload-network':'网络连接中断，当前选择已保留，请恢复网络后重试。'})[id];
+      else if(id.startsWith('upload-'))localPageDemo.message=({ 'upload-format':'文件格式不支持，请选择老师要求的文件类型。','upload-size':'文件超过大小限制，请压缩后重新选择。','upload-duration':'视频不能超过 3 分钟，请剪辑后重新选择。','upload-network':'网络连接中断，当前选择已保留，请恢复网络后重试。'})[id];
       else if(task){
         const isMine=r=>r.taskId===task.id&&(role==='parent'?r.studentId===guardianId:(['student','result'].includes(teacherMode)?r.studentId===teacherStudentId:targetIds(teacherTaskById(task.id)||task).includes(r.studentId)));
         const rows=latestRows(store.submissions.filter(isMine));
@@ -1459,14 +1651,14 @@ window.homeworkPrototype = (() => {
       const target=draftDelete;if(!target)return;
       if(workScope.view==='school'||workScope.teacherId!==target.teacherId){draftMenu=null;draftDelete=null;draftNotice='工作身份已变化，请重新进入我的草稿。';teacherRefresh();return;}
       try{if(target.id==='current'){
-        if(localStorage.getItem(DRAFT_KEY+workScope.teacherId)!==target.snapshot)throw Error('这份草稿已更新，请取消后重新核对。');
-        localStorage.removeItem(DRAFT_KEY+workScope.teacherId);draft=newDraft();subjectTouched=false;composeStep=0;
-      }else{const rows=readDraftArchive(),row=rows.find(row=>row.id===target.id);if(!row||JSON.stringify(row.saved)!==target.snapshot)throw Error('这份草稿已变化，请取消后重新核对。');localStorage.setItem(draftArchiveKey(),JSON.stringify(rows.filter(row=>row.id!==target.id)));}
+        if(previewStorage.getItem(DRAFT_KEY+workScope.teacherId)!==target.snapshot)throw Error('这份草稿已更新，请取消后重新核对。');
+        previewStorage.removeItem(DRAFT_KEY+workScope.teacherId);draft=newDraft();subjectTouched=false;composeStep=0;
+      }else{const rows=readDraftArchive(),row=rows.find(row=>row.id===target.id);if(!row||JSON.stringify(row.saved)!==target.snapshot)throw Error('这份草稿已变化，请取消后重新核对。');previewStorage.setItem(draftArchiveKey(),JSON.stringify(rows.filter(row=>row.id!==target.id)));}
       draftDelete=null;draftMenu=null;draftNotice='草稿已删除';teacherMode='drafts';teacherRefresh();
       }catch(error){target.error=error.message.includes('已')?error.message:'删除失败，草稿仍保留，请重试。';teacherRefresh();}
     },
-    newTeacherDraft(){if(workScope.view==='school')return;composeOrigin=teacherMode==='drafts'?'drafts':'list';if(!archiveCurrentDraft()){teacherRefresh();return;}try{localStorage.removeItem(DRAFT_KEY+workScope.teacherId);}catch{draftNotice='草稿存储不可用，请重试。';teacherRefresh();return;}draft=newDraft();subjectTouched=false;composeStep=0;uniformType='';settingMode='uniform';recognizedCount=0;recognitionStale=false;this.compose();},
-    resumeOtherDraft(id){if(workScope.view==='school')return;try{const rows=readDraftArchive(),row=rows.find(r=>r.id===id);if(!row){draftNotice='这份草稿已不存在，请刷新列表。';teacherRefresh();return;}if(!row.saved.draft.classIds.every(id=>publishingClassIds().includes(id))){draftNotice='接收范围已变化，请切换到有权限的工作身份后继续。';teacherRefresh();return;}if(!archiveCurrentDraft()){teacherRefresh();return;}localStorage.setItem(DRAFT_KEY+workScope.teacherId,JSON.stringify(row.saved));localStorage.setItem(draftArchiveKey(),JSON.stringify(readDraftArchive().filter(r=>r.id!==id)));restoreTeacherDraft();this.compose();}catch{draftNotice='草稿切换失败，内容仍保留，请重试。';teacherRefresh();}},
+    newTeacherDraft(){if(workScope.view==='school')return;composeOrigin=teacherMode==='drafts'?'drafts':'list';if(!archiveCurrentDraft()){teacherRefresh();return;}try{previewStorage.removeItem(DRAFT_KEY+workScope.teacherId);}catch{draftNotice='草稿存储不可用，请重试。';teacherRefresh();return;}draft=newDraft();subjectTouched=false;composeStep=0;uniformType='';settingMode='uniform';recognizedCount=0;recognitionStale=false;this.compose();},
+    resumeOtherDraft(id){if(workScope.view==='school')return;try{const rows=readDraftArchive(),row=rows.find(r=>r.id===id);if(!row){draftNotice='这份草稿已不存在，请刷新列表。';teacherRefresh();return;}if(!row.saved.draft.classIds.every(id=>publishingClassIds().includes(id))){draftNotice='接收范围已变化，请切换到有权限的工作身份后继续。';teacherRefresh();return;}if(!archiveCurrentDraft()){teacherRefresh();return;}previewStorage.setItem(DRAFT_KEY+workScope.teacherId,JSON.stringify(row.saved));previewStorage.setItem(draftArchiveKey(),JSON.stringify(readDraftArchive().filter(r=>r.id!==id)));restoreTeacherDraft();this.compose();}catch{draftNotice='草稿切换失败，内容仍保留，请重试。';teacherRefresh();}},
     compose() { if (workScope.view === 'school') return; if (teacherMode !== 'compose' && !hasTeacherDraft()) { draft = newDraft(); if(listFilters.subject!=='all'&&subjectOptions().includes(listFilters.subject))draft.subject=listFilters.subject;draft.classIds=listFilters.classId!=='all'&&subjectClassIds(draft.subject).includes(listFilters.classId)?[listFilters.classId]:subjectClassIds(draft.subject);draft.recipientModes=Object.fromEntries(draft.classIds.map(id=>[id,'all'])); composeStep = 0; uniformType = ''; settingMode = 'uniform'; } if(toDate(draft.deadline).getTime()<=Date.now())composeStep=0; composeError = ''; publishDemoBranch = 'normal'; rosterReviewRequired = false; teacherMode = 'compose'; teacherRefresh(true); },
     toTeacherList() { if(saveTeacherDraft()===false){teacherRefresh();return;}teacherMode = 'list'; teacherSeriesId = ''; teacherRefresh(true); },
     backCompose() { if (composeStep) { composeStep -= 1; composeError = ''; teacherRefresh(true); } else if(composeOrigin==='drafts')this.openTeacherDrafts();else this.toTeacherList(); },
@@ -1529,7 +1721,7 @@ window.homeworkPrototype = (() => {
       const image=dialog.querySelector('img'),page=dialog._paperPages[index],video=dialog.querySelector('video'),viewport=dialog.querySelector('.hp-paper-viewport'),savedPosition=preserveViewport?{top:viewport.scrollTop,left:viewport.scrollLeft,src:page.src}:null;
       const restorePosition=()=>{if(savedPosition&&dialog._paperPages[dialog._paperIndex]===page&&page.src===savedPosition.src){viewport.scrollTop=savedPosition.top;viewport.scrollLeft=savedPosition.left;}};image.onload=savedPosition?restorePosition:null;
       if(video?.pause){video.pause();video.hidden=page.type!=='video';if(page.type==='video'){video.src=page.src;video.currentTime=0;}else video.removeAttribute('src');}
-      image.onerror=()=>{if(dialog._paperPages[dialog._paperIndex]!==page)return;const failed=grading.submissionImageFailure({...page,path:page.src});Object.assign(page,failed,{src:failed.path});this.changePaperPage(0,dialog,true);};image.hidden=page.type==='video'||!page.src;if(page.src)image.src=page.src;else image.removeAttribute('src');image.alt=page.imageError||page.alt;const heading=dialog.querySelector('header strong');if(heading)heading.textContent=page.title||'作业原图';
+      image.onerror=page.type==='video'?null:()=>{if(dialog._paperPages[dialog._paperIndex]!==page)return;const failed=grading.submissionImageFailure({...page,path:page.src});Object.assign(page,failed,{src:failed.path});this.changePaperPage(0,dialog,true);};image.hidden=page.type==='video'||!page.src;if(page.type!=='video'&&page.src)image.src=page.src;else image.removeAttribute('src');image.alt=page.imageError||page.alt;const heading=dialog.querySelector('header strong');if(heading)heading.textContent=page.title||'作业原图';
       let notice=dialog.querySelector('[data-image-status]');if(!notice&&typeof document.createElement==='function'){notice=document.createElement('p');notice.dataset.imageStatus='';notice.className='hp-record-image-notice';notice.setAttribute('role','status');dialog.querySelector('.hp-paper-viewport').appendChild(notice);}if(notice){notice.textContent=page.imageError||'';notice.hidden=!page.imageError;}
       const toggle=dialog.querySelector('[data-result-toggle]');if(toggle&&'hidden' in toggle){toggle.hidden=!page.gradedPath;toggle.textContent=page.showOriginal?'查看批改图':'查看原图';}const pager=dialog.querySelector('.hp-paper-pager'),buttons=pager.querySelectorAll('button');
       if(dialog._studentGallery){const ids=[...new Set(dialog._paperPages.map(page=>page.studentId))],position=ids.indexOf(page.studentId),media=dialog._paperPages.filter(other=>other.studentId===page.studentId),mediaIndex=media.indexOf(page);pager.querySelector('span').textContent='学生 '+(position+1)+'/'+ids.length+' · 内容 '+(mediaIndex+1)+'/'+media.length;buttons[0].disabled=position===0;buttons[1].disabled=position===ids.length-1;}else{pager.querySelector('span').textContent=(index+1)+' / '+dialog._paperPages.length;buttons[0].disabled=index===0;buttons[1].disabled=index===dialog._paperPages.length-1;}
@@ -1637,6 +1829,7 @@ window.homeworkPrototype = (() => {
       const selected = demoMaterialFiles.find(file => file.id === id);
       if (!selected) return;
       const file = { ...selected, id: `attachment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` };
+      const capacityError=grading.homeworkAttachmentError([...materialAttachments(draft),file]);if(capacityError){composeError=capacityError;teacherRefresh();return;}
       draft.attachments = [...materialAttachments(draft), file]; draft.photo = ''; materialSourceOpen = false; chatDemoOpen = false; clearComposeError();
       if (!draft.items.some(item => item.title.trim())) this.applyRecognition();
       startMaterialUpload(file);
@@ -1649,10 +1842,12 @@ window.homeworkPrototype = (() => {
       for (const file of files) {
         const type = file.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|bmp|heic)$/i.test(file.name) ? 'image' : file.type.startsWith('video/') || /\.(mp4|mov|m4v|webm)$/i.test(file.name) ? 'video' : file.type.startsWith('audio/') || /\.(mp3|m4a|wav|aac|ogg)$/i.test(file.name) ? 'audio' : /\.(pdf|docx?|pptx?|xlsx?|txt)$/i.test(file.name) ? 'file' : '';
         if (!type) { errors.push(`${file.name}：不支持的附件格式`); continue; }
-        const max = type === 'image' ? 20 : type === 'video' ? 200 : 50;
+        const max = type === 'image' || type === 'audio' ? 20 : type === 'video' ? 100 : 50;
         if (file.size > max * 1024 * 1024) { errors.push(`${file.name}：不能超过 ${max}MB`); continue; }
         const entry = { id: `attachment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name: file.name, type, size: file.size, source: materialSelectionSource, path: '' };
+        const capacityError=grading.homeworkAttachmentError([...materialAttachments(draft),...added,entry]);if(capacityError){errors.push(capacityError);continue;}
         try {
+          if(type==='video'||type==='audio')await validateSelectedMedia(file,type);
           try { await storeMaterialFile(entry.id, file); entry.path = URL.createObjectURL(file); materialUrls.set(entry.id, entry.path); }
           catch {
             if (file.size <= 2 * 1024 * 1024) entry.path = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); });
@@ -1693,11 +1888,11 @@ window.homeworkPrototype = (() => {
       });
       store.tasks.unshift(...tasks);
       if(store.consoleDemo?.publishing)store.consoleDemo={taskId:tasks[0].id,scenario:'published',publishing:false};
-      try{localStorage.setItem(KEY,JSON.stringify(store));}catch{store.tasks.splice(0,tasks.length);composeError='发布未保存成功，内容已保留，请重试。';teacherRefresh();return;}
+      try{previewStorage.setItem(KEY,JSON.stringify(store));}catch{store.tasks.splice(0,tasks.length);composeError='发布未保存成功，内容已保留，请重试。';teacherRefresh();return;}
       const studentsCount = targetIds(tasks[0]).length;
       publishedNotice = `已发布给 ${studentsCount} 名学生${count > 1 ? `，共 ${count} 期` : ''}，接收名单已冻结；家长可在作业列表查看。`;
       draft = newDraft(); subjectTouched = false; recipientPickerOpen = false;
-      try { localStorage.removeItem(DRAFT_KEY + workScope.teacherId); } catch {}
+      try { previewStorage.removeItem(DRAFT_KEY + workScope.teacherId); } catch {}
       composeStep = 0; publishDemoBranch = 'normal'; rosterReviewRequired = false; teacherMode = 'success'; teacherRefresh(true);
     },
     review(taskId,questionId,correct,studentId='',inline=false){const task=teacherTaskById(taskId);if(!task||!canRelease(task))return;const eligible=q=>q.id===questionId&&['review','confirmed','unreadable','no-answer'].includes(q.state);const records=submissionsFor(task),record=studentId?records.find(r=>r.studentId===studentId&&r.questions?.some(eligible)):records.find(r=>r.questions?.some(q=>eligible(q)&&q.state==='review'))||records.find(r=>r.questions?.some(eligible)),q=record?.questions.find(eligible);if(!q)return;gradeReviewDraft={taskId,questionId,studentId:record.studentId,itemId:record.itemId,version:record.version||1,signature:grading.gradingSignature(q),inline,correct:null,reason:'已对照学生原图核对',error:''};teacherRefresh();},
@@ -1728,7 +1923,7 @@ window.homeworkPrototype = (() => {
     taskSwipeCancel() { parentTaskTouch = null; },
     taskSwipeEnd(event) { const start = parentTaskTouch; parentTaskTouch = null; if (!start || start.id !== event.pointerId) return; const dx = event.clientX - start.x, dy = event.clientY - start.y; if (Math.abs(dx) < 50 || Math.abs(dx) <= Math.abs(dy) * 1.3) return; const tabs = ['pending', 'completed', 'ended']; const next = tabs.indexOf(parentTaskTab) + (dx < 0 ? 1 : -1); if (next >= 0 && next < tabs.length) this.changeParentTaskTab(tabs[next]); },
     submit(taskId, itemId) { const task = taskById(taskId); const item = task?.items.find(row => row.id === itemId); if (!task || !item || item.type !== 'none' || !targetIds(task).includes(guardianId)) return; if (closedTask(task)) { alert('补交已结束，当前任务只可查看。'); return; } submitRecord(task, item, '家长确认已完成'); },
-    demoException(type) { const messages = { format: '文件格式不支持，请按老师指定的方式选择 PDF、Word、PPT、Excel、TXT、图片或视频。', size: '文件超过当前类型大小限制，请压缩后重新选择。', duration: '视频超过 5 分钟，请剪辑后重新选择。', network: '网络连接中断，当前选择已保留，请恢复网络后重试。' }; alert(messages[type] || '提交失败，请重试。'); },
+    demoException(type) { const messages = { format: '文件格式不支持，请按老师指定的方式选择 PDF、Word、PPT、Excel、TXT、图片或视频。', size: '文件超过当前类型大小限制，请压缩后重新选择。', duration: '视频超过 3 分钟，请剪辑后重新选择。', network: '网络连接中断，当前选择已保留，请恢复网络后重试。' }; alert(messages[type] || '提交失败，请重试。'); },
     openParentPhotoSource(taskId,itemId) { const task=taskById(taskId),item=task?.items.find(row=>row.id===itemId); if(!task||item?.type!=='photo'||closedTask(task)||!targetIds(task).includes(guardianId))return;parentPhotoSource={taskId,itemId,chatOpen:false};parentRefresh(); },
     fillParentDemoPhoto(taskId,itemId) {
       this.openParentPhotoSource(taskId,itemId);
@@ -1783,4 +1978,5 @@ window.homeworkPrototype = (() => {
       try{submitRecord(task, item, upload.name, upload.transient ? '' : upload.media, upload.transient ? upload.media : '',upload.demoPhotoIndex ?? null);pendingUpload=null;persistPending();uploadMessage='本项已提交。';parentRefresh();}catch(error){uploadMessage=error.message;parentRefresh();}
     }
   };
+  return api;
 })();

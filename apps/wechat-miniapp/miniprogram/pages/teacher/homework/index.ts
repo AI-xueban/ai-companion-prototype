@@ -1,3 +1,5 @@
+import { validateHomeworkMedia } from '../../../services/homeworkMedia';
+import { homeworkAttachmentError } from '../../../services/homeworkGrading';
 import { submissionImagePages, submissionGradingComplete, submissionImageFailure, homeworkItemDisplayStatus } from '../../../services/homeworkGrading';
 import type { SubmissionImagePage } from '../../../services/homeworkGrading';
 import { homeworkPreviewNotice, homeworkClosed, homeworkPublishError, homeworkTime, validateHomeworkChange, homeworkSnapshotText, homeworkChangeLabel } from '../../../services/homeworkGrading';
@@ -651,7 +653,7 @@ Page({
   async saveMaterialAttachments(files: Array<Omit<HomeworkAttachment, 'id'>>) {
     if (this.data.attachmentSaving) return;
     const valid = files.filter(file => {
-      const limit = file.type === 'image' ? 20 : file.type === 'video' ? 200 : 50;
+      const limit = file.type === 'image' || file.type==='audio' ? 20 : file.type === 'video' ? 100 : 50;
       return file.path && file.size <= limit * 1024 * 1024 && (file.type !== 'file' || /\.(pdf|docx?|pptx?|xlsx?|txt)$/i.test(file.name));
     });
     if (valid.length !== files.length) wx.showToast({ title: '部分附件格式不支持或超过大小限制', icon: 'none' });
@@ -659,13 +661,16 @@ Page({
     this.setData({ attachmentSaving: true }); wx.showLoading({ title: '正在添加附件', mask: true });
     const added: HomeworkAttachment[] = [];
     let failures = 0;
+    let policyError='';
     for (const file of valid) {
       try {
+        const capacityError=homeworkAttachmentError([...this.data.draft.attachments,...added,file]);if(capacityError)throw new Error(capacityError);
+        if(file.type==='video'||file.type==='audio')await validateHomeworkMedia(file.path,file.type);
         const path = await new Promise<string>((resolve, reject) => wx.getFileSystemManager().saveFile({ tempFilePath: file.path, success: saved => resolve(saved.savedFilePath), fail: reject }));
         added.push({ ...file, path, uploadState:'complete',previewState:file.type==='file'?'pending':'ready', id: `attachment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` });
-      } catch { failures++; }
+      } catch(error) { failures++;policyError=error instanceof Error?error.message:'添加失败，请重新选择。'; }
     }
-    this.setData({ draft: { ...this.data.draft, attachments: [...this.data.draft.attachments, ...added] }, attachmentSaving: false, composeError: '' });
+    this.setData({ draft: { ...this.data.draft, attachments: [...this.data.draft.attachments, ...added] }, attachmentSaving: false, composeError: policyError });
     wx.hideLoading();
     if (!this.data.draft.items.some(item => item.title.trim())) this.applyRecognition();
     this.saveTeacherDraft();

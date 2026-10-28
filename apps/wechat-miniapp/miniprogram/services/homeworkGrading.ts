@@ -147,7 +147,7 @@ export function homeworkSnapshotText(snapshot:string):string {
 }
 export const homeworkTime = (value: string) => new Date((value || '').replace(' ', 'T')).getTime();
 export const homeworkClosed = (task: { withdrawnAt?: string; stoppedAt?: string; submitDeadline: string }, now = Date.now()) => Boolean(task.withdrawnAt || task.stoppedAt || !Number.isFinite(homeworkTime(task.submitDeadline)) || now > homeworkTime(task.submitDeadline));
-export interface HomeworkFileReadiness { uploadState?:'optimizing'|'uploading'|'complete'|'failed'; previewState?:'pending'|'ready'|'failed'; unavailable?:boolean; validationError?:string }
+export interface HomeworkFileReadiness { size?:number; type?:string; uploadState?:'optimizing'|'uploading'|'complete'|'failed'; previewState?:'pending'|'ready'|'failed'; unavailable?:boolean; validationError?:string }
 export function homeworkOriginalError(file:HomeworkFileReadiness):string {
   if(file.unavailable||file.uploadState==='failed')return '原件上传失败或已失效，请重新上传。';
   if(file.uploadState&&file.uploadState!=='complete')return '原件仍在上传，请等待上传完成。';
@@ -168,9 +168,26 @@ export function homeworkSubmissionReceipt(task:{deadline:string;submitDeadline:s
   return {receivedAt,submittedAt,late:receivedAt>due};
 }
 export const homeworkFileExtensions = (graded: boolean) => graded ? ['pdf', 'doc', 'docx'] : ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt'];
+export const HOMEWORK_FILE_LIMITS = {
+  photo: { bytes: 20 * 1024 * 1024, label: '20MB' },
+  file: { bytes: 50 * 1024 * 1024, label: '50MB' },
+  video: { bytes: 100 * 1024 * 1024, seconds: 3 * 60, label: '100MB、3分钟' },
+  audio: { bytes: 20 * 1024 * 1024, seconds: 5 * 60, label: '20MB、5分钟' }
+} as const;
+export function homeworkMediaDurationError(type:'video'|'audio',seconds:number):string {
+  if(!Number.isFinite(seconds)||seconds<=0)return '无法读取文件时长，请重新选择。';
+  return seconds>HOMEWORK_FILE_LIMITS[type].seconds?`${type==='video'?'视频':'录音'}不能超过 ${HOMEWORK_FILE_LIMITS[type].seconds/60} 分钟，请剪辑后重新选择。`:'';
+}
+export function homeworkAttachmentError(files:Array<{size?:number;type?:string}>):string {
+  if(files.length>10)return '每个任务最多添加 10 个附件，原附件已保留。';
+  if(files.reduce((sum,file)=>sum+(file.size||0),0)>200*1024*1024)return '每个任务附件合计不能超过 200MB，原附件已保留。';
+  const invalid=files.find(file=>(file.size||0)>(HOMEWORK_FILE_LIMITS[file.type==='image'?'photo':file.type as keyof typeof HOMEWORK_FILE_LIMITS]||HOMEWORK_FILE_LIMITS.file).bytes);
+  return invalid?'附件超过对应类型的大小限制，请移除或重新选择。':'';
+}
 export function homeworkFileError(name: string, size: number, type: string, graded: boolean): string {
   if (!size || size < 0) return '文件为空，请重新选择。';
-  if (size > (type === 'photo' ? 20 : type === 'video' ? 200 : 50) * 1024 * 1024) return `文件过大，${type === 'photo' ? '每张图片上限 20MB' : type === 'video' ? '视频上限 200MB' : '文件上限 50MB'}。`;
+  const limit=HOMEWORK_FILE_LIMITS[type as keyof typeof HOMEWORK_FILE_LIMITS]||HOMEWORK_FILE_LIMITS.file;
+  if (size > limit.bytes) return `文件过大，${type==='photo'?'每张图片':type==='video'?'视频':type==='audio'?'录音':'文件'}上限 ${limit.bytes/1024/1024}MB。`;
   const ext = name.split('.').pop()?.toLowerCase() || '';
   const allowed = type === 'file' ? homeworkFileExtensions(graded) : type === 'photo' ? ['jpg','jpeg','png','webp','heic','heif'] : type === 'video' ? ['mp4','mov','webm'] : ['mp3','m4a','wav'];
   return allowed.includes(ext) ? '' : graded && type === 'file' ? '本项需自动批改，仅支持 PDF、Word。' : '文件格式不支持，请按本项要求重新选择。';
@@ -192,6 +209,7 @@ export function homeworkDocumentError(name: string, bytes: Uint8Array): string {
 export function homeworkPublishError(task: {title:string;description:string;attachments?:HomeworkFileReadiness[];allowSupplement?:boolean;deadline:string;submitDeadline:string;items:Array<{title:string;type?:string;submitType?:string;expectedPages?:number}>}, now=Date.now()): string {
   if (!task.title.trim()) return '请填写作业标题。';
   if (!task.description.trim() && !task.attachments?.length) return '请填写老师的要求或添加附件。';
+  const capacityError=homeworkAttachmentError(task.attachments||[]);if(capacityError)return capacityError;
   const attachmentError=task.attachments?.map(homeworkOriginalError).find(Boolean);if(attachmentError)return attachmentError;
   if (!task.items.length || task.items.some(i=>!i.title.trim() || !(i.type || i.submitType))) return '请补全每项要求和提交方式。';
   if (task.items.some(i=>i.expectedPages !== undefined && (!Number.isInteger(i.expectedPages) || i.expectedPages < 0 || i.expectedPages > 9))) return '预计页数请填写 1—9，留空表示不限。';

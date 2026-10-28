@@ -1,4 +1,4 @@
-import { homeworkClosed, homeworkPublishError, applyHomeworkChange, validateHomeworkChange, homeworkSubmissionReceipt, homeworkOriginalError, HomeworkFileReadiness } from './homeworkGrading';
+import { HOMEWORK_FILE_LIMITS, homeworkClosed, homeworkPublishError, applyHomeworkChange, validateHomeworkChange, homeworkSubmissionReceipt, homeworkOriginalError, HomeworkFileReadiness } from './homeworkGrading';
 import type { ManagedHomework, HomeworkManagementAction, HomeworkChangeInput } from './homeworkGrading';
 import type { AnswerStandard } from './homeworkGrading';
 import { holdManualResult, confirmManualResult, gradingStatistics, answersEquivalent, initializeAnswerStandards, confirmAnswerStandard, startStandardGrading, completeMockStandardGrading, standardPhase, isFormalGrade, demoQuestionContent, demoPhotoPath, realPhotoQuestions, gradingSignature, gradingProgress, releaseQuestion } from './homeworkGrading';
@@ -27,7 +27,7 @@ const latestSubmissions = (rows: ItemSubmission[]) => [...rows].sort((a, b) => (
 }, new Map<string, ItemSubmission>());
 const currentRows = (rows: ItemSubmission[]) => [...latestSubmissions(rows).values()];
 export const SUBMIT_LABEL: Record<SubmitType, string> = { file: '文件', photo: '图片', video: '视频', audio: '录音', none: '线下完成' };
-export const FILE_LIMITS = { file: { bytes: 50 * 1024 * 1024, label: '50MB' }, photo: { bytes: 20 * 1024 * 1024, label: '20MB' }, video: { bytes: 200 * 1024 * 1024, label: '200MB', seconds: 5 * 60 }, audio: { bytes: 50 * 1024 * 1024, label: '50MB', seconds: 10 * 60 } } as const;
+export const FILE_LIMITS = HOMEWORK_FILE_LIMITS;
 const addDays = (value: string, days: number) => { const date = new Date(value.replace(' ', 'T')); date.setDate(date.getDate() + days); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`; };
 
 const seededTasks: HomeworkTask[] = [
