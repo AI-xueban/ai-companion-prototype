@@ -113,7 +113,7 @@
   const faceProfiles = new Map();
   const faceEnrollmentLogs = [];
   const DEMO_NAV_SELECTOR =
-    "#simulateBorrowControl, #simulateScanFail, #simulateFaceFail, #simulateEnrollFail, #simulateNotCharging, #simulateDoorOpen";
+    "#simulateBorrowControl, #simulateBorrowDateControl, #simulateBorrowStudentControl, #simulateScanFail, #simulateFaceFail, #simulateEnrollFail, #simulateNotCharging, #simulateDoorOpen";
 
   function fitScreen() {
     const stage = document.querySelector(".stage");
@@ -179,7 +179,7 @@
   function showPage(name, options = {}) {
     if (registrationLocked) return;
     if (name === "admin-manage" && !adminSession) name = "admin-login";
-    if (name === "admin-login" || (adminSession && name !== "admin-manage")) resetAdminLogin();
+    if (name === "admin-login" || (name !== "admin-manage" && screenEl.dataset.page === "admin-login") || (adminSession && name !== "admin-manage")) resetAdminLogin();
     clearTimeout(enrollmentTimer);
     enrollFailureAction.hidden = true;
     document.querySelectorAll(".page").forEach((page) => {
@@ -361,9 +361,15 @@
     borrowControlModal.hidden = true;
   }
 
-  function openBorrowControl() {
+  function openBorrowControl(kind = "time") {
     clearTimeout(borrowControlTimer);
     showPage("home");
+    const messages = {
+      time: '现在还不能借用哦，请在<br /><strong>周一到周五 08:10–12:10、14:00–16:30</strong><br />时间内再来借吧',
+      date: '以下日期范围内暂不可借用<br /><strong>2026-10-24 至 2026-10-24</strong><br />请在上述日期范围以外再来借用',
+      student: '当前学生编号不可借用<br />如有疑问，请联系管理员'
+    };
+    borrowControlModal.querySelector('.borrow-control-message').innerHTML = messages[kind];
     borrowControlModal.hidden = false;
     borrowControlTimer = window.setTimeout(closeBorrowControl, 60 * 1000);
   }
@@ -853,6 +859,15 @@
     openBorrowControl();
   });
 
+  document.getElementById("simulateBorrowDateControl").addEventListener("click", (e) => {
+    e.stopPropagation();
+    openBorrowControl("date");
+  });
+  document.getElementById("simulateBorrowStudentControl").addEventListener("click", (e) => {
+    e.stopPropagation();
+    openBorrowControl("student");
+  });
+
   borrowControlAcknowledge.addEventListener("click", closeBorrowControl);
 
   document.querySelector(".scan-guide-card").addEventListener("click", (e) => {
@@ -946,4 +961,206 @@
   setInterval(updateClock, 1000 * 15);
   initBanner();
   initFeedback();
+
+  // Prototype only. Production installation is owned by the third-party system installer.
+  const upgradeKey = 'cabinet-manual-upgrade-v1';
+  const installedVersionKey = 'cabinet-actual-installed-version-v1';
+  const cachedApkKey = 'cabinet-cached-upgrade-apk-v1';
+  let upgrade = { installed: '1.3.0', pending: null, downloaded: false, downloadedApk: null, installingPackage: null };
+  try { const saved = JSON.parse(localStorage.getItem(upgradeKey)); if (saved?.installed) upgrade = saved; } catch {}
+  let downloadTimer = null, downloadProgress = 0, networkOffline = false, installing = false, messageTimer;
+  let upgradeDialogStage = '';
+  const upgradePanel = document.createElement('div');
+  upgradePanel.className = 'upgrade-system-mask'; upgradePanel.hidden = true;
+  upgradePanel.innerHTML = '<div class="upgrade-system-card" role="dialog" aria-modal="true" aria-labelledby="upgradeInstallTitle"><small id="upgradeDialogType"></small><h3 id="upgradeInstallTitle"></h3><p id="upgradeInstallStatus"></p><div><button id="upgradeInstallCancel">取消</button><button id="upgradeInstallConfirm">安装</button></div></div>';
+  screenEl.appendChild(upgradePanel);
+  const upgradeToast = document.createElement('div');
+  upgradeToast.className = 'upgrade-toast'; upgradeToast.hidden = true; upgradeToast.setAttribute('role','status'); screenEl.appendChild(upgradeToast);
+  function upgradeMessage(text) {
+    clearTimeout(messageTimer); upgradeToast.textContent = text; upgradeToast.hidden = false;
+    messageTimer = setTimeout(() => upgradeToast.hidden = true, 3000);
+  }
+  function nextDemoVersion(version) {
+    const parts = String(version).split('.').map(Number);
+    while (parts.length < 3) parts.push(0);
+    parts[2] += 1;
+    return parts.join('.');
+  }
+  function isNewerDemoVersion(candidate, current) {
+    const newer = String(candidate).split('.').map(Number);
+    const older = String(current).split('.').map(Number);
+    if ([...newer, ...older].some(part => !Number.isInteger(part))) return false;
+    for (let index = 0; index < Math.max(newer.length, older.length); index++) {
+      if ((newer[index] || 0) !== (older[index] || 0)) return (newer[index] || 0) > (older[index] || 0);
+    }
+    return false;
+  }
+  function reconcileUpgradeState() {
+    // On restart, the installed version and the locally cached file take precedence over the UI snapshot.
+    upgrade.installed = localStorage.getItem(installedVersionKey) || upgrade.installed;
+    upgrade.installingPackage = null;
+    if (upgrade.pending && !isNewerDemoVersion(upgrade.pending.version, upgrade.installed)) upgrade.pending = null;
+    if (!upgrade.pending || localStorage.getItem(cachedApkKey) !== upgrade.pending.name) {
+      upgrade.downloaded = false;
+      upgrade.downloadedApk = null;
+      localStorage.removeItem(cachedApkKey);
+    }
+  }
+  reconcileUpgradeState();
+  function receiveLatestUpgrade(nextPackage) {
+    if (!isNewerDemoVersion(nextPackage.version, upgrade.installed) ||
+        (upgrade.pending && !isNewerDemoVersion(nextPackage.version, upgrade.pending.version))) return false;
+    if (downloadTimer) { clearInterval(downloadTimer); downloadTimer = null; }
+    downloadProgress = 0;
+    if (!installing) { upgradePanel.hidden = true; upgradeDialogStage = ''; }
+    // The prototype stores no APK bytes. Clearing this reference represents deleting the old cached APK.
+    upgrade.downloaded = false;
+    upgrade.downloadedApk = null;
+    if (!installing) localStorage.removeItem(cachedApkKey);
+    upgrade.pending = nextPackage;
+    renderUpgrade();
+    return true;
+  }
+  function renderUpgrade() {
+    document.getElementById('cabinetVersion').textContent = 'V' + upgrade.installed;
+    document.getElementById('cabinetUpdateBadge').hidden = !upgrade.pending;
+    document.getElementById('adminUpdateDot').hidden = !upgrade.pending;
+    document.getElementById('adminUpdateLabel').textContent = '版本更新';
+    document.getElementById('adminUpdateVersion').textContent = upgrade.pending
+      ? '可升级版本 V' + upgrade.pending.version
+      : '当前版本 V' + upgrade.installed;
+    document.getElementById('adminVersionUpdate').disabled = !!downloadTimer || installing;
+    const progress = document.getElementById('adminDownloadProgress');
+    progress.hidden = !downloadTimer;
+    document.getElementById('adminDownloadName').textContent = upgrade.pending ? '正在下载 ' + upgrade.pending.name : '';
+    document.getElementById('adminDownloadPercent').textContent = downloadProgress + '%';
+    document.getElementById('adminDownloadBar').value = downloadProgress;
+    localStorage.setItem(upgradeKey, JSON.stringify(upgrade));
+  }
+  document.getElementById('cabinetVersionEntry').addEventListener('click', () => upgradeMessage('请登录管理员账号进行版本更新'));
+  function showUpgradeDialog(stage) {
+    if (!adminSession || !upgrade.pending) return;
+    upgradeDialogStage = stage;
+    document.getElementById('upgradeDialogType').textContent = stage === 'download' ? '版本下载确认' : '系统安装确认';
+    document.getElementById('upgradeInstallTitle').textContent = stage === 'download' ? '是否下载（'+upgrade.pending.name+'）？' : '是否安装（'+upgrade.pending.name+'）？';
+    document.getElementById('upgradeInstallStatus').textContent = '';
+    document.getElementById('upgradeInstallCancel').disabled = false;
+    document.getElementById('upgradeInstallCancel').hidden = false;
+    document.getElementById('upgradeInstallConfirm').disabled = false;
+    document.getElementById('upgradeInstallConfirm').textContent = stage === 'download' ? '下载' : '安装';
+    upgradePanel.hidden = false;
+  }
+  function showInstall() { showUpgradeDialog('install'); }
+  function showDownload() { showUpgradeDialog('download'); }
+  function showInstallComplete(version) {
+    upgradeDialogStage = 'complete';
+    document.getElementById('upgradeDialogType').textContent = '版本更新';
+    document.getElementById('upgradeInstallTitle').textContent = '安装完成';
+    document.getElementById('upgradeInstallStatus').textContent = '当前版本 V' + version;
+    document.getElementById('upgradeInstallCancel').hidden = true;
+    document.getElementById('upgradeInstallConfirm').disabled = false;
+    document.getElementById('upgradeInstallConfirm').textContent = '知道了';
+    upgradePanel.hidden = false;
+  }
+  function interruptDownload() {
+    if (!downloadTimer) return;
+    clearInterval(downloadTimer); downloadTimer = null; downloadProgress = 0; upgrade.downloaded = false; upgrade.downloadedApk = null;
+    localStorage.removeItem(cachedApkKey);
+    renderUpgrade(); upgradeMessage('下载中断，请联网后重新下载');
+    document.getElementById('adminFeatureNote').textContent = '下载中断，请联网后点击版本更新重新下载。';
+  }
+  document.getElementById('adminVersionUpdate').addEventListener('click', () => {
+    if (!adminSession || installing || downloadTimer) return;
+    if (!upgrade.pending) return upgradeMessage('当前已是最新版本');
+    if (upgrade.downloaded) return showInstall();
+    if (networkOffline || !navigator.onLine) return upgradeMessage('网络未连接，请联网后重新下载');
+    showDownload();
+  });
+  function startUpgradeDownload() {
+    if (!adminSession || !upgrade.pending || downloadTimer) return;
+    if (networkOffline || !navigator.onLine) return upgradeMessage('网络未连接，请联网后重新下载');
+    downloadProgress = 0;
+    document.getElementById('adminFeatureNote').textContent = '正在下载 '+upgrade.pending.name;
+    downloadTimer = setInterval(() => {
+      if (!adminSession || networkOffline || !navigator.onLine) return interruptDownload();
+      downloadProgress += 10;
+      if (downloadProgress >= 100) {
+        clearInterval(downloadTimer); downloadProgress = 100;
+        downloadTimer = setTimeout(() => {
+          if (!adminSession || networkOffline || !navigator.onLine) return interruptDownload();
+          downloadTimer = null; upgrade.downloaded = true; upgrade.downloadedApk = upgrade.pending.name;
+          localStorage.setItem(cachedApkKey, upgrade.pending.name);
+          document.getElementById('adminFeatureNote').textContent = '下载完成，等待安装。';
+          renderUpgrade(); showInstall();
+        }, 500);
+        renderUpgrade();
+      } else renderUpgrade();
+    }, 600);
+    renderUpgrade();
+  }
+  document.getElementById('upgradeInstallCancel').addEventListener('click', () => {
+    upgradePanel.hidden = true;
+    if (upgradeDialogStage === 'install') upgradeMessage('已取消安装，可点击版本更新继续安装');
+  });
+  document.getElementById('upgradeInstallConfirm').addEventListener('click', () => {
+    if (upgradeDialogStage === 'complete') { upgradePanel.hidden = true; return; }
+    if (upgradeDialogStage === 'download') { upgradePanel.hidden = true; startUpgradeDownload(); return; }
+    if (!adminSession || !upgrade.pending || installing) return;
+    const installingPackage = { ...upgrade.pending };
+    installing = true;
+    upgrade.installingPackage = installingPackage;
+    document.getElementById('upgradeInstallCancel').disabled = true;
+    document.getElementById('upgradeInstallConfirm').disabled = true;
+    document.getElementById('upgradeInstallStatus').textContent = '正在安装…';
+    renderUpgrade();
+    setTimeout(() => {
+      // The system installation finishes first; then read the actual version and evaluate any newer target.
+      localStorage.setItem(installedVersionKey, installingPackage.version);
+      upgrade.installed = localStorage.getItem(installedVersionKey);
+      if (upgrade.pending?.version === installingPackage.version) upgrade.pending = null;
+      upgrade.downloaded = false; upgrade.downloadedApk = null; upgrade.installingPackage = null; installing = false;
+      localStorage.removeItem(cachedApkKey);
+      upgradePanel.hidden = true; renderUpgrade();
+      document.getElementById('adminFeatureNote').textContent = upgrade.pending
+        ? '当前版本 V' + upgrade.installed + '；最新版本 V' + upgrade.pending.version + ' 待下载。'
+        : '当前版本 V' + upgrade.installed;
+      showInstallComplete(upgrade.installed);
+    }, 1800);
+  });
+  window.addEventListener('offline', interruptDownload);
+  document.getElementById('upgradeNetwork').addEventListener('click', e => {
+    networkOffline = !networkOffline; e.target.textContent = networkOffline ? '模拟恢复联网' : '模拟下载断网';
+    if (networkOffline) interruptDownload();
+    else upgradeMessage('网络已恢复，请重新下载');
+  });
+  document.getElementById('simulateCabinetUpgrade').addEventListener('click', () => {
+    if (registrationLocked || downloadTimer || installing) return;
+    if (!upgrade.pending) {
+      const version = nextDemoVersion(upgrade.installed);
+      receiveLatestUpgrade({ version, name: 'cabinet-'+version+'.apk' });
+    }
+    upgradeMessage('收到新版本，请管理员下载安装');
+  });
+  document.getElementById('simulateNewerCabinetUpgrade').addEventListener('click', () => {
+    if (registrationLocked) return;
+    if (installing) {
+      const version = nextDemoVersion(upgrade.pending.version);
+      if (!receiveLatestUpgrade({ version, name: 'cabinet-'+version+'.apk' })) return;
+      upgradeMessage('旧版继续安装；完成后可下载最新版本 V' + version);
+      return;
+    }
+    const oldPackage = upgrade.pending || (() => {
+      const version = nextDemoVersion(upgrade.installed);
+      return { version, name: 'cabinet-'+version+'.apk' };
+    })();
+    // Stage an already-downloaded old package, then dispatch a higher version in one demo action.
+    upgrade.pending = oldPackage;
+    upgrade.downloaded = true;
+    upgrade.downloadedApk = oldPackage.name;
+    const version = nextDemoVersion(oldPackage.version);
+    if (!receiveLatestUpgrade({ version, name: 'cabinet-'+version+'.apk' })) return;
+    document.getElementById('adminFeatureNote').textContent = '旧版APK已清除；请下载最新版本 V' + version;
+    upgradeMessage('旧版APK已清除，最新版本 V' + version + ' 需重新下载');
+  });
+  renderUpgrade();
 })();
