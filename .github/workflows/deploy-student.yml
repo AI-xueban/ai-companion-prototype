@@ -59,7 +59,10 @@ jobs:
           cp -R apps/cabinet/assets apps/student/dist/cabinet/assets
           mkdir -p apps/student/dist/miniapp/miniprogram/assets
           cp -R apps/wechat-miniapp/preview/. apps/student/dist/miniapp/
-          cp apps/wechat-miniapp/miniprogram/assets/homework-demo-paper.png apps/student/dist/miniapp/miniprogram/assets/
+          cp -R apps/wechat-miniapp/miniprogram/assets/. apps/student/dist/miniapp/miniprogram/assets/
+
+      - name: Verify miniapp published assets
+        run: node apps/wechat-miniapp/preview/check-published-assets.mjs apps/student/dist/miniapp
 
       - name: Upload website files
         uses: actions/upload-pages-artifact@v3
