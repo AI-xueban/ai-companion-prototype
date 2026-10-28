@@ -22,6 +22,7 @@ function navigate(route, params) {
 }
 
 function renderApp(route, params) {
+  ensureFaceTabs(route, params);
   renderSiderMenu(route);
   renderBreadcrumb(route);
   renderTabs(route, params);

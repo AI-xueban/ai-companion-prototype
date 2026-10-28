@@ -150,10 +150,25 @@ function renderBreadcrumb(route) {
 let openTabs = [{ id: 'home-config', route: 'home-config', title: '首页配置', params: null }];
 let tabSeq = 1;
 
+// Restore face tabs after direct entry or refresh.
+function ensureFaceTabs(route, params) {
+  if (route !== 'face-library' && route !== 'face-sync-status') return;
+  if (!openTabs.some(t => t.route === 'face-library')) {
+    openTabs.push({ id: 'face-library', route: 'face-library', title: '人脸信息管理', params: null });
+  }
+  if (route === 'face-sync-status' && !openTabs.some(t => t.route === route && JSON.stringify(t.params || null) === JSON.stringify(params || null))) {
+    openTabs.push({ id: params?._tabId || route + '-' + tabSeq++, route, title: '同步记录', params: params || null });
+  }
+}
+
 function openTab(route, title, params, forceNew = false) {
   const meta = ROUTE_META[route];
   const tabTitle = title || meta?.title || route;
   let tab;
+  if (route === 'face-sync-status' && !forceNew) {
+    const existing = openTabs.find(t => t.route === route);
+    if (existing) { existing.params = params || null; existing.title = tabTitle; }
+  }
   if (forceNew) {
     const tabId = `${route}-${tabSeq++}`;
     const tabParams = { ...(params || {}), _tabId: tabId };
@@ -170,7 +185,8 @@ function openTab(route, title, params, forceNew = false) {
     }
   }
   const hash = tab.params ? `${route}?${encodeURIComponent(JSON.stringify(tab.params))}` : route;
-  location.hash = hash;
+  if (location.hash.slice(1) === hash) renderApp(route, tab.params);
+  else location.hash = hash;
 }
 
 function closeTab(tabId, e) {
