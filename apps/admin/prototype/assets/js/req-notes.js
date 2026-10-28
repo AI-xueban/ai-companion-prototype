@@ -782,8 +782,35 @@ function onReqAnnotateMouseOut(e) {
 
 function refreshReqPanelForRoute() {
   clearReqHighlight();
-  if (reqAnnotateOn) renderReqPanelHint();
-  else renderReqPanelIdle();
+  renderConsolePanel();
+}
+
+function renderConsolePanel() {
+  const bodyEl = document.getElementById('req-panel-body');
+  if (!bodyEl) return;
+  const route = getCurrentRouteKey();
+  const routeTitle = ROUTE_META?.[route]?.title || route;
+
+  if (['face-library','face-sync-status','face-sync-detail'].includes(route) && typeof renderFaceConsole === 'function') {
+    bodyEl.innerHTML = renderFaceConsole();
+    return;
+  }
+
+  if (route === 'cabinet-version' && typeof renderCabinetUpgradeConsole === 'function') {
+    bodyEl.innerHTML = renderCabinetUpgradeConsole();
+    return;
+  }
+
+  bodyEl.innerHTML = `
+    <div class="console-page-head">
+      <span class="console-route-label">当前菜单</span>
+      <strong>${esc(routeTitle)}</strong>
+    </div>
+    <div class="console-empty">
+      <div class="console-empty-icon">⌁</div>
+      <p>当前菜单暂无控制项</p>
+    </div>
+  `;
 }
 
 function toggleReqPanel(force) {
@@ -793,7 +820,8 @@ function toggleReqPanel(force) {
   const open = typeof force === 'boolean' ? force : panel.classList.contains('is-hidden');
   panel.classList.toggle('is-hidden', !open);
   button?.classList.toggle('is-active', open);
-  if (button) button.setAttribute('aria-label', open ? '关闭需求说明' : '打开需求说明');
+  if (button) button.setAttribute('aria-label', open ? '关闭控制台' : '打开控制台');
+  if (open) renderConsolePanel();
 }
 
 function initReqNotes() {
@@ -801,21 +829,17 @@ function initReqNotes() {
   const panel = document.getElementById('req-panel');
   panel?.classList.add('is-hidden');
   floatButton?.addEventListener('click', () => toggleReqPanel());
-  const toggle = document.getElementById('req-annotate-toggle');
-  if (toggle) {
-    toggle.checked = reqAnnotateOn;
-    toggle.addEventListener('change', () => setReqAnnotateOn(toggle.checked));
-  }
-  document.body.classList.toggle('req-annotate-on', reqAnnotateOn);
-  document.addEventListener('click', onReqAnnotateClick, true);
-  document.addEventListener('mouseover', onReqAnnotateMouseOver, true);
-  document.addEventListener('mouseout', onReqAnnotateMouseOut, true);
-  if (reqAnnotateOn) renderReqPanelHint();
-  else renderReqPanelIdle();
+  document.getElementById('req-panel-close')?.addEventListener('click', () => toggleReqPanel(false));
+  reqAnnotateOn = false;
+  localStorage.removeItem(REQ_ANNOTATE_KEY);
+  document.body.classList.remove('req-annotate-on');
+  clearReqHighlight();
+  renderConsolePanel();
 }
 
 window.toggleReqPanel = toggleReqPanel;
 window.isReqAnnotateOn = isReqAnnotateOn;
 window.setReqAnnotateOn = setReqAnnotateOn;
 window.refreshReqPanelForRoute = refreshReqPanelForRoute;
+window.renderConsolePanel = renderConsolePanel;
 window.initReqNotes = initReqNotes;

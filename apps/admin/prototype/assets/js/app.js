@@ -22,6 +22,7 @@ function navigate(route, params) {
 }
 
 function renderApp(route, params) {
+  ensureFaceTabs(route, params);
   renderSiderMenu(route);
   renderBreadcrumb(route);
   renderTabs(route, params);
@@ -47,10 +48,6 @@ document.getElementById('menu-toggle')?.addEventListener('click', () => {
 if (typeof initReqNotes === 'function') {
   initReqNotes();
 }
-
-document.getElementById('req-panel-fab')?.addEventListener('click', () => setReqPanelOpen(true));
-document.getElementById('req-panel-close')?.addEventListener('click', () => setReqPanelOpen(false));
-setReqPanelOpen(false);
 
 if (!location.hash) {
   location.hash = 'home-config';
