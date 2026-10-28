@@ -2,7 +2,7 @@
 (() => {
   const R = window.controlRules;
   const storageKey = 'teacher-control-prototype-v1';
-  const ui = { editor: null, pending: null, borrowMode: 'weekly', boolean: null, homeworkSubject: '数学' };
+  const ui = { editor: null, pending: null, borrowMode: 'weekly', boolean: null, teacherLockDraft: null, homeworkSubject: '数学' };
   const homeworkSubjects = ['语文', '数学', '英语'];
   const managedHomeworkSubjects = () => controlDemoRole === 'admin' ? [] : controlWorkView === 'subject' ? ['数学'] : homeworkSubjects;
   const homeworkSubject = () => managedHomeworkSubjects().includes(ui.homeworkSubject) ? ui.homeworkSubject : managedHomeworkSubjects()[0];
@@ -33,7 +33,7 @@
       ui.roster.trigger?.focus(); ui.roster = null; return;
     }
     if (!force && ui.boolean && (ui.boolean.value !== null || needScope(ui.boolean.refs) && ui.boolean.scope !== null)) return controlOverlay('放弃未保存的修改？', '<p>本次修改不会保存。</p>', button('继续编辑', 'parity.renderBoolean()', true) + button('放弃修改', 'parity.cancelBoolean()'));
-    ui.pending = null; ui.boolean = null; legacyCloseOverlay();
+    ui.pending = null; ui.boolean = null; ui.teacherLockDraft = null; legacyCloseOverlay();
   };
   const stateLabels = () => controlModule === 'borrowing' ? ['已设置', '未设置'] : controlModule === 'duration' ? ['有单独规则', '默认规则'] : controlModule === 'homework' ? ['有开放权限', '均不允许'] : controlModule === 'world' ? ['有允许使用学生', '全部禁止使用'] : ['有已锁屏学生', '全部未锁屏'];
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -66,6 +66,12 @@
     const refs = activeRefs();
     return refs.some(ref => refLocked(ref)) ? `<p class="parity-note" role="status">当前班级临时锁屏管控中，老师暂不可修改锁屏。</p>` : '';
   };
+  function teacherLockAction(locked, total, target = 'all') {
+    if (locked > 0 && locked < total) return button('设置锁屏', `parity.teacherLockChoice('${target}')`, false);
+    const value = locked === 0;
+    const label = target === 'all' ? value ? '全班锁屏' : '全班解锁' : value ? '锁屏' : '解锁';
+    return button(label, target === 'all' ? `controlModule='lock';confirmControl('all',${value})` : `parity.selectedBoolean(${value})`, !value, !total);
+  }
   function lockToggle(module, on, action, label) {
     if ((module === 'world' || module === 'lock') && controlDemoRole === 'admin') return button(module === 'world' ? '设置' : on ? '解除临时锁屏' : '设置临时锁屏', action, true);
     const html = binaryToggleButton(module, on, action, label);
@@ -249,9 +255,8 @@
       syncReview(); return;
     }
     const admin = controlDemoRole === 'admin', students = admin ? adminAllStudents() : controlStudents(), locked = students.filter(s => isLocked(s)).length;
-    const lockScope = admin ? '全校' : '全班', lockAction = admin ? "adminBatchAction('lock'," : "controlModule='lock';confirmControl('all',";
     const temporary = admin ? temporaryLockActive() : classRefs().some(ref => refLocked(ref));
-    const lockActions = admin ? button(temporary ? '结束全校临时锁屏' : '一键锁屏全校', 'parity.toggleTemporaryLock()', temporary) : temporary ? button('本班临时锁屏中', '', true, true) : button(lockScope + '解锁', lockAction + 'false)', true, !locked) + button(lockScope + '锁屏', lockAction + 'true)', false, locked === students.length);
+    const lockActions = admin ? button(temporary ? '结束全校临时锁屏' : '一键锁屏全校', 'parity.toggleTemporaryLock()', temporary) : temporary ? button('本班临时锁屏中', '', true, true) : teacherLockAction(locked, students.length);
     const lockDescription = admin ? temporaryLockDescription() : lockNotice();
     const lockCard = `<section class="control-entry-lock"><div class="control-entry-lock-head"><div><h3>${admin ? '全校临时锁屏' : '平板锁屏'}</h3><p>${admin ? schoolStatus('lock') : locked + '人已锁屏 · ' + (students.length - locked) + '人未锁屏'}</p></div><button onclick="${admin ? "enterAdminModule('lock')" : "openControlModule('lock')"}">查看详情 ›</button></div>${lockDescription}<div class="control-actions">${lockActions}</div></section>`;
     const borrowCard = admin && window.borrowing ? borrowing.entryCard() : '';
@@ -307,8 +312,12 @@
     } else if (controlModule === 'lock' || controlModule === 'world') {
       const states = R.resolve(controlData, refs).map(({ student }) => controlModule === 'lock' ? isLocked(student) : student.world);
       const blocked = controlModule === 'lock' && refs.some(ref => refLocked(ref));
-      actions = (states.some(Boolean) ? button(controlModule === 'lock' ? '解锁' : '禁止使用', 'parity.selectedBoolean(false)', true, blocked) : '')
-        + (states.some(value => !value) ? button(controlModule === 'lock' ? '锁屏' : '允许使用', 'parity.selectedBoolean(true)', false, blocked) : '');
+      actions = controlModule === 'lock' && !blocked
+        ? states.length ? teacherLockAction(states.filter(Boolean).length, states.length, 'selected') : button('设置锁屏', "parity.teacherLockChoice('selected')", false)
+        : controlModule === 'world' && states.some(Boolean) && states.some(value => !value)
+          ? button('设置使用状态', "parity.booleanEditor(parity.selectedRefs(),'所选对象',null)")
+          : (states.some(Boolean) ? button(controlModule === 'lock' ? '解锁' : '禁止使用', 'parity.selectedBoolean(false)', true, blocked) : '')
+            + (states.some(value => !value) ? button(controlModule === 'lock' ? '锁屏' : '允许使用', 'parity.selectedBoolean(true)', false, blocked) : '');
     } else actions = button(controlModule === 'borrowing' ? '设置规则' : controlModule === 'duration' ? '设置时长' : '设置权限', 'parity.selectedEdit()', false, !selected || !canEdit());
     const visible = admin ? visibleScopeKeys() : filteredControlStudents().map(s => s.id), set = admin ? adminSelectedScopes : controlSelected;
     return `<footer class="admin-batchbar parity-batchbar"><label class="control-footer-select"><input type="checkbox" aria-label="全选" ${visible.length && visible.every(key => set.has(key)) ? 'checked' : ''} onchange="parity.selectAll(this.checked)"><span>全选</span><small>${selected}/${visible.length}</small></label><div class="admin-batch-actions">${button('取消', 'parity.cancelSelection()', true)}${actions}</div><small class="parity-affected">${selectedStudentsLink(refs)}</small></footer>`;
@@ -319,7 +328,6 @@
   }
   function filteredControlStudents() {
     return controlStudents().filter(s => {
-      if (controlModule === 'homework') return true;
       if (!s.name.includes(controlQuery) && !String(s.id).padStart(6, '0').includes(controlQuery)) return false;
       const active = controlModule === 'duration' ? s.durationRules.length > 0 : controlModule === 'borrowing' ? R.prune(s.schedules).length > 0 : controlModule === 'homework' ? homeworkValue(s).answer || homeworkValue(s).explanation : controlModule === 'world' ? s.world : isLocked(s);
       return controlFilter === 'all' || (controlFilter === 'yes' ? active : !active);
@@ -345,9 +353,9 @@
     }
     const selection = controlView === 'students';
     const reset = '';
-    const filters = controlModule === 'homework' ? homeworkTabs() : `<div class="control-list-tools"><label class="borrow-list-search"><input aria-label="搜索学生姓名或编号" placeholder="搜索学生姓名或编号" value="${esc(controlQuery)}" oninput="parity.studentFilter(this.value,null)"></label><select class="borrow-status-filter" aria-label="筛选学生规则状态" onchange="parity.studentFilter(null,this.value)">${[['all', '全部'], ['yes', stateLabels()[0]], ['no', stateLabels()[1]]].map(([id, label]) => `<option value="${id}" ${controlFilter === id ? 'selected' : ''}>${label}</option>`).join('')}</select></div>`;
+    const filters = `<div class="control-list-tools"><label class="borrow-list-search"><input aria-label="搜索学生姓名或编号" placeholder="搜索学生姓名或编号" value="${esc(controlQuery)}" oninput="parity.studentFilter(this.value,null)"></label><select class="borrow-status-filter" aria-label="${controlModule === 'homework' ? '筛选学生权限状态' : '筛选学生规则状态'}" onchange="parity.studentFilter(null,this.value)">${[['all', '全部'], ['yes', stateLabels()[0]], ['no', stateLabels()[1]]].map(([id, label]) => `<option value="${id}" ${controlFilter === id ? 'selected' : ''}>${label}</option>`).join('')}</select></div>`;
     const listHead = `<div class="borrow-list-head"><b>${selection ? '选择学生' : controlModule === 'homework' ? '学生权限' : '学生规则'}</b>${selection || !canEdit() ? '' : `<button onclick="openControlStudents('${controlModule}')">批量设置</button>`}</div>`;
-    const tools = controlModule === 'homework' ? filters + listHead : listHead + filters;
+    const tools = (controlModule === 'homework' ? homeworkTabs() : '') + listHead + filters;
     shell(selection ? '选择学生' : controlLabels[controlModule], `<div class="parity-context">${selectedTeacherClass}${selection ? ' · 可多选' : ''}</div>${selection ? '' : defaultCard()}${reset ? `<div class="control-actions">${reset}</div>` : ''}${tools}<div class="parity-student-list" id="parity-student-rows">${studentRows()}</div>`, 'parity.back()', selection ? selectionFooter() : '', selection ? 'control-student-screen' : '');
   }
   function ruleCards(student) {
@@ -609,6 +617,7 @@
   function makeOperation(refs, label, kind, value, extra = {}) { return { refs, label, kind, value, module: controlModule, subject: controlModule === 'homework' && controlDemoRole !== 'admin' ? homeworkSubject() : null, base: baseFor(refs), ...extra }; }
   function operationRows(data, operation) {
     if (operation.module === 'duration' && operation.kind === 'save') return R.prepare(data, operation.refs, operation.module, operation.base, 'all').filter(({student}) => R.durationDays(student, operation.value.weekdays, operation.scope).length);
+    if (operation.module === 'lock' && operation.kind === 'boolean') return R.prepare(data, operation.refs, operationModule(operation), operation.base, operation.scope || 'all').filter(({student}) => isLocked(student) !== operation.value);
     return R.prepare(data, operation.refs, operationModule(operation), operation.base, operation.scope || 'all');
   }
   function currentSelectedRefs() { return controlDemoRole === 'admin' ? adminSelectionRefs() : targetRefs('selected'); }
@@ -730,6 +739,31 @@
       controlOverlay('学校借用时间', teacherBorrowSummary(), button('关闭', 'closeControlOverlay()', true));
     },
     cancelBoolean() { closeControlOverlay(true); },
+    teacherLockChoice(target = 'all') {
+      controlModule = 'lock';
+      if (controlDemoRole === 'admin' || !canEdit('lock')) return controlToast('学校管理员正在进行临时锁屏管控，暂时无法修改锁屏状态');
+      if (!targetRefs(target).length) return controlToast('请选择设置对象');
+      ui.teacherLockDraft = { target, value: null };
+      this.renderTeacherLockChoice();
+    },
+    renderTeacherLockChoice() {
+      const draft = ui.teacherLockDraft;
+      if (!draft) return;
+      const students = R.resolve(controlData, targetRefs(draft.target)).map(row => row.student);
+      const locked = students.filter(isLocked).length;
+      const prefix = draft.target === 'all' ? '全班' : '';
+      const options = [false, true].map(value => `<label class="parity-borrow-option"><input type="radio" name="teacher-lock-choice" ${draft.value === value ? 'checked' : ''} onchange="parity.chooseTeacherLock(${value})"><span class="parity-borrow-option-body"><span><b>${prefix}${value ? '锁屏' : '解锁'}</b><small>${value ? students.length - locked : locked} 人将${value ? '锁屏' : '解锁'}</small></span><i>✓</i></span></label>`).join('');
+      controlOverlay('设置锁屏', `<p class="control-scope">${esc(selectedTeacherClass)} · 已锁屏 ${locked} 人 · 未锁屏 ${students.length - locked} 人</p><fieldset class="parity-borrow-choice">${options}</fieldset>`, button('取消', 'parity.cancelTeacherLock()', true) + button('保存', 'parity.saveTeacherLock()'));
+    },
+    chooseTeacherLock(value) { if (!ui.teacherLockDraft) return; ui.teacherLockDraft.value = value; this.renderTeacherLockChoice(); },
+    cancelTeacherLock() { ui.teacherLockDraft = null; closeControlOverlay(); },
+    saveTeacherLock() {
+      const draft = ui.teacherLockDraft;
+      if (!draft) return;
+      if (draft.value === null) return controlToast('请选择设置后的状态');
+      ui.teacherLockDraft = null;
+      confirmControl(draft.target, draft.value);
+    },
     selectedRefs: currentSelectedRefs,
     fillDefault() {
       collectEditor();
@@ -768,7 +802,7 @@
       const classes = [...new Set(b.refs.map(ref => ref.className))];
       const options = [true, false].map(value => {
         const count = classes.filter(className => Boolean(refLocked({ className })) !== value).length;
-        return `<label class="parity-borrow-option"><input type="radio" name="parity-boolean" ${b.value === value ? 'checked' : ''} onchange="parity.chooseBoolean(${value})"><span class="parity-borrow-option-body"><span><b>${b.lock ? value ? '开启临时锁屏' : '解除临时锁屏' : value ? '允许使用万象视界' : '禁止使用万象视界'}</b>${b.lock ? `<small>${count}个班${value ? '未开启' : '已开启'}</small>` : ''}</span><i>✓</i></span></label>`;
+        return `<label class="parity-borrow-option"><input type="radio" name="parity-boolean" ${b.value === value ? 'checked' : ''} onchange="parity.chooseBoolean(${value})"><span class="parity-borrow-option-body"><span><b>${b.lock ? value ? '开启临时锁屏' : '解除临时锁屏' : value ? '允许使用万象视界' : '禁止使用万象视界'}</b><small>${b.lock ? `${count}个班${value ? '未开启' : '已开启'}` : `${eligible.filter(({student}) => student.world !== value).length}人将${value ? '允许使用' : '禁止使用'}`}</small></span><i>✓</i></span></label>`;
       }).join('');
       controlOverlay(b.lock ? '设置临时锁屏' : '设置万象视界', `<p class="control-scope">${esc(b.label)} · ${selectedStudentsLink(b.refs)}</p><fieldset class="parity-borrow-choice">${options}</fieldset>${b.lock ? '' : scopeFields(b)}${b.value !== null && b.scope ? `<p>${changed ? changed + '名学生将修改，' + (rows.length - changed) + '名学生保持不变。' : '当前选择无需修改。'}</p>` : ''}${b.lock && temporaryLockActive() && !b.school ? '<p>解除临时锁屏后，该班老师恢复原有锁屏操作权限。</p>' : ''}<p id="parity-error" class="control-error"></p>`, button('取消', 'parity.cancelBoolean()', true) + button('保存', 'parity.saveBoolean()', false, b.value !== null && b.scope && !changed && !b.school));
       const overlay = document.getElementById('control-overlay');

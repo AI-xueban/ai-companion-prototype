@@ -90,7 +90,7 @@ test('智阅作业按学生和科目分别保存，最后一次成功操作决�
   assert.throws(() => R.prepare(latest.data, refs, 'homework:数学', { 'A:1': mathBase }), /其他老师修改/);
 });
 
-test('智阅作业学生页用科目 Tab 替换搜索筛选，任课老师只管理自己的科目', () => {
+test('智阅作业学生页保留科目 Tab、搜索及权限筛选，任课老师只管理自己的科目', () => {
   const fs = require('node:fs'), vm = require('node:vm');
   let stored, toast;
   const context = {
@@ -103,7 +103,7 @@ test('智阅作业学生页用科目 Tab 替换搜索筛选，任课老师只管
     controlSelected: new Set(), adminSelectedScopes: new Set(), adminLevel: 'class', adminBatchMode: false,
     schoolBorrowingEnabled: true, stage: 'other', app: { innerHTML: '' },
     header(title) { return '<span></span><h2>' + title + '</h2>'; }, syncReview() {},
-    binaryToggleButton() { return ''; }, document: { getElementById() { return null; } },
+    binaryToggleButton() { return ''; }, document: { getElementById() { return null; }, querySelector() { return null; } },
     localStorage: { getItem(key) { return key === 'teacher-control-prototype-v1' ? stored || null : null; }, setItem(key, value) { if (key === 'teacher-control-prototype-v1') stored = value; } },
     controlToast(message) { toast = message; }, controlOverlay() {},
   };
@@ -112,12 +112,20 @@ test('智阅作业学生页用科目 Tab 替换搜索筛选，任课老师只管
   context.renderControl();
   assert.match(context.app.innerHTML, /aria-label="智阅作业科目"/);
   assert.match(context.app.innerHTML, /语文.*数学.*英语/);
-  assert.doesNotMatch(context.app.innerHTML, /搜索学生姓名或编号|筛选学生规则状态/);
+  assert.match(context.app.innerHTML, /搜索学生姓名或编号/);
+  assert.match(context.app.innerHTML, /筛选学生权限状态/);
   assert.ok(context.app.innerHTML.indexOf('aria-label="智阅作业科目"') < context.app.innerHTML.indexOf('>批量设置</button>'));
+  assert.ok(context.app.innerHTML.indexOf('>学生权限</b>') < context.app.innerHTML.indexOf('aria-label="搜索学生姓名或编号"'));
   context.parity.homeworkSubject('语文');
   context.toggleHomeworkPermission(1, 'answer', true);
   assert.equal(R.homeworkValue(JSON.parse(stored).A[0], '语文').answer, true);
   assert.equal(R.homeworkValue(JSON.parse(stored).A[0], '数学').answer, false);
+  context.parity.studentFilter('学生1', 'yes'); context.renderControl();
+  assert.match(context.app.innerHTML, />学生1</);
+  assert.doesNotMatch(context.app.innerHTML, />学生2</);
+  context.parity.studentFilter(null, 'no'); context.renderControl();
+  assert.match(context.app.innerHTML, /没有符合条件的学生/);
+  context.parity.studentFilter('', 'all'); context.renderControl();
   context.controlWorkView = 'subject';
   context.renderControl();
   assert.doesNotMatch(context.app.innerHTML, /role="tab"[^>]*>语文|role="tab"[^>]*>英语/);
@@ -571,15 +579,17 @@ test('借用管控上下展示两类规则，悬浮新增选择类型，编辑�
   assert.match(dialog.actions, /取消/);
 });
 
-test('老师锁屏保留反向动作，万象视界统一进入未预选状态的设置', () => {
+test('老师锁屏和万象视界混合状态统一设置并显示变更人数', () => {
   const fs = require('node:fs'), vm = require('node:vm');
   const locked = student(1), unlocked = student(2);
+  let dialog, toast;
   locked.locked = true;
   locked.world = true;
   unlocked.locked = false;
   unlocked.world = false;
   const context = {
     controlRules: R, closeControlOverlay() {}, addEventListener() {}, setInterval() {},
+    controlOverlay(title, body, actions) { dialog = { title, body, actions }; }, controlToast(message) { toast = message; },
     schoolControlClasses: ['A'], controlClasses: ['A'], selectedTeacherClass: 'A',
     controlData: { A: [locked, unlocked] }, controlStudents() { return context.controlData.A; },
     controlDemoRole: 'teacher', controlWorkView: 'homeroom', controlModule: 'lock', controlView: 'students',
@@ -587,6 +597,8 @@ test('老师锁屏保留反向动作，万象视界统一进入未预选状态�
     controlSelected: new Set(), adminSelectedScopes: new Set(), adminBulkRefs: [], adminLevel: 'class', adminBatchMode: false,
     schoolBorrowingEnabled: true, stage: 'other', app: { innerHTML: '' },
     header(title) { return '<span></span><h2>' + title + '</h2>'; }, syncReview() {},
+    controlRoleSwitcher() { return ''; }, teacherTabBar() { return ''; }, controlCardIcon() { return ''; }, isHeadTeacherClass() { return true; },
+    document: { getElementById() { return null; } },
     localStorage: { getItem() { return null; }, setItem() {} },
   };
   context.window = context;
@@ -611,12 +623,40 @@ test('老师锁屏保留反向动作，万象视界统一进入未预选状态�
     assert.match(inactiveOnly, new RegExp('>' + onLabel + '<'));
 
     const mixed = renderActions(module, [1, 2]);
-    assert.match(mixed, /parity\.selectedBoolean\(false\)/);
-    assert.match(mixed, /parity\.selectedBoolean\(true\)/);
+    if (module === 'lock') {
+      assert.match(mixed, /parity\.teacherLockChoice\('selected'\)/);
+      assert.doesNotMatch(mixed, /parity\.selectedBoolean\(/);
+      context.parity.teacherLockChoice('selected');
+      assert.equal(dialog.title, '设置锁屏');
+      assert.match(dialog.body, /1 人将解锁/);
+      assert.match(dialog.body, /1 人将锁屏/);
+      assert.doesNotMatch(dialog.body, /teacher-lock-choice" checked/);
+      context.parity.saveTeacherLock(); assert.equal(toast, '请选择设置后的状态');
+      context.parity.chooseTeacherLock(true); assert.match(dialog.body, /teacher-lock-choice" checked/);
+      context.parity.cancelTeacherLock();
+      context.parity.teacherLockChoice('selected'); assert.doesNotMatch(dialog.body, /teacher-lock-choice" checked/);
+      context.parity.chooseTeacherLock(true); context.parity.saveTeacherLock();
+      assert.equal(dialog.title, '确认锁屏？');
+      assert.match(dialog.body, /实际影响 1 名学生/);
+    } else {
+      assert.match(mixed, /设置使用状态/);
+      assert.match(mixed, /parity\.booleanEditor\(parity\.selectedRefs\(\),'所选对象',null\)/);
+      assert.doesNotMatch(mixed, /parity\.selectedBoolean\(/);
+      context.parity.booleanEditor(context.parity.selectedRefs(), '所选对象', null);
+      assert.equal(dialog.title, '设置万象视界');
+      assert.match(dialog.body, /1人将允许使用/);
+      assert.match(dialog.body, /1人将禁止使用/);
+      assert.doesNotMatch(dialog.body, /name="parity-boolean" checked/);
+      context.parity.saveBoolean(); assert.equal(toast, '请选择设置后的状态');
+      context.parity.chooseBoolean(true); assert.match(dialog.body, /name="parity-boolean" checked/);
+    }
   }
-  for (const ids of [[1], [2], [1, 2]]) {
+  for (const ids of [[1], [2]]) {
     const html = renderActions('world', ids);
     assert.doesNotMatch(html, /设置使用状态/);
     assert.match(html, /parity\.selectedBoolean/);
   }
+  context.controlModule = 'lock'; context.controlView = 'entry'; context.renderControl();
+  assert.match(context.app.innerHTML, /parity\.teacherLockChoice\('all'\)/);
+  assert.doesNotMatch(context.app.innerHTML, /全班解锁<\/button>|全班锁屏<\/button>/);
 });
