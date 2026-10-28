@@ -1,0 +1,72 @@
+.borrowing-mobile .control-content { padding-bottom: 170px; }
+.control-screen.borrowing-teacher .control-content { padding-bottom:24px; }
+.control-screen.borrowing-teacher .borrowing-student-action { flex:none; width:auto; min-height:36px; padding:8px 12px; font-size:12px; }
+.borrowing-times-link, .borrowing-roster-link { border:0; background:transparent; color:#087fc5; cursor:pointer; }
+.borrowing-times-link { display:block; width:auto; margin-top:10px; padding:5px 0; font-size:12px; text-align:left; }
+.borrowing-roster-link { width:auto; padding:4px 0; font-size:11px; }
+.control-screen.borrowing-mobile .admin-scope-summary > button { flex:none; width:auto; min-width:0; min-height:34px; margin-left:auto; padding:7px 12px; border:1px solid #dcebf2; border-radius:9px; background:#e5f5ff; color:#087fc5; font-size:12px; white-space:nowrap; }
+.borrowing-detail-link { border:0; background:transparent; color:#168fce; padding:8px 0 8px 12px; white-space:nowrap; font-size:14px; }
+.borrowing-list-actions { flex-direction:column; gap:8px; flex-shrink:0; }
+.borrowing-list-actions button { min-width:96px; padding:9px 12px; font-size:14px; }
+.borrowing-rule-section { margin-top:18px; }
+.borrowing-rule-section + .borrowing-rule-section { padding-top:18px; border-top:1px solid #dce9f3; }
+.borrowing-rule-section > h3 { margin:0 0 10px; color:#193349; font-size:15px; }
+.borrowing-rule-item { display:flex; align-items:flex-start; gap:8px; }
+.borrowing-rule-copy { flex:1; min-width:0; }
+.borrowing-rule-item .parity-rule-actions { flex:none; gap:2px; margin-top:0; }
+.borrowing-rule-footer { flex-wrap:nowrap; }
+.borrowing-rule-footer button { min-width:0; padding:10px 6px; font-size:12px; white-space:normal; line-height:1.25; }
+.borrowing-scope-cards { display:grid; gap:12px; }
+.control-grade-group-title { margin:10px 2px 0; color:#59738c; font-size:13px; font-weight:700; }
+.borrowing-scope-card { padding:16px; border:1px solid #e2ebf1; border-radius:17px; background:#fff; }
+.borrowing-card-head { display:flex; flex-wrap:wrap; align-items:center; gap:8px; color:#193349; font-size:14px; }
+.control-screen .borrowing-grade-link { display:inline-flex; align-items:center; gap:8px; width:auto; padding:0; border:0; background:transparent; color:#193349; font-size:14px; font-weight:700; }
+.borrowing-grade-link span { color:#91a6b7; font-size:20px; }
+.borrowing-denied-badge { color:#a26859; background:#fff5ef; border-radius:6px; padding:3px 6px; font-size:10px; }
+.borrowing-card-count { margin:6px 0 0; color:#8196a8; font-size:11px; }
+.borrowing-card-rules { margin:10px 0; color:#53718b; font-size:12px; line-height:1.7; overflow-wrap:anywhere; }
+.borrowing-card-rules > p { margin:0; padding:8px 0; border-bottom:1px solid #edf2f6; }
+.borrowing-card-rules > p:last-of-type { border-bottom:0; }
+.borrowing-card-rules > p { line-height:1.5; }
+.borrowing-card-rules > p.parity-note { padding:6px 0; }
+.borrowing-scope-card.borrowing-selectable { cursor:pointer; outline:none; }
+.borrowing-scope-card.borrowing-selectable:focus-visible { outline:2px solid #287cca; outline-offset:2px; }
+.borrowing-scope-card.borrowing-selectable.is-selected,
+.borrowing-scope-card.borrowing-selectable[aria-checked=true] { border-color:#287cca; background:#eaf5ff; }
+.borrowing-card-check { display:grid; place-items:center; width:22px; height:22px; flex:none; border:1px solid #b8cddd; border-radius:6px; color:#fff; font-size:15px; line-height:1; }
+.borrowing-selectable[aria-checked=true] .borrowing-card-check { border-color:#287cca; background:#287cca; }
+.borrowing-selectable .borrowing-card-head { min-height:24px; }
+.borrowing-card-rules small { display:block; color:#8196a8; font-size:10px; }
+.control-screen .borrowing-card-more { display:block; width:100%; margin-top:4px; padding:6px; border:0; background:transparent; color:#6c8395; font-size:11px; }
+.borrowing-card-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
+.control-screen .borrowing-card-actions button { width:auto; min-height:34px; padding:7px 10px; font-size:12px; }
+.borrowing-mobile .control-actions { flex-wrap:wrap; gap:8px; }
+.borrowing-scope-row { padding:18px 12px; background:white; border-bottom:1px solid #e3edf5; }
+.borrowing-row-head { display:flex; gap:10px; align-items:center; }
+.borrowing-row-head span { margin-left:auto; color:#6b86a0; font-size:13px; }
+.borrowing-scope-link { border:0; background:none; text-align:left; padding:0; color:#16354b; font-size:17px; }
+.borrowing-scope-row p { color:#6985a2; font-size:14px; line-height:1.7; margin:10px 0; }
+.borrowing-footer { position:absolute; bottom:0; left:0; right:0; background:white; border-top:1px solid #dce9f3; padding:12px 20px max(20px,env(safe-area-inset-bottom)); display:flex; flex-wrap:wrap; gap:8px; z-index:20; }
+.borrowing-footer button { flex:1; min-width:90px; }
+.borrowing-footer label { align-self:center; white-space:nowrap; }
+.borrowing-roster { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:15px; max-height:50vh; overflow:auto; }
+.borrowing-select-all { display:flex; align-items:center; gap:7px; min-height:44px; padding:8px 12px; }
+.borrowing-form label { display:block; margin:12px 0; color:#54718d; }
+.borrowing-form input[type=date], .borrowing-form select { width:100%; padding:12px; margin-top:6px; border:1px solid #dce9f3; border-radius:10px; background:white; color:#19384e; }
+.borrowing-form fieldset { border:0; padding:0; }
+.borrowing-days { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.borrowing-period { display:flex; gap:6px; align-items:center; margin:12px 0; }
+.borrowing-period input { width:0; flex:1; min-width:0; padding:10px 3px; border:1px solid #dce9f3; border-radius:8px; }
+.borrowing-period button { padding:10px 8px; }
+.borrowing-conflicts { max-height:180px; overflow:auto; background:#f4f9fc; padding:8px; }
+.borrowing-mobile .control-student-row input[type=checkbox] { width:22px; height:22px; accent-color:#1296df; }
+
+/* Borrowing uses the same role tokens and card/form treatment as the other modules. */
+body.dw-ui-new #app .control-screen .borrowing-scope-card { border-color:var(--control-line); border-radius:16px; background:#ffffffed; box-shadow:0 8px 23px var(--dw-shadow,#4b85b81a); }
+body.dw-ui-new #app .control-screen :is(.borrowing-grade-link,.borrowing-card-head) { color:var(--control-ink); }
+body.dw-ui-new #app .control-screen :is(.borrowing-card-count,.borrowing-card-rules,.borrowing-card-rules small,.borrowing-card-more) { color:var(--control-muted); }
+body.dw-ui-new #app .control-screen :is(.borrowing-times-link,.borrowing-roster-link) { color:var(--accent); }
+body.dw-ui-new #app .control-screen :is(.borrowing-form input[type=date],.borrowing-form select,.borrowing-period input) { border-color:var(--control-line); border-radius:12px; background:#fff; color:var(--control-ink); font:inherit; }
+body.dw-ui-new #app .control-screen .borrowing-form label { color:var(--control-muted); font-size:12px; }
+body.dw-ui-new #app .control-screen .borrowing-footer { border-color:var(--control-line); background:#ffffffeb; box-shadow:0 -5px 18px var(--dw-shadow,#4b85b81a); }
+body.dw-ui-new #app .control-screen .borrowing-conflicts { border-radius:12px; background:var(--control-soft); }

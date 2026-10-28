@@ -38,6 +38,10 @@ export async function handlePreviewRequest(request, response) {
       : pathname === '/assets/role-selection-approved.png'
         ? 'role-selection-approved.png'
         : null;
+    if (['/control-page-demo.js', '/control-borrowing.js', '/control-borrowing-model.js', '/control-borrowing.css'].includes(pathname)) {
+      response.writeHead(200, { 'Content-Type': pathname.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8', 'Cache-Control': 'no-store' });
+      response.end(await readFile(join(root, pathname.slice(1)))); return;
+    }
     const teacherArt = pathname === '/assets/teacher-login-illustration.png';
     const homeworkPaper = ['/miniprogram/assets/homework-demo-paper.png', '/miniprogram/assets/homework-real-page-1.jpg', '/miniprogram/assets/homework-real-page-2.png'].includes(pathname) || /^\/miniprogram\/assets\/homework-worksheets\/[a-z0-9-]+\.(?:webp|png)$/.test(pathname);
     const scenarioAsset = /^\/assets\/tutor-scenarios\/[0-9]{2}-[\p{L}0-9-]+\.png$/u.test(pathname) ? pathname.slice(1) : null;

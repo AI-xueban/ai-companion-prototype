@@ -6,7 +6,161 @@ const dates = (id, startDate, endDate, deny = false) => ({ id, mode: 'dates', we
 const student = id => ({ id, name: '学生' + id, schedules: [], durationRules: [], answer: false, explanation: false, world: true, locked: false, updated: {}, teacherModified: {} });
 const actor = { by: '管理员', phone: '13800138000', role: 'school' };
 
-for (const role of ['school', 'homeroom']) for (const type of ['weekly', 'dates', 'duration']) {
+test('时长按显式星期来源保留，恢复默认标记也受保护，编辑保留其他星期', () => {
+  const s = student(1);
+  s.durationTeacherWeekdays = [0];
+  s.durationRules = [{ ...R.copy(R.defaultDuration), id: 'teacher', weekdays: [2], source: 'homeroom' }];
+  assert.deepEqual(R.durationDays(s, [0, 1, 2, 3], 'unmodified'), [1, 3]);
+  assert.deepEqual(R.durationDays(s, [0, 1, 2, 3], 'all'), [0, 1, 2, 3]);
+  const merged = R.mergeDuration([{ ...R.copy(R.defaultDuration), id: 'old', weekdays: [0, 1], continuousMinutes: 90 }], { ...R.copy(R.defaultDuration), id: 'new', weekdays: [0], continuousMinutes: 45 }, 'old');
+  assert.equal(R.effectiveDuration({durationRules:merged}, 1).continuousMinutes, 60); // old useDefault=true still resolves fixed default
+  assert.deepEqual(merged.find(rule => rule.id === 'old-retained').weekdays, [1]);
+});
+
+test('万象视界只更新实际变化学生，保留未变化学生来源及最近操作', () => {
+  const data = { A: [student(1), student(2), student(3)] };
+  data.A[0].world = false;
+  data.A[1].worldSource = 'teacher'; data.A[1].updated.world = {version: 8, by: '老师'};
+  const refs = data.A.map(s => ({className:'A',id:s.id}));
+  const result = R.transaction(data, refs, 'world', null, 'all', s => { s.world = true; }, actor);
+  assert.equal(result.count, 1);
+  assert.equal(result.data.A[0].worldSource, 'school');
+  assert.deepEqual(result.data.A[1], data.A[1]);
+  assert.deepEqual(result.data.A[2], data.A[2]);
+  assert.equal(R.modified({worldSource:'teacher', teacherModified:{world:false}}, 'world'), true);
+});
+
+test('指定日期生命周期按起止日期判断，只校验日期而不限制当天已过去的时段', () => {
+  const rule = { ...dates('future', '2099-01-01', '2099-01-02'), periods: [{ start: '09:00', end: '10:00' }, { start: '14:00', end: '15:00' }] };
+  assert.equal(R.borrowStatus(rule, new Date('2098-12-31T23:59:59')), '待生效');
+  assert.equal(R.borrowStatus(rule, new Date('2099-01-01T08:59:00')), '生效中');
+  assert.equal(R.borrowStatus(rule, new Date('2099-01-01T09:00:00')), '生效中');
+  assert.equal(R.borrowStatus(rule, new Date('2099-01-01T10:00:00')), '生效中');
+  assert.equal(R.borrowStatus(rule, new Date('2099-01-02T14:59:59')), '生效中');
+  assert.equal(R.borrowStatus(rule, new Date('2099-01-02T23:59:59')), '生效中');
+  assert.equal(R.borrowStatus(rule, new Date('2099-01-03T00:00:00')), '已失效');
+  assert.equal(R.validateBorrow(rule, new Date('2099-01-01T08:59:00')), '');
+  assert.equal(R.validateBorrow(rule, new Date('2099-01-01T20:00:00')), '');
+  assert.match(R.validateBorrow(rule, new Date('2099-01-02T09:00:00')), /今天及以后/);
+  const deny = dates('deny', '2099-01-01', '2099-01-02', true);
+  assert.equal(R.borrowStatus(deny, new Date('2099-01-02T23:59:59')), '生效中');
+  assert.equal(R.borrowStatus(deny, new Date('2099-01-03T00:00:00')), '已失效');
+  assert.equal(R.validateBorrow(deny, new Date('2099-01-01T12:00:00')), '');
+});
+
+test('全校、年级、班级临时锁屏保留原状态，范围重叠及教师权限正确', () => {
+  const fs = require('node:fs'), vm = require('node:vm');
+  let stored, toast, dialog;
+  const context = {
+    controlRules: R, closeControlOverlay() {}, addEventListener() {}, setInterval() {},
+    schoolControlClasses: ['A'], controlClasses: ['A'], selectedTeacherClass: 'A',
+    controlData: { A: [student(1), student(2)], schoolSettings: { homeroomDurationEnabled: true } }, controlStudents() { return context.controlData.A; },
+    controlDemoRole: 'admin', controlWorkView: 'school', controlModule: 'lock', controlView: 'students',
+    controlLabels: { lock: '平板锁屏' }, controlQuery: '', controlFilter: 'all',
+    controlSelected: new Set([1, 2]), adminSelectedScopes: new Set(), adminLevel: 'class', adminBatchMode: false,
+    schoolBorrowingEnabled: true, stage: 'other', app: { innerHTML: '' },
+    header(title) { return '<span></span><h2>' + title + '</h2>'; }, syncReview() {},
+    binaryToggleButton(module, on, action, label) { return `<button onclick="${action}" aria-label="${label}" aria-checked="${on}"></button>`; },
+    adminVisibleScopeKeys() { return ['A']; }, adminSelectionRefs() { return context.adminSelectedScopes.has('A') ? context.controlData.A.map(s => ({ className: 'A', id: s.id })) : []; },
+    document: { getElementById() { return null; } },
+    localStorage: { getItem(key) { return key === 'teacher-control-prototype-v1' ? stored || null : null; }, setItem(key, value) { if (key === 'teacher-control-prototype-v1') stored = value; } },
+    controlToast(message) { toast = message; }, controlOverlay(title) { dialog = title; },
+  };
+  context.controlData.A[0].locked = true;
+  context.controlData.A[0].updated.homework = { by: '作业老师', at: '2026/10/18 09:00:00', version: 7 };
+  context.window = context;
+  const code = fs.readFileSync(require.resolve('./control-parity.js'), 'utf8');
+  vm.runInNewContext(code, context);
+  context.parity.toggleTemporaryLock(undefined, true);
+  assert.equal(JSON.parse(stored).schoolSettings.temporaryLock.active, true);
+  assert.deepEqual(JSON.parse(stored).A.map(s => s.locked), [true, false]);
+  assert.equal(JSON.parse(stored).A[0].updated.lock.by, '学校管理员');
+  assert.equal(JSON.parse(stored).A[0].updated.lock.version, 1);
+  assert.equal(JSON.parse(stored).A[0].updated.homework.by, '作业老师');
+  assert.doesNotMatch(context.app.innerHTML, /最近操作/);
+  assert.doesNotMatch(context.app.innerHTML, /平板未锁屏/);
+  assert.match(context.app.innerHTML, /临时锁屏/);
+  context.controlData = JSON.parse(stored);
+  vm.runInNewContext(code, context);
+  context.renderControl();
+  assert.doesNotMatch(context.app.innerHTML, /平板未锁屏/);
+  for (const role of ['homeroom', 'subject']) {
+    context.controlDemoRole = 'teacher'; context.controlWorkView = role;
+    context.confirmControl('all', false);
+    assert.equal(dialog, undefined);
+    assert.match(toast, /临时锁屏管控/);
+    assert.deepEqual(JSON.parse(stored).A.map(s => s.locked), [true, false]);
+    context.parity.toggleTemporaryLock(undefined, true);
+    assert.equal(JSON.parse(stored).schoolSettings.temporaryLock.active, true);
+  }
+  context.controlDemoRole = 'admin'; context.controlWorkView = 'school';
+  context.parity.toggleTemporaryLock(undefined, true);
+  assert.equal(JSON.parse(stored).schoolSettings.temporaryLock.active, false);
+  assert.deepEqual(JSON.parse(stored).A.map(s => s.locked), [true, false]);
+  assert.match(context.app.innerHTML, /未开启临时锁屏/);
+  assert.doesNotMatch(context.app.innerHTML, /搜索学生|openControlStudentDetail|enterAdminClass/);
+  context.confirmControl(1, false);
+  assert.match(toast, /仅支持全校、年级或班级/);
+  const grade = { key: 'grade:五年级', refs: [{ className: 'A', id: 1 }, { className: 'A', id: 2 }] };
+  const classScope = { key: 'class:A', refs: [{ className: 'A', id: 1 }, { className: 'A', id: 2 }] };
+  context.parity.setTemporaryLocks([grade], true, true);
+  context.parity.setTemporaryLocks([classScope], true, true);
+  context.controlDemoRole = 'teacher'; context.controlWorkView = 'homeroom';
+  context.confirmControl('all', false);
+  assert.match(toast, /临时锁屏/);
+  assert.equal(dialog, undefined);
+  context.controlDemoRole = 'admin'; context.controlWorkView = 'school';
+  context.parity.setTemporaryLocks([classScope], false, true);
+  assert.doesNotMatch(context.app.innerHTML, /平板未锁屏/);
+  context.parity.toggleTemporaryLock(true, true);
+  context.parity.toggleTemporaryLock(false, true);
+  assert.doesNotMatch(context.app.innerHTML, /平板未锁屏/);
+  context.parity.setTemporaryLocks([grade], false, true);
+  assert.match(context.app.innerHTML, /未开启临时锁屏/);
+  assert.deepEqual(JSON.parse(stored).A.map(s => s.locked), [true, false]);
+  assert.ok(JSON.parse(stored).A[0].updated.lock.version > 1);
+  assert.equal(JSON.parse(stored).A[0].updated.homework.version, 7);
+  // 全校会话仍开启，但班级解除后老师恢复原有操作权限。
+  context.parity.toggleTemporaryLock(true, true);
+  context.controlData.A.push(student(3)); stored = JSON.stringify(context.controlData);
+  context.parity.setTemporaryLocks([{key:'class:A',refs:context.controlData.A.map(s => ({className:'A',id:s.id}))}], false, true);
+  assert.equal(JSON.parse(stored).schoolSettings.temporaryLock.active, true);
+  context.controlDemoRole = 'teacher'; context.controlWorkView = 'homeroom';
+  toast = ''; dialog = '';
+  context.confirmControl('all', false);
+  assert.doesNotMatch(toast, /临时锁屏管控/);
+  assert.ok(dialog, '已解除班级可以进入普通锁屏确认');
+  context.controlModule = 'borrowing'; context.openControlEditor('all');
+  assert.match(toast, /老师仅可查看/);
+  context.controlModule = 'duration'; context.controlData.schoolSettings.homeroomDurationEnabled = false;
+  stored = JSON.stringify(context.controlData); context.openControlEditor('all');
+  assert.match(toast, /暂未开放/);
+  context.controlModule = 'lock'; context.controlDemoRole = 'admin'; context.controlWorkView = 'school';
+  context.parity.toggleTemporaryLock(false, true);
+  assert.equal(JSON.parse(stored).schoolSettings.temporaryLock.active, false);
+  assert.deepEqual(JSON.parse(stored).A.map(s => Boolean(s.locked)), [true, false, false]);
+  // 子页顶部大按钮只操作当前年级/班级；局部解除不结束全校会话。
+  context.controlData.B = [student(4)]; context.schoolControlClasses.push('B'); stored = JSON.stringify(context.controlData);
+  context.parity.toggleTemporaryLock(true, true);
+  context.adminLevel = 'grade'; context.adminSelectedGrade = 'A'; context.renderControl();
+  assert.match(context.app.innerHTML,/A临时锁屏/);
+  assert.match(context.app.innerHTML,/parity.currentScopeLock\(\)/);
+  const beforeConfirm = stored;
+  context.parity.currentScopeLock(); assert.match(dialog,/解除临时锁屏/); assert.equal(stored,beforeConfirm);
+  context.parity.commitScopedLock(false);
+  assert.equal(JSON.parse(stored).schoolSettings.temporaryClassStates.A,false);
+  assert.equal(JSON.parse(stored).schoolSettings.temporaryClassStates.B,true);
+  assert.equal(JSON.parse(stored).schoolSettings.temporaryLock.active,true);
+  context.adminLevel = 'class'; context.renderControl();
+  assert.match(context.app.innerHTML,/A临时锁屏/);
+  assert.match(context.app.innerHTML,/>一键锁屏A<\/button>/);
+  context.parity.currentScopeLock(); assert.match(dialog,/开启临时锁屏/);
+  context.parity.commitScopedLock(true);
+  assert.equal(JSON.parse(stored).schoolSettings.temporaryClassStates.A,true);
+  assert.deepEqual(JSON.parse(stored).A.map(s => Boolean(s.locked)),[true,false,false]);
+});
+
+for (const role of ['school', 'homeroom']) for (const type of (role === 'school' ? ['weekly', 'dates', 'duration'] : ['duration'])) {
   test(`${role}的${type}保存确认只展示本次规则，不混入学生历史配置`, () => {
     const fs = require('node:fs'), vm = require('node:vm');
     let dialog;
@@ -26,7 +180,7 @@ for (const role of ['school', 'homeroom']) for (const type of ['weekly', 'dates'
       controlRules: R, crypto: require('node:crypto').webcrypto,
       closeControlOverlay() {}, addEventListener() {}, setInterval() {},
       schoolControlClasses: ['A'], controlClasses: ['A'], selectedTeacherClass: 'A',
-      controlData: { A: [student(1), student(2)] }, controlStudents() { return context.controlData.A; },
+      controlData: { A: [student(1), student(2)], schoolSettings: { homeroomDurationEnabled: true } }, controlStudents() { return context.controlData.A; },
       controlDemoRole: role === 'school' ? 'admin' : 'teacher', controlWorkView: role,
       controlModule: type === 'duration' ? 'duration' : 'borrowing', controlView: 'module', adminLevel: 'grade',
       controlLabels: { borrowing: '借用管控', duration: '使用时长管控' },
@@ -45,9 +199,17 @@ for (const role of ['school', 'homeroom']) for (const type of ['weekly', 'dates'
     vm.runInNewContext(fs.readFileSync(require.resolve('./control-parity.js'), 'utf8'), context);
     context.openControlEditor('all');
     if (type === 'dates') context.parity.editorMode('dates');
+    if (role === 'school' && type === 'dates') {
+      assert.match(context.app.innerHTML, /默认对全校学生生效/);
+      assert.doesNotMatch(context.app.innerHTML, /name="parity-apply-scope"/);
+    }
     context.parity.saveEditor();
     assert.ok(dialog, '应进入保存确认弹窗');
-    const preview = dialog.body.match(/<summary>本次设置的规则<\/summary>([\s\S]*?)<\/details>/)?.[1];
+    if (type === 'dates') {
+      assert.match(dialog.actions, />保存<\/button>/);
+      assert.doesNotMatch(dialog.actions, /确认生效/);
+    }
+    const preview = dialog.body.match(/<div class="parity-preview">([\s\S]*?)<\/div>/)?.[1];
     assert.ok(preview);
     assert.match(preview, /09:00–10:00/);
     assert.doesNotMatch(preview, /08:00|17:30|2099-02|88 分钟|300 分钟/);
@@ -68,18 +230,18 @@ test('指定日期冲突按起止日期拆分，全天禁止无需填写时段',
   assert.equal(R.effectiveBorrow({ schedules: next }, '2099-01-05').deny, true);
   assert.equal(R.effectiveBorrow({ schedules: next }, '2099-01-08').deny, false);
 });
-test('总开关关闭禁止借用；过期指定日期不再遮挡每周规则', () => {
+test('旧总开关不影响借用；过期指定日期不再遮挡每周规则', () => {
   const s = { schedules: [weekly('w', [0, 1, 2, 3, 4, 5, 6]), dates('expired', '2020-01-01', '2020-01-02', true)] };
-  assert.equal(R.effectiveBorrow(s, '2026-10-19', false).deny, true);
+  assert.equal(R.effectiveBorrow(s, '2026-10-19', false).deny, false);
   assert.equal(R.effectiveBorrow(s, '2026-10-19').id, 'w');
   assert.equal(R.prune(s.schedules).length, 1);
-  assert.equal(R.effectiveBorrow({ schedules: [] }, '2026-10-19').deny, true);
+  assert.equal(R.effectiveBorrow({ schedules: [] }, '2026-10-19').deny, false);
 });
 test('删除指定日期恢复每周规则，删除全部规则不补造默认借用时段', () => {
   const rules = [weekly('w', [0]), dates('special', '2026-10-19', '2026-10-19', true)];
   assert.equal(R.effectiveBorrow({ schedules: rules }, '2026-10-19').deny, true);
   assert.equal(R.effectiveBorrow({ schedules: rules.filter(rule => rule.id !== 'special') }, '2026-10-19').id, 'w');
-  assert.equal(R.effectiveBorrow({ schedules: [] }, '2026-10-19').reason, '当天没有有效借用规则');
+  assert.equal(R.effectiveBorrow({ schedules: [] }, '2026-10-19').reason, '未设置借用时间，默认随时可借');
   assert.equal(R.effectiveBorrow({ schedules: [weekly('w', [1])] }, '2026-10-19').deny, true);
 });
 test('使用时长支持多个星期规则、覆盖拆分以及默认规则回退', () => {
@@ -95,7 +257,8 @@ test('使用时长支持多个星期规则、覆盖拆分以及默认规则回�
 });
 test('空可用时段代表全天可用且仍受时长限制，填写时段仍校验重叠和跨日', () => {
   assert.equal(R.validatePeriods([], true), '');
-  assert.match(R.durationText(R.defaultDuration), /全天可用（仍受时长限制）/);
+  assert.match(R.durationText(R.defaultDuration), /全天可用/);
+  assert.doesNotMatch(R.durationText(R.defaultDuration), /（仍受时长限制）/);
   assert.notEqual(R.validatePeriods([]), '');
   assert.notEqual(R.validatePeriods([{ start: '10:00', end: '09:00' }], true), '');
   assert.notEqual(R.validatePeriods([{ start: '08:00', end: '10:00' }, { start: '09:00', end: '11:00' }]), '');
@@ -183,7 +346,9 @@ test('全校删除弹窗对齐教师端：目标规则、回退说明和确认�
   assert.equal(dialog.title, '确认删除全校借用规则？');
   assert.match(dialog.body, /2099-01-01 至 2099-01-02/);
   assert.match(dialog.body, /恢复每周固定借用规则/);
-  assert.match(dialog.body, /实际影响 1 名学生/);
+  assert.match(dialog.body, /实际影响 2 名学生/);
+  assert.equal(context.controlData.A[1].schedules[0].id, 'target');
+  assert.deepEqual(Array.from(context.controlData.A[1].legacyBorrowingRules), []);
   assert.doesNotMatch(dialog.body, /周一|操作后实际生效规则|以保存后的规则为准/);
   assert.match(dialog.actions, /确认删除/);
   assert.doesNotMatch(dialog.actions, /确认生效/);
@@ -199,7 +364,7 @@ test('借用管控上下展示两类规则，悬浮新增选择类型，编辑�
     header() { return '<span></span><h2>借用管控</h2>'; }, syncReview() {},
     localStorage: { getItem() { return null; }, setItem() {} },
   };
-  context.controlData.A[0].schedules = [weekly('weekly-rule', [0]), dates('date-rule', '2099-01-01', '2099-01-02')];
+  context.controlData.A[0].schedules = [weekly('weekly-rule', [0]), dates('date-rule', '2099-01-01', '2099-01-02'), dates('expired-rule', '2020-01-01', '2020-01-02')];
   context.window = context;
   vm.runInNewContext(fs.readFileSync(require.resolve('./control-parity.js'), 'utf8'), context);
   context.renderControl();
@@ -209,7 +374,12 @@ test('借用管控上下展示两类规则，悬浮新增选择类型，编辑�
   assert.equal((html.match(/parity.newBorrowRule\(\)/g) || []).length, 1);
   assert.match(html, /parity-borrow-floating/);
   assert.equal((html.match(/aria-label="编辑规则"/g) || []).length, 2);
-  assert.equal((html.match(/aria-label="删除规则"/g) || []).length, 2);
+  assert.equal((html.match(/aria-label="删除规则"/g) || []).length, 3);
+  assert.match(html, /已失效/);
+  assert.match(html, /待生效/);
+  assert.doesNotMatch(html, /schoolBorrowEdit\('expired-rule'\)/);
+  assert.match(html, /schoolBorrowDelete\('expired-rule'\)/);
+  assert.equal(context.controlData.A[0].schedules.length, 3);
   assert.doesNotMatch(html, />编辑<|>删除</);
   assert.match(html, /weekly-rule/);
   assert.match(html, /date-rule/);
@@ -223,7 +393,7 @@ test('借用管控上下展示两类规则，悬浮新增选择类型，编辑�
   assert.match(dialog.actions, /取消/);
 });
 
-test('锁屏和万象视界批量操作只展示所选状态可切换的动作', () => {
+test('老师锁屏保留反向动作，万象视界统一进入未预选状态的设置', () => {
   const fs = require('node:fs'), vm = require('node:vm');
   const locked = student(1), unlocked = student(2);
   locked.locked = true;
@@ -251,7 +421,7 @@ test('锁屏和万象视界批量操作只展示所选状态可切换的动作',
     context.renderControl();
     return context.app.innerHTML;
   };
-  for (const [module, offLabel, onLabel] of [['lock', '解锁', '锁屏'], ['world', '关闭', '开放']]) {
+  for (const [module, offLabel, onLabel] of [['lock', '解锁', '锁屏'], ['world', '禁止使用', '允许使用']]) {
     const activeOnly = renderActions(module, [1]);
     assert.match(activeOnly, /parity\.selectedBoolean\(false\)/);
     assert.doesNotMatch(activeOnly, /parity\.selectedBoolean\(true\)/);
@@ -265,5 +435,10 @@ test('锁屏和万象视界批量操作只展示所选状态可切换的动作',
     const mixed = renderActions(module, [1, 2]);
     assert.match(mixed, /parity\.selectedBoolean\(false\)/);
     assert.match(mixed, /parity\.selectedBoolean\(true\)/);
+  }
+  for (const ids of [[1], [2], [1, 2]]) {
+    const html = renderActions('world', ids);
+    assert.doesNotMatch(html, /设置使用状态/);
+    assert.match(html, /parity\.selectedBoolean/);
   }
 });

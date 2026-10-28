@@ -10,7 +10,9 @@ import {
   Edit3
 } from 'lucide-react';
 
-export const TeacherProfile: React.FC = () => {
+import { TeacherPortalUser } from '../data/teacherAccess';
+
+export const TeacherProfile: React.FC<{ user: TeacherPortalUser }> = ({ user }) => {
   const [classOpen, setClassOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<{ name: string; type: string; students: number; homeroom: string; alerts: number; completion: number } | null>(null);
   const [pwdOpen, setPwdOpen] = useState(false);
@@ -28,12 +30,12 @@ export const TeacherProfile: React.FC = () => {
   const [emailCountdown, setEmailCountdown] = useState(0);
 
   const teacherInfo = {
-    name: '张雨薇',
-    position: '数学教研组长',
-    email: 'zhangyuwei@turing-edu.com',
-    phone: '138****8888',
-    department: '初中数学组',
-    avatar: 'Z'
+    name: user.name,
+    position: user.roleLabel,
+    email: user.account.includes('@') ? user.account : '未绑定',
+    phone: user.phone ? user.phone.replace(/^(\d{3})\d{4}(\d{4})$/, '$1****$2') : '未绑定',
+    department: user.schoolName,
+    avatar: user.name.slice(0, 1)
   };
   const [emailDisplay, setEmailDisplay] = useState(teacherInfo.email);
 

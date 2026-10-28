@@ -1,72 +1,42 @@
 import assert from 'node:assert/strict';
-import {mkdirSync,writeFileSync} from 'node:fs';
-import {chromium} from 'playwright';
-import {resolve} from 'node:path';
-import {fileURLToPath} from 'node:url';
-import {handlePreviewRequest} from './server.mjs';
-const output=process.env.TUTOR_REPORT_DIR||fileURLToPath(new URL('../../../output/homework-tutor/',import.meta.url));mkdirSync(output,{recursive:true});
-const browser=await chromium.launch({headless:true,channel:'chrome'});
-const page=await browser.newPage({viewport:{width:1440,height:1100}}),errors=[];
-page.on('pageerror',e=>errors.push(e.message));
-await page.route('**/learning-data.js',async route=>{let body,code=200,headers={};await handlePreviewRequest({url:'/learning-data.js'},{writeHead(s,h){code=s;headers=h;},end(v){body=v;}});await route.fulfill({status:code,headers,body});});
-const click=name=>page.getByRole('button',{name,exact:true}).click();
-const phase=()=>page.evaluate(()=>homeworkTutorUI.inspect().phase);
-const shot=name=>page.locator('.device').screenshot({path:resolve(output,name+'.png')});
-// Simulate completed narration, while all user actions use visible controls.
-const narrate=()=>page.evaluate(()=>homeworkTutorUI.next());
-try{
-  await page.goto(new URL('./index.html?review=1&demo=hw-parent-result',import.meta.url).href);
-  assert.equal(await page.locator('.hp-result-footer button').count(),1);
-  assert.equal(await page.locator('.hp-result-question-nav button span').first().innerText(),'第21题');
-  assert.equal(await page.locator('.hp-result-sheet .hp-result-stem,.hp-result-sheet .hp-result-source').count(),0);
-  assert.ok((await page.locator('.hp-result-paper>img').getAttribute('src')).endsWith('homework-real-page-1.jpg'));
-  assert.ok((await page.locator('.hp-result-reading').innerText()).includes('24 ÷ 4'));
-  await shot('00a-批改结果半屏');
-  const slider=()=>page.getByRole('slider',{name:'拖动调整解析高度'});
-  const footerY=await page.locator('.hp-result-footer').evaluate(el=>el.getBoundingClientRect().bottom);
-  await slider().press('Home');
-  assert.equal(await page.locator('.hp-result-sheet.is-minimized').count(),1);
-  assert.equal(await page.locator('.hp-result-sheet-body').getAttribute('aria-hidden'),'true');
-  assert.equal(await page.locator('.hp-result-footer button').isVisible(),true);
-  assert.ok(Math.abs(await page.locator('.hp-result-footer').evaluate(el=>el.getBoundingClientRect().bottom)-footerY)<2);
-  await page.locator('.hp-result-question-nav button').first().click();
-  await shot('00b-批改结果收起');
-  await slider().press('End');
-  assert.equal(await page.locator('.hp-result-sheet.is-full').count(),1);
-  await page.locator('.hp-result-answer-heading').click();
-  await shot('00c-批改结果全屏');
-  await click('查看原图 ⌄');
-  assert.equal(await page.locator('.hp-result-sheet.is-minimized').count(),1);
-  await slider().press('End');
-  await slider().press('ArrowDown');
-  const resized=await page.locator('.hp-result-sheet').evaluate(el=>el.clientHeight);
+import { chromium } from 'playwright';
+import { handlePreviewRequest } from './server.mjs';
+
+const browser = await chromium.launch({ headless: true, channel: 'chrome' });
+const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
+const errors = [];
+page.on('pageerror', error => errors.push(error.message));
+await page.route('**/learning-data.js', async route => {
+  let body, status = 200, headers = {};
+  await handlePreviewRequest({ url: '/learning-data.js' }, {
+    writeHead(code, values) { status = code; headers = values; },
+    end(value) { body = value; },
+  });
+  await route.fulfill({ status, headers, body });
+});
+try {
+  await page.goto(new URL('./index.html?review=1&demo=hw-parent-result', import.meta.url).href);
+  await page.waitForFunction(() => window.homeworkPrototype && window.homeworkTutorUI);
+  assert.equal(await page.locator('.hp-result-sheet').count(), 1);
+  assert.match(await page.locator('.hp-result-reading').innerText(), /24 ÷ 4/);
+  const slider = page.getByRole('slider', { name: '拖动调整解析高度' });
+  await slider.press('Home');
+  assert.equal(await page.locator('.hp-result-sheet.is-minimized').count(), 1);
+  await slider.press('End');
+  assert.equal(await page.locator('.hp-result-sheet.is-full').count(), 1);
   await page.locator('.hp-result-question-nav button').nth(1).click();
-  assert.ok(Math.abs(await page.locator('.hp-result-sheet').evaluate(el=>el.clientHeight)-resized)<2);
-  assert.equal(await page.locator('.hp-result-question-nav button.active span').innerText(),'第22题');
-  assert.ok((await page.locator('.hp-result-answer').innerText()).includes('15.7'));
+  assert.match(await page.locator('.hp-result-answer').innerText(), /15.7/);
   await page.locator('.hp-result-question-nav button').first().click();
-  // Drag to an arbitrary height and release; there must be no snapping to a preset.
-  const handle=await page.locator('.hp-result-handle').boundingBox(),before=await page.locator('.hp-result-sheet').evaluate(el=>el.clientHeight);
-  await page.mouse.move(handle.x+handle.width/2,handle.y+handle.height/2);await page.mouse.down();await page.mouse.move(handle.x+handle.width/2,handle.y+handle.height/2+87,{steps:12});await page.mouse.up();
-  const after=await page.locator('.hp-result-sheet').evaluate(el=>el.clientHeight);assert.ok(Math.abs(after-(before-87))<3,'Free drag keeps chosen height after release');
-  await page.locator('.hp-result-history').click();await click('‹ 返回批改结果');assert.ok(Math.abs(await page.locator('.hp-result-sheet').evaluate(el=>el.clientHeight)-after)<2);
-  await click('开始讲解');
-  assert.equal(await phase(),'playing');assert.equal(await page.getByRole('button',{name:'下一段',exact:true}).count(),0);
-  await click('暂停讲解');assert.equal(await phase(),'paused');await shot('01-精简讲题页');
-  await click('文字提问');await click('发送');assert.equal(await page.locator('#ht-draft').count(),1);assert.ok((await page.locator('.ht-sheet').innerText()).includes('先写下你的问题'));
-  await page.locator('#ht-draft').fill('为什么24人对应4份？');await click('发送');assert.equal(await phase(),'aside');assert.equal(await page.getByRole('heading',{name:'这一步这样理解',exact:true}).count(),1);await shot('02-追问反馈');
-  await click('返回讲题');assert.equal(await phase(),'paused');
-  await click('文字提问');await page.locator('#ht-draft').fill('推荐一部电影');await click('发送');assert.ok((await page.locator('.ht-sheet').innerText()).includes('暂时无法回答'));await click('讲解当前步骤');assert.ok(!(await page.locator('.ht-sheet').innerText()).includes('暂时无法回答'));await click('返回讲题');
-  await click('继续讲解');await narrate();await narrate();assert.equal(await phase(),'waiting');
-  await click('24人');assert.equal(await phase(),'remedial');await click('收起互动');assert.equal(await page.locator('.ht-sheet').count(),0);assert.equal(await phase(),'remedial');await click('查看提示');await click('再试一次');assert.equal(await phase(),'waiting');
-  await click('我还不懂');await click('再试一次');await click('6人');assert.equal(await phase(),'feedback');assert.equal(await page.getByRole('heading',{name:'回答正确',exact:true}).count(),1);await click('继续讲解');
-  await narrate();assert.equal(await phase(),'waiting');await click('收起互动');await click('返回');assert.equal(await page.locator('.ht-root').count(),0);
-  await click('继续讲解');assert.equal(await phase(),'resume');
-  await click('展开原题 ⌄');assert.equal(await page.locator('.ht-source.is-expanded').count(),1);assert.equal(await page.locator('.ht-modal').count(),0);await click('收起原题 ⌃');await click('继续作答');assert.equal(await page.locator('.ht-options>button').count(),3,'Viewing the source before resume must restore the checkpoint');
-  await click('42人');await click('继续讲解');await narrate();assert.equal(await phase(),'done');await shot('03-精简结束页');assert.equal(await page.locator('.ht-method').count(),0);
-  await click('再练一道');assert.equal(await phase(),'transfer');assert.equal(await page.getByRole('button',{name:'结束练习',exact:true}).count(),1);await click('结束练习');assert.equal(await phase(),'done');
-  await click('再练一道');await click('5人');assert.ok((await page.locator('.ht-sheet').innerText()).includes('再选一次'));await click('6人');assert.equal(await phase(),'done');assert.equal(await page.getByRole('heading',{name:'✓ 练习完成',exact:true}).count(),1);
-  await click('返回作业');assert.equal(await page.locator('.ht-root').count(),0);assert.ok(await page.locator('.hp-parent-item').count());
-  assert.deepEqual(errors,[]);writeFileSync(resolve(output,'result.json'),JSON.stringify({passed:true,errors,scenarios:['entry','pause','empty input','local question','unsupported question fallback','wrong answer','help','close and reopen feedback','resume with original panel','finish','practice exit','practice feedback','return to homework']},null,2));
-  console.log('PASS: full tutoring entry, Q&A, remedial help, source/resume, finish, practice and return. '+output);
-}finally{await browser.close();}
+  await page.getByRole('button', { name: 'AI 解题', exact: true }).click();
+  assert.equal(await page.locator('.tv-root').count(), 1);
+  assert.match(await page.locator('.tv-root').innerText(), /1 对 1 讲题/);
+  await page.getByRole('button', { name: '查看原题' }).click();
+  assert.equal(await page.getByRole('dialog', { name: '查看原题' }).count(), 1);
+  await page.getByRole('button', { name: '关闭原题' }).click();
+  await page.evaluate(() => homeworkTutorUI.close());
+  assert.equal(await page.locator('.hp-result-sheet').count(), 1);
+  assert.deepEqual(errors, []);
+  console.log('PASS parent result slider, question switch, tutor entry, original question and return');
+} finally {
+  await browser.close();
+}

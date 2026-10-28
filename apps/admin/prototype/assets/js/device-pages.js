@@ -1109,7 +1109,7 @@ function renderCabinetPage() {
         <table class="data-table">
           <thead><tr>
             <th style="width:40px"><input type="checkbox" id="cabinet-select-all" onchange="toggleCabinetSelectAll(this.checked)" title="全选"></th>
-            <th>序号</th><th>柜机ID</th><th>柜机名称</th><th>人脸识别注册码</th><th>学校</th><th>安装位置</th><th>格口</th><th>在线状态</th><th>轮播素材</th><th>最近心跳</th><th>绑定手机号</th><th>负责人</th><th>联系方式</th><th>创建时间</th><th>操作</th>
+            <th>序号</th><th>柜机ID</th><th>柜机名称</th><th>人脸识别注册码</th><th>学校</th><th>安装位置</th><th>格口</th><th>在线状态</th><th>版本号</th><th>轮播素材</th><th>最近心跳</th><th>绑定手机号</th><th>负责人</th><th>联系方式</th><th>创建时间</th><th>操作</th>
           </tr></thead>
           <tbody>
             ${data.cabinets.map((c, i) => {
@@ -1126,6 +1126,7 @@ function renderCabinetPage() {
                 <td>${esc(c.location)}</td>
                 <td>${c.totalSlots || '—'}</td>
                 <td>${cabinetOnlineTag(c.online)}</td>
+                <td>${esc(c.installedVersion || '未上报')}</td>
                 <td>${typeof renderCarouselThumbStrip === 'function' ? renderCarouselThumbStrip(items) : '—'}</td>
                 <td>${c.lastHeartbeat}</td>
                 <td>${esc(c.boundPhone || '—')}</td>
@@ -1136,6 +1137,7 @@ function renderCabinetPage() {
                   <button class="btn-link" onclick="openEditCabinetModal('${c.id}')">编辑</button>
                   <button class="btn-link" onclick="openTab('cabinet-carousel','配置轮播',{id:'${c.id}'})">配置轮播</button>
                   <button class="btn-link" onclick="openTab('cabinet-detail','柜机详情',{id:'${c.id}'})">查看详情</button>
+                  <button class="btn-link" onclick="cvCabinetHistory('${c.id}')">版本历史</button>
                   <button class="btn-link" onclick="openCarouselPreviewModal('${c.id}')">查看轮播</button>
                   <button class="btn-link danger" onclick="deleteCabinet('${c.id}')">删除</button>
                 </td>

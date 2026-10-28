@@ -1,4 +1,11 @@
 /* Review chrome is intentionally separate from the mini-program product surface. */
+/* Keep the outgoing page visible until the other teacher document is ready.
+   No cross-fade: it makes the fixed phone frame and tab bar look like they blink. */
+@view-transition { navigation: auto; }
+::view-transition-old(root) { animation: none; }
+::view-transition-new(root) { animation: none; }
+::view-transition-group(root) { animation-duration: 0s; }
+html:has(body.demo-workspace) { background: #171b22; scrollbar-gutter: stable; }
 body.demo-workspace{display:block;background:#171b22;color:#b2bcc9;--demo-border:#2b323d}
 #demo-workspace{width:100%;min-width:0}
 .dw-sidebar button[hidden],.dw-sidebar details[hidden]{display:none}
@@ -130,7 +137,7 @@ body.dw-ui-new .teacher-login-screen .teacher-actions{padding-top:18px}
 body.dw-ui-new .teacher-login-screen .teacher-primary{height:49px;border-radius:12px;background:linear-gradient(105deg,#2778cd,#4d9ce5);box-shadow:0 8px 16px #2778cd29}
 body.dw-ui-new .teacher-login-screen .teacher-wechat-entry{height:46px;margin-top:9px;border-color:#bed8f1;background:#ffffffb8;color:#2e6eb0;font-size:14px}
 body.dw-ui-new .teacher-login-screen .teacher-agreement-row{margin-top:11px}
-/* Review states use a reserved column to the right of the phone canvas. */
+/* Review states float beside the phone without moving the product canvas. */
 .dw-state .parent-exception-mask{position:fixed;inset:auto;z-index:20;width:min(414px,calc(100vw - 24px));pointer-events:none}
 .dw-state .parent-exception-sheet{margin:0;max-height:calc(100dvh - 24px);overflow:hidden;pointer-events:auto;overscroll-behavior:contain;box-shadow:0 12px 32px #0005}
 .dw-state .parent-exception-sheet>header,.dw-state .parent-exception-sheet>p,.dw-state .parent-exception-sheet>footer{flex:none}
@@ -150,4 +157,4 @@ body.dw-ui-new #app .ht-simple .ht-board{border:0;box-shadow:none;background:#ff
 body.dw-ui-new #app .ht-simple .ht-dock,body.dw-ui-new #app .ht-simple .ht-caption{background:#fff;border:0;box-shadow:none}
 .ht-simple .ht-caption-head .ht-button.primary{width:auto;min-width:110px;min-height:38px;padding:6px 14px}.ht-simple .ht-caption-label{white-space:nowrap}
 
-body.dw-state-open #demo-workspace{min-width:1000px}.dw-state-open .dw-center{padding-left:234px;padding-right:352px}.dw-state-open .dw-flow,.dw-state-open .dw-flow-toggle{display:none}.dw-state .parent-exception-mask{width:320px}.dw-state .parent-exception-sheet{display:flex;flex-direction:column;max-height:calc(100dvh - 78px)}
+.dw-state-open .dw-flow,.dw-state-open .dw-flow-toggle{display:none}.dw-state .parent-exception-mask{width:320px}.dw-state .parent-exception-sheet{display:flex;flex-direction:column;max-height:calc(100dvh - 78px)}
