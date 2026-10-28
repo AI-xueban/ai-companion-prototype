@@ -304,13 +304,13 @@ export const StudentControlEditor: React.FC<{
             )}
             {showApplyScope && (
               <fieldset className="rounded-lg bg-slate-50 p-4">
-                <legend className="text-sm font-bold text-slate-800"><span className="text-red-500">*</span> 本次修改哪些学生？</legend>
+                <legend className="text-sm font-bold text-slate-800"><span className="text-red-500">*</span> {draft ? "本次修改哪些学生？" : "本次如何修改？"}</legend>
                 <div className="mt-3 space-y-3">
                   <label className="block cursor-pointer">
-                    <span className="flex items-start gap-3"><input type="radio" name="apply-scope" checked={applyScope === "all"} onChange={() => { setApplyScope("all"); setError(""); }} className="mt-1" /><span><b className="block text-sm text-slate-900">{targetLabel === "全校" ? "全校修改" : "修改当前范围全部学生"}</b><span className="mt-1 block text-xs leading-5 text-slate-500">覆盖本次范围内全部学生，包括老师此前单独设置的学生。</span></span></span>
+                    <span className="flex items-start gap-3"><input type="radio" name="apply-scope" checked={applyScope === "all"} onChange={() => { setApplyScope("all"); setError(""); }} className="mt-1" /><span><b className="block text-sm text-slate-900">{!draft ? "修改所选学生的全部科目" : targetLabel === "全校" ? "全校修改" : "修改当前范围全部学生"}</b><span className="mt-1 block text-xs leading-5 text-slate-500">{!draft ? "将本次答案和解析权限应用于所选学生的全部科目，替换学校和老师此前的设置。" : "覆盖本次范围内全部学生，包括老师此前单独设置的学生。"}</span></span></span>
                   </label>
                   <label className="block cursor-pointer">
-                    <span className="flex items-start gap-3"><input type="radio" name="apply-scope" checked={applyScope === "unmodified"} onChange={() => { setApplyScope("unmodified"); setError(""); }} className="mt-1" /><span><b className="block text-sm text-slate-900">跳过老师单独设置的学生</b><span className="mt-1 block text-xs leading-5 text-slate-500">保留老师已按班级或学生设置的规则。</span></span></span>
+                    <span className="flex items-start gap-3"><input type="radio" name="apply-scope" checked={applyScope === "unmodified"} onChange={() => { setApplyScope("unmodified"); setError(""); }} className="mt-1" /><span><b className="block text-sm text-slate-900">{!draft ? "保留老师设置的科目" : "跳过老师单独设置的学生"}</b><span className="mt-1 block text-xs leading-5 text-slate-500">{!draft ? "逐个学生保留老师设置过的科目，其余科目按本次设置修改。" : "保留老师已按班级或学生设置的规则。"}</span></span></span>
                   </label>
                 </div>
               </fieldset>
