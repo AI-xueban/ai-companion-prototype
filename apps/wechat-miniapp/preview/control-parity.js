@@ -33,6 +33,10 @@
       ui.roster.trigger?.focus(); ui.roster = null; return;
     }
     if (!force && ui.boolean && (ui.boolean.value !== null || needScope(ui.boolean.refs) && ui.boolean.scope !== null)) return controlOverlay('放弃未保存的修改？', '<p>本次修改不会保存。</p>', button('继续编辑', 'parity.renderBoolean()', true) + button('放弃修改', 'parity.cancelBoolean()'));
+    if (!force && ui.editor?.modal) {
+      if (ui.pending) { ui.pending = null; return renderEditor(); }
+      return parity.cancelEditor();
+    }
     ui.pending = null; ui.boolean = null; ui.teacherLockDraft = null; legacyCloseOverlay();
   };
   const stateLabels = () => controlModule === 'borrowing' ? ['已设置', '未设置'] : controlModule === 'duration' ? ['有单独规则', '默认规则'] : controlModule === 'homework' ? ['有开放权限', '均不允许'] : controlModule === 'world' ? ['有允许使用学生', '全部禁止使用'] : ['有已锁屏学生', '全部未锁屏'];
@@ -451,9 +455,14 @@
     const button = document.getElementById('parity-fill-default');
     if (button) button.disabled = durationIsDefault(ui.editor.rule);
   }
+  const homeworkPermissionFields = editor => [['answer', '查看答案'], ['explanation', '查看详解']].map(([key, label]) => `<fieldset class="parity-permission"><legend>${label}</legend>${[['true', '允许'], ['false', '不允许']].map(([value, text]) => `<label><input type="radio" name="parity-${key}" value="${value}" ${String(editor.value[key]) === value ? 'checked' : ''}>${text}</label>`).join('')}</fieldset>`).join('');
   function renderEditor() {
     const editor = ui.editor;
     if (!editor) { controlView = 'module'; return renderControl(); }
+    if (editor.modal) {
+      const form = `<p class="control-scope">${esc(editor.label)} · ${selectedStudentsLink(editor.refs)}</p><div id="parity-rule-form">${homeworkPermissionFields(editor)}${button('恢复全校默认规则', 'parity.fillDefault()', true)}${scopeFields(editor)}<p id="parity-error" class="control-error" role="alert"></p></div>`;
+      return controlOverlay('设置智阅作业', form, button('取消', 'parity.cancelEditor()', true) + button('保存', 'parity.saveEditor()'));
+    }
     const rule = editor.rule;
     let form = `<p class="control-scope">${esc(editor.label)}${controlModule === 'homework' && editor.subject ? ' · ' + esc(editor.subject) : ''} · ${selectedStudentsLink(editor.refs)}</p><div id="parity-rule-form" class="borrow-editor-card">`;
     if (controlModule === 'borrowing') {
@@ -465,7 +474,7 @@
       form += `<div class="control-form-section"><b class="control-form-title">适用星期</b>${daysFields(rule.weekdays)}</div>`;
       if (rule.useDefault) form += `<p class="parity-note">${R.durationText(R.defaultDuration)}</p>`;
       else form += `<div class="control-form-section">${[['continuousMinutes', '连续使用时长'], ['restMinutes', '休息时间'], ['dailyMinutes', '每日累计时长']].map(([key, label]) => `<div class="control-number-row"><label for="parity-${key}">${label}</label><span><input id="parity-${key}" type="number" min="1" step="1" value="${rule[key]}">分钟</span></div>`).join('')}</div><div class="control-form-section"><b class="control-form-title">每日可用时段</b>${periodFields(rule.periods)}<p class="control-form-note">不设时段，全天可用，仍受时长限制。</p></div>`;
-    } else form += [['answer', '查看答案'], ['explanation', '查看详解']].map(([key, label]) => `<fieldset class="parity-permission"><legend>${label}</legend>${[['true', '允许'], ['false', '不允许']].map(([value, text]) => `<label><input type="radio" name="parity-${key}" value="${value}" ${String(editor.value[key]) === value ? 'checked' : ''}>${text}</label>`).join('')}</fieldset>`).join('');
+    } else form += homeworkPermissionFields(editor);
     if (controlModule === 'duration' || controlModule === 'homework') form += button(controlModule === 'duration' ? '填入默认设置' : '恢复全校默认规则', 'parity.fillDefault()', true, controlModule === 'duration' && durationIsDefault(rule)).replace('<button ', '<button id="parity-fill-default" ');
     form += `${scopeFields(editor)}<p id="parity-error" class="control-error" role="alert"></p></div>`;
     const title = controlModule === 'borrowing' && (editor.editingId || editor.schoolRule) ? (editor.editingId ? '编辑' : '新增') + (rule.mode === 'weekly' ? '每周固定借用规则' : '指定日期借用规则') : '设置' + controlLabels[controlModule];
@@ -495,9 +504,10 @@
       const values = new Set(selectedStudents.map(student => Boolean(subject ? R.homeworkValue(student, subject)[key] : student[key])));
       return values.size === 1 ? String(values.values().next().value) : null;
     };
-    ui.editor = { schoolRule, refs: R.copy(refs), label, subject, base: baseFor(refs), scope: controlDemoRole === 'admin' && controlModule === 'borrowing' && rule.mode === 'dates' ? 'all' : needScope(refs) ? null : 'all', editingId: existing?.id, returnView: controlView, rule, value: { answer: permissionValue('answer'), explanation: permissionValue('explanation') } };
+    ui.editor = { schoolRule, refs: R.copy(refs), label, subject, base: baseFor(refs), scope: controlDemoRole === 'admin' && controlModule === 'borrowing' && rule.mode === 'dates' ? 'all' : needScope(refs) ? null : 'all', editingId: existing?.id, returnView: controlView, modal: controlDemoRole === 'admin' && controlModule === 'homework', rule, value: { answer: permissionValue('answer'), explanation: permissionValue('explanation') } };
     ui.editor.initial = JSON.stringify([ui.editor.rule, ui.editor.value, ui.editor.scope]);
-    controlView = 'ruleEditor'; renderControl();
+    if (ui.editor.modal) renderEditor();
+    else { controlView = 'ruleEditor'; renderControl(); }
   }
   function clearHomeworkSubjects(student) {
     student.homeworkSubjects = {};
@@ -911,9 +921,10 @@
     deleteStudentRule(id, ruleId) { request(makeOperation(targetRefs(id), selectedTeacherClass + ' · ' + controlStudents().find(s => s.id === id).name, 'delete', null, { ruleId })); },
     cancelEditor(force = false) {
       collectEditor();
-      if (!force && ui.editor && ui.editor.initial !== JSON.stringify([ui.editor.rule, ui.editor.value, ui.editor.scope])) return controlOverlay('放弃未保存的修改？', '<p>放弃后，本次修改不会保存。</p>', button('继续编辑', 'closeControlOverlay()', true) + button('放弃修改', 'parity.cancelEditor(true)'));
+      if (!force && ui.editor && ui.editor.initial !== JSON.stringify([ui.editor.rule, ui.editor.value, ui.editor.scope])) return controlOverlay('放弃未保存的修改？', '<p>放弃后，本次修改不会保存。</p>', button('继续编辑', ui.editor.modal ? 'parity.renderEditor()' : 'closeControlOverlay()', true) + button('放弃修改', 'parity.cancelEditor(true)'));
       const view = ui.editor?.returnView; ui.editor = null; ui.pending = null; controlView = view || 'module'; renderControl();
     },
+    renderEditor,
     editorMode(mode) { if (!ui.editor || ui.editor.editingId || ui.editor.schoolRule) return; collectEditor(); ui.editor.rule.mode = mode; ui.editor.rule.deny = false; renderEditor(); },
     borrowWay() { collectEditor(); renderEditor(); },
     borrowDateChanged() {
@@ -936,7 +947,9 @@
         const problem = R.validatePeriods(rule.periods, true); if (problem && !rule.useDefault) { error.textContent = problem; return; }
       } else if (!['true', 'false'].includes(String(editor.value.answer)) || !['true', 'false'].includes(String(editor.value.explanation))) { error.textContent = '请选择答案和详解权限'; return; }
       const value = controlModule === 'homework' ? { answer: String(editor.value.answer) === 'true', explanation: String(editor.value.explanation) === 'true' } : R.copy(rule);
-      request(makeOperation(editor.refs, editor.label, 'save', value, { subject: editor.subject, base: editor.base, scope: editor.scope, editingId: editor.editingId, schoolRule: editor.schoolRule }));
+      const operation = makeOperation(editor.refs, editor.label, 'save', value, { subject: editor.subject, base: editor.base, scope: editor.scope, editingId: editor.editingId, schoolRule: editor.schoolRule });
+      if (editor.modal) { ui.pending = operation; return apply(); }
+      request(operation);
     },
     confirmScope() { const scope = document.querySelector('[name=parity-apply-scope]:checked')?.value; if (!scope) { document.getElementById('parity-error').textContent = '请选择本次修改范围'; return; } request({ ...ui.pending, scope }); },
     apply,

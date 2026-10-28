@@ -147,7 +147,7 @@ test('学校管理员智阅作业不显示科目，统一设置覆盖各科，�
   const first = R.transaction({ A: [student(1)] }, refs, 'homework:数学', null, 'all', row => {
     row.homeworkSubjects = { 数学: { answer: false, explanation: true } };
   }, teacher);
-  let stored = JSON.stringify({ ...first.data, schoolSettings: {} });
+  let stored = JSON.stringify({ ...first.data, schoolSettings: {} }), dialog;
   const form = {
     querySelectorAll() { return []; },
     querySelector(selector) {
@@ -167,7 +167,7 @@ test('学校管理员智阅作业不显示科目，统一设置覆盖各科，�
     header(title) { return '<span></span><h2>' + title + '</h2>'; }, syncReview() {},
     binaryToggleButton() {}, document: { getElementById(id) { return id === 'parity-rule-form' ? form : id === 'parity-error' ? { textContent: '' } : null; } },
     localStorage: { getItem(key) { return key === 'teacher-control-prototype-v1' ? stored : null; }, setItem(key, value) { if (key === 'teacher-control-prototype-v1') stored = value; } },
-    controlToast() {}, controlOverlay() {},
+    controlToast() {}, controlOverlay(title, body, actions) { dialog = { title, body, actions }; },
   };
   context.window = context;
   vm.runInNewContext(fs.readFileSync(require.resolve('./control-parity.js'), 'utf8'), context);
@@ -175,9 +175,14 @@ test('学校管理员智阅作业不显示科目，统一设置覆盖各科，�
   assert.doesNotMatch(context.app.innerHTML, /aria-label="智阅作业科目"/);
   assert.match(context.app.innerHTML, /默认所有学生不能查看答案和详解/);
   context.parity.editScope('A');
-  assert.doesNotMatch(context.app.innerHTML, /A · 语文|A · 数学|A · 英语/);
+  assert.equal(context.controlView, 'module');
+  assert.equal(dialog.title, '设置智阅作业');
+  assert.match(dialog.body, /查看答案.*查看详解/);
+  assert.match(dialog.actions, /parity\.saveEditor\(\)/);
+  assert.doesNotMatch(dialog.body, /A · 语文|A · 数学|A · 英语/);
+  assert.doesNotMatch(context.app.innerHTML, /borrow-editor-screen/);
   context.parity.saveEditor();
-  context.parity.apply();
+  assert.notEqual(dialog.title, '确认保存智阅作业？');
   const afterAdmin = JSON.parse(stored).A[0];
   assert.deepEqual(R.homeworkValue(afterAdmin, '数学'), { answer: true, explanation: false });
   assert.deepEqual(R.homeworkValue(afterAdmin, '语文'), { answer: true, explanation: false });
@@ -190,6 +195,52 @@ test('学校管理员智阅作业不显示科目，统一设置覆盖各科，�
   assert.deepEqual(R.homeworkValue(afterTeacher, '数学'), { answer: false, explanation: false });
   assert.deepEqual(R.homeworkValue(afterTeacher, '语文'), { answer: true, explanation: false });
   assert.equal(R.modified(afterTeacher, 'homework'), true);
+});
+
+test('管理员智阅作业弹窗在多学生范围要求选择修改范围', () => {
+  const fs = require('node:fs'), vm = require('node:vm');
+  let stored, scope = null, dialog, error = { textContent: '' };
+  const form = {
+    querySelectorAll() { return []; },
+    querySelector(selector) {
+      if (selector === '[name=parity-answer]:checked') return { value: 'true' };
+      if (selector === '[name=parity-explanation]:checked') return { value: 'false' };
+      if (selector === '[name=parity-apply-scope]:checked') return scope ? { value: scope } : null;
+      return null;
+    },
+  };
+  const context = {
+    controlRules: R, closeControlOverlay() {}, addEventListener() {}, setInterval() {}, crypto: { randomUUID() { return 'modal-rule-id'; } },
+    schoolControlClasses: ['A'], controlClasses: ['A'], selectedTeacherClass: 'A',
+    controlData: { A: [student(1), student(2)], schoolSettings: {} }, controlStudents() { return context.controlData.A; },
+    controlDemoRole: 'admin', controlWorkView: 'school', controlModule: 'homework', controlView: 'module',
+    controlLabels: { homework: '智阅作业' }, controlQuery: '', controlFilter: 'all',
+    controlSelected: new Set(), adminSelectedScopes: new Set(), adminLevel: 'class', adminBatchMode: false,
+    schoolBorrowingEnabled: true, stage: 'other', app: { innerHTML: '' },
+    header(title) { return '<span></span><h2>' + title + '</h2>'; }, syncReview() {}, binaryToggleButton() {},
+    document: { getElementById(id) { return id === 'parity-rule-form' ? form : id === 'parity-error' ? error : null; } },
+    localStorage: { getItem(key) { return key === 'teacher-control-prototype-v1' ? stored || null : null; }, setItem(key, value) { if (key === 'teacher-control-prototype-v1') stored = value; } },
+    controlToast() {}, controlOverlay(title, body, actions) { dialog = { title, body, actions }; },
+  };
+  context.window = context;
+  vm.runInNewContext(fs.readFileSync(require.resolve('./control-parity.js'), 'utf8'), context);
+  context.renderControl(); context.parity.editScope('A');
+  const beforeSave = stored;
+  assert.match(dialog.body, /本次修改哪些学生/);
+  assert.equal(context.controlView, 'module');
+  context.closeControlOverlay();
+  assert.equal(dialog.title, '放弃未保存的修改？');
+  context.parity.renderEditor();
+  assert.equal(dialog.title, '设置智阅作业');
+  context.parity.cancelEditor(true);
+  assert.equal(stored, beforeSave);
+  context.parity.editScope('A');
+  context.parity.saveEditor();
+  assert.equal(error.textContent, '请选择本次修改范围');
+  assert.equal(stored, beforeSave);
+  scope = 'all'; context.parity.saveEditor();
+  assert.equal(JSON.parse(stored).A.filter(row => row.answer).length, 2);
+  assert.equal(context.controlView, 'module');
 });
 
 test('时长按显式星期来源保留，恢复默认标记也受保护，编辑保留其他星期', () => {
