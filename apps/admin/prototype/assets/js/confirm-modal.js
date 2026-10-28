@@ -40,11 +40,12 @@ function showConfirmModal(options = {}) {
     `;
   }
 
-  modal?.classList.remove('modal-xl');
-  modal?.classList.add('modal-sm');
+  const modalSizeClass = options.size === 'md' ? 'modal-md' : options.size === 'xl' ? 'modal-xl' : 'modal-sm';
+  modal?.classList.remove('modal-sm', 'modal-md', 'modal-xl');
+  modal?.classList.add(modalSizeClass);
 
   const finish = (confirmed) => {
-    modal?.classList.remove('modal-sm');
+    modal?.classList.remove('modal-sm', 'modal-md', 'modal-xl');
     modal?.classList.add('modal-xl');
     confirmModalHook = null;
     closeModal();

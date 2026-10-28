@@ -28,21 +28,15 @@
       <div class="tabs-bar" id="tabs-bar"></div>
       <main class="content" id="main-content"></main>
     </div>
-    <aside class="req-panel" id="req-panel" aria-label="需求说明">
+    <aside class="req-panel" id="req-panel" aria-label="控制台">
       <div class="req-panel-header">
-        <div class="req-panel-title">需求说明</div>
-        <button class="req-panel-close" id="req-panel-close" type="button" aria-label="收起需求说明">×</button>
-        <label class="req-annotate-switch" title="开启后点击原型元素查看说明；关闭后恢复正常交互">
-          <span>注释</span>
-          <input type="checkbox" id="req-annotate-toggle">
-          <span class="req-annotate-slider" aria-hidden="true"></span>
-        </label>
+        <div class="req-panel-title">控制台</div>
+        <button class="req-panel-close" id="req-panel-close" type="button" aria-label="关闭控制台">×</button>
       </div>
       <div class="req-panel-body" id="req-panel-body"></div>
     </aside>
-    <button class="req-panel-fab" id="req-panel-fab" type="button" aria-label="展开需求说明">需求说明</button>
   </div>
-  <button class="req-float-btn" id="req-float-btn" type="button" aria-label="打开需求说明">?</button>
+  <button class="req-float-btn" id="req-float-btn" type="button" aria-label="打开控制台"><span>控制台</span><b aria-hidden="true">?</b></button>
   <div class="toast-container" id="toast-container"></div>
   <div class="modal-overlay" id="modal-overlay" hidden>
     <div class="modal modal-xl" id="modal">
@@ -74,6 +68,8 @@
 
   <script src="assets/js/mall-pages.js"></script>
   <script src="assets/js/third-party-apps.js"></script>
+  <script src="assets/js/apk-version.js"></script>
+  <script src="assets/js/cabinet-versions.js"></script>
   <script src="assets/js/device-pages.js?v=20260828a"></script>
   <script src="assets/js/face-photo-importer.js?v=20261012b"></script>
   <script src="assets/js/face-pages.js?v=20261013b"></script>
