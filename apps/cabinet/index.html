@@ -36,6 +36,7 @@
       <button type="button" class="nav-btn nav-demo" id="simulateNotCharging">模拟未充电</button>
       <button type="button" class="nav-btn nav-demo" id="simulateDoorOpen">模拟门没关</button>
       <button type="button" class="nav-btn nav-demo" id="simulateCabinetUpgrade">模拟柜机版本升级</button>
+      <button type="button" class="nav-btn nav-demo" id="simulateNewerCabinetUpgrade">模拟已下载后收到新版</button>
     </nav>
     <button type="button" class="nav-btn nav-demo" id="upgradeNetwork">模拟下载断网</button><div class="admin-demo-note"><strong>管理员登录模拟</strong><p>模拟手机号：<br /><b>13800000000</b></p><p>模拟验证码：<b>123456</b></p><p>输入手机号 → 获取验证码 → 输入验证码 → 登录</p><small>仅用于原型演示，不发送真实短信。</small></div>
     <p class="studio-hint">画布会按窗口自动等比缩小，完整显示在当前屏幕内；设计稿仍为 1080×1920。</p>
@@ -124,7 +125,7 @@
             <button type="button" class="feedback-btn" id="faceRegister">人脸注册</button>
             <button type="button" class="feedback-btn" id="feedbackOpenBtn">问题反馈</button>
             <button type="button" class="feedback-btn" data-goto="admin-login">管理员登录</button>
-            <button type="button" id="cabinetVersionEntry" class="cabinet-version">版本 <span id="cabinetVersion">V1.3.0</span><span class="version-update-dot" id="cabinetUpdateDot" role="img" aria-label="有新版本" title="有新版本" hidden></span></button>
+            <button type="button" id="cabinetVersionEntry" class="cabinet-version">版本 <span id="cabinetVersion">V1.3.0</span><span class="cabinet-upgrade-badge" id="cabinetUpdateBadge" hidden>可升级</span></button>
           </footer>
         </section>
         <section class="page page-admin-login" data-page="admin-login">
@@ -144,7 +145,8 @@
         </section>
         <section class="page page-admin-manage" data-page="admin-manage">
           <button type="button" class="text-btn admin-top-back" id="adminLogout">返回</button><span id="adminAccount" hidden></span>
-          <div class="admin-menu"><button type="button" class="admin-menu-item" id="adminVersionUpdate"><span aria-hidden="true">↓</span><strong id="adminUpdateLabel">版本更新</strong><i class="version-update-dot" id="adminUpdateDot" hidden></i></button><button type="button" class="admin-menu-item" data-admin-feature="开箱测试"><span aria-hidden="true">▣</span><strong>开箱测试</strong></button><button type="button" class="admin-menu-item" data-admin-feature="激活设备"><span aria-hidden="true">▱</span><strong>激活设备</strong></button><button type="button" class="admin-menu-item" data-admin-feature="用户管理"><span aria-hidden="true">♙</span><strong>用户管理</strong></button><button type="button" class="admin-menu-item" data-admin-feature="格口详情"><span aria-hidden="true">▤</span><strong>格口详情</strong></button><button type="button" class="admin-menu-item" data-admin-feature="摄像头配置"><span aria-hidden="true">◎</span><strong>摄像头配置</strong></button><button type="button" class="admin-menu-item" data-admin-feature="人脸底库"><span aria-hidden="true">◉</span><strong>人脸底库</strong></button><button type="button" class="admin-menu-item" data-admin-feature="设备管理"><span aria-hidden="true">▥</span><strong>设备管理</strong></button><button type="button" class="admin-menu-item" data-admin-feature="退出软件"><span aria-hidden="true">⏻</span><strong>退出软件</strong></button></div>
+          <div class="admin-menu"><button type="button" class="admin-menu-item" id="adminVersionUpdate"><span aria-hidden="true">↓</span><strong id="adminUpdateLabel">版本更新</strong><span class="admin-update-version" id="adminUpdateVersion">当前版本 V1.3.0</span><i class="version-update-dot" id="adminUpdateDot" hidden></i></button><button type="button" class="admin-menu-item" data-admin-feature="开箱测试"><span aria-hidden="true">▣</span><strong>开箱测试</strong></button><button type="button" class="admin-menu-item" data-admin-feature="激活设备"><span aria-hidden="true">▱</span><strong>激活设备</strong></button><button type="button" class="admin-menu-item" data-admin-feature="用户管理"><span aria-hidden="true">♙</span><strong>用户管理</strong></button><button type="button" class="admin-menu-item" data-admin-feature="格口详情"><span aria-hidden="true">▤</span><strong>格口详情</strong></button><button type="button" class="admin-menu-item" data-admin-feature="摄像头配置"><span aria-hidden="true">◎</span><strong>摄像头配置</strong></button><button type="button" class="admin-menu-item" data-admin-feature="人脸底库"><span aria-hidden="true">◉</span><strong>人脸底库</strong></button><button type="button" class="admin-menu-item" data-admin-feature="设备管理"><span aria-hidden="true">▥</span><strong>设备管理</strong></button><button type="button" class="admin-menu-item" data-admin-feature="退出软件"><span aria-hidden="true">⏻</span><strong>退出软件</strong></button></div>
+          <section class="admin-download-progress" id="adminDownloadProgress" role="status" hidden><div><span id="adminDownloadName"></span><strong id="adminDownloadPercent">0%</strong></div><progress id="adminDownloadBar" max="100" value="0">0%</progress></section>
           <p class="admin-feature-note" id="adminFeatureNote" role="status"></p>
         </section>
 
