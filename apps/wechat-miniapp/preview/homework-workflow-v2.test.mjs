@@ -395,3 +395,16 @@ audioTeacher.previewPublish();assert.equal(audioTeacher.data.previewOpen,true);a
 const audioNative=native.listHomeworkTasks().find(task=>task.title==='原生录音发布验收');assert.equal(audioNative.items[0].submitType,'audio');assert.equal(audioNative.attachments[0].previewState,'pending');
 p.setScope({view:'subject',classIds:['c1','c2'],teacherId:teacher.userId});p.compose();p.setField('description','朗读课文并提交录音');p.applyRecognition();p.setUniformType('audio');p.setTitle('浏览器录音发布验收');p.quickDeadline(2);p.nextCompose();p.nextCompose();p.publish();const audioWeb=p.inspect().tasks.find(task=>task.title==='浏览器录音发布验收');assert.equal(audioWeb.items[0].type,'audio');assert.equal(audioWeb.items[0].gradingEnabled,false);assert.equal(audioWeb.items[0].required,true);
 console.log('PASS confirmed audio controllers: browser/native teacher publishing, uniform/per-item choices, no grading, all-required and READY-original/pending-preview publish.');
+
+// Preview-only gallery states are isolated from business submission and persistent storage.
+const filePreviewTask={...audioWeb,id:'preview-state-isolation',title:'文档预览隔离验收',attachments:[{id:'preview-file',name:'要求.pdf',type:'file',path:'/assets/homework-demo-files/campus-intro.pdf',size:1024,uploadState:'complete',previewState:'pending'}],items:[{id:'document',title:'提交文档',type:'file',required:true,gradingEnabled:false}]};
+p.inspect().tasks.push(filePreviewTask);p.openParent(filePreviewTask.id);p.renderParent('孩子');
+// Use the current guardian's identity from the existing browser fixture.
+p.inspect().submissions.push({taskId:filePreviewTask.id,itemId:'document',studentId:webChild,label:'作业.pdf',media:'/assets/homework-demo-files/campus-intro.pdf',submittedAt:'2026-10-28 10:00',version:1,questions:[],uploadState:'complete',previewState:'pending'});
+const previewStorageBefore=JSON.stringify([...webStorage.entries()]);
+for(const [state,copy] of [['pending','已提交，预览生成中'],['failed','预览生成失败，提交已保留'],['ready','查看文件']]){
+ p.applyPageDemo('upload-preview-'+state,'parent');const html=p.renderParent('孩子');assert.ok(html.includes(copy),state);assert.match(html,/已提交/);assert.doesNotMatch(html,/批改失败|原件上传失败/);assert.equal(p.inspect().tasks.find(task=>task.id===filePreviewTask.id).attachments[0].previewState,state);
+ assert.equal(p.inspect().submissions.find(r=>r.taskId===filePreviewTask.id).version,1);assert.equal(JSON.stringify([...webStorage.entries()]),previewStorageBefore);
+}
+p.restorePageDemo('parent');assert.equal(p.inspect().tasks.find(task=>task.id===filePreviewTask.id).attachments[0].previewState,'pending');assert.equal(p.inspect().submissions.find(r=>r.taskId===filePreviewTask.id).previewState,'pending');
+console.log('PASS preview-state gallery: pending/failed/ready UI, submission preservation, no persistence and restore.');
