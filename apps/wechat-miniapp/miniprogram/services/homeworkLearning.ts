@@ -20,8 +20,8 @@ export function questionRegion(question: GradeQuestion, index: number, mock = fa
 }
 export function questionMark(question: GradeQuestion, parent = true) {
   if (question.state === 'confirmed' && (!parent || isResultReleased(question))) return { mark: question.correct ? '✓' : '×', tone: question.correct ? 'correct' : 'wrong', label: question.correct ? '答对' : '答错' };
-  const labels: Record<string, string> = { review: '待复核', unreadable: '识别存疑', 'no-answer': '答案存疑', failed: '批改失败', queued: '等待批改', processing: '正在批改', confirmed: '待教师开放' };
-  return { mark: ['queued', 'processing'].includes(question.state) ? '…' : question.state === 'confirmed' ? '待开放' : '?', tone: 'pending', label: labels[question.state] || parentGradeLabel(question) };
+  const labels: Record<string, string> = { review: '待复核', unreadable: '识别存疑', 'no-answer': '答案存疑', failed: '批改失败', queued: '等待批改', processing: '正在批改', confirmed: '结果已同步' };
+  return { mark: ['queued', 'processing'].includes(question.state) ? '…' : question.state === 'confirmed' ? '待核对' : '?', tone: 'pending', label: labels[question.state] || parentGradeLabel(question) };
 }
 export function notebookKey(studentId: string, taskId: string, itemId: string, questionId: string) { return JSON.stringify([studentId, taskId, itemId, questionId]); }
 export function addNotebookEntry(entries: NotebookEntry[], source: { studentId: string; taskId: string; itemId: string; version: number; imagePath?: string; taskTitle?: string }, question: GradeQuestion, reason: string): NotebookEntry[] {

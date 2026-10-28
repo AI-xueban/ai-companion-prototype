@@ -19,7 +19,7 @@ window.homeworkDemoConsole = (() => {
     answerChanged:'教师已修订参考答案。学生判定与统计保持不变；发现误判时再对照原图纠正。',
     published:'从家长未提交开始，逐页提交后再演示后台处理。', partial:'提交状态与批改状态分别记录；提交一页仍是部分完成。',
     queued:'后台尚未产出结果。预计时间不是完成承诺。', processing:'模拟后台处理中；可离开页面后再回来查看。',
-    partialGrade:'已有结果可以先确认开放，其他题继续处理中。', failed:'失败题不计作错误，可模拟服务重试返回。',
+    partialGrade:'已完成的有效结果自动同步，其他题继续处理中。', failed:'失败题不计作错误，可模拟服务重试返回。',
     review:'选择学生，对照原图纠正，保存后自动同步。', unreleased:'家长查看整份原图和已完成结果，待处理题目单独标记。',
     partialRelease:'第 1 页已有结果，第 2 页继续处理。', released:'家长可翻页、点题目、查看答案解析与错题。',
     resubmit:'新提交不继承旧版批改结果，统计仅取最新版本。', changed:'人工纠正后统计和家长结果自动更新。',
@@ -80,7 +80,7 @@ window.homeworkDemoConsole = (() => {
     if (s.submitted < s.required) return `切到家长，模拟提交第 ${s.submitted + 1} 项 →`;
     if (s.progress.pending || s.progress.failed) return s.progress.title.startsWith('等待') ? '模拟后台开始批改 →' : '模拟后台返回结果，切到教师 →';
     if (s.progress.review) return '进入待复核题，核对学生原图 →';
-    if (s.progress.released < s.progress.confirmed) return '切到教师，确认开放结果 →';
+    if (s.progress.released < s.progress.confirmed) return '切到家长，查看已同步结果 →';
     return s.progress.total ? '切到家长，查看整份批改结果 →' : '切到家长，查看提交记录 →';
   }
   function sync() {

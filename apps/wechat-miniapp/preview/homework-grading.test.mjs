@@ -170,19 +170,19 @@ console.log('小程序多班结果权限回归通过：任课范围、班主任�
 const filterRules=load('homeworkFilters');
 assert.equal(filterRules.matchesTaskStatuses(filterRules.ALL_TASK_STATUSES,[]),true,'Unrestricted filters include tasks with no grading');
 assert.equal(filterRules.matchesTaskStatuses([],['review']),false);
-assert.equal(filterRules.matchesTaskStatuses(['submitted','review'],['partial','review']),false);
-assert.equal(filterRules.matchesTaskStatuses(['submitted','review'],['submitted','review']),true);
-assert.equal(filterRules.matchesTaskStatuses(['submitted','review','failed'],['submitted','failed']),true);
+assert.equal(filterRules.matchesTaskStatuses(['submitted','processing'],['partial','processing']),false);
+assert.equal(filterRules.matchesTaskStatuses(['submitted','processing'],['submitted','processing']),true);
+assert.equal(filterRules.matchesTaskStatuses(['submitted','processing','graded'],['submitted','graded']),true);
 p=browser();p.setScope({view:'subject',classIds:['c1'],teacherId:'teacher-demo-001',teachingAssignments:[{subject:'数学',classIds:['c1','c2']},{subject:'英语',classIds:['c2']}]});
 const fixture=JSON.parse(JSON.stringify(p.inspect().tasks.find(t=>t.id==='grading-demo-v1'))),s1=roster.DEMO_STUDENTS.find(s=>s.classId==='c1').id,s2=roster.DEMO_STUDENTS.find(s=>s.classId==='c2').id;
 p.inspect().tasks.push({...fixture,id:'filter-multi',title:'筛选专用任务',targetSnapshotIds:[s1,s2],items:[{id:'filter-one',type:'photo',required:true,gradingEnabled:true}]});
-p.inspect().submissions.push(...[s1,s2].map((studentId,index)=>({taskId:'filter-multi',studentId,itemId:'filter-one',version:1,questions:[{id:'filter-q',state:index?'review':'confirmed',correct:true,answer:'1'}]})));
+p.inspect().submissions.push(...[s1,s2].map((studentId,index)=>({taskId:'filter-multi',studentId,itemId:'filter-one',version:1,questions:[{id:'filter-q',state:index?'processing':'confirmed',correct:true,answer:'1'}]})));
 p.toTeacherListWithoutRefresh();
 p.openTaskFilter('status');p.toggleAllTaskStatuses();p.confirmTaskStatuses();assert.match(p.renderTeacher(),/请至少选择一个状态/);p.closeTaskFilter();
 assert.equal(p.getTaskListFilters().statuses.length,filterRules.ALL_TASK_STATUSES.length,'Cancel must preserve applied filters');
-p.openTaskFilter('status');p.toggleAllTaskStatuses();p.toggleTaskStatus('submitted');p.toggleTaskStatus('review');p.confirmTaskStatuses();
+p.openTaskFilter('status');p.toggleAllTaskStatuses();p.toggleTaskStatus('submitted');p.toggleTaskStatus('processing');p.confirmTaskStatuses();
 assert.ok(p.getFilteredTaskIds().includes('filter-multi'));
-p.openTaskFilter('class');p.selectTaskFilter('c1');assert.ok(!p.getFilteredTaskIds().includes('filter-multi'),'A review in another class cannot satisfy the selected class filter');
+p.openTaskFilter('class');p.selectTaskFilter('c1');assert.ok(!p.getFilteredTaskIds().includes('filter-multi'),'Processing in another class cannot satisfy the selected class filter');
 p.resetTaskFilters();p.openTaskFilter('class');p.selectTaskFilter('c2');p.openTaskFilter('subject');p.selectTaskFilter('英语');assert.equal(p.getTaskListFilters().classId,'c2');
 p.setScope({view:'subject',classIds:['c1'],teacherId:'teacher-demo-001',teachingAssignments:[{subject:'数学',classIds:['c1']},{subject:'英语',classIds:['c2']}]});
 p.openTaskFilter('subject');p.selectTaskFilter('数学');assert.equal(p.getTaskListFilters().classId,'all','Incompatible class resets when changing subjects');
@@ -291,3 +291,7 @@ page.data.studentSearch='不存在';page.refreshDraft();assert.equal(page.data.s
 console.log('跨班指定学生回归通过：班级切换保留、整班选择与清空、搜索不影响已选、分班核对与发布名单快照。');
 
 p.compose();p.fillDemoPaste();p.inspectDraft().items.forEach((item,index)=>p.setItemType(index,'none'));p.nextCompose();if(!p.inspectDraft().classIds.includes('c2'))p.toggleClass('c2');p.setClassRecipientMode('c1','selected');p.toggleStudent(firstChild.id);p.setClassRecipientMode('c2','selected');p.nextCompose();assert.match(p.renderTeacher(),/至少指定一名学生/);p.toggleStudent(secondChild.id);p.closeRecipientPicker();p.nextCompose();p.publish();assert.deepEqual(Array.from(p.inspect().tasks[0].targetSnapshotIds).sort(),[firstChild.id,secondChild.id].sort());
+
+// Grading progress is mutually exclusive; issue details remain on the corresponding content.
+for(const [states,expected] of [[['queued'],'queued'],[['queued','queued'],'queued'],[['queued','confirmed'],'processing'],[['processing','confirmed'],'processing'],[['confirmed'],'graded'],[['failed','review'],'graded']]){const result=filterRules.taskStatusKeys({target:1,completed:1,partial:0},states.map(state=>({state})));assert.deepEqual(Array.from(result).filter(id=>['queued','processing','graded'].includes(id)),[expected]);}
+assert.deepEqual(Array.from(filterRules.ALL_TASK_STATUSES),['unsubmitted','submitted','queued','processing','graded']);
