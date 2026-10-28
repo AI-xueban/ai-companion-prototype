@@ -6,6 +6,61 @@ const dates = (id, startDate, endDate, deny = false) => ({ id, mode: 'dates', we
 const student = id => ({ id, name: '学生' + id, schedules: [], durationRules: [], answer: false, explanation: false, world: true, locked: false, updated: {}, teacherModified: {} });
 const actor = { by: '管理员', phone: '13800138000', role: 'school' };
 
+test('管理员和老师能看到三个模块的现有规则与状态摘要', () => {
+  const fs = require('node:fs'), vm = require('node:vm');
+  let stored, overlayBody;
+  const first = student(1), second = student(2);
+  first.durationRules = [{ id: 'duration-1', weekdays: [0, 1, 2, 3, 4], continuousMinutes: 45, restMinutes: 10, dailyMinutes: 120, periods: [{ start: '08:00', end: '18:00' }] }];
+  first.homeworkSubjects = { 数学: { answer: true, explanation: false } };
+  first.world = true; second.world = false;
+  const context = {
+    controlRules: R, closeControlOverlay() {}, addEventListener() {}, setInterval() {}, crypto: { randomUUID() { return 'test-rule-id'; } },
+    schoolControlClasses: ['五年级 2 班'], controlClasses: ['五年级 2 班'], selectedTeacherClass: '五年级 2 班',
+    controlData: { '五年级 2 班': [first, second], schoolSettings: { homeroomDurationEnabled: true } },
+    controlStudents() { return context.controlData['五年级 2 班']; }, adminAllStudents() { return context.controlData['五年级 2 班']; },
+    adminVisibleScopeKeys() { return ['五年级']; }, controlRoleSwitcher() { return ''; }, teacherTabBar() { return ''; }, controlCardIcon() { return ''; },
+    controlDemoRole: 'admin', controlWorkView: 'school', controlModule: 'duration', controlView: 'entry',
+    controlLabels: { duration: '使用时长管控', homework: '智阅作业管控', world: '万象视界管控' },
+    controlQuery: '', controlFilter: 'all', controlSelected: new Set(), adminSelectedScopes: new Set(), adminLevel: 'school', adminBatchMode: false,
+    schoolBorrowingEnabled: true, stage: 'other', app: { innerHTML: '' },
+    header(title) { return '<span></span><h2>' + title + '</h2>'; }, syncReview() {}, binaryToggleButton() { return ''; },
+    document: { getElementById() { return null; } },
+    localStorage: { getItem(key) { return key === 'teacher-control-prototype-v1' ? stored || null : null; }, setItem(key, value) { if (key === 'teacher-control-prototype-v1') stored = value; } },
+    controlOverlay(title, body) { overlayBody = body; },
+  };
+  context.window = context;
+  vm.runInNewContext(fs.readFileSync(require.resolve('./control-parity.js'), 'utf8'), context);
+  context.renderControl();
+  assert.match(context.app.innerHTML, /1人有单独规则/);
+  assert.match(context.app.innerHTML, /答案允许 1 人 · 详解允许 0 人/);
+  assert.match(context.app.innerHTML, /允许使用 1 人 · 禁止使用 1 人/);
+  context.controlView = 'module';
+  context.renderControl();
+  assert.match(context.app.innerHTML, /部分班级有差异/);
+  assert.match(context.app.innerHTML, /查看全部规则/);
+  context.parity.showScopeRules('五年级');
+  assert.match(overlayBody, /五年级 2 班（部分学生）/);
+  assert.doesNotMatch(overlayBody, /[12]名学生/);
+  assert.match(overlayBody, /连续 45 分钟/);
+  assert.match(overlayBody, /连续 60 分钟/);
+  context.adminLevel = 'grade';
+  context.adminSelectedGrade = '五年级';
+  context.adminVisibleScopeKeys = () => ['五年级 2 班'];
+  context.renderControl();
+  assert.match(context.app.innerHTML, /<h3>五年级 2 班<\/h3>/);
+  assert.match(context.app.innerHTML, /部分学生有差异/);
+  context.controlModule = 'homework';
+  context.renderControl();
+  assert.match(context.app.innerHTML, /答案允许 1 人/);
+  context.controlModule = 'world';
+  context.renderControl();
+  assert.match(context.app.innerHTML, /万象视界使用状态.*部分学生允许使用/);
+  context.controlModule = 'lock';
+  context.renderControl();
+  assert.match(context.app.innerHTML, /<article class="parity-scope-card"/);
+  assert.match(context.app.innerHTML, /<b>临时锁屏<\/b><span>未开启<\/span>/);
+});
+
 test('智阅作业按学生和科目分别保存，最后一次成功操作决定该科目状态', () => {
   const data = { A: [student(1)] }, refs = [{ className: 'A', id: 1 }];
   const teacher = { by: '数学老师', role: 'subject' };
@@ -16,6 +71,8 @@ test('智阅作业按学生和科目分别保存，最后一次成功操作决�
   assert.deepEqual(R.homeworkValue(first.data.A[0], '语文'), { answer: false, explanation: false });
   assert.equal(R.modified(first.data.A[0], 'homework:数学'), true);
   assert.equal(R.modified(first.data.A[0], 'homework:语文'), false);
+  assert.equal(R.modified(first.data.A[0], 'homework'), true);
+  const globalBase = R.signature(first.data.A[0], 'homework');
   const mathBase = R.signature(first.data.A[0], 'homework:数学');
   const chineseBase = R.signature(first.data.A[0], 'homework:语文');
   const second = R.transaction(first.data, refs, 'homework:语文', null, 'all', row => {
@@ -23,6 +80,7 @@ test('智阅作业按学生和科目分别保存，最后一次成功操作决�
   }, { by: '班主任', role: 'homeroom' });
   assert.equal(R.signature(second.data.A[0], 'homework:数学'), mathBase);
   assert.notEqual(R.signature(second.data.A[0], 'homework:语文'), chineseBase);
+  assert.throws(() => R.prepare(second.data, refs, 'homework', { 'A:1': globalBase }), /其他老师修改/);
   const latest = R.transaction(second.data, refs, 'homework:数学', null, 'all', row => {
     row.homeworkSubjects = { ...row.homeworkSubjects, 数学: { answer: false, explanation: true } };
   }, actor);
@@ -73,6 +131,57 @@ test('智阅作业学生页用科目 Tab 替换搜索筛选，任课老师只管
   context.openControlEditor(1);
   assert.match(context.app.innerHTML, /A · 学生1 · 数学/);
   assert.match(context.app.innerHTML, /name="parity-explanation" value="true" checked/);
+});
+
+test('学校管理员智阅作业不显示科目，统一设置覆盖各科，老师随后仅改自己的科目', () => {
+  const fs = require('node:fs'), vm = require('node:vm');
+  const teacher = { by: '数学老师', role: 'subject' }, refs = [{ className: 'A', id: 1 }];
+  const first = R.transaction({ A: [student(1)] }, refs, 'homework:数学', null, 'all', row => {
+    row.homeworkSubjects = { 数学: { answer: false, explanation: true } };
+  }, teacher);
+  let stored = JSON.stringify({ ...first.data, schoolSettings: {} });
+  const form = {
+    querySelectorAll() { return []; },
+    querySelector(selector) {
+      if (selector === '[name=parity-answer]:checked') return { value: 'true' };
+      if (selector === '[name=parity-explanation]:checked') return { value: 'false' };
+      return null;
+    },
+  };
+  const context = {
+    controlRules: R, closeControlOverlay() {}, addEventListener() {}, setInterval() {}, crypto: { randomUUID() { return 'admin-rule-id'; } },
+    schoolControlClasses: ['A'], controlClasses: ['A'], selectedTeacherClass: 'A',
+    controlData: JSON.parse(stored), controlStudents() { return context.controlData.A; },
+    controlDemoRole: 'admin', controlWorkView: 'school', controlModule: 'homework', controlView: 'module',
+    controlLabels: { homework: '智阅作业' }, controlQuery: '', controlFilter: 'all',
+    controlSelected: new Set(), adminSelectedScopes: new Set(), adminLevel: 'class', adminBatchMode: false,
+    schoolBorrowingEnabled: true, stage: 'other', app: { innerHTML: '' },
+    header(title) { return '<span></span><h2>' + title + '</h2>'; }, syncReview() {},
+    binaryToggleButton() {}, document: { getElementById(id) { return id === 'parity-rule-form' ? form : id === 'parity-error' ? { textContent: '' } : null; } },
+    localStorage: { getItem(key) { return key === 'teacher-control-prototype-v1' ? stored : null; }, setItem(key, value) { if (key === 'teacher-control-prototype-v1') stored = value; } },
+    controlToast() {}, controlOverlay() {},
+  };
+  context.window = context;
+  vm.runInNewContext(fs.readFileSync(require.resolve('./control-parity.js'), 'utf8'), context);
+  context.renderControl();
+  assert.doesNotMatch(context.app.innerHTML, /aria-label="智阅作业科目"/);
+  assert.match(context.app.innerHTML, /默认所有学生不能查看答案和详解/);
+  context.parity.editScope('A');
+  assert.doesNotMatch(context.app.innerHTML, /A · 语文|A · 数学|A · 英语/);
+  context.parity.saveEditor();
+  context.parity.apply();
+  const afterAdmin = JSON.parse(stored).A[0];
+  assert.deepEqual(R.homeworkValue(afterAdmin, '数学'), { answer: true, explanation: false });
+  assert.deepEqual(R.homeworkValue(afterAdmin, '语文'), { answer: true, explanation: false });
+  assert.equal(R.modified(afterAdmin, 'homework'), false);
+  assert.equal(R.modified(afterAdmin, 'homework:数学'), false);
+  assert.throws(() => R.prepare(JSON.parse(stored), refs, 'homework:数学', { 'A:1': R.signature(first.data.A[0], 'homework:数学') }), /其他老师修改/);
+  context.controlDemoRole = 'teacher'; context.controlWorkView = 'subject';
+  context.toggleHomeworkPermission(1, 'answer', false);
+  const afterTeacher = JSON.parse(stored).A[0];
+  assert.deepEqual(R.homeworkValue(afterTeacher, '数学'), { answer: false, explanation: false });
+  assert.deepEqual(R.homeworkValue(afterTeacher, '语文'), { answer: true, explanation: false });
+  assert.equal(R.modified(afterTeacher, 'homework'), true);
 });
 
 test('时长按显式星期来源保留，恢复默认标记也受保护，编辑保留其他星期', () => {

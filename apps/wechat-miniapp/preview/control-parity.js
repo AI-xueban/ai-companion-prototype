@@ -4,11 +4,11 @@
   const storageKey = 'teacher-control-prototype-v1';
   const ui = { editor: null, pending: null, borrowMode: 'weekly', boolean: null, homeworkSubject: '数学' };
   const homeworkSubjects = ['语文', '数学', '英语'];
-  const managedHomeworkSubjects = () => controlWorkView === 'subject' ? ['数学'] : homeworkSubjects;
+  const managedHomeworkSubjects = () => controlDemoRole === 'admin' ? [] : controlWorkView === 'subject' ? ['数学'] : homeworkSubjects;
   const homeworkSubject = () => managedHomeworkSubjects().includes(ui.homeworkSubject) ? ui.homeworkSubject : managedHomeworkSubjects()[0];
   const homeworkModule = subject => 'homework:' + subject;
-  const operationModule = operation => operation.module === 'homework' ? homeworkModule(operation.subject) : operation.module;
-  const homeworkValue = student => R.homeworkValue(student, homeworkSubject());
+  const operationModule = operation => operation.module === 'homework' && operation.subject ? homeworkModule(operation.subject) : operation.module;
+  const homeworkValue = student => controlDemoRole === 'admin' ? { answer: Boolean(student.answer), explanation: Boolean(student.explanation) } : R.homeworkValue(student, homeworkSubject());
   const homeworkTabs = () => `<div class="control-subject-tabs" role="tablist" aria-label="智阅作业科目">${managedHomeworkSubjects().map(subject => `<button type="button" role="tab" aria-selected="${homeworkSubject() === subject}" onclick="parity.homeworkSubject('${subject}')">${subject}</button>`).join('')}</div>`;
   let durationNoticeOpen = false, renderingDemo = false;
   const noticeKey = 'teacher-duration-permission-seen';
@@ -88,7 +88,7 @@
     const classes = controlWorkView === 'homeroom' ? [controlClasses[0]] : controlClasses;
     if (refs.some(ref => !classes.includes(ref.className)) || ['borrowing', 'duration'].includes(module) && controlWorkView !== 'homeroom') throw Error('当前身份没有该范围的管控权限');
   }
-  const baseFor = (refs, module = controlModule, subject = homeworkSubject()) => Object.fromEntries(R.resolve(controlData, refs).map(({ ref, student }) => [ref.className + ':' + ref.id, R.signature(student, module === 'homework' ? homeworkModule(subject) : module)]));
+  const baseFor = (refs, module = controlModule, subject = controlDemoRole === 'admin' ? null : homeworkSubject()) => Object.fromEntries(R.resolve(controlData, refs).map(({ ref, student }) => [ref.className + ':' + ref.id, R.signature(student, module === 'homework' && subject ? homeworkModule(subject) : module)]));
   const card = (title, body) => `<section class="control-module-panel"><h3>${title}</h3>${body}</section>`;
   const button = (text, action, secondary = false, disabled = false) => `<button type="button" class="control-${secondary ? 'secondary' : 'primary'}" onclick="${action}" ${disabled || controlDemoRole !== 'admin' && controlModule === 'lock' && refLocked({className: selectedTeacherClass}) && /selectedBoolean|confirmControl|scopeBoolean/.test(action) ? 'disabled' : ''}>${text}</button>`;
   function ruleIconButton(kind, action, disabled = false) {
@@ -146,7 +146,7 @@
     }
     if (module === 'borrowing') return student.schedules.length ? student.schedules.map(rule => R.borrowText(rule) + (rule.mode === 'dates' ? ' · ' + R.borrowStatus(rule) : '')) : ['未设置借用规则，没有有效规则时不能借用'];
     if (module === 'duration') return R.durationGroups(student).map(text => text.replace(/(?:单独规则|默认规则) · /g, ''));
-    if (module === 'homework') { const value = homeworkValue(student); return [`${homeworkSubject()} · 答案${value.answer ? '允许' : '不允许'} · 详解${value.explanation ? '允许' : '不允许'}`]; }
+    if (module === 'homework') { const value = homeworkValue(student); return [`${controlDemoRole === 'admin' ? '' : homeworkSubject() + ' · '}答案${value.answer ? '允许' : '不允许'} · 详解${value.explanation ? '允许' : '不允许'}`]; }
     return [module === 'world' ? student.world ? '允许使用' : '禁止使用' : isLocked(student) ? '已锁屏' : '未锁屏'];
   }
   function configurationKey(student, module = controlModule) {
@@ -184,7 +184,7 @@
   function defaultCard() {
     if (controlModule === 'borrowing') return card('借用规则说明', '<p>指定日期规则优先，到期或删除后恢复每周规则。没有有效规则时不能借用。</p>');
     if (controlModule === 'duration') return card('全校默认配置说明', `<p>${R.dayText(R.defaultDuration.weekdays)} · ${R.durationText(R.defaultDuration)}</p>`) + (controlDemoRole === 'admin' && adminLevel === 'school' ? card('允许班主任调整本班使用时长', `<p>开放后可调整；关闭后不能修改，已有设置继续生效。</p>${button(durationAllowed() ? '关闭调整权限' : '开放调整权限', 'parity.durationPermission()', true)}`) : controlDemoRole !== 'admin' && !durationAllowed() ? '<p class="parity-note">学校暂未开放调整权限，仅可查看。</p>' : '');
-    if (controlModule === 'homework') return card('学生权限', `<p>${homeworkSubject()}：默认不能查看答案和详解。</p>`);
+    if (controlModule === 'homework') return card('当前查看权限', controlDemoRole === 'admin' ? `<p>${scopeOverview(activeRefs(), 'homework').join(' · ')}</p><p class="parity-note">默认所有学生不能查看答案和详解；按学生去重统计，包含老师已设置的科目。</p>` : `<p>${homeworkSubject()}：${scopeOverview(activeRefs(), 'homework').join(' · ')}</p>`);
     const students = R.resolve(controlData, activeRefs()).map(row => row.student), count = students.filter(s => controlModule === 'world' ? s.world : isLocked(s)).length;
     if (controlModule === 'lock' && controlDemoRole === 'admin') return temporaryLockScopeCard();
     return card(scopeLabel() + '当前状态', `<p>${count}人${controlModule === 'world' ? '允许使用' : '已锁屏'} · ${students.length - count}人${controlModule === 'world' ? '禁止使用' : '未锁屏'}</p>`);
@@ -199,18 +199,37 @@
     const status = school && temporaryLockActive() ? '全校临时锁屏中' + (locked < classes.length ? '，部分班级已解除' : '') : locked === classes.length && classes.length ? '已开启临时锁屏' : mixed ? '部分班级临时锁屏中' : '未开启临时锁屏';
     return `<section class="control-entry-lock"><div class="control-entry-lock-head"><div><h3>${esc(scopeLabel())}临时锁屏</h3><p>${status}</p></div></div>${temporaryLockDescription()}<div class="control-actions">${button(label, 'parity.currentScopeLock()', false, !activeRefs().length)}</div></section>`;
   }
+  function scopeOverview(refs, module) {
+    const students = R.resolve(controlData, refs).map(row => row.student);
+    if (!students.length) return ['暂无学生'];
+    if (module === 'duration') {
+      const count = students.filter(student => student.durationRules?.length).length;
+      const variants = new Set(students.map(student => JSON.stringify(R.durationGroups(student))));
+      return variants.size > 1 ? [`${count}人有单独规则`, controlDemoRole === 'admin' && adminLevel === 'school' ? '部分班级规则有差异' : '部分学生规则有差异'] : R.durationGroups(students[0]).slice(0, 2).concat(R.durationGroups(students[0]).length > 2 ? ['还有更多规则'] : []);
+    }
+    if (module === 'homework') {
+      const values = students.map(student => {
+        const subjects = controlDemoRole === 'admin' ? [...new Set([...homeworkSubjects, ...Object.keys(student.homeworkSubjects || {})])] : [homeworkSubject()];
+        return { answer: subjects.some(subject => R.homeworkValue(student, subject).answer), explanation: subjects.some(subject => R.homeworkValue(student, subject).explanation) };
+      });
+      return [`答案允许 ${values.filter(value => value.answer).length} 人`, `详解允许 ${values.filter(value => value.explanation).length} 人`];
+    }
+    if (module === 'world') {
+      const allowed = students.filter(student => student.world).length;
+      return [`允许使用 ${allowed} 人`, `禁止使用 ${students.length - allowed} 人`];
+    }
+    return [];
+  }
   function schoolStatus(module) {
     const students = adminAllStudents();
     if (module === 'lock') {
       const states = allRefs().map(ref => Boolean(refLocked(ref)));
       return states.length && states.every(Boolean) ? '临时锁屏全部开启' : states.some(Boolean) ? '临时锁屏部分开启' : '临时锁屏未开启';
     }
-    if (module === 'world') {
-      const allowed = students.filter(student => student.world).length;
-      return `允许使用 ${allowed} 人 · 禁止使用 ${students.length - allowed} 人`;
-    }
+    if (['duration', 'homework', 'world'].includes(module)) return scopeOverview(allRefs(), module).join(' · ');
     const mixed = new Set(students.map(student => configurationKey(student, module))).size > 1;
-    return module === 'homework' ? students.some(student => homeworkSubjects.some(subject => { const value = R.homeworkValue(student, subject); return value.answer || value.explanation; })) ? '按科目查看权限' : '各科答案、详解均不允许' : mixed ? '学生规则有差异' : '学生规则一致';
+    const subjectDifference = module === 'homework' && students.some(student => Object.values(student.homeworkSubjects || {}).some(value => Boolean(value.answer) !== Boolean(student.answer) || Boolean(value.explanation) !== Boolean(student.explanation)));
+    return mixed || subjectDifference ? '学生规则有差异' : module === 'homework' && !students.some(student => student.answer || student.explanation) ? '答案、详解均不允许' : '学生规则一致';
   }
   function selectedStudentsLink(refs) {
     return `已选 ${refs.length} 名学生 <button type="button" aria-label="查看所选学生名单" style="border:0;background:none;color:inherit;padding:4px 8px;cursor:pointer" onclick="parity.showSelectedStudents('${encodeURIComponent(JSON.stringify(refs))}')">›</button>`;
@@ -237,7 +256,7 @@
     const lockCard = `<section class="control-entry-lock"><div class="control-entry-lock-head"><div><h3>${admin ? '全校临时锁屏' : '平板锁屏'}</h3><p>${admin ? schoolStatus('lock') : locked + '人已锁屏 · ' + (students.length - locked) + '人未锁屏'}</p></div><button onclick="${admin ? "enterAdminModule('lock')" : "openControlModule('lock')"}">查看详情 ›</button></div>${lockDescription}<div class="control-actions">${lockActions}</div></section>`;
     const borrowCard = admin && window.borrowing ? borrowing.entryCard() : '';
     const entries = [...(!admin && controlWorkView === 'homeroom' && isHeadTeacherClass() ? [['borrowing', '柜机借用管控', '禁止学生借用或解除禁借']] : []), ...(admin || isHeadTeacherClass() ? [['duration', '使用时长管控', '设置使用时长、休息和每日可用时段']] : []), ['homework', '智阅作业管控', '设置答案和详解的查看权限'], ['world', '万象视界管控', '允许或禁止学生进入']];
-    const list = entries.map(([module, title, description]) => `<button class="control-entry-card" onclick="${admin ? 'enterAdminModule' : 'openControlModule'}('${module}')"><span class="control-entry-icon ${module}">${controlCardIcon(module)}</span><span class="control-entry-copy"><h3>${title}</h3>${admin ? `<p class="parity-school-status" role="status">${schoolStatus(module)}</p>` : ''}<p>${description}</p></span><span class="control-entry-action">›</span></button>`).join('');
+    const list = entries.map(([module, title, description]) => `<button class="control-entry-card" onclick="${admin ? 'enterAdminModule' : 'openControlModule'}('${module}')"><span class="control-entry-icon ${module}">${controlCardIcon(module)}</span><span class="control-entry-copy"><h3>${title}</h3>${module === 'borrowing' ? '' : `<p class="parity-school-status" role="status">${esc((admin ? scopeOverview(allRefs(), module) : scopeOverview(classRefs(), module)).join(' · '))}</p>`}<p>${description}</p></span><span class="control-entry-action">›</span></button>`).join('');
     app.innerHTML = `<main class="screen control-screen">${header('管控', false)}${controlRoleSwitcher()}<section class="control-entry" id="teacher-tab-panel" role="tabpanel">${lockCard}${admin ? '' : `<div class="control-actions">${button('查看借用时间', 'parity.showBorrowTimes()', true)}</div>`}${borrowCard}<div class="control-entry-subtitle">其他管控</div><div class="control-entry-list">${list}</div></section>${teacherTabBar()}<div id="control-overlay"></div><div id="control-toast" role="status"></div></main>`;
     syncReview();
   }
@@ -249,10 +268,32 @@
       const empty = students.length === 0, stage = adminLevel === 'school' ? stageOf(key) : '';
       const heading = stage && stage !== previousStage ? `<div class="control-grade-group-title">${stage}</div>` : '';
       if (stage) previousStage = stage;
-      const next = adminLevel === 'school' ? `enterAdminGrade('${key}')` : '';
-      const count = students.filter(s => controlModule === 'duration' ? s.durationRules.length : controlModule === 'borrowing' ? s.schedules.length : controlModule === 'homework' ? homeworkValue(s).answer || homeworkValue(s).explanation : controlModule === 'world' ? s.world : isLocked(s)).length;
-      const direct = controlModule === 'world' || controlModule === 'lock', on = students.every(s => controlModule === 'world' ? s.world : isLocked(s));
-      return `${heading}<div class="admin-level-row">${adminBatchMode && !empty ? `<label><input class="admin-level-check" type="checkbox" aria-label="选择${key}" ${adminSelectedScopes.has(key) ? 'checked' : ''} onchange="parity.selectScope('${key}',this.checked)"></label>` : ''}<button class="admin-level-link" ${adminBatchMode && empty || !adminBatchMode && adminLevel !== 'school' ? 'disabled' : ''} onclick="${adminBatchMode ? `parity.selectScope('${key}',!adminSelectedScopes.has('${key}'))` : next}"><span class="admin-level-copy"><b>${key}</b><small>${students.length}名学生${controlModule === 'lock' ? ' · ' + (refs.length && refs.every(ref => refLocked(ref)) ? '已开启临时锁屏' : refs.some(ref => refLocked(ref)) ? '部分开启临时锁屏' : '未开启临时锁屏') : ''}</small>${empty ? '<small>暂无学生，暂不能设置</small>' : scopeModifiedInfo(students)}</span>${adminLevel === 'school' ? '<i>›</i>' : ''}</button>${!adminBatchMode && !empty ? `<div class="parity-scope-actions">${controlModule === 'lock' ? button(refs.every(ref => refLocked(ref)) ? '解除临时锁屏' : refs.some(ref => refLocked(ref)) ? '设置临时锁屏' : '临时锁屏', `parity.scopeBoolean('${key}',null)`, true) : direct ? lockToggle(controlModule, on, `parity.scopeBoolean('${key}',${!on})`, (on ? '关闭' : '开启') + key + controlLabels[controlModule]) : `<button onclick="parity.editScope('${key}')">设置</button>`}</div>` : ''}</div>`;
+      const navigate = adminLevel === 'school' && !adminBatchMode ? `<button type="button" class="parity-scope-navigate" onclick="enterAdminGrade('${key}')">查看班级 ›</button>` : '';
+      const select = adminBatchMode && !empty ? `<label class="parity-scope-check"><input type="checkbox" aria-label="选择${key}" ${adminSelectedScopes.has(key) ? 'checked' : ''} onchange="parity.selectScope('${key}',this.checked)"></label>` : '';
+      const locked = refs.filter(ref => refLocked(ref)).length;
+      const lockedText = !locked ? '未开启' : locked === refs.length ? '已开启' : '部分班级已开启';
+      const permissionText = field => {
+        const count = students.filter(student => field === 'world' ? student.world : field === 'answer' || field === 'explanation' ? [...new Set([...homeworkSubjects, ...Object.keys(student.homeworkSubjects || {})])].some(subject => R.homeworkValue(student, subject)[field]) : false).length;
+        return count === 0 ? '不允许' : count === students.length ? '全部学生至少一科允许' : `${count}名学生至少一科允许`;
+      };
+      let rules = '';
+      if (empty) rules = `<p class="parity-scope-empty">${adminLevel === 'school' ? '该年级' : '该班级'}暂无学生</p>`;
+      else if (controlModule === 'duration') {
+        const grouped = groups(refs), mixed = grouped.length > 1;
+        rules = mixed ? `<div class="parity-scope-rule"><b>使用时长规则</b><span>${schoolControlClasses.includes(key) ? '部分学生有差异' : '部分班级有差异'}</span></div>` : R.durationGroups(students[0]).slice(0, 2).map(text => {
+          const [days, ...details] = text.split('：');
+          return `<div class="parity-scope-rule"><b>${esc(days)}</b><span>${esc(details.join('：'))}</span></div>`;
+        }).join('');
+        if (!adminBatchMode && (mixed || R.durationGroups(students[0]).length > 2)) rules += `<button type="button" class="parity-scope-more" onclick="parity.showScopeRules('${key}')">查看全部规则 ›</button>`;
+      } else if (controlModule === 'homework') {
+        rules = `<div class="parity-scope-rule"><b>查看答案</b><span>${permissionText('answer')}</span></div><div class="parity-scope-rule"><b>查看详解</b><span>${permissionText('explanation')}</span></div>`;
+      } else if (controlModule === 'world') {
+        const allowed = students.filter(student => student.world).length;
+        rules = `<div class="parity-scope-rule"><b>万象视界使用状态</b><span>${allowed === 0 ? '禁止使用' : allowed === students.length ? '允许使用' : '部分学生允许使用'}</span></div>`;
+      } else if (controlModule === 'lock') rules = `<div class="parity-scope-rule"><b>临时锁屏</b><span>${lockedText}</span></div>`;
+      const on = controlModule === 'world' ? students.every(student => student.world) : locked === refs.length;
+      const action = controlModule === 'lock' ? button(on ? '解除临时锁屏' : locked ? '设置临时锁屏' : '临时锁屏', `parity.scopeBoolean('${key}',null)`, true) : controlModule === 'world' ? lockToggle('world', on, `parity.scopeBoolean('${key}',${!on})`, '设置使用状态') : `<button type="button" class="control-secondary" onclick="parity.editScope('${key}')">${controlModule === 'duration' ? '设置规则' : '设置权限'}</button>`;
+      return `${heading}<article class="parity-scope-card" ${adminBatchMode && !empty ? `role="checkbox" aria-checked="${adminSelectedScopes.has(key)}" tabindex="0" onclick="if(!event.target.closest('label,button'))parity.selectScope('${key}',!adminSelectedScopes.has('${key}'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();parity.selectScope('${key}',!adminSelectedScopes.has('${key}'))}"` : ''}><div class="parity-scope-card-head">${select}<h3>${esc(key)}</h3>${navigate}</div><div class="parity-scope-card-rules">${rules}</div>${!adminBatchMode && !empty ? `<div class="parity-scope-card-footer">${action}</div>` : ''}</article>`;
     }).join('') || '<div class="control-empty">没有符合条件的年级或班级</div>';
   }
   function selectionFooter(admin = false) {
@@ -274,7 +315,7 @@
   }
   function scopePage() {
     const footer = adminBatchMode ? selectionFooter(true) : '';
-    shell(controlLabels[controlModule], `${defaultCard()}${controlModule === 'homework' ? homeworkTabs() : ''}<div class="admin-scope-summary"><b>${adminBatchMode ? '选择' : '按'}${adminLevel === 'school' ? '年级' : '班级'}${adminBatchMode ? '' : '查看'}</b>${adminBatchMode ? '' : '<button onclick="parity.startSelection()">批量设置</button>'}</div><div id="parity-scope-rows" class="admin-level-list">${scopeRows()}</div>`, 'parity.back()', footer);
+    shell(controlLabels[controlModule], `${defaultCard()}<div class="admin-scope-summary"><b>${adminBatchMode ? '选择' : '按'}${adminLevel === 'school' ? '年级' : '班级'}${adminBatchMode ? '' : '查看'}</b>${adminBatchMode ? '' : '<button onclick="parity.startSelection()">批量设置</button>'}</div><div id="parity-scope-rows" class="parity-scope-card-list">${scopeRows()}</div>`, 'parity.back()', footer);
   }
   function filteredControlStudents() {
     return controlStudents().filter(s => {
@@ -406,7 +447,7 @@
     const editor = ui.editor;
     if (!editor) { controlView = 'module'; return renderControl(); }
     const rule = editor.rule;
-    let form = `<p class="control-scope">${esc(editor.label)}${controlModule === 'homework' ? ' · ' + esc(editor.subject) : ''} · ${selectedStudentsLink(editor.refs)}</p><div id="parity-rule-form" class="borrow-editor-card">`;
+    let form = `<p class="control-scope">${esc(editor.label)}${controlModule === 'homework' && editor.subject ? ' · ' + esc(editor.subject) : ''} · ${selectedStudentsLink(editor.refs)}</p><div id="parity-rule-form" class="borrow-editor-card">`;
     if (controlModule === 'borrowing') {
       if (!editor.editingId && !editor.schoolRule) form += `<div class="control-form-section"><b class="control-form-title">规则类型</b><div class="control-segment">${[['weekly', '每周固定'], ['dates', '指定日期']].map(([mode, label]) => `<button aria-pressed="${rule.mode === mode}" onclick="parity.editorMode('${mode}')">${label}</button>`).join('')}</div></div>`;
       form += `<p class="control-form-note">指定日期规则优先，到期或删除后恢复每周规则。</p>`;
@@ -441,14 +482,21 @@
       if (!existing) rule.weekdays = [0, 1, 2, 3, 4, 5, 6];
     }
     const selectedStudents = R.resolve(controlData, refs).map(row => row.student);
-    const subject = controlModule === 'homework' ? homeworkSubject() : null;
+    const subject = controlModule === 'homework' && controlDemoRole !== 'admin' ? homeworkSubject() : null;
     const permissionValue = key => {
-      const values = new Set(selectedStudents.map(student => Boolean(R.homeworkValue(student, subject)[key])));
+      const values = new Set(selectedStudents.map(student => Boolean(subject ? R.homeworkValue(student, subject)[key] : student[key])));
       return values.size === 1 ? String(values.values().next().value) : null;
     };
     ui.editor = { schoolRule, refs: R.copy(refs), label, subject, base: baseFor(refs), scope: controlDemoRole === 'admin' && controlModule === 'borrowing' && rule.mode === 'dates' ? 'all' : needScope(refs) ? null : 'all', editingId: existing?.id, returnView: controlView, rule, value: { answer: permissionValue('answer'), explanation: permissionValue('explanation') } };
     ui.editor.initial = JSON.stringify([ui.editor.rule, ui.editor.value, ui.editor.scope]);
     controlView = 'ruleEditor'; renderControl();
+  }
+  function clearHomeworkSubjects(student) {
+    student.homeworkSubjects = {};
+    for (const field of ['updated', 'teacherModified', 'operatedAt']) {
+      if (!student[field]) continue;
+      student[field] = Object.fromEntries(Object.entries(student[field]).filter(([key]) => !key.startsWith('homework:')));
+    }
   }
   function operationChange(operation) {
     return student => {
@@ -461,14 +509,20 @@
           const marks = student.durationTeacherWeekdays || R.durationDays(student, [0,1,2,3,4,5,6], 'all').filter(day => !R.durationDays(student, [day], 'unmodified').length);
           student.durationTeacherWeekdays = controlDemoRole === 'admin' ? marks.filter(day => !days.includes(day)) : [...new Set([...marks, ...days])];
         }
-        else if (operation.module === 'homework') student.homeworkSubjects = { ...student.homeworkSubjects, [operation.subject]: { ...operation.value } };
+        else if (operation.module === 'homework') {
+          if (operation.subject) student.homeworkSubjects = { ...student.homeworkSubjects, [operation.subject]: { ...operation.value } };
+          else { Object.assign(student, operation.value); clearHomeworkSubjects(student); }
+        }
         else Object.assign(student, operation.value);
       } else if (operation.kind === 'delete') {
         const key = operation.module === 'borrowing' ? 'schedules' : 'durationRules';
         student[key] = student[key].filter(rule => operation.ruleId ? rule.id !== operation.ruleId : operation.mode ? rule.mode !== operation.mode : false);
       } else if (operation.kind === 'reset') {
         if (operation.module === 'duration') student.durationRules = [];
-        else if (operation.module === 'homework') student.homeworkSubjects = { ...student.homeworkSubjects, [operation.subject]: { answer: false, explanation: false } };
+        else if (operation.module === 'homework') {
+          if (operation.subject) student.homeworkSubjects = { ...student.homeworkSubjects, [operation.subject]: { answer: false, explanation: false } };
+          else { student.answer = false; student.explanation = false; clearHomeworkSubjects(student); }
+        }
       } else student[operation.module === 'lock' ? 'locked' : 'world'] = operation.value;
     };
   }
@@ -509,7 +563,7 @@
       else texts = [operation.module === 'lock' ? operation.value ? '平板已锁屏' : '平板未锁屏' : operation.value ? '万象视界允许使用' : '万象视界禁止使用'];
       const label = operation.kind === 'delete' ? '删除规则' : operation.kind === 'reset' ? '恢复默认规则' : operation.module === 'lock' ? operation.value ? '锁屏' : '解除锁屏' : operation.module === 'world' ? operation.value ? '开放万象视界' : '关闭万象视界' : '保存' + controlLabels[operation.module];
       ui.pending = operation;
-      controlOverlay(`确认${label}？`, `<p class="control-scope">${esc(operation.label)}${operation.module === 'homework' ? ' · ' + esc(operation.subject) : ''} · 实际影响 ${rows.length} 名学生</p><div class="parity-preview">${texts.map(text => `<p>${esc(text)}</p>`).join('')}</div>`, button('取消', 'closeControlOverlay()', true) + button(operation.kind === 'save' && operation.module === 'borrowing' && operation.value.mode === 'dates' ? '保存' : '确认生效', 'parity.apply()'));
+      controlOverlay(`确认${label}？`, `<p class="control-scope">${esc(operation.label)}${operation.module === 'homework' && operation.subject ? ' · ' + esc(operation.subject) : ''} · 实际影响 ${rows.length} 名学生</p><div class="parity-preview">${texts.map(text => `<p>${esc(text)}</p>`).join('')}</div>`, button('取消', 'closeControlOverlay()', true) + button(operation.kind === 'save' && operation.module === 'borrowing' && operation.value.mode === 'dates' ? '保存' : '确认生效', 'parity.apply()'));
     } catch (error) { conflict(error); }
   }
   function conflict(error) {
@@ -552,7 +606,7 @@
       renderControl(); controlToast(result.count ? operation.kind === 'save' && operation.module === 'borrowing' && operation.value.mode === 'dates' ? '已保存' : `${operation.kind === 'delete' ? '删除成功' : '已生效'} · ${result.count}名学生` : '没有符合修改范围的学生，原规则保留');
     } catch (error) { conflict(error); }
   }
-  function makeOperation(refs, label, kind, value, extra = {}) { return { refs, label, kind, value, module: controlModule, subject: controlModule === 'homework' ? homeworkSubject() : null, base: baseFor(refs), ...extra }; }
+  function makeOperation(refs, label, kind, value, extra = {}) { return { refs, label, kind, value, module: controlModule, subject: controlModule === 'homework' && controlDemoRole !== 'admin' ? homeworkSubject() : null, base: baseFor(refs), ...extra }; }
   function operationRows(data, operation) {
     if (operation.module === 'duration' && operation.kind === 'save') return R.prepare(data, operation.refs, operation.module, operation.base, 'all').filter(({student}) => R.durationDays(student, operation.value.weekdays, operation.scope).length);
     return R.prepare(data, operation.refs, operationModule(operation), operation.base, operation.scope || 'all');
@@ -565,6 +619,22 @@
     return keys.filter(key => scopeRefs(key).length && [...container.querySelectorAll('.admin-level-copy b')].some(node => node.textContent === key));
   }
   window.parity = {
+    showScopeRules(key) {
+      const grouped = new Map();
+      R.resolve(controlData, scopeRefs(key)).forEach(({ ref, student }) => R.durationGroups(student).forEach(rule => {
+        if (!grouped.has(rule)) grouped.set(rule, []);
+        grouped.get(rule).push(ref);
+      }));
+      const body = [...grouped].map(([rule, refs]) => {
+        const classes = [...new Set(refs.map(ref => ref.className))];
+        const scope = classes.map(className => {
+          const inGroup = refs.filter(ref => ref.className === className).length;
+          return esc(className) + (inGroup < controlData[className].length ? '（部分学生）' : '');
+        }).join('、');
+        return `<div class="parity-scope-rule-group"><b>${scope}</b><p>${esc(rule)}</p></div>`;
+      }).join('');
+      controlOverlay(`${key}使用时长规则`, body || '<p>暂无学生</p>', button('关闭', 'closeControlOverlay()', true));
+    },
     homeworkSubject(subject) {
       if (controlModule !== 'homework' || !managedHomeworkSubjects().includes(subject)) return;
       ui.homeworkSubject = subject;

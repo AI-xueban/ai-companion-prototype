@@ -102,9 +102,10 @@
     const subject = module.startsWith('homework:') ? module.slice('homework:'.length) : null;
     const homework = subject ? homeworkValue(student, subject) : null;
     const value = module === 'borrowing' ? student.schedules || [] : module === 'duration' ? student.durationRules || [] : module === 'homework' ? [student.answer, student.explanation] : subject ? [homework.answer, homework.explanation] : student[module === 'lock' ? 'locked' : 'world'];
-    return JSON.stringify([value, student.updated?.[module]?.version ?? (subject ? student.updated?.homework?.version || 0 : 0), module === 'duration' ? student.durationTeacherWeekdays || [] : module === 'world' ? student.worldSource : null]);
+    const subjectVersions = module === 'homework' ? Object.keys(student.homeworkSubjects || {}).sort().map(key => [key, student.homeworkSubjects[key], student.updated?.['homework:' + key]?.version || 0]) : null;
+    return JSON.stringify([value, student.updated?.[module]?.version || 0, module === 'duration' ? student.durationTeacherWeekdays || [] : module === 'world' ? student.worldSource : subject ? student.updated?.homework?.version || 0 : subjectVersions]);
   }
-  const modified = (student, module) => module === 'world' && student.worldSource !== undefined ? student.worldSource === 'teacher' : Boolean(student.teacherModified?.[module] ?? (module.startsWith('homework:') ? student.teacherModified?.homework : false)) && (module === 'borrowing' ? prune(student.schedules || []).length > 0 : module === 'duration' ? (student.durationRules || []).length > 0 : true);
+  const modified = (student, module) => module === 'world' && student.worldSource !== undefined ? student.worldSource === 'teacher' : module === 'homework' ? Object.entries(student.teacherModified || {}).some(([key, value]) => value && (key === 'homework' || key.startsWith('homework:'))) : Boolean(student.teacherModified?.[module] ?? (module.startsWith('homework:') ? student.teacherModified?.homework : false)) && (module === 'borrowing' ? prune(student.schedules || []).length > 0 : module === 'duration' ? (student.durationRules || []).length > 0 : true);
   function resolve(data, refs) {
     const seen = new Set();
     return refs.filter(ref => { const key = ref.className + ':' + ref.id; if (seen.has(key)) return false; seen.add(key); return true; }).map(ref => {
