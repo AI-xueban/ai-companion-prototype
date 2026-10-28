@@ -674,7 +674,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
             ? `修改范围：${value.applyScope === "all" ? `修改${label === "全校" ? "全校" : "当前所选范围"}全部学生，将覆盖老师此前单独设置的学生` : "跳过老师单独设置的学生，保留老师已有设置"}。`
             : "新借用规则将应用到所选学生。每周借用规则与指定日期借用规则分别保留。"
         : value.applyScope
-          ? `修改方式：${value.applyScope === "all" ? "修改所选学生的全部科目，替换学校和老师此前的答案和解析权限" : "逐个学生保留老师设置过的科目，其余科目按本次设置修改"}。`
+          ? `修改方式：${value.applyScope === "all" ? "所选学生的所有科目都按本次设置，老师之前的设置也会替换" : "每个学生已由老师设置的科目保持不变，其余科目按本次设置"}。`
           : "将统一设置所选学生全部科目的答案和解析权限。",
       resultPreview: schedule ? <>
         <p className="font-bold">{schedule.mode === "dates" ? "保存后的规则" : "保存后实际生效规则"}</p>
