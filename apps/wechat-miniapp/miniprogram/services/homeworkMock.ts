@@ -1,4 +1,4 @@
-import { homeworkClosed, homeworkPublishError, applyHomeworkChange, validateHomeworkChange } from './homeworkGrading';
+import { homeworkClosed, homeworkPublishError, applyHomeworkChange, validateHomeworkChange, homeworkSubmissionReceipt, homeworkOriginalError, HomeworkFileReadiness } from './homeworkGrading';
 import type { ManagedHomework, HomeworkManagementAction, HomeworkChangeInput } from './homeworkGrading';
 import type { AnswerStandard } from './homeworkGrading';
 import { holdManualResult, confirmManualResult, gradingStatistics, answersEquivalent, initializeAnswerStandards, confirmAnswerStandard, startStandardGrading, completeMockStandardGrading, standardPhase, isFormalGrade, demoQuestionContent, demoPhotoPath, realPhotoQuestions, gradingSignature, gradingProgress, releaseQuestion } from './homeworkGrading';
@@ -11,12 +11,12 @@ export type SubmitType = 'file' | 'photo' | 'video' | 'audio' | 'none';
 export type GradeState = 'confirmed' | 'review' | 'unreadable' | 'no-answer' | 'queued' | 'processing' | 'failed';
 
 export interface HomeworkItem { id: string; title: string; instruction: string; submitType: SubmitType; required: boolean; gradingEnabled?: boolean; expectedPages?: number }
-export interface HomeworkAttachment { id: string; name: string; type: 'image' | 'video' | 'audio' | 'file'; path: string; size: number; source: string }
+export interface HomeworkAttachment extends HomeworkFileReadiness { id: string; name: string; type: 'image' | 'video' | 'audio' | 'file'; path: string; size: number; source: string }
 export interface HomeworkTask extends Omit<ManagedHomework, 'items'> { gradingPolicyVersion?:number; needsAnswerConfirmation?:boolean; answerStandards?:AnswerStandard[]; id: string; title: string; description: string; materialPhoto?: string; attachments?: HomeworkAttachment[]; kind: HomeworkKind; classIds: string[]; targetStudentIds: string[] | null; targetSnapshotIds?: string[]; schoolId?: string; subject?: string; items: HomeworkItem[]; deadline: string; submitDeadline: string; parentVisible: boolean; publishedAt: string; publishedBy?: string; seriesId?: string; cycleId?: string; cycleCount?: number }
 export interface HomeworkStudent { id: string; name: string; classId: string }
 export interface GradeQuestion { pageIndex?:number; explanationInvalidated?:boolean; aiUnavailable?:boolean;aiCorrect?:boolean;aiState?:string;aiAnswer?:string;aiExplanation?:string;reviewReason?:'answer-changed'|'manual-hold';decisionSource?:'ai'|'teacher'; standardStatus?:'pending'|'processing'|'ready';standardVersion?:number;recognizedFinalAnswer?:string; region?: { x: number; y: number; width: number; height: number }; stem?: string; analysis?: string; explanation?: string; keyPoint?: string; knowledge?: string; knowledgeVideoUrl?: string; releasedSignature?: string; releasedAt?: string; estimatedMinutes?: number; id: string; questionVersion?: number; label: string; answer: string; answerVersion?: number; studentAnswer?: string; correct: boolean; state: GradeState; reviewedAt?: string; reviewHistory?: { at: string; before: GradeState; after: GradeState; correct: boolean; reason: string; reviewerId: string }[] }
 export interface SubmissionPhoto { path:string; name:string; size?:number; saved?:boolean; error?:string }
-export interface ItemSubmission { gradingResult?: import('./homeworkGrading').SubmissionGradingImages; photos?: SubmissionPhoto[]; gradingError?: string; studentId: string; taskId: string; itemId: string; submittedAt: string; late?: boolean; operatorId?: string; operatorName?: string; mediaLabel: string; mediaPath?: string; isMock?: boolean; version?: number; questions: GradeQuestion[] }
+export interface ItemSubmission extends HomeworkFileReadiness { receivedAt?:number; requestId?:string; gradingResult?: import('./homeworkGrading').SubmissionGradingImages; photos?: SubmissionPhoto[]; gradingError?: string; studentId: string; taskId: string; itemId: string; submittedAt: string; late?: boolean; operatorId?: string; operatorName?: string; mediaLabel: string; mediaPath?: string; isMock?: boolean; version?: number; questions: GradeQuestion[] }
 export interface HomeworkStudentRow { student: HomeworkStudent; status: 'completed' | 'partial' | 'missing'; submissions: ItemSubmission[]; wrongQuestions: GradeQuestion[]; latestSubmittedAt: string }
 interface Store { tasks: HomeworkTask[]; submissions: ItemSubmission[] }
 
@@ -258,7 +258,7 @@ export function getTaskStudentRows(task: HomeworkTask): HomeworkStudentRow[] {
   const submissions = currentRows(readStore().submissions.filter(row => row.taskId === task.id));
   return targetStudents(task).map(student => {
     const mine = submissions.filter(row => row.studentId === student.id);
-    const required = task.items.filter(item => item.required);
+    const required = task.items;
     const status = !mine.length ? 'missing' : required.every(item => mine.some(row => row.itemId === item.id)) ? 'completed' : 'partial';
     return { student, status, submissions: mine, wrongQuestions: mine.flatMap(row => row.questions || []).filter(question => isFormalGrade(question) && !question.correct), latestSubmittedAt: mine.map(row => row.submittedAt).sort().pop() || '' };
   });
@@ -283,28 +283,29 @@ export function publishHomework(input: Omit<HomeworkTask, 'id' | 'publishedAt'>)
     deadline.setDate(deadline.getDate() + index);
     const due = `${deadline.getFullYear()}-${String(deadline.getMonth() + 1).padStart(2, '0')}-${String(deadline.getDate()).padStart(2, '0')} ${String(deadline.getHours()).padStart(2, '0')}:${String(deadline.getMinutes()).padStart(2, '0')}`;
     const submitDeadline = addDays(input.submitDeadline, index);
-    return { ...input,needsAnswerConfirmation:input.kind==='homework'&&input.items.some(i=>(i.submitType==='photo'||i.submitType==='file')&&i.gradingEnabled!==false), notification:{status:'pending' as const,message:'本地演示：作业已保存，通知待服务接入后发送。',attempts:0}, parentVisible: false, id: count === 1 ? seriesId : `${seriesId}-cycle-${index + 1}`, seriesId, cycleId: input.kind === 'checkin' ? `cycle-${index + 1}` : undefined, title: count === 1 ? generatedTitle : `${generatedTitle} · 第${index + 1}期`, targetSnapshotIds: DEMO_STUDENTS.filter(student => input.classIds.includes(student.classId) && (!input.targetStudentIds || input.targetStudentIds.includes(student.id))).map(student => student.id), schoolId: input.schoolId || 'luohu-demo', deadline: due, submitDeadline, publishedAt };
+    return { ...input,items:input.items.map(item=>({...item,required:true,gradingEnabled:input.kind==='homework'&&['photo','file'].includes(item.submitType)&&item.gradingEnabled!==false})),needsAnswerConfirmation:input.kind==='homework'&&input.items.some(i=>(i.submitType==='photo'||i.submitType==='file')&&i.gradingEnabled!==false), notification:{status:'pending' as const,message:'本地演示：作业已保存，通知待服务接入后发送。',attempts:0}, parentVisible: false, id: count === 1 ? seriesId : `${seriesId}-cycle-${index + 1}`, seriesId, cycleId: input.kind === 'checkin' ? `cycle-${index + 1}` : undefined, title: count === 1 ? generatedTitle : `${generatedTitle} · 第${index + 1}期`, targetSnapshotIds: DEMO_STUDENTS.filter(student => input.classIds.includes(student.classId) && (!input.targetStudentIds || input.targetStudentIds.includes(student.id))).map(student => student.id), schoolId: input.schoolId || 'luohu-demo', deadline: due, submitDeadline, publishedAt };
   });
   store.tasks.unshift(...tasks);
   saveStore(store);
   return tasks[0];
 }
 
-export function submitHomeworkItem(taskId: string, itemId: string, studentId: string, file?: { path: string; name: string; photos?:SubmissionPhoto[]; expectedVersion?:number }, operator?: { id: string; name: string }): ItemSubmission {
+export function submitHomeworkItem(taskId: string, itemId: string, studentId: string, file?: { path: string; name: string; photos?:SubmissionPhoto[]; expectedVersion?:number; requestId?:string } & HomeworkFileReadiness, operator?: { id: string; name: string }): ItemSubmission {
+  const receivedAt=Date.now();
   const store = readStore();
   const task = store.tasks.find(row => row.id === taskId);
   const item = task?.items.find(row => row.id === itemId);
   if (!task || !item || !targetStudents(task).some(student => student.id === studentId)) throw new Error('任务或接收范围不存在');
-  if (homeworkClosed(task)) throw new Error('任务已撤回、终止或补交已结束，当前选择已保留。');
+  const replay=file?.requestId&&store.submissions.find(r=>r.taskId===taskId&&r.itemId===itemId&&r.studentId===studentId&&r.requestId===file.requestId);if(replay)return replay;
+  if(file){const error=homeworkOriginalError(file);if(error)throw new Error(error);}
   const latest=getStudentSubmissions(taskId,studentId).find(r=>r.itemId===itemId);
   if(file?.expectedVersion!==undefined && file.expectedVersion!==(latest?.version||0))throw new Error('已有新版本，请查看最新内容后再决定合并或替换。');
   if(file?.photos && (!file.photos.length||file.photos.length>9||file.photos.some(p=>p.error||!p.path)))throw new Error('请处理失败图片；每项最多 9 张。');
   if(item.submitType==='file'&&item.gradingEnabled!==false&&file&&!/\.(pdf|docx?)$/i.test(file.name))throw new Error('本项需自动批改，仅支持 PDF、Word。');
   if (item.submitType !== 'none' && !file?.path) throw new Error('请先选择对应的提交文件');
-  const now = new Date();
-  const submittedAt = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const receipt=homeworkSubmissionReceipt(task,receivedAt);
   const version = store.submissions.filter(row => row.studentId === studentId && row.taskId === taskId && row.itemId === itemId).reduce((max, row) => Math.max(max, row.version || 1), 0) + 1;
-  const submission: ItemSubmission = { studentId, taskId, itemId, submittedAt, late: submittedAt > task.deadline, operatorId: operator?.id, operatorName: operator?.name, mediaLabel: file?.name || (item.submitType === 'none' ? '家长确认已完成' : `模拟${SUBMIT_LABEL[item.submitType]}提交`), photos: file?.photos, mediaPath: file?.path || (item.submitType === 'photo' ? demoPhotoPath(itemId) : ''), isMock: !file && item.submitType !== 'none', version, questions: item.submitType === 'photo' && task.kind === 'homework' ? mockExternalGrade(taskId, itemId, studentId).map(q => ({ ...q, state: 'queued' as const, estimatedMinutes: 2 })) : [] };
+  const submission: ItemSubmission = { studentId, taskId, itemId, ...receipt, requestId:file?.requestId, uploadState:'complete',previewState:file?.previewState||(item.submitType==='file'?'pending':'ready'), operatorId: operator?.id, operatorName: operator?.name, mediaLabel: file?.name || (item.submitType === 'none' ? '家长确认已完成' : `模拟${SUBMIT_LABEL[item.submitType]}提交`), photos: file?.photos, mediaPath: file?.path || (item.submitType === 'photo' ? demoPhotoPath(itemId) : ''), isMock: !file && item.submitType !== 'none', version, questions: item.submitType === 'photo' && task.kind === 'homework' ? mockExternalGrade(taskId, itemId, studentId).map(q => ({ ...q, state: 'queued' as const, estimatedMinutes: 2 })) : [] };
   if(file?.photos?.length)submission.questions=file.photos.flatMap((photo,page)=>mockExternalGrade(taskId,itemId,studentId).map(q=>({...q,id:page===0?q.id:q.id+'-page-'+page,label:'第 '+(page+1)+' 页 · '+q.label,pageIndex:page,state:'queued' as const,estimatedMinutes:2}))).filter(()=>item.gradingEnabled!==false&&task.kind==='homework');
   if(item.submitType==='file'&&item.gradingEnabled!==false){submission.questions=[];submission.gradingError='当前演示未接入文档转页与批改服务；提交已保留。';}
   store.submissions.push(submission);
@@ -316,8 +317,8 @@ export function submitHomeworkItem(taskId: string, itemId: string, studentId: st
 export function summarizeHomework(task: HomeworkTask) {
   const students = targetStudents(task);
   const submissions = currentRows(readStore().submissions.filter(row => row.taskId === task.id && students.some(student => student.id === row.studentId)));
-  const completed = students.filter(student => task.items.filter(item => item.required).every(item => submissions.some(row => row.studentId === student.id && row.itemId === item.id))).length;
-  const partial = students.filter(student => submissions.some(row => row.studentId === student.id) && !task.items.filter(item => item.required).every(item => submissions.some(row => row.studentId === student.id && row.itemId === item.id))).length;
+  const completed = students.filter(student => task.items.every(item => submissions.some(row => row.studentId === student.id && row.itemId === item.id))).length;
+  const partial = students.filter(student => submissions.some(row => row.studentId === student.id) && !task.items.every(item => submissions.some(row => row.studentId === student.id && row.itemId === item.id))).length;
   const questions = submissions.flatMap(row => row.questions);
   const confirmed = questions.filter(isFormalGrade);
   const questionRows = [...new Set(questions.map(question => question.id))].map(id => {

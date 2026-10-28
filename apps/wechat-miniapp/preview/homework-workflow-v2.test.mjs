@@ -154,7 +154,7 @@ for(const type of ['file','video','audio']){
   p.reselectPendingUpload();assert.equal(p.pending(),choice,'Cancelled reselect must keep the current selection');
   full=true;p.confirmUpload();assert.equal(p.pending(),choice);assert.equal(p.inspect().submissions.filter(r=>r.taskId===id).length,0);full=false;p.confirmUpload();assert.equal(p.pending(),null);
   rendered=p.renderParent('孩子');assert.match(rendered,/重新提交/);assert.doesNotMatch(rendered,/有问题？/);if(type==='file')assert.doesNotMatch(rendered,/>重试批改</,'Waiting for the service offers no redundant retry');
-  p.stageSingleForTest({...choice,expectedVersion:0});p.confirmUpload();rendered=p.renderParent('孩子');assert.match(rendered,/使用当前文件/);assert.equal(p.inspect().submissions.filter(r=>r.taskId===id).length,1);
+  p.stageSingleForTest({...choice,requestId:undefined,expectedVersion:0});p.confirmUpload();rendered=p.renderParent('孩子');assert.match(rendered,/使用当前文件/);assert.equal(p.inspect().submissions.filter(r=>r.taskId===id).length,1);
   p.acknowledgePendingVersion();assert.equal(p.pending().expectedVersion,1);p.confirmUpload();assert.equal(p.inspect().submissions.filter(r=>r.taskId===id).length,2);
   p.inspect().tasks.find(t=>t.id===id).withdrawnAt=new Date().toISOString();rendered=p.renderParent('孩子');assert.doesNotMatch(rendered,/class="hp-single-reselect"|class="hp-upload hp-resubmit-button"/);
 }
@@ -166,7 +166,7 @@ for(const type of ['file','video','audio']){
   const originalChooser=wx.chooseMessageFile;wx.chooseMessageFile=o=>o.fail?.({errMsg:'cancel'});const originalMediaChooser=wx.chooseMedia;wx.chooseMedia=o=>o.fail?.({errMsg:'cancel'});
   family.reselectPendingUpload(event({id:type}));assert.equal(family.data.pendingUpload,choice);wx.chooseMessageFile=originalChooser;wx.chooseMedia=originalMediaChooser;
   family.confirmUpload();for(let i=0;i<12;i++)await Promise.resolve();assert.equal(family.data.pendingUpload,null);assert.equal(native.getStudentSubmissions(single.id,child)[0].version,1);
-  family.data.pendingUpload={...choice,expectedVersion:0};family.confirmUpload();for(let i=0;i<12;i++)await Promise.resolve();assert.equal(family.data.versionConflict,true);assert.ok(family.data.pendingUpload);
+  family.data.pendingUpload={...choice,requestId:undefined,expectedVersion:0};family.confirmUpload();for(let i=0;i<12;i++)await Promise.resolve();assert.equal(family.data.versionConflict,true);assert.ok(family.data.pendingUpload);
   family.resolveVersionConflict(event({mode:'replace'}));assert.equal(family.data.pendingUpload.expectedVersion,1);family.confirmUpload();for(let i=0;i<12;i++)await Promise.resolve();assert.equal(native.getStudentSubmissions(single.id,child)[0].version,2);
 }
 // Shared five-stage labels, with submission and grading remaining independent.
@@ -384,3 +384,14 @@ const photoCard=failureHtml.slice(failureHtml.indexOf('web-photo'),failureHtml.i
 const failureStore=storage.get('demo_homework_v1'),failureRow=failureStore.submissions.filter(r=>r.taskId===galleryTask.id&&r.itemId==='gallery-photo'&&r.studentId===child).sort((a,b)=>(b.version||1)-(a.version||1))[0];failureRow.gradingError=photoError;storage.set('demo_homework_v1',failureStore);correctedParent.refreshTask();assert.equal(correctedParent.data.items[0].gradeStatus,photoError);assert.equal(correctedParent.data.items[0].statusLabel,'批改失败');assert.equal(correctedParent.data.items[0].canRetryGrading,false);
 latestCorrection.gradingError='';latestCorrection.gradingResult.complete=false;p.openParent(webGallery.id);assert.ok(p.renderParent('李涵').includes(rules.homeworkGradingNotice('待批改')));
 console.log('PASS question entry: all/correct/wrong/pending scope, stale-roster isolation, student/media switching, return-to-question, and matching photo failure details without fake retry.');
+
+// Confirmed decisions: actual teacher controller accepts audio in both type-setting modes.
+profile=teacher;view={view:'subject',classId:'c1',period:'7d',grade:'all'};
+const audioTeacher=page('teacher/homework');audioTeacher.data.scope=view;audioTeacher.data.readOnly=false;
+audioTeacher.data.draft={...audioTeacher.data.draft,...input(),title:'原生录音发布验收',titleCustomized:true,recipientModes:{c1:'all'},attachments:[{id:'ready-document',name:'要求.pdf',path:'/saved/要求.pdf',type:'file',size:10,source:'微信',uploadState:'complete',previewState:'pending'}]};
+audioTeacher.selectUniformType(event({type:'audio'}));assert.equal(audioTeacher.data.draft.items[0].submitType,'audio');assert.equal(audioTeacher.data.draft.items[0].gradingEnabled,false);
+audioTeacher.selectItemType(event({index:0,type:'photo'}));audioTeacher.data.draft.items[0].gradingEnabled=true;audioTeacher.selectItemType(event({index:0,type:'audio'}));assert.equal(audioTeacher.data.draft.items[0].gradingEnabled,false);
+audioTeacher.previewPublish();assert.equal(audioTeacher.data.previewOpen,true);assert.doesNotMatch(audioTeacher.data.previewItems[0].type,/自动批改/);audioTeacher.confirmPublish();assert.equal(audioTeacher.data.mode,'success');
+const audioNative=native.listHomeworkTasks().find(task=>task.title==='原生录音发布验收');assert.equal(audioNative.items[0].submitType,'audio');assert.equal(audioNative.attachments[0].previewState,'pending');
+p.setScope({view:'subject',classIds:['c1','c2'],teacherId:teacher.userId});p.compose();p.setField('description','朗读课文并提交录音');p.applyRecognition();p.setUniformType('audio');p.setTitle('浏览器录音发布验收');p.quickDeadline(2);p.nextCompose();p.nextCompose();p.publish();const audioWeb=p.inspect().tasks.find(task=>task.title==='浏览器录音发布验收');assert.equal(audioWeb.items[0].type,'audio');assert.equal(audioWeb.items[0].gradingEnabled,false);assert.equal(audioWeb.items[0].required,true);
+console.log('PASS confirmed audio controllers: browser/native teacher publishing, uniform/per-item choices, no grading, all-required and READY-original/pending-preview publish.');

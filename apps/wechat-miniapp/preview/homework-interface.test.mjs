@@ -15,12 +15,12 @@ assert.equal(JSON.stringify(records),snapshot,'Reference revisions must not muta
 assert.equal(g.gradingStatistics(records.flatMap(r=>r.questions)).wrongRate,50);
 task.deadline='2026-10-22 20:00';
 const deadline=new Date('2026-10-22T20:00').getTime();
-assert.equal(g.teacherReference(task,'q',false,deadline-1).answer,'A','Teacher can see their own reference before the deadline');
-const hidden=g.teacherReference(task,'q',true,deadline-1);
+assert.equal(g.teacherReference(task,'q',false).answer,'A','Teacher can see their own reference before the deadline');
+const hidden=g.teacherReference(task,'q',true,{questions:[{...records[0].questions[0],state:'processing'}]});
 assert.equal(hidden.locked,true);assert.equal(hidden.answer,'');assert.equal(hidden.explanation,'','Hidden reference content must not be sent to the result renderer');
-assert.equal(g.teacherReference(task,'q',true,deadline).answer,'A','Teacher reference becomes available at the first deadline');
-assert.equal(g.teacherReference(task,'unmatched',true,deadline),null,'Unmatched question must not borrow another reference');
-assert.equal(g.teacherReference({...task,deadline:undefined},'q',true,deadline).locked,true);
+assert.equal(g.teacherReference(task,'q',true,records[0]).answer,'A','A completed effective submission unlocks the reference independently of deadline');
+assert.equal(g.teacherReference(task,'unmatched',true,records[0]),null,'Unmatched question must not borrow another reference');
+assert.equal(g.teacherReference({...task,deadline:undefined},'q',true,records[0]).locked,false);
 assert.equal(g.teacherReference({answerStandards:[{...task.answerStandards[0],source:'ai',teacherAnswer:'',answer:'C'}]},'q'),null,'Legacy AI-source entry is not a teacher reference');
 assert.equal(JSON.stringify(records),snapshot,'Reference visibility must not affect per-student grades');
 const first=records[0].questions[0];g.confirmManualResult(task,records,first,true,'now');

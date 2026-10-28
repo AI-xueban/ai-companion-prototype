@@ -75,15 +75,14 @@ export interface AnswerStandard {
 }
 export interface StandardTask { id?:string; deadline?:string; answerStandards?:AnswerStandard[]; gradingPolicyVersion?:number }
 // The mock catalog uses an assigned question ID. Real uploaded pages need verified mapping first.
-export function teacherReference(task:StandardTask,questionId:string,parent=false,now=Date.now()) {
+export function teacherReference(task:StandardTask,questionId:string,parent=false,record?:{questions:GradingQuestion[];version?:number;gradingResult?:SubmissionGradingImages}) {
   const reference=task.answerStandards?.find(s=>s.questionId===questionId);
   if(!reference)return null;
   const answer=reference.source==='custom'?reference.answer:reference.teacherAnswer;
   const explanation=reference.source==='custom'?reference.explanation:reference.teacherExplanation;
   if(!answer?.trim())return null;
-  const deadline=task.deadline?new Date(task.deadline.replace(' ','T')).getTime():NaN;
-  const locked=parent&&(!Number.isFinite(deadline)||now<deadline);
-  return {answer:locked?'':answer,explanation:locked?'':explanation,locked,availableAt:task.deadline||''};
+  const locked=parent&&(!record?.questions.some(q=>q.id===questionId)||!record.questions.every(isResultReleased)||submissionGradingComplete(record)===false);
+  return {answer:locked?'':answer,explanation:locked?'':explanation,locked,availableAt:''};
 }
 export interface StandardRecord { questions:GradingQuestion[] }
 export function answersEquivalent(a:string,b:string){
@@ -148,6 +147,26 @@ export function homeworkSnapshotText(snapshot:string):string {
 }
 export const homeworkTime = (value: string) => new Date((value || '').replace(' ', 'T')).getTime();
 export const homeworkClosed = (task: { withdrawnAt?: string; stoppedAt?: string; submitDeadline: string }, now = Date.now()) => Boolean(task.withdrawnAt || task.stoppedAt || !Number.isFinite(homeworkTime(task.submitDeadline)) || now > homeworkTime(task.submitDeadline));
+export interface HomeworkFileReadiness { uploadState?:'optimizing'|'uploading'|'complete'|'failed'; previewState?:'pending'|'ready'|'failed'; unavailable?:boolean; validationError?:string }
+export function homeworkOriginalError(file:HomeworkFileReadiness):string {
+  if(file.unavailable||file.uploadState==='failed')return '原件上传失败或已失效，请重新上传。';
+  if(file.uploadState&&file.uploadState!=='complete')return '原件仍在上传，请等待上传完成。';
+  return file.validationError||'';
+}
+export function homeworkPreviewNotice(file?:HomeworkFileReadiness|null,attachment=false):string {
+  if(!file||homeworkOriginalError(file))return '';
+  if(file.previewState==='pending')return attachment?'附件预览生成中':'已提交，预览生成中';
+  if(file.previewState==='failed')return attachment?'附件预览生成失败，原件可查看':'预览生成失败，提交已保留，可查看原件';
+  return '';
+}
+// Both prototypes simulate this service boundary locally. Production must supply server receipt time.
+export function homeworkSubmissionReceipt(task:{deadline:string;submitDeadline:string;allowSupplement?:boolean;withdrawnAt?:string;stoppedAt?:string},receivedAt=Date.now()) {
+  const due=homeworkTime(task.deadline),end=task.allowSupplement===false?due:homeworkTime(task.submitDeadline);
+  if(!Number.isFinite(receivedAt)||!Number.isFinite(due)||!Number.isFinite(end)||task.withdrawnAt||task.stoppedAt||receivedAt>end)throw new Error('任务已撤回、终止或补交已结束，当前选择已保留。');
+  const date=new Date(receivedAt),pad=(n:number)=>String(n).padStart(2,'0');
+  const submittedAt=`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+  return {receivedAt,submittedAt,late:receivedAt>due};
+}
 export const homeworkFileExtensions = (graded: boolean) => graded ? ['pdf', 'doc', 'docx'] : ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt'];
 export function homeworkFileError(name: string, size: number, type: string, graded: boolean): string {
   if (!size || size < 0) return '文件为空，请重新选择。';
@@ -170,9 +189,10 @@ export function homeworkDocumentError(name: string, bytes: Uint8Array): string {
   if (text.includes('EncryptionInfo') || text.includes('EncryptedPackage')) return '文档已加密，请导出为无需密码的 Word 或 PDF。';
   return '';
 }
-export function homeworkPublishError(task: {title:string;description:string;attachments?:unknown[];allowSupplement?:boolean;deadline:string;submitDeadline:string;items:Array<{title:string;type?:string;submitType?:string;expectedPages?:number}>}, now=Date.now()): string {
+export function homeworkPublishError(task: {title:string;description:string;attachments?:HomeworkFileReadiness[];allowSupplement?:boolean;deadline:string;submitDeadline:string;items:Array<{title:string;type?:string;submitType?:string;expectedPages?:number}>}, now=Date.now()): string {
   if (!task.title.trim()) return '请填写作业标题。';
   if (!task.description.trim() && !task.attachments?.length) return '请填写老师的要求或添加附件。';
+  const attachmentError=task.attachments?.map(homeworkOriginalError).find(Boolean);if(attachmentError)return attachmentError;
   if (!task.items.length || task.items.some(i=>!i.title.trim() || !(i.type || i.submitType))) return '请补全每项要求和提交方式。';
   if (task.items.some(i=>i.expectedPages !== undefined && (!Number.isInteger(i.expectedPages) || i.expectedPages < 0 || i.expectedPages > 9))) return '预计页数请填写 1—9，留空表示不限。';
   if (!(homeworkTime(task.deadline)>now)) return '截止时间已过，请重新设置。';
