@@ -1087,7 +1087,7 @@ function renderDeviceOverviewPage() {
 }
 
 function getDefaultCabinetFilter() {
-  return { id: '', name: '', school: '', version: '', online: '', location: '', carousel: '', start: '', end: '' };
+  return { id: '', name: '', school: '', version: '', online: '', start: '', end: '' };
 }
 
 let cabinetFilterState = getDefaultCabinetFilter();
@@ -1095,14 +1095,10 @@ let cabinetFilterState = getDefaultCabinetFilter();
 function filterCabinets(cabinets, filter) {
   const contains = (value, key) => String(value || '').toLowerCase().includes(key.trim().toLowerCase());
   return cabinets.filter(c => {
-    if (!contains(c.id, filter.id) || !contains(c.name, filter.name) || !contains(c.location, filter.location)) return false;
+    if (!contains(c.id, filter.id) || !contains(c.name, filter.name)) return false;
     if (filter.school && c.schoolName !== filter.school) return false;
     if (filter.version && c.installedVersion !== filter.version) return false;
     if (filter.online && (c.online ? 'online' : 'offline') !== filter.online) return false;
-    if (filter.carousel) {
-      const config = typeof getCabinetCarousel === 'function' ? getCabinetCarousel(c.id) : null;
-      if ((config?.items?.length ? 'configured' : 'empty') !== filter.carousel) return false;
-    }
     const day = String(c.createdAt || '').replaceAll('/', '-').slice(0, 10);
     if ((filter.start || filter.end) && !/^\d{4}-\d{2}-\d{2}$/.test(day)) return false;
     if (filter.start && day < filter.start) return false;
@@ -1142,8 +1138,6 @@ function renderCabinetPage() {
         <div class="filter-item"><label for="cabinet-filter-school">学校</label><select id="cabinet-filter-school" class="select"><option value="">全部学校</option>${options(schools, f.school)}</select></div>
         <div class="filter-item"><label for="cabinet-filter-version">版本号</label><select id="cabinet-filter-version" class="select"><option value="">全部版本</option>${options(versions, f.version)}</select></div>
         <div class="filter-item"><label for="cabinet-filter-online">在线状态</label><select id="cabinet-filter-online" class="select"><option value="">全部</option><option value="online" ${f.online === 'online' ? 'selected' : ''}>在线</option><option value="offline" ${f.online === 'offline' ? 'selected' : ''}>离线</option></select></div>
-        <div class="filter-item"><label for="cabinet-filter-location">安装位置</label><input id="cabinet-filter-location" class="input" placeholder="请输入安装位置" value="${esc(f.location)}"></div>
-        <div class="filter-item"><label for="cabinet-filter-carousel">广告轮播</label><select id="cabinet-filter-carousel" class="select"><option value="">全部</option><option value="configured" ${f.carousel === 'configured' ? 'selected' : ''}>已配置</option><option value="empty" ${f.carousel === 'empty' ? 'selected' : ''}>未配置</option></select></div>
         <div class="filter-item"><label>创建时间</label><div style="display:flex;align-items:center;gap:8px"><input id="cabinet-filter-start" aria-label="创建开始日期" class="input" type="date" style="width:145px" value="${esc(f.start)}"><span>至</span><input id="cabinet-filter-end" aria-label="创建结束日期" class="input" type="date" style="width:145px" value="${esc(f.end)}"></div></div>
         <div class="filter-actions"><button type="button" class="btn" onclick="resetCabinetFilter()">重置</button><button type="submit" class="btn btn-primary">搜索</button></div>
       </form>
