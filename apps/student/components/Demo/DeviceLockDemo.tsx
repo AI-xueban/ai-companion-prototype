@@ -27,8 +27,8 @@ export const DeviceLockDemo: React.FC<DeviceLockDemoProps> = ({ type, onExit }) 
             <BatteryLow size={34} strokeWidth={2} />
           </span>
           <p className="mt-4 text-[44px] font-semibold leading-none tabular-nums text-amber-600">10<span className="ml-1 text-[24px]">%</span></p>
-          <h1 id="low-battery-reminder-title" className="mt-3 text-[22px] font-bold text-slate-900">电量不足，请及时归还</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-600">请及时将平板归还柜机，电量降至5%时将自动锁屏。</p>
+          <h1 id="low-battery-reminder-title" className="mt-3 text-[22px] font-bold text-slate-900">电量不足，请及时充电或归还</h1>
+          <p className="mt-2 text-sm leading-6 text-slate-600">电量降至5%时将自动锁屏。</p>
           <button type="button" onClick={onExit} className="mt-6 h-11 w-full rounded-xl bg-indigo-600 text-sm font-bold text-white shadow-lg shadow-indigo-200 transition-colors hover:bg-indigo-700">
             我知道了
           </button>
@@ -72,13 +72,13 @@ export const DeviceLockDemo: React.FC<DeviceLockDemoProps> = ({ type, onExit }) 
           {isLowBattery ? <BatteryLow size={30} strokeWidth={2} /> : <LockKeyhole size={30} strokeWidth={2} />}
         </span>
         <h1 className="mt-3 text-[24px] font-bold leading-tight">{isLowBattery ? '电量过低，设备已锁屏' : '设备已被老师锁定'}</h1>
-        <p className={`mt-1.5 text-sm ${isLowBattery ? 'font-semibold text-amber-700' : 'text-slate-600'}`}>{isLowBattery ? '请及时将平板归还柜机' : '当前暂时无法使用设备，请等待老师解除锁屏。'}</p>
+        {!isLowBattery && <p className="mt-1.5 text-sm text-slate-600">当前暂时无法使用设备，请等待老师解除锁屏。</p>}
         <div className={`mt-5 text-[54px] font-semibold leading-none tabular-nums tracking-tight ${isLowBattery ? 'text-amber-600' : 'text-slate-800'}`}>
           {isLowBattery ? <>5<span className="ml-1 text-[28px]">%</span></> : now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}
         </div>
-        <p className="mt-1 text-xs text-slate-500">{isLowBattery ? '当前电量 · 未充电' : '当前时间'}</p>
+        <p className="mt-1 text-xs text-slate-500">{isLowBattery ? '当前电量' : '当前时间'}</p>
         <div className={`mt-5 w-full max-w-[500px] rounded-2xl bg-white px-5 py-3 shadow-sm ${isLowBattery ? 'border border-amber-200' : 'border border-indigo-100'}`}>
-          <p className={`font-bold ${isLowBattery ? 'text-[17px] text-amber-700' : 'text-indigo-600'}`}>{isLowBattery ? '请及时归还设备' : '管控中'}</p>
+          <p className={`font-bold ${isLowBattery ? 'text-[17px] text-amber-700' : 'text-indigo-600'}`}>{isLowBattery ? '请及时充电或归还' : '管控中'}</p>
           {isLowBattery
             ? <p className="mt-1 text-xs text-slate-400">充电至10%后解除低电量限制</p>
             : <p className="mt-1 text-xs text-slate-600">锁屏不影响设备归还，如有疑问请联系老师。</p>}
