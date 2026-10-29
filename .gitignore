@@ -7,6 +7,7 @@ dist-ssr/
 *.local
 *.log
 *.zip
+!apps/admin/prototype/assets/demo/student-photo-submission-guide.zip
 *.mp4
 .DS_Store
 Thumbs.db
