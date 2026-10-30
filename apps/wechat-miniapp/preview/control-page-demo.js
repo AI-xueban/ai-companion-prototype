@@ -1,4 +1,4 @@
-/* Review scenarios; acknowledging duration revocation updates local prototype permissions. */
+/* Review scenarios for control pages. */
 window.controlPageDemo = (() => {
   const groups = {
     '班级与学生空状态': [
@@ -8,7 +8,6 @@ window.controlPageDemo = (() => {
       ['noStudents', '班级无学生', '查看空班级，可切换其他班级对比管控区域。']
     ],
     '操作期间权限变化': [
-      ['durationRevoked', '编辑时使用时长权限被关闭', '编辑页弹出权限关闭通知，点“知道了”后只能查看。'],
       ['classRevoked', '操作时班级管理权限被收回', '当前页面通知班级权限已变更，点“知道了”后回到无班级状态。'],
       ['lockStarted', '操作时管理员开启临时锁屏', '锁屏页弹出通知，点弹窗外或“知道了”后禁止操作。'],
       ['borrowTemporaryStarted', '操作时学校开启临时禁借', '进入班主任借用页查看通知；点“知道了”后学生借用设置变为只读。'],
@@ -31,10 +30,9 @@ window.controlPageDemo = (() => {
     adminNoClasses: ['柜机借用管控', '该年级暂无班级', '添加班级后可设置管控。'],
     noClasses: ['管控', '暂无已分配班级', '请联系学校管理员。'],
     noStudents: ['管控', '当前班级暂无学生', '班级加入学生后，可在这里查看和设置管控。'],
-    durationRevoked: ['使用时长管控', '使用时长修改权限已关闭', '学校管理员已关闭使用时长修改权限，现在只能查看。'],
     classRevoked: ['管控', '班级管理权限已变更', '学校管理员已取消你对该班的管理权限，现在无法继续操作。'],
     lockStarted: ['锁屏', '临时锁屏管控中', '学校管理员已开启临时锁屏，老师暂不可修改锁屏。'],
-    borrowTemporaryStarted: ['柜机借用管控', '学校已开启临时禁借', '现在不能修改学生的借用状态。'],
+    borrowTemporaryStarted: ['柜机借用管控', '学校已开启临时禁借', '现在不能修改本班借用状态。'],
     borrowTimesChanged: ['柜机借用管控', '借用时间已更新', '是否立即查看学校最新借用时间？'],
     accountRemoved: ['账号不可用', '账号已被学校删除', '暂时无法使用管控，请联系学校管理员。'],
     loadFailed: ['管控', '加载失败，请重试', '暂时无法获取班级和管控数据，请检查网络后重试。'],
@@ -57,16 +55,15 @@ window.controlPageDemo = (() => {
       window.parity.showEmptyClassDemo(); return;
     }
     const [title, message, description] = screens[active];
-    const contextual = ['durationRevoked', 'lockStarted', 'saveFailed', 'changed', 'removed', 'classRevoked', 'accountRemoved'].includes(active);
+    const contextual = ['lockStarted', 'saveFailed', 'changed', 'removed', 'classRevoked', 'accountRemoved'].includes(active);
     if (contextual && window.parity?.renderDemoPage) {
       window.parity.renderDemoPage(active);
-      if (active === 'durationRevoked') window.parity.stageDurationRevocation?.();
       app.querySelector('.screen')?.setAttribute('data-control-demo', active);
       if (active === 'lockStarted') {
         document.getElementById('control-overlay').innerHTML = `<div class="logout-confirm-shade" onclick="if(event.target===this)controlPageDemo.dismiss()"><section class="logout-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="control-demo-lock-title"><h2 id="control-demo-lock-title">学校管理员已开启临时锁屏</h2><p>暂时不能修改锁屏状态。</p><button class="teacher-primary" onclick="controlPageDemo.dismiss()">知道了</button></section></div>`;
         return;
       }
-      if (['classRevoked', 'accountRemoved', 'durationRevoked'].includes(active)) {
+      if (['classRevoked', 'accountRemoved'].includes(active)) {
         document.getElementById('control-overlay').innerHTML = `<div class="logout-confirm-shade"><section class="logout-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="control-demo-dialog-title"><h2 id="control-demo-dialog-title">${message}</h2><p>${description}</p><button class="teacher-primary" onclick="controlPageDemo.dismiss()">知道了</button></section></div>`;
       }
       return;
@@ -114,16 +111,6 @@ window.controlPageDemo = (() => {
           active = ''; savedNodes = null;
           window.pageDemoTools?.sync();
         } catch { controlToast('锁屏状态更新失败，请重试'); }
-        return;
-      }
-      if (active === 'durationRevoked') {
-        try {
-          // This scenario intentionally becomes a real local prototype state so
-          // both administrator and teacher can continue the permission flow.
-          window.parity.acknowledgeDurationRevoked();
-          active = ''; savedNodes = null;
-          window.pageDemoTools?.sync();
-        } catch { controlToast('权限更新失败，请重试'); }
         return;
       }
       if (active === 'classRevoked') {
