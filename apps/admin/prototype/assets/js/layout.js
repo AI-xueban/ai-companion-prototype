@@ -87,8 +87,8 @@ const ROUTE_META = {
   'third-party-apps': { title: '第三方应用', breadcrumb: ['第三方应用'] },
   'app-library': { title: '第三方应用', breadcrumb: ['第三方应用'] },
   'school-apps': { title: '学校应用', breadcrumb: ['第三方应用', '学校应用'] },
-  'face-sync-status': { title: '同步记录', breadcrumb: ['用户管理','人脸信息管理','同步记录'] },
-  'face-sync-detail': { title: '同步状态详情', breadcrumb: ['用户管理','人脸信息管理','同步状态','详情'] },
+  'face-sync-status': { title: '上传注册记录', breadcrumb: ['用户管理','人脸信息管理','上传注册记录'] },
+  'face-sync-detail': { title: '注册状态详情', breadcrumb: ['用户管理','人脸信息管理','注册状态','详情'] },
   'face-library': { title: '人脸信息管理', breadcrumb: ['用户管理', '人脸信息管理'] },
 };
 
@@ -157,7 +157,7 @@ function ensureFaceTabs(route, params) {
     openTabs.push({ id: 'face-library', route: 'face-library', title: '人脸信息管理', params: null });
   }
   if (route === 'face-sync-status' && !openTabs.some(t => t.route === route && JSON.stringify(t.params || null) === JSON.stringify(params || null))) {
-    openTabs.push({ id: params?._tabId || route + '-' + tabSeq++, route, title: '同步记录', params: params || null });
+    openTabs.push({ id: params?._tabId || route + '-' + tabSeq++, route, title: '上传注册记录', params: params || null });
   }
 }
 
