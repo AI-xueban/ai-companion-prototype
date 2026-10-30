@@ -17,7 +17,7 @@ window.pageDemoTools = (() => {
       // Page tools show only this node's concerns. All 14 end-to-end presets stay in the flow guide.
       const submission=['published','partial','late','closed'];
       const result=['queued','processing','partialGrade','failed','unreleased','partialRelease','released','resubmit','changed'];
-      const choices=window.demoWorkspace?.enabled?c.choices.filter(([id])=>c.mode==='detail'?submission.includes(id)||id.startsWith('upload-'):role==='parent'&&c.mode==='result'?result.includes(id):true):c.choices;
+      const choices=window.demoWorkspace?.enabled?c.choices.filter(([id])=>c.mode==='detail'?submission.includes(id)||id.startsWith('upload-')||role==='teacher'&&(id.startsWith('grading-wait-')||id.startsWith('grade-overview-')||id==='correction-demo'):role==='parent'&&c.mode==='result'?result.includes(id):true):c.choices;
       return {...c,kind:'homework',choices:choices.map(([id,label,hint,group])=>({id,label,hint,group}))};
     }
     window.homeworkPrototype?.clearPageDemo?.();

@@ -97,7 +97,8 @@ assert.match(p.getConsoleSnapshot().progress.title, /预计还需约 2 分钟/);
 p.advanceConsoleGrading('complete');
 assert.equal(p.getConsoleSnapshot().progress.review, 1);
 p.openConsoleReview();
-assert.match(p.renderTeacher(), /待复核 1 人/);
+assert.match(p.renderTeacher(), /待处理 1/);
+assert.match(p.renderTeacher(), /查看本题作答/);
 let pending = p.inspect().submissions.filter(r => r.taskId === 'homework-console-v1' && r.studentId === child).flatMap(r => r.questions).find(q => q.state === 'review');
 p.review('homework-console-v1', pending.id);p.setGradeReviewDecision(false);
 p.setGradeReviewReason('已核对原图，作答有误');
@@ -170,19 +171,19 @@ console.log('小程序多班结果权限回归通过：任课范围、班主任�
 const filterRules=load('homeworkFilters');
 assert.equal(filterRules.matchesTaskStatuses(filterRules.ALL_TASK_STATUSES,[]),true,'Unrestricted filters include tasks with no grading');
 assert.equal(filterRules.matchesTaskStatuses([],['review']),false);
-assert.equal(filterRules.matchesTaskStatuses(['submitted','review'],['partial','review']),false);
-assert.equal(filterRules.matchesTaskStatuses(['submitted','review'],['submitted','review']),true);
-assert.equal(filterRules.matchesTaskStatuses(['submitted','review','failed'],['submitted','failed']),true);
+assert.equal(filterRules.matchesTaskStatuses(['submitted','processing'],['partial','processing']),false);
+assert.equal(filterRules.matchesTaskStatuses(['submitted','processing'],['submitted','processing']),true);
+assert.equal(filterRules.matchesTaskStatuses(['submitted','processing','graded'],['submitted','graded']),true);
 p=browser();p.setScope({view:'subject',classIds:['c1'],teacherId:'teacher-demo-001',teachingAssignments:[{subject:'数学',classIds:['c1','c2']},{subject:'英语',classIds:['c2']}]});
 const fixture=JSON.parse(JSON.stringify(p.inspect().tasks.find(t=>t.id==='grading-demo-v1'))),s1=roster.DEMO_STUDENTS.find(s=>s.classId==='c1').id,s2=roster.DEMO_STUDENTS.find(s=>s.classId==='c2').id;
 p.inspect().tasks.push({...fixture,id:'filter-multi',title:'筛选专用任务',targetSnapshotIds:[s1,s2],items:[{id:'filter-one',type:'photo',required:true,gradingEnabled:true}]});
-p.inspect().submissions.push(...[s1,s2].map((studentId,index)=>({taskId:'filter-multi',studentId,itemId:'filter-one',version:1,questions:[{id:'filter-q',state:index?'review':'confirmed',correct:true,answer:'1'}]})));
+p.inspect().submissions.push(...[s1,s2].map((studentId,index)=>({taskId:'filter-multi',studentId,itemId:'filter-one',version:1,questions:[{id:'filter-q',state:index?'processing':'confirmed',correct:true,answer:'1'}]})));
 p.toTeacherListWithoutRefresh();
 p.openTaskFilter('status');p.toggleAllTaskStatuses();p.confirmTaskStatuses();assert.match(p.renderTeacher(),/请至少选择一个状态/);p.closeTaskFilter();
 assert.equal(p.getTaskListFilters().statuses.length,filterRules.ALL_TASK_STATUSES.length,'Cancel must preserve applied filters');
-p.openTaskFilter('status');p.toggleAllTaskStatuses();p.toggleTaskStatus('submitted');p.toggleTaskStatus('review');p.confirmTaskStatuses();
+p.openTaskFilter('status');p.toggleAllTaskStatuses();p.toggleTaskStatus('submitted');p.toggleTaskStatus('processing');p.confirmTaskStatuses();
 assert.ok(p.getFilteredTaskIds().includes('filter-multi'));
-p.openTaskFilter('class');p.selectTaskFilter('c1');assert.ok(!p.getFilteredTaskIds().includes('filter-multi'),'A review in another class cannot satisfy the selected class filter');
+p.openTaskFilter('class');p.selectTaskFilter('c1');assert.ok(!p.getFilteredTaskIds().includes('filter-multi'),'Processing in another class cannot satisfy the selected class filter');
 p.resetTaskFilters();p.openTaskFilter('class');p.selectTaskFilter('c2');p.openTaskFilter('subject');p.selectTaskFilter('英语');assert.equal(p.getTaskListFilters().classId,'c2');
 p.setScope({view:'subject',classIds:['c1'],teacherId:'teacher-demo-001',teachingAssignments:[{subject:'数学',classIds:['c1']},{subject:'英语',classIds:['c2']}]});
 p.openTaskFilter('subject');p.selectTaskFilter('数学');assert.equal(p.getTaskListFilters().classId,'all','Incompatible class resets when changing subjects');
@@ -221,6 +222,8 @@ assert.equal(homeworkLearning.addNotebookEntry(book,{studentId:s1,taskId:'t',ite
 assert.equal(homeworkLearning.checkGuideAnswer('24（人）','24 人'),true);
 p=browser();p.prepareConsoleScenario('released');p.openParent('homework-console-v1');p.openParentGrade();
 let gradeHtml=p.renderParent('李涵',0);assert.match(gradeHtml,/hp-result-paper/);assert.match(gradeHtml,/hp-paper-region/);assert.match(gradeHtml,/AI 解题/);
+p.openParentQuestion('console-page-2','console-page-2-q2');p.openCorrection();assert.match(p.renderParent('李涵',0),/提交订正/);p.submitCorrection();assert.match(p.renderParent('李涵',0),/请填写文字、添加图片或录制语音/);p.changeCorrectionText('重新核对第24题的解题过程。');p.submitCorrection();assert.match(p.renderParent('李涵',0),/重新核对第24题的解题过程。/);assert.match(p.renderParent('李涵',0),/再次订正/);
+const corrected=p.inspect().submissions.find(r=>r.taskId==='homework-console-v1'&&r.itemId==='console-page-2'&&r.studentId===roster.GUARDIAN_STUDENT_ID);assert.equal(corrected.questions.find(q=>q.id==='console-page-2-q2').parentCorrections.length,1);assert.ok(p.inspect().submissions.filter(r=>r.studentId!==roster.GUARDIAN_STUDENT_ID).every(r=>r.questions.every(q=>!q.parentCorrections?.length)));
 p.openMistakeReason();assert.match(p.renderParent('李涵',0),/标记错因/);p.chooseMistakeReason('计算失误');p.saveHomeworkMistake();p.saveHomeworkMistake();
 let savedBook=JSON.parse(storage.get(homeworkLearning.NOTEBOOK_KEY));assert.equal(savedBook.length,1);assert.equal(savedBook[0].reason,'计算失误');
 assert.match(p.renderParent('李涵',0),/hp-result-paper/);
@@ -241,9 +244,9 @@ p.prepareConsoleScenario('released');p.openParent('homework-console-v1');p.openP
 
 assert.ok(filterRules.taskStatusKeys({target:30,completed:0,partial:1},[]).includes('unsubmitted'));assert.ok(!filterRules.ALL_TASK_STATUSES.includes('partial'));
 
-p=browser();p.setScope({view:'subject',classIds:['c1'],teacherId:'teacher-demo-001'});p.openTeacher('grading-demo-v1');const photoQuestion=p.inspect().submissions.find(r=>r.taskId==='grading-demo-v1'&&r.questions?.length).questions[0].id;p.openGradeQuestion(photoQuestion);assert.match(p.renderTeacher(),/题目区域的原照片截取/);assert.match(p.renderTeacher(),/查看文字/);p.showQuestionSource('text');assert.match(p.renderTeacher(),/文字由图片提取，仅供核对/);assert.match(p.renderTeacher(),/查看原图/);p.selectDetailClass('c2');p.showQuestionSource('photo');assert.match(p.renderTeacher(),/题目区域的原照片截取/);p.setScope({view:'school',classIds:['c1','c2'],teacherId:'teacher-demo-001'});assert.doesNotMatch(p.renderTeacher(),/题目区域的原照片截取/);
+p=browser();p.setScope({view:'subject',classIds:['c1'],teacherId:'teacher-demo-001'});p.openTeacher('grading-demo-v1');const photoQuestion=p.inspect().submissions.find(r=>r.taskId==='grading-demo-v1'&&r.questions?.length).questions[0].id;p.openGradeQuestion(photoQuestion);assert.match(p.renderTeacher(),/本题照片（含学生作答）/);assert.match(p.renderTeacher(),/放大本题原图/);p.selectDetailClass('c2');p.showQuestionSource('photo');assert.match(p.renderTeacher(),/本题照片（含学生作答）/);p.setScope({view:'school',classIds:['c1','c2'],teacherId:'teacher-demo-001'});assert.doesNotMatch(p.renderTeacher(),/本题照片（含学生作答）/);
 resultProfile={userId:'teacher-demo-001',roles:['teacher'],teachingAssignments:[{subject:'数学',classIds:['c1','c2']},{subject:'英语',classIds:['c2']}]};resultScope={view:'subject',classId:'c1',grade:'all',period:'7d'};page.data.scope=resultScope;page.data.readOnly=false;page.openTask(task.id);page.openGradeQuestion(event('id',nativeQuestion.id));assert.ok(page.data.questionPhoto?.region);page.loadQuestionPhoto({currentTarget:{dataset:{path:page.data.questionPhoto.path}},detail:{width:600,height:760}});assert.ok(page.data.questionPhotoHeight>0);page.toggleQuestionText();assert.equal(page.data.questionTextOpen,true);page.data.scope={...resultScope,view:'school'};page.data.readOnly=true;page.openTask(task.id);page.openGradeQuestion(event('id',nativeQuestion.id));assert.equal(page.data.questionPhoto,null);
-console.log('单题原照片回归通过：按题定位、班级切换、识别文字辅助、原图比例与校级隐私边界。');
+console.log('单题原照片回归通过：按题定位、班级切换、原图放大入口、原图比例与校级隐私边界。');
 
 // Photo-backed samples must keep page paths, coordinates and actual answers aligned.
 const photoPage1=g.realPhotoQuestions('grading-page-1','sample-');
@@ -291,3 +294,7 @@ page.data.studentSearch='不存在';page.refreshDraft();assert.equal(page.data.s
 console.log('跨班指定学生回归通过：班级切换保留、整班选择与清空、搜索不影响已选、分班核对与发布名单快照。');
 
 p.compose();p.fillDemoPaste();p.inspectDraft().items.forEach((item,index)=>p.setItemType(index,'none'));p.nextCompose();if(!p.inspectDraft().classIds.includes('c2'))p.toggleClass('c2');p.setClassRecipientMode('c1','selected');p.toggleStudent(firstChild.id);p.setClassRecipientMode('c2','selected');p.nextCompose();assert.match(p.renderTeacher(),/至少指定一名学生/);p.toggleStudent(secondChild.id);p.closeRecipientPicker();p.nextCompose();p.publish();assert.deepEqual(Array.from(p.inspect().tasks[0].targetSnapshotIds).sort(),[firstChild.id,secondChild.id].sort());
+
+// Grading progress is mutually exclusive; issue details remain on the corresponding content.
+for(const [states,expected] of [[['queued'],'queued'],[['queued','queued'],'queued'],[['queued','confirmed'],'processing'],[['processing','confirmed'],'processing'],[['confirmed'],'graded'],[['failed','review'],'graded']]){const result=filterRules.taskStatusKeys({target:1,completed:1,partial:0},states.map(state=>({state})));assert.deepEqual(Array.from(result).filter(id=>['queued','processing','graded'].includes(id)),[expected]);}
+assert.deepEqual(Array.from(filterRules.ALL_TASK_STATUSES),['unsubmitted','submitted','queued','processing','graded']);

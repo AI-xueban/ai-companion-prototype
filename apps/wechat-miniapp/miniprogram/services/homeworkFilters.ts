@@ -1,13 +1,11 @@
-import { isResultReleased } from './homeworkGrading';
 import type { GradeQuestion } from './homeworkMock';
 
 export const TASK_STATUS_GROUPS = [
   { id: 'submission', label: '提交情况', options: [
     { id: 'unsubmitted', label: '未交齐' }, { id: 'submitted', label: '已交齐' },
   ] },
-  { id: 'grading', label: '处理进度', options: [
-    { id: 'processing', label: '批改中' }, { id: 'failed', label: '批改失败' }, { id: 'review', label: '待教师复核' },
-    { id: 'unreleased', label: '待教师开放' }, { id: 'partialRelease', label: '部分开放' }, { id: 'released', label: '全部开放' },
+  { id: 'grading', label: '批改进度', options: [
+    { id: 'queued', label: '等待批改' }, { id: 'processing', label: '批改中' }, { id: 'graded', label: '批改完成' },
   ] },
 ];
 export const ALL_TASK_STATUSES = TASK_STATUS_GROUPS.flatMap(group => group.options.map(option => option.id));
@@ -24,11 +22,9 @@ export function matchesTaskStatuses(selected: string[], states: string[]): boole
 export function taskStatusKeys(summary: { target: number; completed: number; partial: number }, questions: GradeQuestion[]): string[] {
   const states: string[] = [];
   if (summary.target > 0) states.push(summary.completed === summary.target ? 'submitted' : 'unsubmitted');
-  if (questions.some(q => q.state === 'queued' || q.state === 'processing')) states.push('processing');
-  if (questions.some(q => q.state === 'failed')) states.push('failed');
-  if (questions.some(q => q.state === 'review')) states.push('review');
-  if (questions.some(q => q.state === 'confirmed' && !isResultReleased(q))) states.push('unreleased');
-  const released = questions.filter(isResultReleased).length;
-  if (released) states.push(released === questions.length ? 'released' : 'partialRelease');
+  if (questions.length) {
+    const pending = questions.filter(q => q.state === 'queued' || q.state === 'processing');
+    states.push(pending.length === questions.length && pending.every(q => q.state === 'queued') ? 'queued' : pending.length ? 'processing' : 'graded');
+  }
   return states;
 }

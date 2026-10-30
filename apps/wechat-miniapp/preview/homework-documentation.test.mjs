@@ -32,6 +32,22 @@ for(const name of ['draft-list','draft-save-error','publish-network','publish-su
   if(name==='photo-network'){assert.match(rendered,/网络连接中断/);assert.match(rendered,/待提交 · 2 张/);}
 }
 assert.equal(client.prepareDocumentationScene('not-a-scene'),false);
+context.stage='teacherDesk';context.window.demoWorkspace={enabled:true};context.window.addEventListener=()=>{};
+vm.runInNewContext(readFileSync(new URL('./page-demo-tools.js',import.meta.url),'utf8'),context);
+for(const scene of ['stats-overview','student-first']){
+  client.prepareDocumentationScene(scene);
+  const baseline=client.renderTeacher();
+  for(const [id,copy] of [['normal','批改预计还需3—5分钟完成'],['peak','批改预计还需10—15分钟完成'],['unknown','正在排队批改，完成时间暂无法估算']]){
+    assert.ok(client.getPageDemoContext('teacher').choices.some(c=>c[0]==='grading-wait-'+id));
+    assert.ok(context.window.pageDemoTools.getContext().choices.some(c=>c.id==='grading-wait-'+id),'Visible state tool must retain the wait choice');
+    client.applyPageDemo('grading-wait-'+id,'teacher');
+    assert.ok(client.renderTeacher().includes(copy),scene+': '+copy);
+    assert.equal(realStorageCalls,0,'Wait estimates are isolated demonstrations, not real service writes');
+  }
+  client.restorePageDemo('teacher');
+  assert.equal(client.renderTeacher(),baseline,'Restoring wait demo must recover original results and versions');
+}
+client.prepareDocumentationScene('file-conflict-resolved');client.openTeacher('homework-console-v1');client.openQuestionResults();assert.equal(client.getTeacherMode(),'questions','The wait-row correction entry also opens an automatic file item without fabricating results');
 const normal={...context,location:{search:'?review=1',protocol:'http:'},window:{...context.window},localStorage:{getItem:()=>null,setItem(){},removeItem(){}}};
 vm.runInNewContext(source,normal);assert.equal(normal.window.homeworkPrototype.prepareDocumentationScene('publish-success'),false,'The fixture API is disabled outside the explicitly selected documentation session');
 console.log('PASS documentation session: no real storage reads/writes/removal, existing controller failures, publish/recovery, read-only permissions, pending-media preservation and normal-mode guard.');

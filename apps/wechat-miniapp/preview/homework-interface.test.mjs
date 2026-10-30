@@ -50,11 +50,11 @@ assert.doesNotMatch(p.renderTeacher(),/第 21 题 · 线段图/,'Question result
 p.openTeacher('grading-demo-v1');
 const child=roster.GUARDIAN_STUDENT_ID;const record=p.inspect().submissions.find(r=>r.taskId==='grading-demo-v1'&&r.studentId===child&&r.questions.some(q=>q.state==='confirmed'));assert.ok(record);
 const q=record.questions.find(q=>q.state==='confirmed');const original=q.correct;
-p.openGradeQuestion(q.id);assert.match(p.renderTeacher(),/hp-inline-verdict/);
+p.openGradeQuestion(q.id);assert.doesNotMatch(p.renderTeacher(),/hp-inline-verdict/);assert.match(p.renderTeacher(),/查看本题作答/);p.openQuestionAnswer(child);p.reviewCurrentAnswer();assert.match(p.renderTeacher(),/aria-label="核对判定"/);p.closeGradeReview();p.backToQuestionList();
 p.chooseInlineGrade('grading-demo-v1',q.id,child,original?'wrong':'right');
 assert.equal(q.correct,original,'Selecting a verdict does not save it');
 assert.doesNotMatch(p.renderTeacher(),/role="dialog"/);
-assert.match(p.renderTeacher(),/待保存/);
+assert.equal(q.correct,original,'Legacy review compatibility still requires an explicit save');
 p.closeGradeReview();assert.equal(q.correct,original);
 p.chooseInlineGrade('grading-demo-v1',q.id,child,original?'wrong':'right');p.saveInlineGrade();
 assert.equal(q.correct,!original);assert.equal(q.decisionSource,'teacher');
@@ -64,7 +64,7 @@ p.chooseInlineGrade('grading-demo-v1',q.id,child,original?'right':'wrong');p.sav
 assert.equal(q.correct,original);
 p.review('grading-demo-v1',q.id,undefined,child);assert.match(p.renderTeacher(),/当前复核学生的题目原图|当前复核学生的作业原图/);
 p.setGradeReviewDecision(!original);p.confirmGradeReview();assert.equal(q.correct,!original);assert.equal(q.decisionSource,'teacher');
-p.openParent('grading-demo-v1');p.openParentGrade();assert.match(p.renderParent('林小满'),/判定已更新，解析暂未更新/,'Changed verdict must hide the stale explanation');assert.doesNotMatch(p.renderParent('林小满'),/class="hp-result-answer"|待教师开放|确认有效并开放/);
+p.openParent('grading-demo-v1');p.openParentGrade();assert.match(p.renderParent('林小满'),/教师已改判，当前暂无匹配解析/,'Changed verdict must hide the stale explanation');assert.doesNotMatch(p.renderParent('林小满'),/class="hp-result-answer"|待教师开放|确认有效并开放/);
 p.openTeacher('grading-demo-v1');p.review('grading-demo-v1',q.id,undefined,child);p.holdGradeReview();assert.equal(q.state,'review');assert.equal(g.isResultReleased(q),false);
 p=browser();p.openTeacher('grading-demo-v1');assert.ok(p.inspect().submissions.some(r=>r.questions.some(v=>v.id===q.id&&v.reviewReason==='manual-hold')));
 // Stale dialogs and read-only roles must not mutate results.
@@ -97,7 +97,7 @@ p.saveBatch();assert.ok(batchRows.every(r=>r.questions[0].correct&&r.questions[0
 const childRow=demoRows.find(r=>r.studentId===child&&r.itemId===demo.items[0].id),childQuestion=childRow.questions[0];
 assert.equal(childQuestion.explanationInvalidated,true);assert.equal(childQuestion.parentFeedback.status,'resolved');
 p.openParent(demo.id);p.openParentGrade();
-let parentHTML=p.renderParent('李涵');assert.match(parentHTML,/判定已更新，解析暂未更新/);assert.doesNotMatch(parentHTML,/onclick="homeworkPrototype.openHomeworkTutor/);
+let parentHTML=p.renderParent('李涵');assert.match(parentHTML,/教师已改判，当前暂无匹配解析/);assert.doesNotMatch(parentHTML,/onclick="homeworkPrototype.openHomeworkTutor/);
 p.openHomeworkTutor();assert.doesNotMatch(p.renderParent('李涵'),/hp-homework-tutor/);
 p.reportGradeIssue();assert.equal(childQuestion.parentFeedback.status,'pending');assert.equal(childQuestion.correct,true);
 assert.doesNotMatch(p.renderParent('李涵'),/教师参考资料|查看原资料|参考资料标题/);

@@ -1,7 +1,36 @@
-import { isResultReleased, parentGradeLabel, canUseAIExplanation } from './homeworkGrading';
+import { isResultReleased, parentGradeLabel, canUseAIExplanation, submissionImagePages, submissionImageFailure } from './homeworkGrading';
+import type { SubmissionImagePage, SubmissionGradingImages } from './homeworkGrading';
 import type { GradeQuestion } from './homeworkMock';
 
 export interface QuestionRegion { x: number; y: number; width: number; height: number }
+export interface SubmissionEffectMark { id:string; label:string; tone:string; mark:string; style:string; ai:boolean }
+export interface SubmissionEffectPage extends SubmissionImagePage { allMarks:SubmissionEffectMark[]; marks:SubmissionEffectMark[]; aiMarked:boolean; hasEffect:boolean; previewStyle?:string }
+/** Share the same actual image and located results between cards and full-screen previews. */
+export function submissionEffectPages(record:{version?:number;gradingResult?:SubmissionGradingImages;questions:GradeQuestion[];isMock?:boolean;mock?:boolean}|null|undefined,originals:string[],original=false,parent=true):SubmissionEffectPage[]{
+  const questions=record?.questions||[],mock=Boolean(record?.isMock||record?.mock);
+  const located=questions.flatMap((q,index)=>{
+    if(parent?!isResultReleased(q):!['confirmed','review','unreadable','no-answer'].includes(q.state))return [];
+    const region=questionRegion(q,index,mock);if(!region)return [];
+    const mark=questionMark(q,parent);
+    return [{page:q.pageIndex||0,id:q.id,label:q.label,tone:mark.tone,mark:mark.mark,ai:q.aiCorrect!==undefined||q.decisionSource==='ai'||mock&&!q.decisionSource,style:'left:'+region.x*100+'%;top:'+region.y*100+'%;width:'+region.width*100+'%;height:'+region.height*100+'%;'}];
+  });
+  return submissionImagePages(record,originals,original).map(page=>{
+    const allMarks=located.filter(mark=>mark.page===page.page),hasEffect=Boolean(page.gradedPath||allMarks.length);
+    return setSubmissionEffectView({...page,allMarks,marks:[],hasEffect,aiMarked:allMarks.some(mark=>mark.ai)},original);
+  });
+}
+export function setSubmissionEffectView<T extends SubmissionEffectPage>(page:T,original:boolean):T {
+  const showOriginal=original||!page.hasEffect;
+  return {...page,showOriginal,path:showOriginal?page.originalPath:page.gradedPath||page.originalPath,marks:showOriginal||page.gradedPath?[]:page.allMarks,imageError:''};
+}
+export function submissionEffectFailure<T extends SubmissionEffectPage>(page:T):T & {imageError:string} {
+  return {...submissionImageFailure(page),marks:[]};
+}
+export function submissionPreviewStyle(width:number,height:number,viewportWidth:number,viewportHeight:number):string {
+  if(![width,height,viewportWidth,viewportHeight].every(v=>Number.isFinite(v)&&v>0))return '';
+  const scale=Math.min(viewportWidth/width,viewportHeight/height),w=width*scale,h=height*scale;
+  return 'width:'+w+'px;height:'+h+'px;left:'+(viewportWidth-w)/2+'px;top:'+(viewportHeight-h)/2+'px;';
+}
 export const NOTEBOOK_KEY = 'demo_homework_notebook_v1';
 export const MISTAKE_REASONS = ['知识点不熟', '思路不清', '计算失误', '审题疏漏', '其他'];
 export const CUSTOM_MISTAKE_REASON_LIMIT = 10;
@@ -20,8 +49,8 @@ export function questionRegion(question: GradeQuestion, index: number, mock = fa
 }
 export function questionMark(question: GradeQuestion, parent = true) {
   if (question.state === 'confirmed' && (!parent || isResultReleased(question))) return { mark: question.correct ? '✓' : '×', tone: question.correct ? 'correct' : 'wrong', label: question.correct ? '答对' : '答错' };
-  const labels: Record<string, string> = { review: '待复核', unreadable: '识别存疑', 'no-answer': '答案存疑', failed: '批改失败', queued: '等待批改', processing: '正在批改', confirmed: '待教师开放' };
-  return { mark: ['queued', 'processing'].includes(question.state) ? '…' : question.state === 'confirmed' ? '待开放' : '?', tone: 'pending', label: labels[question.state] || parentGradeLabel(question) };
+  const labels: Record<string, string> = { review: '待复核', unreadable: '识别存疑', 'no-answer': '答案存疑', failed: '批改失败', queued: '等待批改', processing: '正在批改', confirmed: '结果已同步' };
+  return { mark: ['queued', 'processing'].includes(question.state) ? '…' : question.state === 'confirmed' ? '待核对' : '?', tone: 'pending', label: labels[question.state] || parentGradeLabel(question) };
 }
 export function notebookKey(studentId: string, taskId: string, itemId: string, questionId: string) { return JSON.stringify([studentId, taskId, itemId, questionId]); }
 export function addNotebookEntry(entries: NotebookEntry[], source: { studentId: string; taskId: string; itemId: string; version: number; imagePath?: string; taskTitle?: string }, question: GradeQuestion, reason: string): NotebookEntry[] {
