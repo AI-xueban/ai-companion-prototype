@@ -1355,6 +1355,59 @@ body.req-annotate-on .req-active-target {
 
 .batch-import-template-btn { width: 100%; }
 
+/* 人脸照片批量导入 */
+.modal.modal-xl:has(.face-import-modal) {
+  max-width: min(1500px, calc(100vw - 32px));
+}
+.modal:has(.face-import-modal) .modal-header,
+.modal:has(.face-import-modal) .modal-footer { border: 0; }
+.modal:has(.face-import-modal) .modal-body { padding: 8px 18px 0; }
+.face-import-modal {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(320px, 1.05fr);
+  gap: 20px;
+  min-height: 460px;
+}
+.face-import-modal .face-import-main { min-width: 0; }
+.face-import-modal .face-import-list { margin-top: 0; }
+.face-import-modal .data-table th { background: #fff; font-weight: 600; color: var(--text-secondary); }
+.face-import-modal .data-table td { vertical-align: middle; }
+.face-import-upload { min-width: 0; }
+.face-import-context { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.face-import-school, .face-import-class { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.face-import-school > span, .face-import-class > span { color: var(--text-secondary); }
+.face-import-school strong { line-height: 40px; overflow-wrap: anywhere; }
+.face-import-class em { color: var(--danger); font-style: normal; }
+.face-import-class .select { width: 100%; }
+.face-import-upload-card { padding: 20px; border-radius: 10px; background: #f5f7fa; }
+.face-import-upload-zone { position: relative; }
+.face-import-dropzone {
+  min-height: 184px;
+  padding: 88px 20px 20px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-secondary);
+}
+.face-import-demo-btn { position: absolute; top: 38px; left: 50%; transform: translateX(-50%); border-color: #91caff; color: var(--primary); white-space: nowrap; }
+.face-import-upload-link { color: var(--primary); }
+.face-import-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.face-import-actions .btn { width: 100%; white-space: nowrap; text-align: center; }
+.face-record-progress { min-width: 150px; }
+.face-record-progress__track { height: 6px; border-radius: 999px; background: #e5e7eb; overflow: hidden; }
+.face-record-progress__fill { display: block; height: 100%; border-radius: inherit; background: var(--primary); }
+.face-record-progress__count { display: block; margin-top: 5px; color: var(--text-secondary); font-size: 12px; }
+.face-sync-records .btn-link:disabled { color: var(--text-secondary); opacity: .55; cursor: not-allowed; }
+@media (max-width: 900px) {
+  .face-import-modal { grid-template-columns: 1fr; min-height: 0; }
+  .face-import-upload { grid-row: 1; }
+  .face-import-context { margin-bottom: 12px; }
+  .face-import-modal .face-import-main { min-height: 220px; }
+}
+
 .import-result-fail { color: var(--danger); }
 
 .import-action-success { color: var(--text-secondary); }
