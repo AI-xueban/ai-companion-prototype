@@ -86,3 +86,12 @@ assert.equal(borrowingResult(setTemporaryBorrowing(initialBorrowingState(),['c1'
 assert.equal(borrowingResult({...initialBorrowingState(),studentBans:{[student.id]:true}},student,friday),'班主任已禁止借用');
 assert.equal(borrowingResult(saveClassBorrowingRule(initialBorrowingState(),['c1'],weekly),student,new Date('2026-10-23T11:00:00+08:00')),'当前不在借用时段');
 console.log('PASS default allow, date lifecycle, weekly gaps and ban precedence');
+
+// Grade-level editing must also reach classes that did not share the original rule.
+const gradeBefore = { ...initialBorrowingState(), classRules: { c1: [weekly], c2: [], outside: [dates] } };
+const gradeRule = { ...weekly, periods: [{ start: '09:00', end: '12:00' }] };
+const gradeAfter = saveGroupedBorrowingRule(gradeBefore, [{ classId: 'c1', ruleId: weekly.id }], gradeRule, ['c1', 'c2']);
+assert.deepEqual(gradeAfter.classRules.c1[0].periods, gradeRule.periods);
+assert.deepEqual(gradeAfter.classRules.c2[0].periods, gradeRule.periods, '编辑年级规则必须覆盖原先未设置该规则的班级');
+assert.deepEqual(gradeAfter.classRules.outside, gradeBefore.classRules.outside, '其他年级不受影响');
+console.log('PASS grade-wide rule editing includes previously unconfigured classes');

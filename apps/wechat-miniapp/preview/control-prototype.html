@@ -762,12 +762,12 @@ app.innerHTML='<main class="screen control-screen">'+top+'<section class="contro
       renderControlWithEditing();
       if(controlDemoRole==='admin'||!['borrowing','duration'].includes(controlModule)||controlView==='entry')return;
       if(controlModule==='duration'&&isHeadTeacherClass()&&durationAdjustmentAllowed())return;
-      const notice=document.createElement('p');notice.className='control-hint';notice.textContent=controlModule==='borrowing'?'借用安排由学校统一管理，仅可查看。':'学校未开放班主任调整权限，当前使用时长规则继续执行。';
+      const notice=document.createElement('p');notice.className='control-hint';notice.textContent=controlModule==='borrowing'?'借用安排由学校统一管理，仅可查看。':'仅班主任可调整本班学生的使用时长。';
       const content=document.querySelector('.control-content');if(content)content.prepend(notice);
       document.querySelectorAll('button[onclick]').forEach(button=>{const action=button.getAttribute('onclick')||'';if(/openControlEditor|openBorrowEditor|openDurationEditor|openModuleScope|openControlStudents|toggleControlBatch/.test(action)){button.disabled=true;button.textContent='仅可查看';}});
     };
-    function durationAdjustmentAllowed(){try{return JSON.parse(localStorage.getItem('ai-companion-device-controls-v2')||'null')?.durationTeacherCanEdit===true}catch{return false}}
-    function allowSchoolControlEdit(module){if(controlDemoRole==='admin')return true;if(module==='borrowing'){controlToast('借用规则由学校管理员统一管理，仅可查看');return false}if(module==='duration'&&(!isHeadTeacherClass()||!durationAdjustmentAllowed())){controlToast('学校未开放班主任调整权限，当前规则继续生效');return false}return true}
+    function durationAdjustmentAllowed(){return true}
+    function allowSchoolControlEdit(module){if(controlDemoRole==='admin')return true;if(module==='borrowing'){controlToast('借用规则由学校管理员统一管理，仅可查看');return false}if(module==='duration'&&(!isHeadTeacherClass()||!durationAdjustmentAllowed())){controlToast('仅班主任可调整本班学生的使用时长');return false}return true}
     document.querySelectorAll('[data-stage]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.stage)));document.querySelectorAll('[data-teacher-flow]').forEach(b=>b.addEventListener('click',()=>startTeacherFlow(b.dataset.teacherFlow)));restoreDemoTeacherOnLaunch();({home,auth,code,confirm,pending,approved,teacherLaunch,teacherLogin,teacherPhone:teacherPhoneLogin,teacherBind,teacherDesk,teacherSecurity}[stage]||home)();
   </script>
 </body>

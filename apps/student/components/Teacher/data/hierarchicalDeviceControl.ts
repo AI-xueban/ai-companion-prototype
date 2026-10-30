@@ -2,7 +2,7 @@ import { schoolDeviceClasses } from './schoolDeviceClasses';
 
 export type ControlModule = 'borrowing' | 'duration' | 'homework' | 'world' | 'lock';
 export type DeviceStudent = { id: string; number: string; name: string; classId: string; grade: number };
-export type BorrowSchedule = { id: string; mode: 'weekly' | 'dates'; weekdays: number[]; startDate: string; endDate: string; deny: boolean; periods: { start: string; end: string }[] };
+export type BorrowSchedule = { id: string; mode: 'weekly' | 'dates'; weekdays: number[]; startDate: string; endDate: string; deny: boolean; periods: { start: string; end: string }[]; weekdayPeriods?: Record<number, { start: string; end: string }[]> };
 export type DurationRule = { source?: 'school' | 'homeroom'; id: string; weekdays: number[]; useDefault: boolean; continuousMinutes: number; restMinutes: number; dailyMinutes: number; periods: { start: string; end: string }[] };
 export const defaultDurationRule: Omit<DurationRule, 'id' | 'weekdays' | 'useDefault'> = { continuousMinutes: 60, restMinutes: 15, dailyMinutes: 180, periods: [] };
 export const newDurationRule = (): DurationRule => ({ id: `duration-${Date.now()}`, weekdays: [0, 1, 2, 3, 4, 5, 6], useDefault: true, ...defaultDurationRule, periods: [] });
@@ -35,7 +35,14 @@ export const weekdayRangeText = (weekdays: number[]) => {
   return parts.join('、');
 };
 export const scheduleDateText = (s: BorrowSchedule) => s.mode === 'weekly' ? weekdayRangeText(s.weekdays) : `${s.startDate} 至 ${s.endDate}`;
-export const schedulePeriodText = (s: BorrowSchedule) => s.deny ? '全天禁止借用' : s.periods.map(p => `${p.start}–${p.end}`).join('、');
+export const borrowingPeriodsForDay = (s: BorrowSchedule, day: number) => s.weekdayPeriods ? s.weekdayPeriods[day] ?? [] : s.weekdays.includes(day) ? s.periods : [];
+export const schedulePeriodText = (s: BorrowSchedule) => {
+  if (s.deny) return '全天禁止借用';
+  if (s.mode !== 'weekly' || !s.weekdayPeriods) return s.periods.map(p => `${p.start}–${p.end}`).join('、');
+  const groups = new Map<string, number[]>();
+  s.weekdays.forEach(day => { const text = borrowingPeriodsForDay(s, day).map(p => `${p.start}–${p.end}`).join('、'); groups.set(text, [...(groups.get(text) ?? []), day]); });
+  return [...groups].map(([text, days]) => `${weekdayRangeText(days)} ${text}`).join('；');
+};
 // 生命周期按包含起止日期的有效期判断，借用时段只决定当前能否借出。
 export const schoolDate = (now = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
 export const borrowScheduleStatus = (s: BorrowSchedule, now = new Date()): '待生效' | '生效中' | '已失效' => {
@@ -44,14 +51,24 @@ export const borrowScheduleStatus = (s: BorrowSchedule, now = new Date()): '待�
   if (date > s.endDate) return '已失效';
   return '生效中';
 };
-export const validateSchedule = (s: BorrowSchedule, now = new Date(), preservedStartDate?: string): string => {
+export const validateSchedule = (s: BorrowSchedule, now = new Date(), preservedStartDate?: string, allowPastDates = false): string => {
   if (s.mode === 'weekly' && !s.weekdays.length) return '请至少选择一个星期';
   if (s.mode === 'dates' && (!s.startDate || !s.endDate)) return '请选择开始和结束日期';
   if (s.mode === 'dates' && s.startDate > s.endDate) return '结束日期不能早于开始日期';
   const today = schoolDate(now);
-  if (s.mode === 'dates' && s.startDate < today && s.startDate !== preservedStartDate) return '生效日期只能选择当天及之后';
-  if (s.mode === 'dates' && s.endDate < today) return '结束日期不能早于今天';
+  if (s.mode === 'dates' && !allowPastDates && s.startDate < today && s.startDate !== preservedStartDate) return '生效日期只能选择当天及之后';
+  if (s.mode === 'dates' && !allowPastDates && s.endDate < today) return '结束日期不能早于今天';
   if (s.mode === 'dates' && s.deny) return '';
+  if (s.mode === 'weekly' && s.weekdayPeriods) {
+    for (const day of s.weekdays) {
+      const periods = borrowingPeriodsForDay(s, day);
+      if (!periods.length || periods.some(p => !p.start || !p.end)) return `${weekdayNames[day]}：请填写完整的借用时段`;
+      if (periods.some(p => p.start >= p.end)) return `${weekdayNames[day]}：结束时间须晚于开始时间，暂不支持跨日`;
+      const sorted = [...periods].sort((a, b) => a.start.localeCompare(b.start));
+      if (sorted.some((p, i) => i > 0 && p.start < sorted[i - 1].end)) return `${weekdayNames[day]}：借用时段不能重叠`;
+    }
+    return '';
+  }
   if (!s.periods.length || s.periods.some(p => !p.start || !p.end)) return '请填写完整的借用时段';
   if (s.periods.some(p => p.start >= p.end)) return '结束时间须晚于开始时间，暂不支持跨日';
   const sorted = [...s.periods].sort((a, b) => a.start.localeCompare(b.start));

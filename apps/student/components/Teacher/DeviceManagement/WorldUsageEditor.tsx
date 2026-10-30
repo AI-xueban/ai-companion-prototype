@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { X } from "lucide-react";
 import { DeviceControlLayer } from "./DeviceControlLayer";
 import { ControlValidationNotice } from "./ControlValidationNotice";
 
@@ -20,10 +21,10 @@ export const WorldUsageEditor: React.FC<{
   const eligibleAllowed = allowed - (scope === "unmodified" ? teacherAllowed : 0);
   const changed = value === null ? 0 : value ? eligible - eligibleAllowed : eligibleAllowed;
   const state = value ? "允许使用" : "禁止使用";
-  return <DeviceControlLayer variant="drawer" labelId="world-usage-title" onClose={onClose} unsavedChanges={value !== null || scope !== null}>
-    {(_close, closeAfterSave) => <>
+  return <DeviceControlLayer labelId="world-usage-title" onClose={onClose} unsavedChanges={value !== null || scope !== null}>
+    {(close, closeAfterSave) => <>
+      <header className="flex items-center justify-between"><h2 id="world-usage-title" className="text-xl font-bold text-slate-900">设置这 {total} 名学生的万象视界使用状态</h2><button type="button" aria-label="关闭设置" onClick={close}><X size={20} /></button></header>
       <div className="dc-panel-body">
-        <h2 id="world-usage-title" className="text-xl font-bold text-slate-900">设置这 {total} 名学生的万象视界使用状态</h2>
         <p className="mt-3 text-sm text-slate-600">设置范围：{label}</p>
         <p className="mt-2 text-sm text-slate-500">当前允许使用 {allowed} 人，禁止使用 {total - allowed} 人</p>
         {!!selectedObjects?.length && <ul aria-label="本次设置对象列表" className="mt-3 flex flex-wrap gap-2 text-sm">{selectedObjects.map((name) => <li key={name} className="rounded bg-slate-50 px-2 py-1">{name}</li>)}</ul>}

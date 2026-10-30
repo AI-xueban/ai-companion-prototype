@@ -1,0 +1,76 @@
+import assert from 'node:assert/strict';
+import { build } from 'esbuild';
+const load = async path => {
+  const result = await build({ entryPoints: [path], bundle: true, write: false, format: 'esm', platform: 'node' });
+  return import(`data:text/javascript;base64,${Buffer.from(result.outputFiles[0].text).toString('base64')}`);
+};
+const { saveGradeBorrowingRule, gradeBorrowingDateConflict, initialBorrowingState, borrowingResult } = await load('components/Teacher/data/borrowingControl.ts');
+const { validateSchedule, schedulePeriodText } = await load('components/Teacher/data/hierarchicalDeviceControl.ts');
+const student = { id: 'a', classId: 'c1' };
+const weekly = { id: 'weekly', mode: 'weekly', weekdays: [0, 1], startDate: '', endDate: '', deny: false, periods: [], weekdayPeriods: { 0: [{ start: '08:00', end: '09:00' }], 1: [{ start: '14:00', end: '15:00' }] } };
+let state = saveGradeBorrowingRule(initialBorrowingState(), ['c1', 'c2'], weekly);
+assert.equal(borrowingResult(state, student, new Date('2026-10-26T08:30:00+08:00')), '当前可借用');
+assert.equal(borrowingResult(state, student, new Date('2026-10-27T08:30:00+08:00')), '当前不在借用时段');
+assert.equal(borrowingResult(state, student, new Date('2026-10-27T14:30:00+08:00')), '当前可借用');
+assert.equal(borrowingResult(state, student, new Date('2026-10-28T14:30:00+08:00')), '当前不在借用时段');
+assert.match(schedulePeriodText(weekly), /周一 08:00–09:00；周二 14:00–15:00/);
+assert.throws(() => saveGradeBorrowingRule(state, ['c1', 'new-grade'], weekly), /已有每周固定规则/);
+assert.equal(state.classRules['new-grade'], undefined);
+state = saveGradeBorrowingRule(state, ['c1'], { ...weekly, id: 'replacement', weekdays: [4], weekdayPeriods: { 4: [{ start: '10:00', end: '11:00' }] } }, [{ classId: 'c1', ruleId: weekly.id }]);
+assert.equal(state.classRules.c1.filter(rule => rule.mode === 'weekly').length, 1);
+assert.deepEqual(state.classRules.c1[0].weekdays, [4]);
+assert.deepEqual(state.classRules.c2[0], weekly);
+const date = { ...weekly, id: 'ban-1', mode: 'dates', startDate: '2026-11-01', endDate: '2026-11-03' };
+state = saveGradeBorrowingRule(state, ['c1'], date);
+assert.equal(state.classRules.c1.find(rule => rule.id === date.id).deny, true);
+assert.deepEqual(state.classRules.c1.find(rule => rule.id === date.id).periods, []);
+const conflict = { ...date, id: 'ban-2', startDate: '2026-11-03', endDate: '2026-11-05' };
+const before = JSON.stringify(state);
+assert.equal(gradeBorrowingDateConflict(state, ['c2', 'c1'], conflict), true);
+assert.throws(() => saveGradeBorrowingRule(state, ['c2', 'c1'], conflict), /所选日期已有规则，请重新选择/);
+assert.equal(JSON.stringify(state), before);
+assert.equal(gradeBorrowingDateConflict(state, ['c1'], date, [{ classId: 'c1', ruleId: date.id }]), false);
+state = saveGradeBorrowingRule(state, ['c1'], { ...conflict, startDate: '2026-11-04' });
+assert.equal(state.classRules.c1.filter(rule => rule.mode === 'dates').length, 2);
+assert.equal(validateSchedule(weekly), '');
+assert.match(validateSchedule({ ...weekly, weekdayPeriods: { ...weekly.weekdayPeriods, 1: [{ start: '15:00', end: '14:00' }] } }), /星期二.*结束时间/);
+assert.match(validateSchedule({ ...weekly, weekdayPeriods: { ...weekly.weekdayPeriods, 1: [{ start: '14:00', end: '15:00' }, { start: '14:30', end: '16:00' }] } }), /星期二.*重叠/);
+console.log('PASS daily periods, single weekly policy, date-only bans, inclusive conflicts, edit self-exclusion, atomic batch rejection and validation');
+
+const { borrowingWeekGroups, applyBorrowingWeekGroups } = await load('components/Teacher/data/borrowingWeeklyGroups.ts');
+const sharedDays = [{ days: [0, 1, 2, 3, 4], periods: [{ start: '08:00', end: '09:00' }, { start: '14:00', end: '15:00' }] }, { days: [5], periods: [{ start: '10:00', end: '11:00' }] }];
+const groupedRule = applyBorrowingWeekGroups(weekly, sharedDays);
+assert.equal(validateSchedule(groupedRule), '');
+assert.deepEqual(borrowingWeekGroups(groupedRule), sharedDays);
+assert.notEqual(groupedRule.weekdayPeriods[0], groupedRule.weekdayPeriods[1]);
+const dailyGroups = [0, 1, 2, 3, 4, 5, 6].map(day => ({ days: [day], periods: [{ start: `${day + 10}:00`, end: `${day + 11}:00` }] }));
+assert.deepEqual(borrowingWeekGroups(applyBorrowingWeekGroups(weekly, dailyGroups)), dailyGroups);
+const legacyRule = { ...weekly, weekdays: [0, 1, 2], weekdayPeriods: undefined, periods: [{ start: '08:00', end: '09:00' }] };
+assert.deepEqual(borrowingWeekGroups(legacyRule), [{ days: [0, 1, 2], periods: legacyRule.periods }]);
+const afterDelete = { ...state, classRules: { ...state.classRules, c1: state.classRules.c1.filter(rule => rule.mode !== 'weekly') } };
+assert.equal(saveGradeBorrowingRule(afterDelete, ['c1'], weekly).classRules.c1.filter(rule => rule.mode === 'weekly').length, 1);
+console.log('PASS reject duplicate weekly creation; allow edit/recreate after delete; shared-day groups and individual-day round trips');
+
+// Saved date arrangements remain editable; the date range still limits execution.
+const historicalDate = { ...date, deny: true, periods: [], startDate: '2025-01-01', endDate: '2025-01-03' };
+assert.equal(validateSchedule(historicalDate, new Date('2026-10-29T12:00:00+08:00'), undefined, true), '');
+assert.notEqual(validateSchedule(historicalDate, new Date('2026-10-29T12:00:00+08:00')), '');
+assert.match(validateSchedule({ ...historicalDate, endDate: '2024-12-31' }, new Date(), undefined, true), /结束日期不能早于开始日期/);
+const dateOnlyState = saveGradeBorrowingRule(initialBorrowingState(), ['c1'], { ...date, startDate: '2026-11-01', endDate: '2026-11-03' });
+assert.equal(borrowingResult(dateOnlyState, student, new Date('2026-10-29T12:00:00+08:00')), '当前可借用');
+assert.equal(borrowingResult(dateOnlyState, student, new Date('2026-11-02T12:00:00+08:00')), '指定日期禁止借用');
+assert.equal(borrowingResult(dateOnlyState, student, new Date('2026-11-04T12:00:00+08:00')), '当前可借用');
+console.log('PASS date edits independent of lifecycle; date-only bans apply within the inclusive range');
+
+// The settings entry may replace an existing weekly rule only after confirmation.
+const confirmedBefore = JSON.stringify(state);
+const changedWeekly = { ...weekly, id: 'confirmed-week', weekdayPeriods: { 0: [{ start: '12:00', end: '13:00' }], 1: [{ start: '14:00', end: '16:00' }] } };
+const confirmedChange = saveGradeBorrowingRule(state, ['c1', 'new-grade'], changedWeekly, [], true);
+assert.equal(JSON.stringify(state), confirmedBefore);
+assert.equal(confirmedChange.classRules.c1.filter(rule => rule.mode === 'weekly').length, 1);
+assert.equal(confirmedChange.classRules.c1.find(rule => rule.mode === 'weekly').id, 'confirmed-week');
+assert.equal(confirmedChange.classRules['new-grade'][0].id, 'confirmed-week');
+assert.deepEqual(confirmedChange.classRules.c2, state.classRules.c2);
+assert.deepEqual(confirmedChange.classRules.c1.filter(rule => rule.mode === 'dates'), state.classRules.c1.filter(rule => rule.mode === 'dates'));
+assert.throws(() => saveGradeBorrowingRule(state, ['c1'], { ...date, id: 'date-overlap', startDate: '2026-11-02', endDate: '2026-11-03' }, [], true), /所选日期已有规则/);
+console.log('PASS confirmed weekly replacement, mixed new/existing grades, untouched other grades and strict date conflicts');

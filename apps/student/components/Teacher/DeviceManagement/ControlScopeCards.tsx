@@ -1,27 +1,30 @@
 import React from 'react';
-import { ChevronRight } from 'lucide-react';
 import { ControlModule, durationRuleText, StudentControl, weekdayRangeText } from '../data/hierarchicalDeviceControl';
-import { groupDurationRules } from '../data/durationRuleGroups';
+import { SchoolDurationPolicies, schoolDurationGroups } from '../data/schoolDurationPolicies';
 import './SchoolBorrowingControl.css';
 
 type Row = { id: string; label: string; ids: string[]; grade?: number; classId?: string };
 export const ControlScopeCards: React.FC<{
+  durationPolicies: SchoolDurationPolicies;
   module: ControlModule; rows: Row[]; rowType: string; controls: Record<string, StudentControl>;
   batch: boolean; selected: string[]; onBatch: () => void; onSelect: (ids: string[]) => void;
-  onNavigate: (row: Row) => void; onSettings: (row: Row) => void;
+  onSettings: (row: Row) => void;
   onBatchSettings: () => void; lockState: (ids: string[]) => string; lockAction: (ids: string[]) => string;
   recentOperation: (ids: string[]) => { title: string; operator: string; at: string } | undefined;
   emptyTitle?: string; emptyDescription?: string;
-}> = ({ module, rows, rowType, controls, batch, selected, onBatch, onSelect, onNavigate, onSettings, onBatchSettings, lockState, lockAction, recentOperation, emptyTitle, emptyDescription }) => {
+}> = ({ durationPolicies, module, rows, rowType, controls, batch: requestedBatch, selected, onBatch, onSelect, onSettings, onBatchSettings, lockState, lockAction, recentOperation, emptyTitle, emptyDescription }) => {
+  const batch = requestedBatch && module !== 'lock';
   const toggle = (id: string) => onSelect(selected.includes(id) ? selected.filter(value => value !== id) : [...selected, id]);
   const selectableRows = rows.filter(row => row.ids.length > 0);
   const selectedRows = selectableRows.filter(row => selected.includes(row.id));
   const all = selectableRows.length > 0 && selectableRows.every(row => selected.includes(row.id));
   const action = (ids: string[]) => module === 'duration' ? '设置规则' : module === 'homework' ? '设置权限' : module === 'world' ? '设置使用状态' : lockAction(ids);
+  const heading = module === 'duration' ? '使用时长规则' : module === 'homework' ? '智阅作业管控' : module === 'world' ? '万象视界管控' : `${rowType}管控`;
+  const settingLabel = module === 'duration' ? '设置全校使用时长规则' : module === 'homework' ? '设置全校权限' : module === 'world' ? '设置全校使用状态' : '批量操作';
   return <section className="dc-list-card overflow-hidden">
     <div className="dc-list-heading borrow-list-heading flex flex-wrap items-center justify-between gap-3">
-      <h3 className="font-bold text-slate-900">{rowType}{module === 'duration' ? '使用时长规则' : '管控'}</h3>
-      <button type="button" className="dc-btn borrow-batch-toggle" aria-pressed={batch} disabled={!selectableRows.length} onClick={onBatch}>{batch ? '退出批量操作' : '批量操作'}</button>
+      <h3 className="font-bold text-slate-900">{heading}</h3>
+      {module !== 'lock' && <button type="button" className="dc-btn borrow-batch-toggle" aria-pressed={batch} disabled={!selectableRows.length} onClick={onBatch}>{batch ? '退出设置' : settingLabel}</button>}
     </div>
     {batch && <div className="borrow-batch-bar">
       <label className="borrow-select-all"><input type="checkbox" aria-label="全选当前层级" checked={all} disabled={!selectableRows.length} onChange={() => onSelect(all ? [] : selectableRows.map(row => row.id))} />全选当前层级</label>
@@ -34,8 +37,7 @@ export const ControlScopeCards: React.FC<{
         if (!row.ids.length) return <React.Fragment key={row.id}>{stageHeader}<article className="borrow-scope-card" aria-disabled="true"><div className="borrow-card-heading"><div className="borrow-card-title"><h4>{row.label}</h4></div></div><div className="borrow-card-rules"><p className="borrow-card-placeholder">{row.classId ? '该班级暂无学生' : '该年级暂无学生'}</p></div></article></React.Fragment>;
         const entries = row.ids.map(id => controls[id]).filter(Boolean);
         const latest = recentOperation(row.ids);
-        const duration = module === 'duration' ? groupDurationRules(row.ids, controls) : [];
-        const different = duration.some(group => group.ids.length !== row.ids.length);
+        const duration = module === 'duration' ? schoolDurationGroups(row.ids, durationPolicies[row.grade ?? ""] ?? []) : [];
         const permission = (field: 'answer' | 'explanation' | 'world') => {
           const count = entries.filter(entry => entry[field]).length;
           return count === 0 ? '不允许' : count === entries.length ? '允许' : '部分学生允许';
@@ -46,12 +48,11 @@ export const ControlScopeCards: React.FC<{
           onKeyDown={batch ? event => { if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); toggle(row.id); } } : undefined}>
           <div className="borrow-card-heading">
             {batch && <span className="borrow-card-checkbox" aria-hidden="true" />}
-            <div className="borrow-card-title">{!batch && !row.classId ? <button type="button" className="borrow-grade-link" onClick={() => onNavigate(row)}>{row.label}</button> : <h4>{row.label}</h4>}</div>
-            {!batch && !row.classId && <button type="button" className="borrow-grade-hint" onClick={() => onNavigate(row)}>查看班级<ChevronRight size={14} /></button>}
+            <div className="borrow-card-title"><h4>{row.label}</h4></div>
           </div>
           <div className="borrow-card-rules">
-            {module === 'duration' && (different ? <div className="borrow-card-rule borrow-card-rule--diff"><strong>使用时长规则</strong><span>{row.classId ? '部分学生有差异' : '部分班级有差异'}</span></div> : duration.slice(0, 2).map(group => <div className="borrow-card-rule" key={group.key}><strong>{weekdayRangeText(group.rule.weekdays)}{group.fallback ? ' · 默认规则' : ''}</strong><span>{durationRuleText(group.rule)}</span></div>))}
-            {module === 'duration' && !batch && (different || duration.length > 2) && <button type="button" className="borrow-card-more" onClick={() => onSettings(row)}>查看全部规则</button>}
+            {module === 'duration' && duration.slice(0, 2).map(group => <div className="borrow-card-rule" key={group.key}><strong>{weekdayRangeText(group.rule.weekdays)}{group.fallback ? ' · 默认规则' : ''}</strong><span>{durationRuleText(group.rule)}</span></div>)}
+            {module === 'duration' && !batch && duration.length > 2 && <button type="button" className="borrow-card-more" onClick={() => onSettings(row)}>查看全部规则</button>}
             {module === 'homework' && <><div className="borrow-card-rule"><strong>查看答案</strong><span>{permission('answer')}</span></div><div className="borrow-card-rule"><strong>查看详解</strong><span>{permission('explanation')}</span></div></>}
             {module === 'world' && <div className="borrow-card-rule"><strong>万象视界使用状态</strong><span>{permission('world') === '不允许' ? '禁止使用' : permission('world') === '允许' ? '允许使用' : '部分学生允许使用'}</span></div>}
             {module === 'lock' && <div className="borrow-card-rule"><strong>临时锁屏</strong><span>{lockState(row.ids)}</span></div>}
