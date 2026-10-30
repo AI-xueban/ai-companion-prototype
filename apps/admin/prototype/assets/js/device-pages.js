@@ -1086,18 +1086,62 @@ function renderDeviceOverviewPage() {
     </div>`;
 }
 
+function getDefaultCabinetFilter() {
+  return { id: '', name: '', school: '', version: '', online: '', location: '', start: '', end: '' };
+}
+
+let cabinetFilterState = getDefaultCabinetFilter();
+
+function filterCabinets(cabinets, filter) {
+  const contains = (value, key) => String(value || '').toLowerCase().includes(key.trim().toLowerCase());
+  return cabinets.filter(c => {
+    if (!contains(c.id, filter.id) || !contains(c.name, filter.name) || !contains(c.location, filter.location)) return false;
+    if (filter.school && c.schoolName !== filter.school) return false;
+    if (filter.version && c.installedVersion !== filter.version) return false;
+    if (filter.online && (c.online ? 'online' : 'offline') !== filter.online) return false;
+    const day = String(c.createdAt || '').replaceAll('/', '-').slice(0, 10);
+    if ((filter.start || filter.end) && !/^\d{4}-\d{2}-\d{2}$/.test(day)) return false;
+    if (filter.start && day < filter.start) return false;
+    if (filter.end && day > filter.end) return false;
+    return true;
+  });
+}
+
+function applyCabinetFilter() {
+  const next = Object.fromEntries(Object.keys(getDefaultCabinetFilter()).map(key => [key, document.getElementById(`cabinet-filter-${key}`)?.value || '']));
+  if (next.start && next.end && next.start > next.end) {
+    toast('创建开始日期不能晚于结束日期', 'warning');
+    return;
+  }
+  cabinetFilterState = next;
+  navigate('cabinet');
+}
+
+function resetCabinetFilter() {
+  cabinetFilterState = getDefaultCabinetFilter();
+  navigate('cabinet');
+}
+
 function renderCabinetPage() {
+  const f = cabinetFilterState;
+  const cabinets = filterCabinets(data.cabinets, f);
+  const schools = [...new Set([...(typeof FACE_SCHOOLS !== 'undefined' ? FACE_SCHOOLS.map(s => s.name) : []), ...data.cabinets.map(c => c.schoolName)].filter(Boolean))];
+  const versions = [...new Set(data.cabinets.map(c => c.installedVersion).filter(Boolean))];
+  const options = (values, selected) => values.map(value => `<option value="${esc(value)}" ${value === selected ? 'selected' : ''}>${esc(value)}</option>`).join('');
   return `
     <div class="page-card">
       <div class="page-card-title">柜机管理</div>
       <p class="form-hint" style="margin:0 0 16px" data-req-title="广告轮播" data-req-body="各柜机广告区可下发独立图片轮播，展示尺寸 1080×600，单柜上限 3 条。支持单柜配置与多选批量配置（保存后覆盖所选柜机原有内容；空列表即清空）。图片停留全柜统一 5 秒，后台无时长入口。本期仅图片，不支持视频。详情页不展示轮播。" data-req-doc="设备管理需求文档 §4.16 / §5.6">柜机台账与广告轮播（${CABINET_AD_SIZE.width}×${CABINET_AD_SIZE.height}）统一在此管理：可单柜配置，或勾选多台后「批量配置轮播内容」（保存后覆盖原内容）。</p>
-      <div class="filter-form">
-        <div class="filter-item"><label>柜机名称</label><input class="input" placeholder="请输入"></div>
-        <div class="filter-item"><label>在线状态</label><select class="select"><option>全部</option><option>在线</option><option>离线</option></select></div>
-        <div class="filter-item"><label>安装位置</label><input class="input" placeholder="请输入"></div>
-        <div class="filter-item"><label>广告轮播</label><select class="select"><option>全部</option><option>已配置</option><option>未配置</option></select></div>
-        <div class="filter-actions"><button class="btn">重置</button><button class="btn btn-primary">搜索</button></div>
-      </div>
+      <form class="filter-form" onsubmit="event.preventDefault(); applyCabinetFilter()">
+        <div class="filter-item"><label for="cabinet-filter-id">柜机ID</label><input id="cabinet-filter-id" class="input" placeholder="请输入柜机ID" value="${esc(f.id)}"></div>
+        <div class="filter-item"><label for="cabinet-filter-name">柜机名称</label><input id="cabinet-filter-name" class="input" placeholder="请输入柜机名称" value="${esc(f.name)}"></div>
+        <div class="filter-item"><label for="cabinet-filter-school">学校</label><select id="cabinet-filter-school" class="select"><option value="">全部学校</option>${options(schools, f.school)}</select></div>
+        <div class="filter-item"><label for="cabinet-filter-version">版本号</label><select id="cabinet-filter-version" class="select"><option value="">全部版本</option>${options(versions, f.version)}</select></div>
+        <div class="filter-item"><label for="cabinet-filter-online">在线状态</label><select id="cabinet-filter-online" class="select"><option value="">全部</option><option value="online" ${f.online === 'online' ? 'selected' : ''}>在线</option><option value="offline" ${f.online === 'offline' ? 'selected' : ''}>离线</option></select></div>
+        <div class="filter-item"><label for="cabinet-filter-location">安装位置</label><input id="cabinet-filter-location" class="input" placeholder="请输入安装位置" value="${esc(f.location)}"></div>
+        <div class="filter-item"><label>创建时间</label><div style="display:flex;align-items:center;gap:8px"><input id="cabinet-filter-start" aria-label="创建开始日期" class="input" type="date" style="width:145px" value="${esc(f.start)}"><span>至</span><input id="cabinet-filter-end" aria-label="创建结束日期" class="input" type="date" style="width:145px" value="${esc(f.end)}"></div></div>
+        <div class="filter-actions"><button type="button" class="btn" onclick="resetCabinetFilter()">重置</button><button type="submit" class="btn btn-primary">搜索</button></div>
+      </form>
       <div class="toolbar" style="margin-bottom:16px">
         <div class="toolbar-left">
           <button class="btn btn-primary" onclick="openAddCabinetModal()">添加柜机</button>
@@ -1112,7 +1156,7 @@ function renderCabinetPage() {
             <th>序号</th><th>柜机ID</th><th>柜机名称</th><th>人脸识别注册码</th><th>学校</th><th>安装位置</th><th>格口</th><th>在线状态</th><th>版本号</th><th>轮播素材</th><th>最近心跳</th><th>绑定手机号</th><th>负责人</th><th>联系方式</th><th>创建时间</th><th>操作</th>
           </tr></thead>
           <tbody>
-            ${data.cabinets.map((c, i) => {
+            ${cabinets.map((c, i) => {
               const conf = typeof getCabinetCarousel === 'function' ? getCabinetCarousel(c.id) : { items: [], updatedAt: null };
               const items = conf.items || [];
               return `
@@ -1143,7 +1187,7 @@ function renderCabinetPage() {
                 </td>
               </tr>
             `;
-            }).join('')}
+            }).join('') || '<tr><td colspan="17" style="text-align:center;color:#999;padding:32px">暂无符合条件的柜机</td></tr>'}
           </tbody>
         </table>
       </div>

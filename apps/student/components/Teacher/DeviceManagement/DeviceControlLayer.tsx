@@ -10,18 +10,23 @@ const focusableSelector =
 export const DeviceControlLayer: React.FC<{
   labelId: string;
   onClose: () => void;
+  unsavedChanges?: boolean;
   variant?: "drawer" | "dialog";
   size?: "normal" | "wide";
   level?: number;
-  children: (close: () => void) => React.ReactNode;
+  children: (close: () => void, closeAfterSave: () => void) => React.ReactNode;
 }> = ({
   labelId,
   onClose,
+  unsavedChanges = false,
   variant = "drawer",
   size = "normal",
   level = 0,
   children,
 }) => {
+  const [discardPrompt, setDiscardPrompt] = useState(false);
+  const dirty = useRef(unsavedChanges);
+  dirty.current = unsavedChanges;
   const [closing, setClosing] = useState(false);
   const panel = useRef<HTMLDivElement>(null);
   const callback = useRef(onClose);
@@ -38,6 +43,11 @@ export const DeviceControlLayer: React.FC<{
       reduceMotion ? 0 : 170,
     );
   }, []);
+
+  const requestClose = useCallback(() => {
+    if (dirty.current) setDiscardPrompt(true);
+    else close();
+  }, [close]);
 
   useEffect(() => {
     const previousFocus = document.activeElement as HTMLElement | null;
@@ -68,7 +78,7 @@ export const DeviceControlLayer: React.FC<{
       if (event.key === "Escape") {
         event.preventDefault();
         event.stopImmediatePropagation();
-        close();
+        requestClose();
         return;
       }
       if (event.key !== "Tab") return;
@@ -96,7 +106,7 @@ export const DeviceControlLayer: React.FC<{
     };
     document.addEventListener("keydown", handleKey, true);
     return () => document.removeEventListener("keydown", handleKey, true);
-  }, [close]);
+  }, [requestClose]);
 
   return createPortal(
     <div
@@ -107,7 +117,7 @@ export const DeviceControlLayer: React.FC<{
       data-closing={closing}
       style={{ zIndex: 10000 + level * 10 }}
       onClick={(event) => {
-        if (event.target === event.currentTarget) close();
+        if (event.target === event.currentTarget) requestClose();
       }}
     >
       <div
@@ -119,7 +129,10 @@ export const DeviceControlLayer: React.FC<{
         className="dc-panel"
         onClick={(event) => event.stopPropagation()}
       >
-        {children(close)}
+        {children(requestClose, close)}
+        {discardPrompt && <DeviceControlLayer labelId={`${labelId}-discard`} variant="dialog" level={level + 5} onClose={() => setDiscardPrompt(false)}>
+          {(dismiss) => <><div className="dc-confirm-body"><h2 id={`${labelId}-discard`} className="text-xl font-bold">放弃未保存的修改？</h2><p className="mt-3 text-sm text-slate-600">修改尚未保存，离开后将丢失本次填写的内容。</p></div><div className="dc-confirm-footer"><button type="button" className="dc-btn" data-autofocus onClick={dismiss}>继续编辑</button><button type="button" className="dc-btn-danger" onClick={close}>放弃修改</button></div></>}
+        </DeviceControlLayer>}
       </div>
     </div>,
     document.body,
