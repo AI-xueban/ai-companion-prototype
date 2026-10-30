@@ -44,6 +44,19 @@
 .control-screen .admin-module-actions p { margin: 6px 0 0; color: var(--control-muted); font-size: 12px; line-height: 1.6; }
 .control-screen .control-entry-lock-head button,
 .control-screen .admin-school-toggle-top .admin-detail-link { min-height: 32px; padding: 0; color: #087fc5; font-size: 12px; white-space: nowrap; }
+.control-screen .borrowing-entry-card .borrowing-times-link { display:flex; align-items:center; justify-content:space-between; width:100%; margin-top:10px; padding:10px 0; border:0; border-top:1px solid var(--control-line); background:none; color:#087fc5; font-size:13px; text-align:left; cursor:pointer; }
+.control-screen .borrowing-entry-card .control-actions { margin-top:6px; }
+.control-screen .homework-subject-form { display:grid; gap:12px; padding-bottom:80px; }
+.control-screen .homework-subject-form > .parity-note { margin:0 2px; }
+.control-screen .homework-subject-card { padding:16px; border:1px solid var(--control-line); border-radius:17px; background:#fff; box-shadow:0 5px 16px #1933490b; }
+.control-screen .homework-subject-card h3 { margin:0 0 8px; color:var(--control-ink); font-size:16px; }
+.control-screen .homework-subject-setting { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:52px; border-top:1px solid var(--control-line); color:var(--control-ink); font-size:14px; }
+.control-screen .homework-setting-options { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:5px; }
+.control-screen .homework-setting-options label { position:relative; cursor:pointer; }
+.control-screen .homework-setting-options input { position:absolute; opacity:0; width:1px; height:1px; }
+.control-screen .homework-setting-options span { display:block; padding:7px 10px; border:1px solid var(--control-line); border-radius:10px; background:#fff; color:var(--control-muted); font-size:12px; white-space:nowrap; }
+.control-screen .homework-setting-options input:checked + span { border-color:var(--accent); background:#e8f5ff; color:#087fc5; font-weight:700; }
+.control-screen .homework-setting-options input:focus-visible + span { outline:2px solid var(--accent); outline-offset:2px; }
 .control-screen .control-entry-subtitle { margin: 20px 2px 10px; color: var(--control-ink); font-size: 16px; font-weight: 700; }
 .control-screen .control-entry-list { gap: 10px; }
 .control-screen .control-entry-card { gap: 12px; padding: 16px; border-color: var(--control-line); border-radius: 17px; box-shadow: 0 5px 16px #1933490b; }
@@ -195,7 +208,8 @@
 .parity-radio-row { display: flex; flex-wrap: wrap; gap: 16px; margin: 18px 0; color: #537891; font-size: 12px; }
 .parity-radio-row label, .parity-permission label { display: flex; align-items: center; gap: 6px; }
 .parity-borrow-choice { min-width: 0; margin: 20px 0 0; padding: 0; border: 0; }
-.control-subject-tabs { display: inline-flex; max-width: 100%; gap: 4px; margin: 10px 0 8px; padding: 3px; border: 1px solid #dcebf2; border-radius: 10px; background: #edf6fc; }
+.control-subject-tabs { display: inline-flex; max-width: 100%; gap: 4px; margin: 0 0 16px; padding: 3px; border: 1px solid #dcebf2; border-radius: 10px; background: #edf6fc; }
+.control-subject-label { margin: 0 0 16px; color: #087fc5; font-size: 14px; font-weight: 600; }
 .control-screen .control-subject-tabs button { flex: 0 0 auto; min-width: 68px; min-height: 32px; padding: 5px 10px; border: 0; border-radius: 7px; background: transparent; color: #648099; font-size: 12px; font-weight: 600; cursor: pointer; }
 .control-screen .control-subject-tabs button[aria-selected="true"] { background: #fff; color: #087fc5; box-shadow: 0 2px 8px rgba(31,95,147,.12); }
 .control-screen .control-subject-tabs button:focus-visible { outline: 2px solid #168fe0; outline-offset: 2px; }
@@ -283,3 +297,49 @@ body.dw-ui-new #app .control-screen .parity-borrow-option input:checked + .parit
 body.dw-ui-new #app .control-screen .parity-borrow-option input:checked + .parity-borrow-option-body b { color:var(--accent); }
 body.dw-ui-new #app .control-screen .parity-borrow-option input:checked + .parity-borrow-option-body i { border-color:var(--accent); background:var(--accent); }
 body.dw-ui-new #app .control-screen .parity-borrow-option input:focus-visible + .parity-borrow-option-body { outline-color:var(--accent); }
+
+/* The four teacher tabs share one component scale. Keep control's legacy review mode separate. */
+body.dw-ui-new #app .control-screen {
+  --control-ink:var(--dw-ink);
+  --control-muted:var(--dw-muted);
+  --control-line:var(--dw-border);
+  --control-soft:var(--dw-accent-soft);
+  --control-card-radius:19px;
+  --control-field-radius:14px;
+  --control-card-shadow:0 10px 28px var(--dw-shadow);
+  background:radial-gradient(circle at 94% 7%,#cfe8ff,transparent 34%),linear-gradient(175deg,#f8fcff,#edf7ff 55%,#f9fcff);
+  color:var(--dw-ink);
+}
+body.dw-ui-new #app .control-screen :is(.control-entry,.control-content,.borrow-editor-content) { padding-left:16px; padding-right:16px; }
+body.dw-ui-new #app .control-screen :is(.control-entry-lock,.admin-school-toggle,.control-module-panel,.admin-module-actions,.control-student-detail-card,.borrow-editor-card,.control-entry-card,.parity-scope-card,.borrowing-scope-card,.admin-level-list,.control-current,.parity-rule) {
+  border:1px solid var(--dw-border);
+  border-radius:var(--control-card-radius);
+  background:#fff;
+  box-shadow:var(--control-card-shadow);
+}
+body.dw-ui-new #app .control-screen .homework-subject-card { border-color:var(--dw-border); border-radius:var(--control-card-radius); box-shadow:var(--control-card-shadow); }
+body.dw-ui-new #app .control-screen .homework-setting-options span { border-color:var(--dw-border); border-radius:var(--control-field-radius); }
+body.dw-ui-new #app .control-screen .homework-setting-options input:checked + span { border-color:var(--dw-accent); background:var(--dw-accent-soft); color:var(--dw-accent-strong); }
+body.dw-ui-new #app .control-screen :is(.control-entry-lock,.admin-school-toggle,.control-module-panel,.admin-module-actions,.control-student-detail-card,.borrow-editor-card,.parity-scope-card,.borrowing-scope-card) { padding:16px; }
+body.dw-ui-new #app .control-screen :is(.control-entry-subtitle,.admin-scope-summary b,.borrow-list-head b,.flat-control-head b,.parity-borrow-heading h3,.borrowing-rule-section > h3,.control-grade-group-title) { color:var(--dw-heading); font-size:17px; font-weight:700; }
+body.dw-ui-new #app .control-screen :is(.control-entry-card h3,.control-entry-lock h3,.control-module-panel h3,.admin-level-copy b,.parity-scope-card-head h3,.borrowing-card-head,.parity-student-main > b,.control-row-name) { color:var(--dw-ink); }
+body.dw-ui-new #app .control-screen :is(.control-entry-card p,.control-entry-lock-head p,.control-module-panel > p,.parity-note,.parity-context,.parity-scope-rule span,.borrowing-card-rules,.borrow-student-rule,.parity-student-main > span,.control-form-note) { color:var(--dw-muted); }
+body.dw-ui-new #app .control-screen :is(.control-primary,.borrow-editor-actions .control-primary,.parity-borrow-floating .control-primary) {
+  border:1px solid var(--dw-accent);
+  border-radius:14px;
+  background:linear-gradient(135deg,var(--dw-accent),var(--dw-accent-strong));
+  color:#fff;
+  box-shadow:0 8px 18px var(--dw-shadow);
+  font-weight:700;
+}
+body.dw-ui-new #app .control-screen .control-secondary { border:1px solid var(--dw-border); border-radius:14px; background:#fff; color:var(--dw-accent-strong); font-weight:650; }
+body.dw-ui-new #app .control-screen :is(.control-primary,.control-secondary):disabled { border-color:#e7eef4; background:#f2f6f9; color:#a4b3bf; box-shadow:none; }
+body.dw-ui-new #app .control-screen :is(.control-subject-tabs,.control-segment) { border-color:var(--dw-border); border-radius:var(--control-field-radius); background:var(--dw-accent-soft); }
+body.dw-ui-new #app .control-screen :is(.control-subject-tabs button[aria-selected=true],.control-segment button[aria-pressed=true]) { border-radius:10px; background:#fff; color:var(--dw-accent-strong); box-shadow:0 2px 8px var(--dw-shadow); }
+body.dw-ui-new #app .control-screen :is(.control-subject-label,.control-description-fold > summary,.control-entry-lock-head button,.admin-scope-summary button,.borrow-list-head button,.flat-control-head button,.control-detail-head button,.parity-scope-navigate,.parity-scope-more,.borrowing-times-link,.borrowing-roster-link) { color:var(--dw-accent-strong); }
+body.dw-ui-new #app .control-screen :is(.borrow-list-search,.borrow-status-filter,.control-period-row input,.control-time-row input,.control-date-row input,.control-number-row input,.borrowing-form input[type=date],.borrowing-form input[type=time],.borrowing-form select) { border:1px solid var(--dw-border); border-radius:var(--control-field-radius); background:#fff; color:var(--dw-ink); }
+body.dw-ui-new #app .control-screen :is(.parity-scope-rule,.parity-apply-scope,.admin-scope-path) { border-color:var(--dw-border); border-radius:14px; background:var(--dw-accent-soft); }
+body.dw-ui-new #app .control-screen :is(.parity-student-list,.borrow-student-list,.flat-control-list) { margin-left:-16px; margin-right:-16px; padding-left:16px; padding-right:16px; background:#fff; }
+body.dw-ui-new #app .control-screen :is(.borrow-list-toolbar,.flat-control-toolbar) { padding-left:16px; padding-right:16px; background:#f3f9ff; }
+body.dw-ui-new #app .control-screen :is(.control-batchbar,.admin-batchbar,.borrow-editor-actions,.borrowing-footer) { border-color:var(--dw-border); background:#fffffff5; box-shadow:0 -7px 22px var(--dw-shadow); }
+body.dw-ui-new #app .control-screen .control-sheet { border-radius:24px 24px 0 0; background:#fff; box-shadow:0 -8px 28px var(--dw-shadow); }

@@ -48,7 +48,7 @@ window.pageDemoTools = (() => {
     host.innerHTML=render({...context,open:menuOpen,select:id=>'pageDemoTools.select('+JSON.stringify(id)+')',show:'pageDemoTools.open()',close:'pageDemoTools.close()',restore:'pageDemoTools.restore()'});
     if(context.kind==='control' && context.active){
       const choice=context.choices.find(item=>item.id===context.active);
-      host.insertAdjacentHTML('beforeend',`<section class="control-demo-detail" role="status" style="padding:14px;line-height:1.7;color:inherit"><strong>${esc(choice.group)} · ${esc(choice.label)}</strong><p>${esc(choice.hint)}</p><small>${choice.id==='classRevoked'?'本地调整权限已关闭，弹窗仅作通知，可在管理员端重新开启。':choice.id==='durationRevoked'?'点“知道了”后同步关闭本地调整权限，可在管理员端重新开启。':'场景说明 · 不修改当前管控设置'}</small></section>`);
+      host.insertAdjacentHTML('beforeend',`<section class="control-demo-detail" role="status" style="padding:14px;line-height:1.7;color:inherit"><strong>${esc(choice.group)} · ${esc(choice.label)}</strong><p>${esc(choice.hint)}</p><small>${choice.id==='classRevoked'?'本地调整权限已关闭，弹窗仅作通知，可在管理员端重新开启。':'场景说明 · 不修改当前管控设置'}</small></section>`);
     }
     document.getElementById('dw-state-toggle')?.setAttribute('aria-expanded',String(menuOpen));
     document.body.classList.toggle('dw-state-open',Boolean(menuOpen&&external));
