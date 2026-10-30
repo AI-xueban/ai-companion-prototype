@@ -203,8 +203,9 @@ function cvDispatch(id) {
   if (!data.cabinets.length) return toast('暂无柜机可下发', 'warning');
   showConfirmModal({
     title: '确认柜机更新',
-    message: `是否向全部 ${data.cabinets.length} 台柜机下发更新？`,
-    hint: '目标版本：' + pack.version,
+    htmlMessage: true,
+    message: `是否向全部 ${data.cabinets.length} 台柜机下发更新？<p class="confirm-modal-hint">目标版本：${esc(pack.version)}</p>`,
+    hint: '已更新到目标版本的柜机将自动跳过',
     confirmText: '确认下发',
     onConfirm: () => cvConfirmDispatch(id)
   });
