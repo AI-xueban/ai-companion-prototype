@@ -11,12 +11,14 @@ window.demoWorkspace = (() => {
     {id:'login',label:'登录与绑定',roles:[{id:'parent',label:'家长',items:parentLogin},{id:'teacher',label:'教师',items:teacherLogin}]},
     {id:'learning',label:'学情',items:[entry('learn-parent','孩子学情','parentTab','learning'),entry('learn-subject','任教学情','learning','subject'),entry('learn-class','班主任学情','learning','homeroom'),entry('learn-school','学校学情','learning','school'),entry('learn-students','学生学情','learning','students')]},
     {id:'homework',label:'作业与打卡',roles:[
-      {id:'teacher',label:'教师',items:[entry('hw-list','作业列表','homework','teacher'),entry('hw-publish','发布作业／打卡','homework','publish'),entry('hw-answers','维护参考答案','homeworkState','answerConflict'),entry('hw-review','批改与复核','homeworkState','review'),entry('hw-release','发布与同步结果','homeworkState','unreleased'),entry('hw-flow','完整流程（从发布开始）','flow','homework')]},
-      {id:'parent',label:'家长',items:[entry('hw-parent','作业待办与提交','homework','parent'),entry('hw-parent-result','查看批改结果','homeworkState','released',{role:'parent'}),entry('hw-parent-tutor','1对1讲题','homeworkState','released',{role:'parent'})]}
+      {id:'teacher',label:'教师',items:[entry('hw-guide','标准讲解｜发布到订正反馈','guided','homework'),entry('hw-list','作业列表','homework','teacher'),entry('hw-publish','发布作业／打卡','homework','publish'),entry('hw-review','批改与复核','homeworkState','review'),entry('hw-release','发布与同步结果','homeworkState','unreleased'),entry('hw-flow','完整流程（从发布开始）','flow','homework')]},
+      {id:'parent',label:'家长',items:[entry('hw-parent','作业待办与提交','homework','parent'),entry('hw-parent-result','查看批改结果','homeworkState','released',{role:'parent'}),entry('hw-parent-correction','订正','homeworkCorrection','released'),entry('hw-parent-tutor','1对1讲题','homeworkState','released',{role:'parent'})]}
     ]},
     {id:'control',label:'管控',items:[entry('ctl-teacher','教师管控','control','teacher'),entry('ctl-admin','学校管理员管控','control','admin'),...Object.entries({borrowing:'柜机借用管控',duration:'使用时长管控',homework:'智阅作业权限',world:'万象视界',lock:'锁屏'}).map(([key,label])=>entry('ctl-'+key,label,'controlModule',key))]},
     {id:'mine',label:'我的',roles:[{id:'parent',label:'家长',items:[entry('mine-parent','我的首页','parentTab','mine'),entry('mine-children','孩子与绑定关系','parentChildren','mine'),entry('mine-unbind','解绑孩子','parent','wrong'),entry('mine-two','两个孩子','parent','twoChildren'),entry('mine-family','家长管理','parent','familyManage'),entry('mine-ordinary','普通家长权限','parent','ordinary'),entry('mine-security','账号与安全','parentSecurity','mine')]},{id:'teacher',label:'教师',items:[entry('mine-teacher','我的首页','teacherTab','mine'),entry('mine-teacher-security','账号与安全','teacherSecurity','mine')]}]}
   ];
+  const catalogOrder = ['login', 'homework', 'control', 'learning', 'mine'];
+  catalog.sort((a,b)=>catalogOrder.indexOf(a.id)-catalogOrder.indexOf(b.id));
   const entries = catalog.flatMap(g=>g.roles?g.roles.flatMap(r=>r.items):g.items);
   let selected='', activeFlow='',flowRole='',stateInfo=null;
   const uiKey='twj-review-ui-mode';
@@ -43,13 +45,14 @@ window.demoWorkspace = (() => {
     else if(item.kind==='homeworkCurrent'){activeFlow='homework';homeworkDemoConsole.role(item.value,true,item.value==='parent');}
     else if(item.kind==='homeworkExperience'){activeFlow='homework';homeworkDemoConsole.role('teacher',false);homeworkPrototype.prepareWorkflowExperience();}
     else if(item.kind==='homeworkState'){activeFlow='homework';homeworkDemoConsole.role(item.role||'teacher',false);homeworkDemoConsole.start(item.value);if(item.role==='parent')homeworkDemoConsole.role('parent',true,true);}
+    else if(item.kind==='homeworkCorrection'){activeFlow='homework';homeworkDemoConsole.role('parent',false);homeworkDemoConsole.start('released');homeworkDemoConsole.role('parent',true,true);homeworkPrototype.openCorrectionDemo();}
+    else if(item.kind==='guided'){activeFlow='homework';flowRole='teacher';homeworkDemoConsole.guidedPublish();document.body.classList.add('dw-flow-open');}
     else if(item.kind==='flow'){activeFlow='homework';flowRole='teacher';homeworkDemoConsole.publish();if(innerWidth>1000)document.body.classList.add('dw-flow-open');}
     else if(item.kind==='reference'){location.assign(new URL(item.value,location.href));return;}
     else if(item.kind==='control'||item.kind==='controlModule'){
       if(!isControl()){const url=new URL('control-prototype.html',location.href);url.search='?review=1&page=teacherDesk&tab=control&identity=all';url.searchParams.set('demo',id);location.assign(url.href);return;}
       if(item.kind==='control')switchControlDemoRole(item.value);else{teacherTab='control';stage='teacherDesk';openControlModule(item.value);}
     }
-    if(id==='hw-parent-tutor')homeworkPrototype.openHomeworkTutor();
     revealEntry(id);sync();
   }
   function syncFlow(){
@@ -57,12 +60,12 @@ window.demoWorkspace = (() => {
     const parent=typeof stage!=='undefined'&&stage==='parent';
     const hw=window.homeworkDemoConsole?.isActive();
     let title='当前流程',html='';
-    if(activeFlow==='homework'&&hw){title='作业完整流程';const pane=get('homework-demo-pane');if(pane){const copy=pane.cloneNode(true);copy.querySelectorAll('[data-workspace-duplicate]').forEach(e=>e.remove());html=copy.innerHTML;}html+='<details><summary>跳转流程节点</summary>'+[['answerConflict','参考答案独立维护'],['answerChanged','修改参考答案'],['published','未提交'],['partial','部分提交'],['queued','等待批改'],['processing','正在批改'],['partialGrade','部分完成'],['failed','批改失败'],['review','待复核'],['unreleased','结果已同步'],['partialRelease','部分结果可见'],['released','全部批改完成'],['resubmit','重新提交'],['changed','人工纠正已同步'],['late','逾期可补交'],['closed','补交已结束']].map(([id,label])=>`<button data-homework-state="${id}" onclick="homeworkDemoConsole.start('${id}')">${label}</button>`).join('')+'</details>';}
+    if(activeFlow==='homework'&&hw){title='作业完整流程';const pane=get('homework-demo-pane');if(pane){const copy=pane.cloneNode(true);copy.querySelectorAll('[data-workspace-duplicate]').forEach(e=>e.remove());html=copy.innerHTML;}html+=(window.homeworkDemoConsole.isGuided()?'':'<p>以下预设会重建专用样例，不影响其他作业；连续讲解请使用标准讲解。</p>');if(!window.homeworkDemoConsole.isGuided())html+='<details><summary>跳转流程节点</summary>'+[['published','未提交'],['partial','部分提交'],['queued','等待批改'],['processing','正在批改'],['partialGrade','部分完成'],['failed','批改失败'],['review','待复核'],['unreleased','结果已同步'],['partialRelease','部分结果可见'],['released','全部批改完成'],['resubmit','重新提交'],['changed','人工纠正已同步'],['late','逾期可补交'],['closed','补交已结束']].map(([id,label])=>`<button data-homework-state="${id}" onclick="homeworkDemoConsole.start('${id}')">${label}</button>`).join('')+'</details>';}
     else if(parent&&activeFlow==='parent'){title='家长流程';html=['parent-review-context','parent-review-steps','parent-review-actions'].map(id=>{const node=get(id);return node?`<${node.tagName.toLowerCase()}>${node.innerHTML}</${node.tagName.toLowerCase()}>`:''}).join('');html+=`<details><summary>演示数据</summary>${get('parent-review-detail')?.innerHTML||''}</details>`;}
     else if(!parent&&activeFlow==='teacher'){title='教师登录流程';html=`<ol>${get('teacher-review-steps')?.innerHTML||''}</ol><div id="dw-flow-actions">${get('teacher-review-action')?.innerHTML||''}</div><p>${get('teacher-review-detail')?.innerHTML||''}</p><details><summary>演示账号</summary><p>手机号：13800138000<br>验证码：123456<br>密码：123456</p></details>`;}
     else{html='<p>从左侧选择登录场景，或进入“作业与打卡”体验完整流程。</p>';}
     get('dw-flow-title').textContent=title;
-    const extra=activeFlow&&activeFlow!=='homework'?'<button type="button" onclick="demoWorkspace.restart()">重启本流程</button><details><summary>清除登录与绑定缓存</summary><p>沿用原控制台的缓存清理范围，不清除作业与管控数据。</p><button onclick="clearDemoCacheAndRestart()">清除缓存重新演示</button></details>':'';
+    const extra=activeFlow&&!['homework','tutor'].includes(activeFlow)?'<button type="button" onclick="demoWorkspace.restart()">重启本流程</button><details><summary>清除登录与绑定缓存</summary><p>沿用原控制台的缓存清理范围，不清除作业与管控数据。</p><button onclick="clearDemoCacheAndRestart()">清除缓存重新演示</button></details>':'';
     const target=get('dw-flow-body');if(target.innerHTML!==html+extra)target.innerHTML=html+extra;
   }
   function sync(){
@@ -71,6 +74,7 @@ window.demoWorkspace = (() => {
     get('dw-context').textContent=(parent?'家长':typeof stage!=='undefined'&&stage.startsWith('teacher')?'教师':'小程序')+' · '+title;
     document.querySelectorAll('[data-dw-entry]').forEach(b=>{const active=b.dataset.dwEntry===selected;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
     const accountStates=get('dw-account-states');if(accountStates)accountStates.hidden=parent||stage==='home';
+    let data=get('dw-homework-data');if(!data){data=document.createElement('section');data.id='dw-homework-data';get('dw-flow-body').before(data);}const hw=window.homeworkDemoConsole?.isActive();data.hidden=!hw;if(hw)data.innerHTML=homeworkDemoConsole.dataMarkup();
     syncUi();
     syncFlow();
   }
