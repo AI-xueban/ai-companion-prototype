@@ -62,3 +62,8 @@
 .tl-condition-row .tl-scope-value{overflow:hidden;color:#193349;font-size:22rpx;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
 .tl-condition-row .tl-period{flex:none;width:255rpx;max-width:none;margin:0 0 0 auto;padding:6rpx;background:#e9f6ff}
 .tl-condition-row .tl-period view{padding:13rpx 2rpx;font-size:20rpx}
+
+/* 学情辅助文字在浅底上保持足够字重与对比度。 */
+.tl-muted,.tl-hero-note,.tl-greeting-meta,.tl-caption,.tl-footnote{color:#5e7487;font-size:24rpx;font-weight:500;line-height:1.5}
+.tl-hero-label,.tl-stats view{color:#5e7487;font-weight:500}
+.tl-condition-row .tl-scope-key{color:#5e7487;font-weight:500}

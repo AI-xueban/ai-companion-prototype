@@ -1,0 +1,171 @@
+/* Review chrome is intentionally separate from the mini-program product surface. */
+/* Keep the outgoing page visible until the other teacher document is ready.
+   No cross-fade: it makes the fixed phone frame and tab bar look like they blink. */
+@view-transition { navigation: auto; }
+::view-transition-old(root) { animation: none; }
+::view-transition-new(root) { animation: none; }
+::view-transition-group(root) { animation-duration: 0s; }
+html:has(body.demo-workspace) { background: #171b22; scrollbar-gutter: stable; }
+body.demo-workspace{display:block;background:#171b22;color:#b2bcc9;--demo-border:#2b323d}
+#demo-workspace{width:100%;min-width:0}
+.dw-sidebar button[hidden],.dw-sidebar details[hidden]{display:none}
+.demo-workspace .demo-console-toggle,.demo-workspace .review-launch,.demo-workspace #demo-console-panel,.demo-workspace>.review{display:none!important}
+.dw-header{height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;border-bottom:1px solid var(--demo-border);font-size:12px}
+.dw-header strong{font-size:15px;font-weight:500}.dw-header small{margin-left:18px;color:#8f9aaa}.dw-header button,.dw-flow-toggle{border:0;background:none;color:#a6b1c0;font-size:11px;padding:9px;cursor:pointer}
+.dw-sidebar{position:fixed;top:54px;bottom:0;left:0;width:210px;padding:16px 12px;overflow:auto;border-right:1px solid var(--demo-border);font-size:12px;background:#1a1f27}
+.dw-search{width:100%;height:32px;border:1px solid #343d4b;border-radius:5px;padding:0 10px;background:transparent;color:#c4ccd7;font-size:11px;margin-bottom:15px}
+.dw-sidebar details{margin-bottom:4px}.dw-sidebar summary{list-style:none;display:flex;align-items:center;justify-content:space-between;min-height:33px;padding:6px 9px;cursor:pointer;color:#aab5c3}.dw-sidebar summary::-webkit-details-marker{display:none}.dw-sidebar summary:after{content:'›';font-size:15px}.dw-sidebar details[open]>summary:after{transform:rotate(90deg)}
+.dw-role{margin-left:11px;border-left:1px solid #303844}.dw-role>summary{font-size:11px;color:#9ba8b8}.dw-items{padding-left:12px}.dw-sidebar button{display:block;width:100%;min-height:30px;padding:6px 8px;border:0;border-left:2px solid transparent;border-radius:3px;background:none;color:#99a6b7;text-align:left;font-size:11px;line-height:1.5;cursor:pointer}.dw-sidebar button:hover,.dw-sidebar summary:hover{background:#252c36;color:#d4dce6}.dw-sidebar button.active{border-left-color:#8ca8c7;background:#252d38;color:#c6d6e8}.dw-sidebar .dw-full-flow{margin:8px 0;border-top:1px solid #303844;padding-top:10px}
+.dw-center{min-height:calc(100vh - 54px);padding:18px 230px 22px;display:flex;flex-direction:column;align-items:center;gap:12px}
+.dw-context{font-size:11px;color:#96a3b4;min-height:17px}.demo-workspace .device{flex:none;width:390px;height:780px;max-width:100%;border:6px solid #343d4c;box-shadow:0 12px 36px #0003;border-radius:30px;color:var(--ink)}
+.dw-ui-mode{display:flex;align-items:center;justify-content:space-between;width:390px;max-width:100%;min-height:36px;color:#aebaca;font-size:11px}.dw-ui-mode[hidden]{display:none}.dw-ui-mode-options{display:flex;gap:3px;padding:3px;border:1px solid #35404d;border-radius:8px;background:#202630}.dw-ui-mode-options button{min-width:48px;min-height:25px;border:0;border-radius:5px;background:transparent;color:#9aa9bb;font-size:11px;cursor:pointer}.dw-ui-mode-options button[aria-pressed="true"]{background:#3b4b60;color:#f4f7fb;font-weight:700}
+#dw-canvas{width:390px;max-width:100%;flex:none}
+.dw-state{width:414px;max-width:100%;position:relative;color:#aebaca;font-size:11px}.dw-state-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:40px;border:1px solid #303a47;background:#1d232d;border-radius:6px;padding:8px 10px}.dw-state-heading>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dw-state-heading button{border:0;background:none;color:#b3c0d0;white-space:nowrap;font-size:11px;cursor:pointer}.dw-state[hidden]{display:none}
+.dw-state #page-demo-tools-host{position:static;width:100%}.dw-state .parent-demo-toolbar{display:none}.dw-state .parent-exception-mask{position:static;display:block;padding:0;background:none;backdrop-filter:none}.dw-state .parent-exception-sheet{position:static;transform:none;width:100%;max-height:330px;margin:6px 0 0;padding:14px;border:1px solid #343e4c;border-radius:7px;box-shadow:none;background:#202731;color:#c0cad8;overflow:auto;animation:none}.dw-state .parent-exception-sheet header{padding:0}.dw-state .parent-exception-sheet h2{font-size:12px;color:#c4cfde}.dw-state .parent-exception-sheet small,.dw-state .parent-exception-sheet p{color:#98a6b8;font-size:10px}.dw-state .parent-exception-option{padding:9px;margin:5px 0;border:1px solid #354151;border-radius:5px;background:#252e3a;color:#c1ccda}.dw-state .parent-exception-option strong{color:#c1ccda;font-size:11px}.dw-state .parent-exception-option.is-active{border-color:#7994b2;background:#2c3a4c}.dw-state .parent-exception-sheet button{font-size:11px}.dw-state .parent-exception-sheet footer button{background:#2b3644;color:#c4cfdd}.dw-state .parent-exception-close{color:#acb8c9}.dw-state .page-demo-group{font-size:11px;color:#a0b5cd;margin:12px 0 6px}
+.dw-flow-toggle{position:fixed;right:0;top:95px;border:1px solid #35404d;border-radius:5px 0 0 5px;background:#202630;writing-mode:vertical-rl}.dw-flow{display:none;position:fixed;right:0;top:54px;bottom:0;width:230px;padding:16px;background:#1c222b;border-left:1px solid var(--demo-border);overflow:auto;z-index:5;font-size:11px}.dw-flow-open .dw-flow{display:block}.dw-flow-open .dw-flow-toggle{display:none}.dw-flow-head{display:flex;align-items:center;justify-content:space-between;font-size:13px}.dw-flow button{margin:7px 0;min-height:30px;padding:6px 8px;border:1px solid #394555;border-radius:4px;background:#252e3a;color:#b5c5d8;font-size:11px;line-height:1.5;cursor:pointer}.dw-flow button:disabled{opacity:.45;cursor:default}.dw-flow p,.dw-flow .data{color:#96a7bd;font-size:11px;line-height:1.7;overflow-wrap:anywhere}.dw-flow ol{padding:0;list-style:none}.dw-flow li{padding:8px 0;color:#8d9caf}.dw-flow li.current{color:#bdd4ec}.dw-flow li.done{color:#95b4aa}.dw-flow details{margin-top:12px}.dw-flow [hidden]{display:none}.dw-flow small{display:block;font-size:10px;color:#91a2b6}.dw-flow #dw-flow-actions button{display:block;width:100%}
+.dw-focus .dw-sidebar,.dw-focus .dw-flow,.dw-focus .dw-flow-toggle,.dw-focus .dw-state{display:none!important}.dw-focus .dw-center{padding-left:16px;padding-right:16px}
+.dw-demo-result{margin:20px;padding:25px 18px;border:1px solid #e2e9ef;border-radius:12px;background:#fff;color:#34516a;text-align:center;font-size:14px;line-height:1.8}.dw-demo-result h3{font-size:18px;margin:0 0 10px}.dw-demo-result button{border:0;border-radius:6px;padding:10px 18px;background:#eaf4fb;color:#387da7;cursor:pointer}.dw-skeleton{height:60px;border-radius:8px;background:#edf2f6;margin:12px 0}
+@media(min-width:1400px){.dw-center{padding-left:240px;padding-right:240px}}
+@media(max-width:1000px){.dw-center{padding-left:226px;padding-right:16px;align-items:center}.dw-flow{box-shadow:-15px 0 35px #0006}}
+@media(max-width:650px){.dw-sidebar{display:none;width:210px;z-index:10}.dw-nav-open .dw-sidebar{display:block;box-shadow:15px 0 35px #0006}.dw-center{padding:12px 10px 20px}.dw-header{padding:0 10px}.dw-header small{display:none}.demo-workspace .device{width:390px;max-width:100%;height:780px;border-radius:22px}.dw-state{width:390px}.dw-flow{width:230px}.dw-header strong{font-size:13px}}
+.demo-workspace button:focus-visible,.demo-workspace summary:focus-visible{outline:2px solid #9cb7d4;outline-offset:2px}
+/* The review switch applies one visual system across every mini-program canvas. */
+body.dw-ui-new .home-content{background:radial-gradient(circle at 82% 4%,#dceeff,transparent 36%),linear-gradient(180deg,#f5faff,#eef4fa 65%,#f7f9fc)}
+body.dw-ui-new .home-hero h1{color:#23466c}body.dw-ui-new .role-card{border:1px solid #e4ecf4;border-radius:18px;box-shadow:0 9px 24px #476b981a}
+body.dw-ui-new .role-parent{background:linear-gradient(125deg,#fffdf9,#ffeddc)}body.dw-ui-new .role-teacher{background:linear-gradient(125deg,#fcfeff,#e7f3ff)}
+body.dw-ui-new .role-parent .role-icon{background:linear-gradient(145deg,#dc773b,#f0a45e)}body.dw-ui-new .role-teacher .role-icon{background:linear-gradient(145deg,#2879ca,#62a9ec)}
+body.dw-ui-new #app .parent-screen{--dw-accent:#d96f32;--dw-accent-strong:#b95825;--dw-accent-soft:#fff2e8;--dw-ink:#3f2b20;--dw-heading:#4f321f;--dw-muted:#7d6553;--dw-border:#efddce;--dw-shadow:#a66a3822}
+body.dw-ui-new #app .teacher-screen,body.dw-ui-new #app .control-screen{--dw-accent:#1687df;--dw-accent-strong:#086dbd;--dw-accent-soft:#e9f5ff;--dw-ink:#142f48;--dw-heading:#071a38;--dw-muted:#607991;--dw-border:#d9e9f6;--dw-shadow:#4b83b524}
+body.dw-ui-new #app .parent-screen:has(.ht-root){--dw-accent:#735fd0;--dw-accent-strong:#5943b4;--dw-accent-soft:#f1edff;--dw-ink:#29314b;--dw-heading:#202944;--dw-muted:#74758d;--dw-border:#e4ddf7;--dw-shadow:#7461b52b}
+body.dw-ui-new .parent-screen:not(.parent-login-screen):not(:has(.ht-root)){background:radial-gradient(circle at 94% 7%,#ffecdc,transparent 34%),linear-gradient(175deg,#fffdfb,#fff8f2 54%,#fffdfb)}
+body.dw-ui-new .teacher-screen:not(.teacher-login-screen){background:radial-gradient(circle at 94% 7%,#cfe8ff,transparent 34%),linear-gradient(175deg,#f8fcff,#edf7ff 55%,#f9fcff)}
+body.dw-ui-new .control-screen{background:linear-gradient(170deg,#f7fbff,#ebf4ff 48%,#f8fbff)}
+body.dw-ui-new .parent-screen:not(:has(.ht-root)) .lp-page{background:#fffdfb}body.dw-ui-new .teacher-screen .lp-page{background:#f3f9ff}
+body.dw-ui-new .parent-screen .pr-report{background:transparent!important}
+body.dw-ui-new .parent-screen .lp-hero{background:linear-gradient(130deg,#fff2e7,#fffdfb)}body.dw-ui-new .teacher-screen .lp-hero{background:linear-gradient(130deg,#ddecff,#f8fcff)}
+body.dw-ui-new .parent-screen .hp-parent-hero{background:linear-gradient(130deg,#fff1e5,#fffdf9)}
+body.dw-ui-new .parent-screen .hp-parent-hero h1,body.dw-ui-new .parent-screen .hp-section{color:#744b2f}
+body.dw-ui-new .teacher-screen .hp-hero h1,body.dw-ui-new .teacher-screen .hp-section{color:#234e78}
+body.dw-ui-new #app :is(.parent-card,.hp-card,.lp-card,.lp-stat,.teacher-auth-card,.teacher-class,.teacher-module,.control-entry-card,.control-card,.control-current){border:1px solid var(--dw-border,#e4ebf3);border-radius:19px;background:#fff;box-shadow:0 10px 28px var(--dw-shadow,#5b7b9b18)}
+body.dw-ui-new #app :is(.parent-primary,.teacher-primary,.hp-primary,.control-primary){border-radius:14px;background:linear-gradient(135deg,var(--dw-accent,#1687df),var(--dw-accent-strong,#086dbd));box-shadow:0 8px 18px var(--dw-shadow,#5b7b9b2b);color:#fff;font-weight:700}
+body.dw-ui-new #app .parent-screen:not(:has(.ht-root)) .parent-primary{background:linear-gradient(105deg,#f8a56a,#f49355);box-shadow:0 8px 18px #ed8b4a24}
+body.dw-ui-new #app :is(.parent-secondary,.teacher-wechat-entry,.hp-secondary,.control-secondary){border-radius:14px;border-color:var(--dw-border,#dce8f5);background:#fff;color:var(--dw-accent-strong,#287cca);font-weight:650}
+body.dw-ui-new #app :is(.parent-field input,.teacher-field-input,.hp-field input:not([type=file]),.hp-field textarea,.hp-field select,.control-search input){border-color:var(--dw-border,#dce8f5);border-radius:14px;background:#fff;color:var(--dw-ink,#193349);font-weight:500}
+body.dw-ui-new #app :is(.parent-tabbar,.teacher-tabbar){border-color:var(--dw-border,#e4ebf3);background:#fffffff5;box-shadow:0 -7px 22px var(--dw-shadow,#5b7b9b18)}
+body.dw-ui-new #app :is(.parent-tabbar,.teacher-tabbar) button[aria-selected="true"]{background:var(--dw-accent-soft,#eaf5ff);color:var(--dw-accent,#287cca)}
+body.dw-ui-new #app :is(.lp-chip.active,.hp-tabs button.active,.hp-chips button.active){border-color:var(--dw-border,#dce8f5);background:var(--dw-accent-soft,#eaf5ff);color:var(--dw-accent,#287cca)}
+body.dw-ui-new #app :is(.hp-line b,.hp-top button,.hp-text-button,.lp-link,.lp-back){color:var(--dw-accent,#287cca)}
+body.dw-ui-new .parent-screen:has(.ht-root),body.dw-ui-new .parent-screen:has(.ht-root) .parent-main,body.dw-ui-new .ht-root{background:radial-gradient(circle at 80% 6%,#dfd5ff,transparent 35%),linear-gradient(165deg,#f9f6ff,#f0ebff 58%,#fbfaff)}
+body.dw-ui-new .ht-root .ht-board{border-color:#ddd5f5;box-shadow:0 10px 28px #7967b41a}
+body.dw-ui-new .ht-root .ht-caption{border-color:#e5dcf9;background:linear-gradient(130deg,#f5efff,#eee8ff)}
+/* Login and binding steps share the same form rhythm without changing their flow. */
+body.dw-ui-new .parent-screen:not(.parent-login-screen) .parent-main:has(>.parent-hero){padding:22px 24px 26px}
+body.dw-ui-new .parent-screen:not(.parent-login-screen) .parent-hero{padding:9px 1px 19px}
+body.dw-ui-new .parent-screen:not(.parent-login-screen) .parent-symbol{width:42px;height:42px;border-radius:12px;background:linear-gradient(145deg,#da743b,#efa35e);box-shadow:0 8px 18px #c27b3d2c;font-size:20px}
+body.dw-ui-new .parent-screen:not(.parent-login-screen) .parent-hero h1{margin-top:19px;color:#68422d;font-size:24px;line-height:1.36}
+body.dw-ui-new .parent-screen:not(.parent-login-screen) .parent-hero p{color:#93755d;font-size:13px;line-height:1.6}
+body.dw-ui-new .parent-screen .parent-info{border:1px solid #f4e1ce;border-radius:12px;background:#fff8ef;color:#815c40}
+body.dw-ui-new .parent-screen .parent-student{padding:1px 0}
+body.dw-ui-new .parent-screen .parent-field{color:#704f39;font-size:13px}
+body.dw-ui-new .parent-screen .parent-code-row button{border-radius:12px;border-color:#efd2ba;background:#fff5e9;color:#ad632e}
+body.dw-ui-new .parent-screen .parent-link{color:#a3663f}
+body.dw-ui-new .parent-screen .parent-agreement-row input{accent-color:#d9783e}
+body.dw-ui-new .teacher-screen:not(.teacher-login-screen) .teacher-hero{padding-top:26px}
+body.dw-ui-new .teacher-screen:not(.teacher-login-screen) .teacher-mark{width:42px;height:42px;border-radius:12px;background:linear-gradient(145deg,#2b79c8,#65aaeb);box-shadow:0 8px 18px #4b8bcb2b;font-size:20px}
+body.dw-ui-new .teacher-screen:not(.teacher-login-screen) .teacher-hero h1{margin-top:19px;color:#234d77;font-size:24px;line-height:1.36}
+body.dw-ui-new .teacher-screen:not(.teacher-login-screen) .teacher-hero p{color:#708ba7;font-size:13px}
+body.dw-ui-new .teacher-screen .teacher-auth-card{margin-top:22px;padding:18px}
+body.dw-ui-new .teacher-screen .teacher-field-label{color:#365a7c}
+body.dw-ui-new .teacher-screen .teacher-send-code{border-color:#cde2f5;border-radius:12px;background:#ebf5ff;color:#2c77bd}
+body.dw-ui-new .teacher-screen .teacher-auth-mode.active{border-color:#287cca;color:#287cca}
+body.dw-ui-new .teacher-screen .teacher-agreement-row input{accent-color:#287cca}
+/* Learning, homework, controls and personal pages use the role accent. */
+body.dw-ui-new .parent-screen .lp-page{color:#553e31}
+body.dw-ui-new .parent-screen :is(.lp-primary,.pl-study,.lp-brief){background:linear-gradient(135deg,#bf6836,#e69a57);box-shadow:0 9px 22px #b8723b24}
+body.dw-ui-new .teacher-screen :is(.lp-primary,.pl-study,.lp-brief){background:linear-gradient(135deg,#235b9b,#3c8ccf);box-shadow:0 9px 22px #3b76b024}
+body.dw-ui-new #app :is(.lp-stat strong,.lp-row strong,.lp-event b,.lp-list-button b,.lp-evidence-entry b){color:var(--dw-accent,#287cca)}
+body.dw-ui-new #app :is(.lp-switch,.lp-class-switch,.wb-period){background:var(--dw-accent-soft,#eaf5ff)}
+body.dw-ui-new #app .lp-chip.active{background:#fff;color:var(--dw-accent,#287cca);box-shadow:0 2px 9px var(--dw-shadow,#5b7b9b20)}
+body.dw-ui-new #app .lp-tabs button.active{border-color:var(--dw-accent,#287cca);color:var(--dw-accent,#287cca)}
+body.dw-ui-new #app .lp-link{background:var(--dw-accent-soft,#eaf5ff)}
+body.dw-ui-new #app :is(.hp-card,.lp-card,.parent-card){margin-bottom:14px}
+body.dw-ui-new #app .hp-hero h1{color:var(--dw-accent,#287cca)}
+body.dw-ui-new #app .hp-tabs button.active{border-color:var(--dw-border,#dce8f5);background:var(--dw-accent-soft,#eaf5ff)}
+body.dw-ui-new #app .hp-steps span.active{background:var(--dw-accent-soft,#eaf5ff);color:var(--dw-accent,#287cca)}
+body.dw-ui-new #app :is(.hp-line em,.hp-series-next,.hp-recipient-details span){background:var(--dw-accent-soft,#eaf5ff);color:var(--dw-accent,#287cca)}
+body.dw-ui-new #app :is(.hp-tag-done,.hp-done){color:#18734d!important}
+body.dw-ui-new #app :is(.hp-pending,.hp-share-warning){border-color:#efd6b2;background:#fff8eb;color:#80551a}
+body.dw-ui-new .teacher-screen .teacher-desk{background:transparent}
+body.dw-ui-new .teacher-screen .teacher-greeting h1{color:#234e78}
+/* 新版界面的正文层级：辅助信息保持可读，重点数据继续由原有强调色承担。 */
+body.dw-ui-new #app :is(.parent-screen,.teacher-screen,.control-screen){color:var(--dw-ink,#193349);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body.dw-ui-new #app :is(.hp-hero h1,.hp-top h1,.lp-hero h1,.wb-heading h1,.pl-heading h1,.parent-hero h1,.teacher-hero h1,.teacher-greeting h1){color:var(--dw-heading,#071a38);font-weight:750;letter-spacing:-.02em}
+body.dw-ui-new #app :is(.hp-section,.lp-title h3,.pr-section-heading h3,.wb-focus-heading h2,.control-card-title,.control-entry-card h3){color:var(--dw-heading,#071a38);font-weight:700}
+body.dw-ui-new #app :is(.hp-card strong,.lp-card strong,.parent-card strong,.teacher-module b,.control-card strong){color:var(--dw-ink,#193349);font-weight:700}
+body.dw-ui-new #app :is(.wb-focus-list .lp-list-button span small,.lp-row span small,.lp-event small,.lp-evidence-entry small,.lp-stat span,.hp-parent-task small,.hp-muted){color:var(--dw-muted,#607991);font-size:12px;font-weight:500;line-height:1.55}
+body.dw-ui-new #app :is(.pr-overview>p,.pr-attention-row small,.pr-subject>p,.pr-record small,.pr-section-heading>small,.pr-subject-heading>span){color:var(--dw-muted,#607991);font-size:12px;font-weight:500;line-height:1.6}
+body.dw-ui-new #app :is(.hp-task-bottom,.lp-row+.lp-row,.lp-event+.lp-event,.lp-list-button+.lp-list-button,.parent-list-button+.parent-list-button){border-color:color-mix(in srgb,var(--dw-border,#d9e9f6) 76%,white)}
+body.dw-ui-new #app :is(.hp-tabs button,.hp-chips button,.lp-chip,.wb-period,.teacher-class,.control-class-option){border-radius:12px;font-weight:600}
+body.dw-ui-new #app :is(.wx-nav,.parent-detail-nav){border-color:var(--dw-border,#d9e9f6);background:#fffffff2;color:var(--dw-heading,#071a38)}
+body.dw-ui-new #app .parent-screen:not(:has(.ht-root)) :is(.wx-nav,.parent-detail-nav){background:transparent}
+body.dw-ui-new #app .teacher-login-screen .wx-nav{border-bottom:0;background:transparent}
+body.dw-ui-new #app .screen:has(>.home-content){background:radial-gradient(circle at 82% 4%,#dceeff,transparent 36%),linear-gradient(180deg,#f5faff,#eef4fa 65%,#f7f9fc)}
+body.dw-ui-new #app .screen:has(>.home-content) :is(.wx-header,.wx-nav,.home-content){background:transparent}
+body.dw-ui-new #app .wx-title{color:var(--dw-heading,#071a38);font-weight:750;letter-spacing:-.01em}
+body.dw-ui-new #app :is(.parent-tabbar,.teacher-tabbar) button{font-weight:600}
+body.dw-ui-new #app :is(.parent-tabbar,.teacher-tabbar) button[aria-selected="true"]{font-weight:750}
+body.dw-ui-new #app :is(.hp-section,.hp-requirement-heading>strong){display:flex;align-items:center;gap:9px}
+body.dw-ui-new #app :is(.hp-section,.hp-requirement-heading>strong)::before{content:"";flex:none;width:4px;height:20px;border-radius:4px;background:var(--dw-accent,#1687df);box-shadow:0 3px 8px var(--dw-shadow,#4b83b52b)}
+body.dw-ui-new #app :is(.wb-page>.lp-primary.full span,.wb-page>.lp-primary.full small,.hp-parent-task .hp-task-bottom){font-weight:600}
+body.dw-ui-new #app :is(.teacher-class.active,.control-class-option.active){border-color:#9ac7ed;background:#eff7ff}
+body.dw-ui-new #app :is(.teacher-module b,.control-entry-card h3,.control-card-title){color:#285e90}
+body.dw-ui-new #app :is(.control-entry-card,.control-card,.security-card){border:1px solid var(--dw-border,#dbeaf7);border-radius:16px;background:#ffffffed;box-shadow:0 8px 23px var(--dw-shadow,#4b85b81a)}
+body.dw-ui-new #app :is(.control-sheet,.lp-evidence-sheet){border-radius:24px 24px 0 0}
+/* Login entry visuals are part of the same global variant. */
+.teacher-login-tip{display:none}
+body.dw-ui-new .teacher-login-screen{background:radial-gradient(circle at 84% 13%,#c6e3ff 0,transparent 38%),linear-gradient(168deg,#f8fcff 0%,#eaf5ff 60%,#f8fbff 100%)}
+body.dw-ui-new .teacher-login-screen .teacher-main{padding:24px 24px 23px}
+body.dw-ui-new .teacher-login-screen .teacher-login-hero{height:342px;padding:12px 2px 0}
+body.dw-ui-new .teacher-login-screen .teacher-mark{width:40px;height:40px;border-radius:12px;background:linear-gradient(145deg,#2f76c8,#79b7f1);font-size:20px;box-shadow:0 8px 20px #3d89d02c}
+body.dw-ui-new .teacher-login-screen .teacher-login-hero h1{margin-top:25px;color:#153a65;font-size:30px;letter-spacing:-.4px}
+body.dw-ui-new .teacher-login-screen .teacher-login-hero p{max-width:none;margin-top:7px;color:#607e9e;font-size:13px}
+body.dw-ui-new .teacher-login-screen .teacher-login-hero .teacher-art{top:146px;right:50%;width:196px;height:170px;transform:translateX(50%);filter:drop-shadow(0 18px 14px #5a94cf25);opacity:1}
+body.dw-ui-new .teacher-login-screen .teacher-login-tip{display:grid;gap:5px;padding:14px 16px;border:1px solid #d4e7fa;border-radius:15px;background:#ffffffd9;box-shadow:0 7px 24px #6389ba13}
+body.dw-ui-new .teacher-login-screen .teacher-login-tip strong{color:#234e7c;font-size:13px}
+body.dw-ui-new .teacher-login-screen .teacher-login-tip span{color:#6d88a3;font-size:11px;line-height:1.55}
+body.dw-ui-new .teacher-login-screen .teacher-actions{padding-top:18px}
+body.dw-ui-new .teacher-login-screen .teacher-primary{height:49px;border-radius:12px;background:linear-gradient(105deg,#2778cd,#4d9ce5);box-shadow:0 8px 16px #2778cd29}
+body.dw-ui-new .teacher-login-screen .teacher-wechat-entry{height:46px;margin-top:9px;border-color:#bed8f1;background:#ffffffb8;color:#2e6eb0;font-size:14px}
+body.dw-ui-new .teacher-login-screen .teacher-agreement-row{margin-top:11px}
+/* Review states float beside the phone without moving the product canvas. */
+.dw-state .parent-exception-mask{position:fixed;inset:auto;z-index:20;width:min(414px,calc(100vw - 24px));pointer-events:none}
+.dw-state .parent-exception-sheet{margin:0;max-height:calc(100dvh - 24px);overflow:hidden;pointer-events:auto;overscroll-behavior:contain;box-shadow:0 12px 32px #0005}
+.dw-state .parent-exception-sheet>header,.dw-state .parent-exception-sheet>p,.dw-state .parent-exception-sheet>footer{flex:none}
+.dw-state .parent-exception-list{flex:0 1 auto;min-height:0;overflow:auto;scrollbar-width:thin;scrollbar-color:#526174 transparent}
+.dw-state .parent-exception-close{width:26px;height:26px;min-height:0;padding:0;border-radius:4px;background:transparent;color:#9eacbd;font-size:18px}
+.dw-state .parent-exception-sheet footer{padding:12px 0 0;border-color:#354151}
+.dw-state .parent-exception-sheet footer button{min-height:34px;border-radius:5px}
+
+/* Parent primary actions use the same coral as the upload-file button. */
+body.dw-ui-new #app .parent-screen:not(:has(.ht-root)) :is(.parent-primary,.hp-primary,.hp-upload-primary){background:#ef795a;color:#fff;box-shadow:0 8px 18px #ef795a24}
+body.dw-ui-new #app .parent-screen:not(:has(.ht-root)) :is(.parent-primary,.hp-primary,.hp-upload-primary):hover{background:#e96f50}
+body.dw-ui-new #app .parent-screen:not(:has(.ht-root)) :is(.parent-primary,.hp-primary,.hp-upload-primary):disabled{background:#e5d9d4;color:#786861;box-shadow:none}
+
+/* Approved tutoring screen takes priority over the old global purple skin. */
+body.dw-ui-new #app .parent-screen:has(.ht-simple),body.dw-ui-new #app .parent-screen:has(.ht-simple) .parent-main,body.dw-ui-new #app .ht-root.ht-simple{background:#fff}
+body.dw-ui-new #app .ht-simple .ht-board{border:0;box-shadow:none;background:#fff}
+body.dw-ui-new #app .ht-simple .ht-dock,body.dw-ui-new #app .ht-simple .ht-caption{background:#fff;border:0;box-shadow:none}
+.ht-simple .ht-caption-head .ht-button.primary{width:auto;min-width:110px;min-height:38px;padding:6px 14px}.ht-simple .ht-caption-label{white-space:nowrap}
+
+.dw-state-open .dw-flow,.dw-state-open .dw-flow-toggle{display:none}.dw-state .parent-exception-mask{width:320px}.dw-state .parent-exception-sheet{display:flex;flex-direction:column;max-height:calc(100dvh - 78px)}
+
+/* Main parent page: review controls remain outside the student phone. */
+.demo-workspace .dw-tutor-launch{margin:0 0 12px;padding:10px 18px;min-height:40px;border:1px solid #8d77b4;border-radius:9px;background:#342c45;color:#e2d8f3;font-size:13px;cursor:pointer}.dw-tutor-launch[hidden]{display:none}.tw-walkthrough-active .parent-main:has(.tw-phone-root){padding:0!important;overflow:hidden;display:flex;flex-direction:column}.tw-phone-root{flex:1;height:100%;min-height:0;display:flex;flex-direction:column;background:#fffefc}.tw-phone-root .tv-root{flex:1;min-height:0}.tw-entry{height:100%;padding:24px 20px;display:flex;flex-direction:column;background:#fffefc;color:#293348}.tw-paper-label{font-size:12px;color:#9c89ad}.tw-entry h2{font-size:21px;margin:18px 0 12px}.tw-entry>p{font-size:18px;line-height:1.9;margin:0}.tw-original-answer{margin-top:24px;padding:15px;background:#f8f5fa;border:1px solid #eae4ef;border-radius:12px}.tw-original-answer small{color:#94849f;font-size:11px}.tw-original-answer p{font-size:19px;line-height:1.8}.tw-original-answer>span{color:#c47c67;font-size:12px}.tw-entry-bottom{margin-top:auto;padding-top:24px}.tw-entry-bottom button{width:100%;min-height:46px}.tw-guide h3{color:#e3d7f1;font-size:17px;line-height:1.7;margin:14px 0 8px}.tw-guide .tw-guide-count{font-size:11px;color:#b9a4d2}.tw-guide-actions{display:flex;gap:7px}.tw-guide-actions button{flex:1;min-height:40px}.tw-guide .tw-guide-next{background:#9878bd;border-color:#a98dca;color:#fff;font-weight:600}.tw-guide .tw-guide-next-title{font-size:10px;color:#a99abb}.tw-guide .tw-guide-speech{border:1px solid #414052;padding:9px;border-radius:6px;margin:12px 0}.tw-guide-speech summary{color:#c6b5dc;cursor:pointer}.tw-guide .tw-guide-speech p{color:#c9c0d5;font-size:12px}.tw-guide .tw-guide-chapters{display:flex;gap:5px;flex-wrap:wrap;margin:10px 0}.tw-guide-chapters button{margin:0;padding:5px 8px}.tw-guide-chapters button[aria-pressed=true]{background:#4b3d60;border-color:#9e85bb;color:#eee3fa}.tw-guide .tw-guide-step{display:block;width:100%;text-align:left}.tw-guide .tw-guide-step.current{border-color:#aa91c6;color:#e6d8f6}.tw-guide .tw-guide-footnote{font-size:10px;line-height:1.8;color:#8795a7}.tw-guide button:focus-visible,.dw-tutor-launch:focus-visible{outline:2px solid #c7a7f0;outline-offset:2px}
+
+@media(min-width:1001px){.tw-walkthrough-active .device{height:min(844px,calc(100dvh - 142px));min-height:480px}}
+
+@media(max-width:1000px){.tw-walkthrough-active .dw-flow{position:relative;top:auto;right:auto;bottom:auto;width:390px;max-width:calc(100% - 24px);margin:12px auto 24px;max-height:none;border:1px solid #35404d;border-radius:10px;box-shadow:none}.tw-walkthrough-active .dw-account-states{display:none}}
+
+.tw-sample-select{display:block;width:100%;margin:8px 0 12px;padding:9px;background:#242d38;color:#eee;border:1px solid #516074;border-radius:7px}.tw-entry{overflow:auto}.tw-entry-image{max-width:100%;max-height:240px;object-fit:contain;margin:12px 0}.tw-guide .tw-branches{border-top:1px solid #394452;margin-top:14px;padding-top:12px}.tw-guide .tw-branches button{display:block;width:100%;text-align:left}.tw-guide label{font-size:12px;color:#c5cddd}
+
+#dw-homework-data{margin:0 0 16px;padding:10px 12px;border:1px solid #344655;border-radius:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;color:#b9cddd;font-size:12px}#dw-homework-data[hidden]{display:none}#dw-homework-data button{background:#253442;border:1px solid #40576a;color:#bdddf2;padding:6px 8px;border-radius:6px;cursor:pointer}#dw-homework-data button[aria-pressed=true]{background:#15537c;color:white}#dw-homework-data small{flex-basis:100%;color:#91a8bb}

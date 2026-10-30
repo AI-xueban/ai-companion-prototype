@@ -1,6 +1,16 @@
 // 与平板端 2026-10-12 的校级演示名册保持相同的班级、学生 ID 和人数。
 export const SCHOOL_NAME = '罗湖实验学校';
 export const REPORT_END = '2026-10-12';
+export interface TeachingAssignment { subject: string; classIds: string[] }
+export function getDemoTeachingAssignments(teacherId: string): TeachingAssignment[] {
+  if (teacherId === 'teacher-demo-001') return [{ subject: '数学', classIds: ['c1', 'c2'] }, { subject: '英语', classIds: ['c1', 'c2'] }];
+  if (teacherId === 'other-teacher-demo') return [{ subject: '语文', classIds: ['c1'] }];
+  return [];
+}
+export function formatHomeworkTitle(subject: string, kind: 'homework' | 'checkin' = 'homework', at: Date = new Date()): string {
+  const date = new Date(at.getTime() + 8 * 60 * 60 * 1000);
+  return `${date.getUTCMonth() + 1}月${date.getUTCDate()}日（周${'日一二三四五六'[date.getUTCDay()]}）${subject}${kind === 'checkin' ? '打卡' : '任务'}`;
+}
 
 export const DEMO_CLASSES = [
   { id: 'c1', name: '七年级(2)班', grade: 7, count: 30, used7: 18, learned7: 15, used30: 26, learned30: 23, subjects7: { 数学: 12, 语文: 10, 英语: 8 }, subjects30: { 数学: 21, 语文: 18, 英语: 15 } },
@@ -33,3 +43,20 @@ export const reportDate = (day: number) => {
   date.setUTCDate(date.getUTCDate() - day);
   return date.toISOString().slice(0, 10);
 };
+
+/** Only retire redundant built-in completed-list examples; keep task/submission history intact. */
+export function isRedundantCompletedHomeworkDemo(taskId:string,completedTaskIds:readonly string[]=[]):boolean {
+  return ['teacher-history-completed','teacher-history-pending','guardian-demo-status-v1-completed-english','guardian-demo-status-v1-completed-read','demo-read-cycle-2','demo-read-cycle-3'].includes(taskId)
+    || taskId==='grading-demo-v1'&&completedTaskIds.includes('homework-console-v1');
+}
+
+export interface IncompleteHomeworkDemoEntry {id:string;kind:string;completed:boolean;closed:boolean;completedCount:number;endedByDeadline:boolean}
+/** Curate only known seed IDs and only when an equivalent scenario remains visible. */
+export function isRedundantIncompleteHomeworkDemo(entry:IncompleteHomeworkDemoEntry,entries:readonly IncompleteHomeworkDemoEntry[]):boolean {
+  if(entry.completed)return false;
+  const peers=entries.filter(other=>other.id!==entry.id&&!other.completed&&other.kind===entry.kind&&other.closed===entry.closed&&other.completedCount===entry.completedCount);
+  if(['guardian-demo-status-v1-pending-math','guardian-demo-status-v1-pending-read'].includes(entry.id)&&!entry.closed&&entry.completedCount===0)return peers.length>0;
+  if(['guardian-demo-status-v1-ended-math','guardian-demo-status-v1-ended-english'].includes(entry.id)&&entry.closed&&entry.endedByDeadline)return peers.some(other=>other.endedByDeadline&&!other.id.startsWith('guardian-demo-status-v1-ended-')&&!/cycle-[23]$/.test(other.id));
+  const base=entry.id.match(/^(demo-read|task-demo-2)-cycle-[23]$/)?.[1];
+  return Boolean(base&&peers.some(other=>other.id===base&&(!entry.closed||other.endedByDeadline===entry.endedByDeadline)));
+}

@@ -23,25 +23,37 @@ function isTabletAbnormal(tablet) {
 
 function resolveTabletDeviceState(tablet) {
   if (!tablet) return null;
-  if (isTabletAbnormal(tablet)) return 'abnormal';
-  if (tablet.status === 'borrowed') return 'borrowed';
-  if (tablet.status === 'in_cabinet') return 'charging';
-  return 'borrowed';
+  if (tablet.status === 'maintenance' || isTabletAbnormal(tablet)) return 'abnormal';
+  if (tablet.charging === true) return 'charging';
+  return null;
 }
 
 function getTabletDeviceStatusLabel(tablet) {
-  const labels = { charging: '充电中', borrowed: '已借出', abnormal: '异常' };
-  return labels[resolveTabletDeviceState(tablet)] || '已借出';
+  const labels = { charging: '充电中', abnormal: '异常' };
+  return labels[resolveTabletDeviceState(tablet)] || '—';
 }
 
 function tabletDeviceStatusTag(tablet) {
   if (!tablet) return '';
   const map = {
     charging: '<span class="tag tag-green">充电中</span>',
-    borrowed: '<span class="tag tag-device-out">已借出</span>',
     abnormal: '<span class="tag tag-alert-pending">异常</span>',
   };
-  return map[resolveTabletDeviceState(tablet)] || esc(resolveTabletDeviceState(tablet));
+  return map[resolveTabletDeviceState(tablet)] || '<span style="color:var(--text-muted)">—</span>';
+}
+
+function tabletAppearanceStatusTag(tablet) {
+  return tablet.condition === 'normal'
+    ? '<span class="tag tag-green">正常</span>'
+    : '<span class="tag tag-red">异常</span>';
+}
+
+function tabletCreatedAt(tablet) {
+  return tablet.createdAt || '—';
+}
+
+function isTabletInCabinet(tablet) {
+  return tablet?.status === 'in_cabinet' || tablet?.status === 'maintenance';
 }
 
 function tabletDeviceStatusNote(tablet) {
@@ -519,17 +531,17 @@ function alertTypeLabel(type) {
   return map[type] || esc(type);
 }
 
-/** 告警内容：按类型统一简短描述；人工问题反馈展示具体问题文案 */
+/** 仅人工问题反馈直接展示接口文案；其他类型按固定规则生成告警内容。 */
 function alertContentText(a) {
-  if (a.type === 'manual_feedback') return a.message || '—';
+  if (a.type === 'manual_feedback') return a.description || a.message || '—';
   const map = {
-    damage: '外观对比发现损坏',
+    damage: '外观对比发现设备损坏',
     overdue: '借出逾期',
+    return_door_open: '对应格口柜门未关闭',
+    return_not_charging: '设备入柜后未进入充电状态',
     cabinet_offline: '柜机连接超时',
-    return_door_open: '未关门',
-    return_not_charging: '未充电',
   };
-  return map[a.type] || a.message || '—';
+  return map[a.type] || '—';
 }
 
 function resolveAlertSlotNo(alert) {
@@ -658,7 +670,8 @@ function filterTablets(tablets, filter) {
     if (snKey && !String(tablet.sn || '').toLowerCase().includes(snKey)) return false;
     if (cabinetIdKey && !String(tablet.cabinetId || '').toLowerCase().includes(cabinetIdKey)) return false;
     if (filter.cabinetName && !String(getCabinetName(tablet.cabinetId)).toLowerCase().includes(filter.cabinetName.trim().toLowerCase())) return false;
-    if (filter.status !== '全部' && getTabletDeviceStatusLabel(tablet) !== filter.status) return false;
+    if (filter.status === '已借出' && tablet.status !== 'borrowed') return false;
+    if (!['全部', '已借出'].includes(filter.status) && getTabletDeviceStatusLabel(tablet) !== filter.status) return false;
     return true;
   });
 }
@@ -699,8 +712,7 @@ function filterUsageRecords(records, filter) {
     }
     if (snKey && !String(r.sn || '').toLowerCase().includes(snKey)) return false;
     if (cabinetKey) {
-      const cabinetId = data.tablets.find(t => t.id === r.tabletId)?.cabinetId || r.cabinetBorrow || '';
-      if (!String(cabinetId).toLowerCase().includes(cabinetKey)) return false;
+      if (!String(r.cabinetBorrow || '').toLowerCase().includes(cabinetKey)) return false;
     }
     if (filter.status !== '全部') {
       if (getUsageRecordStatusLabel(r) !== filter.status) return false;
@@ -708,7 +720,7 @@ function filterUsageRecords(records, filter) {
     const borrowYmd = parseRecordYmd(r.borrowAt);
     if (!isYmdInRange(borrowYmd, filter.borrowStart, filter.borrowEnd)) return false;
     if (filter.returnStart || filter.returnEnd) {
-      const returnYmd = parseRecordYmd(r.returnAt || r.cancelledAt);
+      const returnYmd = parseRecordYmd(r.returnAt);
       if (!isYmdInRange(returnYmd, filter.returnStart, filter.returnEnd)) return false;
     }
     return true;
@@ -818,24 +830,22 @@ function resetAlertFilter() {
   navigate('device-alert', { keepFilter: true });
 }
 
-function renderUsageTableRows(records) {
+function renderUsageTableRows(records, startIndex = 0) {
   if (!records.length) {
-    return '<tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:32px">暂无符合条件的使用记录</td></tr>';
+    return '<tr><td colspan="11" style="text-align:center;color:var(--text-muted);padding:32px">暂无符合条件的使用记录</td></tr>';
   }
-  return records.map(r => `
+  return records.map((r, index) => `
     <tr>
-      <td>${esc(r.id)}</td>
+      <td>${startIndex + index + 1}</td>
       <td>${esc(r.sn || '—')}</td>
-      <td>${data.tablets.find(t => t.id === r.tabletId)?.slotNo != null ? `#${esc(String(data.tablets.find(t => t.id === r.tabletId).slotNo))}` : `#${esc(String(r.slotBorrow || '—'))}`}</td>
-      <td>${esc(data.tablets.find(t => t.id === r.tabletId)?.cabinetId || r.cabinetBorrow || '—')}</td>
-      <td>${esc(r.studentId || '—')}</td>
+      <td>${r.slotBorrow != null ? `#${esc(String(r.slotBorrow))}` : '—'}</td>
+      <td>${esc(r.cabinetBorrow || '—')}</td>
       <td>${esc(r.studentName)}</td>
+      <td>${esc(r.studentId || '—')}</td>
       <td>${esc(r.grade || '—')}</td>
-
       <td>${usageRecordStateTag(r)}</td>
-      <td class="status-ref-note">${esc(usageRecordStateNote(r))}</td>
       <td>${r.borrowAt}</td>
-      <td>${r.returnAt || r.cancelledAt || '—'}</td>
+      <td>${r.returnAt || '—'}</td>
       <td><button class="btn-link" onclick="openTab('device-usage-detail','使用记录详情',{id:'${r.id}'})">详情</button></td>
     </tr>
   `).join('');
@@ -860,10 +870,11 @@ function changeAlertStatus(alertId) {
 }
 function renderAlertTableRows(alerts) {
   if (!alerts.length) {
-    return '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:32px">暂无符合条件的告警</td></tr>';
+    return '<tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:32px">暂无符合条件的告警</td></tr>';
   }
-  return alerts.map(a => `
+  return alerts.map((a, index) => `
     <tr>
+      <td>${index + 1}</td>
       <td>${esc(a.id)}</td>
       <td>${alertTypeLabel(a.type)}</td>
       <td>${esc(a.sn || '—')}</td>
@@ -872,7 +883,7 @@ function renderAlertTableRows(alerts) {
       <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(alertContentText(a))}</td>
       <td>${alertStatusTag(a.status)}</td>
       <td>${a.createdAt}</td>
-      <td><button class="btn-link" onclick="changeAlertStatus('${a.id}')">${a.status === 'resolved' ? '恢复待处理' : '标记已解决'}</button></td>
+      <td><button class="btn-link" onclick="changeAlertStatus('${a.id}')">处理</button></td>
     </tr>
   `).join('');
 }
@@ -1075,18 +1086,62 @@ function renderDeviceOverviewPage() {
     </div>`;
 }
 
+function getDefaultCabinetFilter() {
+  return { id: '', name: '', school: '', version: '', online: '', location: '', start: '', end: '' };
+}
+
+let cabinetFilterState = getDefaultCabinetFilter();
+
+function filterCabinets(cabinets, filter) {
+  const contains = (value, key) => String(value || '').toLowerCase().includes(key.trim().toLowerCase());
+  return cabinets.filter(c => {
+    if (!contains(c.id, filter.id) || !contains(c.name, filter.name) || !contains(c.location, filter.location)) return false;
+    if (filter.school && c.schoolName !== filter.school) return false;
+    if (filter.version && c.installedVersion !== filter.version) return false;
+    if (filter.online && (c.online ? 'online' : 'offline') !== filter.online) return false;
+    const day = String(c.createdAt || '').replaceAll('/', '-').slice(0, 10);
+    if ((filter.start || filter.end) && !/^\d{4}-\d{2}-\d{2}$/.test(day)) return false;
+    if (filter.start && day < filter.start) return false;
+    if (filter.end && day > filter.end) return false;
+    return true;
+  });
+}
+
+function applyCabinetFilter() {
+  const next = Object.fromEntries(Object.keys(getDefaultCabinetFilter()).map(key => [key, document.getElementById(`cabinet-filter-${key}`)?.value || '']));
+  if (next.start && next.end && next.start > next.end) {
+    toast('创建开始日期不能晚于结束日期', 'warning');
+    return;
+  }
+  cabinetFilterState = next;
+  navigate('cabinet');
+}
+
+function resetCabinetFilter() {
+  cabinetFilterState = getDefaultCabinetFilter();
+  navigate('cabinet');
+}
+
 function renderCabinetPage() {
+  const f = cabinetFilterState;
+  const cabinets = filterCabinets(data.cabinets, f);
+  const schools = [...new Set([...(typeof FACE_SCHOOLS !== 'undefined' ? FACE_SCHOOLS.map(s => s.name) : []), ...data.cabinets.map(c => c.schoolName)].filter(Boolean))];
+  const versions = [...new Set(data.cabinets.map(c => c.installedVersion).filter(Boolean))];
+  const options = (values, selected) => values.map(value => `<option value="${esc(value)}" ${value === selected ? 'selected' : ''}>${esc(value)}</option>`).join('');
   return `
     <div class="page-card">
       <div class="page-card-title">柜机管理</div>
       <p class="form-hint" style="margin:0 0 16px" data-req-title="广告轮播" data-req-body="各柜机广告区可下发独立图片轮播，展示尺寸 1080×600，单柜上限 3 条。支持单柜配置与多选批量配置（保存后覆盖所选柜机原有内容；空列表即清空）。图片停留全柜统一 5 秒，后台无时长入口。本期仅图片，不支持视频。详情页不展示轮播。" data-req-doc="设备管理需求文档 §4.16 / §5.6">柜机台账与广告轮播（${CABINET_AD_SIZE.width}×${CABINET_AD_SIZE.height}）统一在此管理：可单柜配置，或勾选多台后「批量配置轮播内容」（保存后覆盖原内容）。</p>
-      <div class="filter-form">
-        <div class="filter-item"><label>柜机名称</label><input class="input" placeholder="请输入"></div>
-        <div class="filter-item"><label>在线状态</label><select class="select"><option>全部</option><option>在线</option><option>离线</option></select></div>
-        <div class="filter-item"><label>安装位置</label><input class="input" placeholder="请输入"></div>
-        <div class="filter-item"><label>广告轮播</label><select class="select"><option>全部</option><option>已配置</option><option>未配置</option></select></div>
-        <div class="filter-actions"><button class="btn">重置</button><button class="btn btn-primary">搜索</button></div>
-      </div>
+      <form class="filter-form" onsubmit="event.preventDefault(); applyCabinetFilter()">
+        <div class="filter-item"><label for="cabinet-filter-id">柜机ID</label><input id="cabinet-filter-id" class="input" placeholder="请输入柜机ID" value="${esc(f.id)}"></div>
+        <div class="filter-item"><label for="cabinet-filter-name">柜机名称</label><input id="cabinet-filter-name" class="input" placeholder="请输入柜机名称" value="${esc(f.name)}"></div>
+        <div class="filter-item"><label for="cabinet-filter-school">学校</label><select id="cabinet-filter-school" class="select"><option value="">全部学校</option>${options(schools, f.school)}</select></div>
+        <div class="filter-item"><label for="cabinet-filter-version">版本号</label><select id="cabinet-filter-version" class="select"><option value="">全部版本</option>${options(versions, f.version)}</select></div>
+        <div class="filter-item"><label for="cabinet-filter-online">在线状态</label><select id="cabinet-filter-online" class="select"><option value="">全部</option><option value="online" ${f.online === 'online' ? 'selected' : ''}>在线</option><option value="offline" ${f.online === 'offline' ? 'selected' : ''}>离线</option></select></div>
+        <div class="filter-item"><label for="cabinet-filter-location">安装位置</label><input id="cabinet-filter-location" class="input" placeholder="请输入安装位置" value="${esc(f.location)}"></div>
+        <div class="filter-item"><label>创建时间</label><div style="display:flex;align-items:center;gap:8px"><input id="cabinet-filter-start" aria-label="创建开始日期" class="input" type="date" style="width:145px" value="${esc(f.start)}"><span>至</span><input id="cabinet-filter-end" aria-label="创建结束日期" class="input" type="date" style="width:145px" value="${esc(f.end)}"></div></div>
+        <div class="filter-actions"><button type="button" class="btn" onclick="resetCabinetFilter()">重置</button><button type="submit" class="btn btn-primary">搜索</button></div>
+      </form>
       <div class="toolbar" style="margin-bottom:16px">
         <div class="toolbar-left">
           <button class="btn btn-primary" onclick="openAddCabinetModal()">添加柜机</button>
@@ -1098,10 +1153,10 @@ function renderCabinetPage() {
         <table class="data-table">
           <thead><tr>
             <th style="width:40px"><input type="checkbox" id="cabinet-select-all" onchange="toggleCabinetSelectAll(this.checked)" title="全选"></th>
-            <th>序号</th><th>柜机 ID</th><th>柜机名称</th><th>安装位置</th><th>格口</th><th>在线状态</th><th>轮播素材</th><th>最近心跳</th><th>绑定手机号</th><th>负责人</th><th>负责人联系方式</th><th>操作</th>
+            <th>序号</th><th>柜机ID</th><th>柜机名称</th><th>人脸识别注册码</th><th>学校</th><th>安装位置</th><th>格口</th><th>在线状态</th><th>版本号</th><th>轮播素材</th><th>最近心跳</th><th>绑定手机号</th><th>负责人</th><th>联系方式</th><th>创建时间</th><th>操作</th>
           </tr></thead>
           <tbody>
-            ${data.cabinets.map((c, i) => {
+            ${cabinets.map((c, i) => {
               const conf = typeof getCabinetCarousel === 'function' ? getCabinetCarousel(c.id) : { items: [], updatedAt: null };
               const items = conf.items || [];
               return `
@@ -1110,27 +1165,56 @@ function renderCabinetPage() {
                 <td>${i + 1}</td>
                 <td>${esc(c.id)}</td>
                 <td>${esc(c.name)}</td>
+                <td>${esc(c.faceRegistrationCode || '—')}</td>
+                <td>${esc(c.schoolName || '—')}</td>
                 <td>${esc(c.location)}</td>
-                <td>${getCabinetBoundTabletCount(c.id)}/${c.totalSlots}</td>
+                <td>${c.totalSlots || '—'}</td>
                 <td>${cabinetOnlineTag(c.online)}</td>
+                <td>${esc(c.installedVersion || '未上报')}</td>
                 <td>${typeof renderCarouselThumbStrip === 'function' ? renderCarouselThumbStrip(items) : '—'}</td>
                 <td>${c.lastHeartbeat}</td>
                 <td>${esc(c.boundPhone || '—')}</td>
-                <td>${esc(c.manager)}</td>
+                <td>${esc(c.manager || '—')}</td>
                 <td>${esc(c.managerContact || '—')}</td>
+                <td>${esc(c.createdAt || '—')}</td>
                 <td>
                   <button class="btn-link" onclick="openEditCabinetModal('${c.id}')">编辑</button>
-                  <button class="btn-link" onclick="openTab('cabinet-detail','柜机详情',{id:'${c.id}'})">查看详情</button>
-                  <button class="btn-link" onclick="openCarouselPreviewModal('${c.id}')">查看轮播</button>
                   <button class="btn-link" onclick="openTab('cabinet-carousel','配置轮播',{id:'${c.id}'})">配置轮播</button>
+                  <button class="btn-link" onclick="openTab('cabinet-detail','柜机详情',{id:'${c.id}'})">查看详情</button>
+                  <button class="btn-link" onclick="cvCabinetHistory('${c.id}')">版本历史</button>
+                  <button class="btn-link" onclick="openCarouselPreviewModal('${c.id}')">查看轮播</button>
+                  <button class="btn-link danger" onclick="deleteCabinet('${c.id}')">删除</button>
                 </td>
               </tr>
             `;
-            }).join('')}
+            }).join('') || '<tr><td colspan="17" style="text-align:center;color:#999;padding:32px">暂无符合条件的柜机</td></tr>'}
           </tbody>
         </table>
       </div>
     </div>`;
+}
+
+function deleteCabinet(cabinetId) {
+  const cabinet = data.cabinets.find(item => item.id === cabinetId);
+  if (!cabinet) return;
+  const boundCount = data.tablets.filter(item => item.cabinetId === cabinetId).length;
+  if (boundCount) {
+    toast(`该柜机仍绑定 ${boundCount} 台设备，暂不能删除`, 'warning');
+    return;
+  }
+  showConfirmModal({
+    title: '确认删除柜机',
+    message: `确认删除柜机“${cabinet.name}”吗？`,
+    hint: '删除后该柜机的轮播配置也会一并移除。',
+    confirmText: '删除',
+    onConfirm: () => {
+      data.cabinets = data.cabinets.filter(item => item.id !== cabinetId);
+      if (data.cabinetCarousels) delete data.cabinetCarousels[cabinetId];
+      saveData(data);
+      toast('柜机已删除', 'success');
+      navigate('cabinet');
+    },
+  });
 }
 
 function renderCabinetDetailPage(params) {
@@ -1141,15 +1225,18 @@ function renderCabinetDetailPage(params) {
     <div class="page-card">
       <div class="page-card-title">柜机详情 · ${esc(cab.name)}</div>
       <div class="detail-grid">
-        <div class="detail-item"><label>柜机 ID</label><span>${esc(cab.id)}</span></div>
+        <div class="detail-item"><label>柜机ID</label><span>${esc(cab.id)}</span></div>
         <div class="detail-item"><label>柜机名称</label><span>${esc(cab.name)}</span></div>
+        <div class="detail-item"><label>人脸识别注册码</label><span>${esc(cab.faceRegistrationCode || '—')}</span></div>
+        <div class="detail-item"><label>学校</label><span>${esc(cab.schoolName || '—')}</span></div>
         <div class="detail-item"><label>安装位置</label><span>${esc(cab.location)}</span></div>
         <div class="detail-item"><label>格口</label><span>${getCabinetBoundTabletCount(cab.id)} / ${cab.totalSlots} 已激活</span></div>
         <div class="detail-item"><label>在线状态</label><span>${cabinetOnlineTag(cab.online)}</span></div>
         <div class="detail-item"><label>最近心跳</label><span>${cab.lastHeartbeat}</span></div>
         <div class="detail-item"><label>绑定手机号</label><span>${esc(cab.boundPhone || '—')}</span></div>
         <div class="detail-item"><label>负责人</label><span>${esc(cab.manager)}</span></div>
-        <div class="detail-item"><label>负责人联系方式</label><span>${esc(cab.managerContact || '—')}</span></div>
+        <div class="detail-item"><label>联系方式</label><span>${esc(cab.managerContact || '—')}</span></div>
+        <div class="detail-item"><label>创建时间</label><span>${esc(cab.createdAt || '—')}</span></div>
       </div>
       <div class="form-section-title">格口概览</div>
       <div class="toolbar" style="margin-bottom:12px">
@@ -1209,7 +1296,8 @@ function renderTabletPage(params) {
   }
   const f = tabletFilterState;
   const tablets = filterTablets(data.tablets, f);
-  const totalCount = tablets.length;
+  const inCabinetCount = tablets.filter(isTabletInCabinet).length;
+  const outCabinetCount = tablets.length - inCabinetCount;
   return `
     <div class="page-card">
       <div class="page-card-title">平板设备</div>
@@ -1223,29 +1311,28 @@ function renderTabletPage(params) {
       </div>
       <div class="toolbar">
         <div class="toolbar-left">
-          <button class="btn btn-primary" onclick="openBatchImportModal('导入设备')">导入设备</button>
-          <button class="btn" onclick="openRestoreDeviceModal()">设备还原</button>
+          <span class="status-text">入柜设备 <strong>${inCabinetCount}</strong> 台　|　离柜数量 <strong>${outCabinetCount}</strong> 台</span>
         </div>
-        <div class="toolbar-right status-text">总计：${totalCount}</div>
+        <div class="toolbar-right"><button class="btn btn-primary" onclick="openBatchImportModal('导入设备')">导入设备</button></div>
       </div>
       <div class="table-wrap">
         <table class="data-table">
           <thead><tr>
-            <th>设备ID</th><th>设备SN</th><th>型号</th><th>柜机ID</th><th>柜机名称</th><th>格口号</th><th>柜门</th><th>格口状态</th><th>设备状态</th><th>说明</th><th>操作</th>
+            <th>序号</th><th>设备SN</th><th>柜机编号</th><th>柜机名称</th><th>格口编号</th><th>柜门状态</th><th>格口状态</th><th>外观状态</th><th>设备状态</th><th>创建时间</th><th>操作</th>
           </tr></thead>
           <tbody>
-            ${tablets.length ? tablets.map(t => `
+            ${tablets.length ? tablets.map((t, index) => `
               <tr>
-                <td>${esc(formatTabletIdDisplay(t.id))}</td>
+                <td>${index + 1}</td>
                 <td>${esc(t.sn)}</td>
-                <td>${esc(t.model)}</td>
                 <td>${esc(t.cabinetId || '—')}</td>
                 <td>${esc(getCabinetName(t.cabinetId))}</td>
                 <td>${t.slotNo != null ? `#${esc(String(t.slotNo))}` : '—'}</td>
                 <td>${doorStatusTag(t.doorStatus)}</td>
                 <td>${slotStateTag(t)}</td>
+                <td>${tabletAppearanceStatusTag(t)}</td>
                 <td>${tabletDeviceStatusTag(t)}</td>
-                <td class="status-ref-note">${esc(tabletDeviceStatusNote(t))}</td>
+                <td>${esc(tabletCreatedAt(t))}</td>
                 <td>
                   <button class="btn-link" onclick="openTab('tablet-detail','设备详情',{id:'${t.id}'})">详情</button>
                 </td>
@@ -1282,7 +1369,7 @@ function renderTabletDetailPage(params) {
       <div class="page-card-title">设备详情 · ${esc(formatTabletIdDisplay(tab.id))}</div>
       <div class="detail-grid">
         <div class="detail-item"><label>设备ID</label><span>${esc(formatTabletIdDisplay(tab.id))}</span></div>
-        <div class="detail-item"><label>SN 序列号</label><span>${esc(tab.sn)}</span></div>
+        <div class="detail-item"><label>设备SN</label><span>${esc(tab.sn)}</span></div>
         <div class="detail-item"><label>设备型号</label><span>${esc(tab.model)}</span></div>
         <div class="detail-item"><label>屏保二维码</label><span><code>${esc(tab.qrCode)}</code> <span style="font-size:12px;color:var(--text-muted)">（归还时柜机拍摄该码画面并识别）</span></span></div>
         <div class="detail-item"><label>所属柜机</label><span>${esc(getCabinetName(tab.cabinetId))}</span></div>
@@ -1311,7 +1398,7 @@ function renderTabletDetailPage(params) {
                 <td>${esc(u.studentName)}</td>
                 <td>${esc(u.grade || '—')}</td>
                 <td>${u.borrowAt}</td>
-                <td>${u.returnAt || u.cancelledAt || '—'}</td>
+                <td>${u.returnAt || '—'}</td>
                 <td>${usageRecordStateTag(u)}</td>
                 <td class="status-ref-note">${esc(usageRecordStateNote(u))}</td>
                 <td><button class="btn-link" onclick="openTab('device-usage-detail','使用记录详情',{id:'${u.id}'})">详情</button></td>
@@ -1352,9 +1439,9 @@ function renderDeviceUsagePage(params) {
       <div class="table-wrap">
         <table class="data-table">
           <thead><tr>
-            <th>记录ID</th><th>设备SN</th><th>格口号</th><th>所属柜机ID</th><th>编号</th><th>学生</th><th>班级</th><th>状态</th><th>说明</th><th>借出时间</th><th>归还时间</th><th>操作</th>
+            <th>序号</th><th>设备SN</th><th>格口编号</th><th>柜机编号</th><th>用户</th><th>用户编号</th><th>班级</th><th>平板使用记录状态</th><th>借出时间</th><th>归还时间</th><th>操作</th>
           </tr></thead>
-          <tbody>${renderUsageTableRows(pageRows)}</tbody>
+          <tbody>${renderUsageTableRows(pageRows, start)}</tbody>
         </table>
       </div>
       ${renderUsagePagination(filtered.length, page, pageSize)}
@@ -1417,7 +1504,7 @@ function renderDeviceAlertPage(params) {
       <div class="table-wrap">
         <table class="data-table">
           <thead><tr>
-            <th>告警ID</th><th>类型</th><th>设备SN</th><th>格口</th><th>所属柜机ID</th><th>告警内容</th><th>状态</th><th>产生时间</th><th>操作</th>
+            <th>序号</th><th>告警ID</th><th>类型</th><th>设备SN</th><th>格口编号</th><th>柜机编号</th><th>描述</th><th>状态</th><th>创建时间</th><th>操作</th>
           </tr></thead>
           <tbody>${renderAlertTableRows(filtered)}</tbody>
         </table>

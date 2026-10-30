@@ -76,5 +76,5 @@ export function StudentLearningDetail({ studentId, data, scope, onClose }: { stu
 }
 
 export function ReportFootnote() {
-  return <details className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-500"><summary className="cursor-pointer font-semibold">统计说明与数据范围</summary><div className="mt-3 space-y-2 leading-6"><p>所有数字为截至 2026-10-12 的固定演示数据，用于评审交互。近 7 / 30 天按完整自然日统计。</p><p>使用人数按学生去重；学习人数计入已发生内容观看、练习或学习互动的学生。仅打开页面不计入学习。筛选学科或任教范围后，使用人数只计该范围的操作。</p><p>学习时长统计活动参与分钟，排除后台、暂停与服务等待，不代表专注时长。总时长去重；人均时长除以本期学习人数。</p><p>本演示覆盖同步微课、自主练习、错题订正、AI 讲题和小晤学习问答。实际数据服务尚未接入；其他功能的记录范围见需求稿。当前数据不反映线下学习及其他应用。</p></div></details>;
+  return <details className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-500"><summary className="cursor-pointer font-semibold">统计说明与数据范围</summary><div className="mt-3 space-y-2 leading-6"><p>所有数字为截至 2026-10-12 的固定演示数据，用于评审交互。近 7 / 30 天按完整自然日统计。</p><p>使用人数按学生去重；学习人数仅计同步微课、自主练习、错题订正和 AI 解题。小晤问答仅计入应用使用和问答次数。筛选学科或任教范围后，使用人数只计该范围的操作。</p><p>学习时长为演示活动分钟之和，人均时长除以本期学习人数；真实有效时间片与去重计时尚未接入，不代表专注时长。借后亮屏时长另按设备屏幕状态统计。</p><p>AI 解题的解题次数按有效请求计，道题数按题目 ID 去重，问答次数按学生发问计。演示数据尚未接入实际服务；其他功能的记录范围见需求稿。</p></div></details>;
 }

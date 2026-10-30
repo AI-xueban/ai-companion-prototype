@@ -903,6 +903,8 @@ body.req-annotate-on .req-active-target {
 
 .modal.modal-xl { max-width: min(1200px, 100%); }
 
+.modal.modal-md { max-width: min(680px, 100%); }
+
 .modal.modal-sm { max-width: min(420px, 100%); }
 
 .modal.modal-md { max-width: min(560px, 100%); }
@@ -1352,6 +1354,59 @@ body.req-annotate-on .req-active-target {
 }
 
 .batch-import-template-btn { width: 100%; }
+
+/* 人脸照片批量导入 */
+.modal.modal-xl:has(.face-import-modal) {
+  max-width: min(1500px, calc(100vw - 32px));
+}
+.modal:has(.face-import-modal) .modal-header,
+.modal:has(.face-import-modal) .modal-footer { border: 0; }
+.modal:has(.face-import-modal) .modal-body { padding: 8px 18px 0; }
+.face-import-modal {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(320px, 1.05fr);
+  gap: 20px;
+  min-height: 460px;
+}
+.face-import-modal .face-import-main { min-width: 0; }
+.face-import-modal .face-import-list { margin-top: 0; }
+.face-import-modal .data-table th { background: #fff; font-weight: 600; color: var(--text-secondary); }
+.face-import-modal .data-table td { vertical-align: middle; }
+.face-import-upload { min-width: 0; }
+.face-import-context { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.face-import-school, .face-import-class { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.face-import-school > span, .face-import-class > span { color: var(--text-secondary); }
+.face-import-school strong { line-height: 40px; overflow-wrap: anywhere; }
+.face-import-class em { color: var(--danger); font-style: normal; }
+.face-import-class .select { width: 100%; }
+.face-import-upload-card { padding: 20px; border-radius: 10px; background: #f5f7fa; }
+.face-import-upload-zone { position: relative; }
+.face-import-dropzone {
+  min-height: 184px;
+  padding: 88px 20px 20px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-secondary);
+}
+.face-import-demo-btn { position: absolute; top: 38px; left: 50%; transform: translateX(-50%); border-color: #91caff; color: var(--primary); white-space: nowrap; }
+.face-import-upload-link { color: var(--primary); }
+.face-import-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.face-import-actions .btn { width: 100%; white-space: nowrap; text-align: center; }
+.face-record-progress { min-width: 150px; }
+.face-record-progress__track { height: 6px; border-radius: 999px; background: #e5e7eb; overflow: hidden; }
+.face-record-progress__fill { display: block; height: 100%; border-radius: inherit; background: var(--primary); }
+.face-record-progress__count { display: block; margin-top: 5px; color: var(--text-secondary); font-size: 12px; }
+.face-sync-records .btn-link:disabled { color: var(--text-secondary); opacity: .55; cursor: not-allowed; }
+@media (max-width: 900px) {
+  .face-import-modal { grid-template-columns: 1fr; min-height: 0; }
+  .face-import-upload { grid-row: 1; }
+  .face-import-context { margin-bottom: 12px; }
+  .face-import-modal .face-import-main { min-height: 220px; }
+}
 
 .import-result-fail { color: var(--danger); }
 
@@ -2830,12 +2885,66 @@ body.req-annotate-on .req-active-target {
 .empty-state { padding:40px !important; text-align:center; color:#86909c; }
 .third-party-app-page .btn-link + .btn-link { margin-left:14px; }
 
-/* 需求说明改为右下角悬浮入口，默认不占用页面空间 */
+/* 控制台改为右下角唯一悬浮入口，默认不占用页面空间 */
 .layout-main { margin-right: 0; }
 .req-panel.is-hidden { display: none; }
-.req-float-btn { position: fixed; right: 20px; bottom: 20px; z-index: 3100; width: 42px; height: 42px; border: 0; border-radius: 50%; background: var(--primary); color: #fff; font-size: 20px; line-height: 42px; text-align: center; cursor: pointer; box-shadow: 0 5px 16px rgba(22,119,255,.28); transition: transform .2s, background .2s; }
+.req-float-btn { position: fixed; right: 20px; bottom: 20px; z-index: 3100; min-width: 96px; height: 42px; padding: 0 16px; border: 0; border-radius: 999px; background: var(--primary); color: #fff; display: inline-flex; align-items: center; justify-content: center; gap: 10px; font-size: 14px; cursor: pointer; box-shadow: 0 5px 16px rgba(22,119,255,.28); transition: transform .2s, background .2s; }
+.req-float-btn b { font-size: 18px; font-weight: 600; }
 .req-float-btn:hover { transform: translateY(-2px); background: var(--primary-hover); }
 .req-float-btn.is-active { background: #475467; }
+
+.console-page-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 14px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+.console-page-head strong { font-size: 16px; color: var(--text); }
+.console-route-label { font-size: 12px; color: var(--text-muted); }
+.console-section { padding: 14px; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+.console-section h4 { margin: 0 0 8px; font-size: 14px; }
+.console-section > p { margin: 0 0 16px; color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
+.console-field { display: block; margin-bottom: 6px; color: var(--text-secondary); font-size: 12px; }
+.console-select { width: 100%; margin-bottom: 12px; }
+.console-task-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.console-task-actions .btn { padding: 0 8px; }
+.console-note { padding: 10px 12px; margin-top: 14px; border-radius: 6px; background: var(--bg); color: var(--text-muted); font-size: 12px; line-height: 1.6; }
+.console-empty { display: grid; place-items: center; min-height: 180px; color: var(--text-muted); text-align: center; }
+.console-empty-icon { font-size: 28px; color: #b8c1cc; }
+.console-empty p { margin: 0; }
+.console-empty--compact { min-height: 90px; border-radius: 6px; background: var(--bg); }
+
+/* 控制台使用轻量浮窗，不占用或压缩原型画布 */
+.req-panel {
+  top: auto;
+  right: 20px;
+  bottom: 72px;
+  width: 340px;
+  max-width: calc(100vw - 40px);
+  max-height: min(520px, calc(100vh - 100px));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(31, 45, 61, .18);
+}
+
+.req-panel-header {
+  height: 48px;
+  padding: 0 16px;
+}
+
+.req-panel-body {
+  min-height: 0;
+  padding: 16px;
+}
+
+.modal-overlay { right: 0; }
+.toast-container { right: 20px; }
+
+@media (max-width: 540px) {
+  .req-panel {
+    right: 12px;
+    bottom: 66px;
+    width: calc(100vw - 24px);
+    max-width: none;
+    max-height: min(480px, calc(100vh - 88px));
+  }
+  .req-float-btn { right: 12px; bottom: 12px; }
+}
 .third-party-filters { display:grid; grid-template-columns: 1.4fr 1fr 1fr 1fr auto; gap:12px; align-items:end; margin-bottom:16px; padding:16px; background:#fff; border:1px solid #e8ebf0; border-radius:8px; }
 .third-party-filters label { display:flex; flex-direction:column; gap:6px; min-width:0; color:#4e5969; font-size:12px; }
 .third-party-filters .input, .third-party-filters .select { width:100%; min-width:0; }

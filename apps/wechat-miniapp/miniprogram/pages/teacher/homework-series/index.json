@@ -1,1 +1,1 @@
-{ "navigationBarTitleText": "每日进度" }
+{ "navigationBarTitleText": "每日进度", "navigationStyle": "custom", "usingComponents": { "page-navigation": "/components/page-navigation/index" } }

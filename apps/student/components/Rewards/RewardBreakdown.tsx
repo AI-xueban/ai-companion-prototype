@@ -15,7 +15,7 @@ export const RewardBreakdown: React.FC<{ result: RewardGrantResult; compact?: bo
         {result.coinBreakdown.length ? result.coinBreakdown.map((item, index) => <div key={index} className="flex justify-between gap-3 py-1"><span>{item.label}</span><b className="shrink-0">+{item.value}</b></div>) : <p className="text-xs">本次未获得金币</p>}
       </div>
       <div className="rounded-2xl bg-blue-50 border border-blue-100 p-3 text-slate-700">
-        <p className="font-black text-blue-700 mb-2">经验 +{result.xp} XP</p>
+        <p className="font-black text-blue-700 mb-2">经验 +{result.xp} 经验值（XP）</p>
         {compact && summarizeXp(result).map((item, index) => <div key={index} className="flex justify-between gap-3 py-1"><span>{item.label}</span><b className="shrink-0">{item.value >= 0 ? '+' : ''}{item.value}</b></div>)}
         <details open={!compact}>
           <summary className="cursor-pointer text-xs font-bold">经验计算明细</summary>

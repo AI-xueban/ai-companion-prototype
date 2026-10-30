@@ -22,7 +22,7 @@ function renderCabinetFormModal(cabinet) {
   const subtitle = document.getElementById('modal-subtitle');
   const footer = document.getElementById('modal-footer');
   const schools = typeof FACE_SCHOOLS !== 'undefined' ? FACE_SCHOOLS : [];
-  const schoolOptions = schools.map(school => `<option value="${esc(school.id)}" ${cabinet?.schoolId === school.id ? 'selected' : ''}>${esc(school.name)}</option>`).join('');
+  const schoolOptions = schools.map(school => `<option value="${esc(school.name)}"></option>`).join('');
 
   document.getElementById('modal-title').textContent = isEdit ? '编辑柜机' : '添加柜机';
   if (subtitle) {
@@ -37,7 +37,7 @@ function renderCabinetFormModal(cabinet) {
 
   const readonlyBlock = isEdit ? `
     <div class="device-form-readonly">
-      <div class="device-form-readonly-item"><label>柜机 ID</label><span>${esc(cabinet.id)}</span></div>
+      <div class="device-form-readonly-item"><label>柜机ID</label><span>${esc(cabinet.id)}</span></div>
       <div class="device-form-readonly-item"><label>格口数量</label><span>${cabinet.totalSlots}（已占用 ${cabinet.usedSlots}）</span></div>
       <div class="device-form-readonly-item"><label>在线状态</label><span>${cabinet.online ? '<span class="tag tag-green">在线</span>' : '<span class="tag tag-red">离线</span>'}</span></div>
       <div class="device-form-readonly-item"><label>最近心跳</label><span>${esc(cabinet.lastHeartbeat)}</span></div>
@@ -49,7 +49,7 @@ function renderCabinetFormModal(cabinet) {
       ${readonlyBlock}
       ${isEdit ? '' : `
       <div class="add-tag-field">
-        <label class="add-tag-label"><span class="required">*</span>柜机 ID</label>
+        <label class="add-tag-label"><span class="required">*</span>柜机ID</label>
         <input class="input add-tag-input" id="add-cabinet-id" placeholder="如 CAB-004" value="${esc(getNextCabinetId())}">
       </div>`}
       <div class="add-tag-field">
@@ -57,15 +57,17 @@ function renderCabinetFormModal(cabinet) {
         <input class="input add-tag-input" id="add-cabinet-name" placeholder="请输入" value="${isEdit ? esc(cabinet.name) : ''}">
       </div>
       <div class="add-tag-field">
-        <label class="add-tag-label"><span class="required">*</span>安装位置</label>
-        <input class="input add-tag-input" id="add-cabinet-location" placeholder="请输入" value="${isEdit ? esc(cabinet.location) : ''}">
+        <label class="add-tag-label">人脸识别注册码</label>
+        <input class="input add-tag-input" id="add-cabinet-face-code" placeholder="请输入人脸识别注册码（非必填）" value="${isEdit ? esc(cabinet.faceRegistrationCode || '') : ''}">
       </div>
       <div class="add-tag-field">
         <label class="add-tag-label"><span class="required">*</span>学校</label>
-        <select class="select add-tag-input" id="add-cabinet-school">
-          <option value="">请选择学校</option>
-          ${schoolOptions}
-        </select>
+        <input class="input add-tag-input" id="add-cabinet-school" list="add-cabinet-school-options" placeholder="请输入学校名称搜索" value="${isEdit ? esc(cabinet.schoolName || '') : ''}">
+        <datalist id="add-cabinet-school-options">${schoolOptions}</datalist>
+      </div>
+      <div class="add-tag-field">
+        <label class="add-tag-label"><span class="required">*</span>安装位置</label>
+        <input class="input add-tag-input" id="add-cabinet-location" placeholder="请输入" value="${isEdit ? esc(cabinet.location) : ''}">
       </div>
       <div class="add-tag-field">
         <label class="add-tag-label"><span class="required">*</span>绑定手机号</label>
@@ -110,10 +112,13 @@ function getNextCabinetId() {
 function saveCabinetFormModal() {
   const cabinetId = document.getElementById('add-cabinet-id')?.value?.trim();
   const name = document.getElementById('add-cabinet-name')?.value?.trim();
+  const faceRegistrationCode = document.getElementById('add-cabinet-face-code')?.value?.trim();
   const location = document.getElementById('add-cabinet-location')?.value?.trim();
-  const schoolSelect = document.getElementById('add-cabinet-school');
-  const schoolId = schoolSelect?.value || '';
-  const schoolName = schoolId ? schoolSelect?.selectedOptions?.[0]?.textContent?.trim() || '' : '';
+  const schoolInput = document.getElementById('add-cabinet-school');
+  const schoolName = schoolInput?.value?.trim() || '';
+  const schools = typeof FACE_SCHOOLS !== 'undefined' ? FACE_SCHOOLS : [];
+  const school = schools.find(item => item.name === schoolName);
+  const schoolId = school?.id || '';
   const boundPhone = document.getElementById('add-cabinet-bound-phone')?.value?.trim();
   const manager = document.getElementById('add-cabinet-manager')?.value?.trim();
   const managerContact = document.getElementById('add-cabinet-manager-contact')?.value?.trim();
@@ -126,9 +131,14 @@ function saveCabinetFormModal() {
     toast('请填写安装位置', 'warning');
     return;
   }
-  if (!schoolId) {
+  if (!schoolName) {
     toast('请选择学校', 'warning');
-    schoolSelect?.focus();
+    schoolInput?.focus();
+    return;
+  }
+  if (!school) {
+    toast('请选择搜索结果中的学校', 'warning');
+    schoolInput?.focus();
     return;
   }
   if (!boundPhone) {
@@ -149,6 +159,7 @@ function saveCabinetFormModal() {
       return;
     }
     cab.name = name;
+    cab.faceRegistrationCode = faceRegistrationCode || '—';
     cab.location = location;
     cab.schoolId = schoolId;
     cab.schoolName = schoolName || '—';
@@ -168,17 +179,18 @@ function saveCabinetFormModal() {
     return;
   }
   if (!cabinetId) {
-    toast('请填写柜机 ID', 'warning');
+    toast('请填写柜机ID', 'warning');
     return;
   }
   if (data.cabinets.some(c => c.id === cabinetId)) {
-    toast('柜机 ID 已存在', 'warning');
+    toast('柜机ID已存在', 'warning');
     return;
   }
 
   data.cabinets.push({
     id: cabinetId,
     name,
+    faceRegistrationCode: faceRegistrationCode || '—',
     location,
     schoolId,
     schoolName: schoolName || '—',
@@ -189,6 +201,7 @@ function saveCabinetFormModal() {
     boundPhone: boundPhone,
     manager: manager || '—',
     managerContact: managerContact || '—',
+    createdAt: now(),
   });
   saveData(data);
   closeAddCabinetModal();

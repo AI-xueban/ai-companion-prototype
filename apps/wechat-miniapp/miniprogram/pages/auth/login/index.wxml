@@ -39,8 +39,8 @@
         </view>
       </view>
     </view>
-    <checkbox-group bindchange="changeAgreement" class="agreement"><label><checkbox value="agreed" color="#5267D8" />我已阅读并同意《隐私政策》与《家长监护说明》</label></checkbox-group>
     <button class="primary-button" loading="{{isSubmitting}}" bindtap="completeGuardianBinding">微信授权并进入家长端</button>
+    <view class="teacher-agreement-row guardian-agreement-row"><checkbox-group bindchange="changeAgreement"><label><checkbox value="agreed" checked="{{agreed}}" color="#f3807e" />我已阅读并同意</label></checkbox-group><text data-kind="guardianService" bindtap="openTeacherAgreement">《用户协议》</text><view>和</view><text data-kind="guardianPrivacy" bindtap="openTeacherAgreement">《隐私政策》</text></view>
   </view>
 
   <view wx:elif="{{stage === 'teacher-login'}}" class="flow-stage teacher-flow">
@@ -75,6 +75,7 @@
     <view class="teacher-bottom">
       <button class="teacher-submit" loading="{{isSubmitting}}" bindtap="completeTeacherVerification">进入工作台</button>
       <button class="teacher-wechat-entry" loading="{{isSubmitting}}" bindtap="teacherWechatQuickLogin">微信一键登录</button>
+      <view class="teacher-agreement-row"><checkbox-group bindchange="changeTeacherAgreement"><label><checkbox value="agreed" checked="{{teacherAgreed}}" color="#4d99de" />我已阅读并同意</label></checkbox-group><text data-kind="service" bindtap="openTeacherAgreement">《用户协议》</text><view>和</view><text data-kind="privacy" bindtap="openTeacherAgreement">《隐私政策》</text></view>
     </view>
   </view>
   <view wx:else class="flow-stage teacher-flow">
@@ -96,3 +97,5 @@
     </view>
   </view>
 </view>
+
+<view wx:if="{{agreementTitle}}" class="teacher-agreement-mask"><view class="teacher-agreement-detail"><view class="teacher-agreement-heading"><text>{{agreementTitle}}</text><text bindtap="closeTeacherAgreement">关闭</text></view><scroll-view scroll-y class="teacher-agreement-body"><block wx:for="{{agreementSections}}" wx:key="index"><view class="{{index % 2 === 0 ? 'teacher-agreement-subtitle' : 'teacher-agreement-paragraph'}}">{{item}}</view></block></scroll-view><button bindtap="closeTeacherAgreement" class="teacher-submit">返回登录</button></view></view>

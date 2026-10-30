@@ -20,6 +20,9 @@ Page({
     selectedChildId: DEMO_GUARDIAN_CHILD_IDS[0],
     children: CHILDREN,
     agreed: false,
+    teacherAgreed: false,
+    agreementTitle: "",
+    agreementSections: [] as string[],
     isSubmitting: false,
     teacherPhone: "",
     teacherLoginMode: "sms" as TeacherLoginMode,
@@ -94,6 +97,10 @@ Page({
     this.setData({ selectedChildId: event.currentTarget.dataset.id });
   },
 
+  changeTeacherAgreement(event: WechatMiniprogram.CustomEvent<{ value: string[] }>) { this.setData({ teacherAgreed: event.detail.value.includes('agreed') }); },
+  openTeacherAgreement(event: WechatMiniprogram.BaseEvent) { const docs: Record<string, {title: string; sections: string[]}> = {"service":{"title":"用户协议","sections":["协议内容示意","本页用于演示协议阅读交互，正式协议正文待接入。","账号与权限","请使用学校分配的教师账号登录，按任教范围处理班级任务，并妥善保管账号。","服务使用","可在已授权范围内查看学情、布置作业与处理学生提交。具体服务规则以正式协议为准。"]},"privacy":{"title":"隐私政策","sections":["政策内容示意","本页用于演示隐私政策阅读交互，正式政策正文待接入。","信息与用途","登录涉及账号身份验证；班级、学生及作业信息用于已授权的教学工作。","权限与管理","图片、视频和文件仅在主动选择附件时读取。个人信息处理范围、保存期限、联系及权利申请方式以正式政策为准。"]}}; docs.guardianService={"title":"用户协议","sections":["协议内容示意","本页用于演示协议阅读交互，正式协议正文待接入。","账号与孩子关联","请使用本人微信和手机号登录，按照学校二维码或家庭邀请流程关联孩子。关联成功前不展示孩子的学习详情。","服务使用","家长仅在已授权范围内查看关联孩子的学情、作业和提交记录。具体服务规则以正式协议为准。"]}; docs.guardianPrivacy={"title":"隐私政策","sections":["政策内容示意","本页用于演示隐私政策阅读交互，正式政策正文待接入。","信息与用途","微信身份、手机号和孩子关联信息用于账号登录、关联验证与授权访问。","权限与管理","相册、拍摄及文件选择在用户主动操作时使用。信息处理范围、保存期限、联系及权利申请方式以正式政策为准。"]}; const doc=docs[String(event.currentTarget.dataset.kind)]; if(doc)this.setData({agreementTitle:doc.title,agreementSections:doc.sections}); },
+  closeTeacherAgreement() { this.setData({agreementTitle: '', agreementSections: []}); },
+  requireTeacherAgreement() { if(this.data.teacherAgreed)return true; wx.showToast({title:'请先阅读并勾选同意协议',icon:'none'}); return false; },
   changeAgreement(event: WechatMiniprogram.CustomEvent<{ value: string[] }>) {
     this.setData({ agreed: event.detail.value.includes("agreed") });
   },
@@ -137,7 +144,7 @@ Page({
 
   async completeGuardianBinding() {
     if (!this.data.agreed) {
-      wx.showToast({ title: "请先阅读并同意授权说明", icon: "none" });
+      wx.showToast({ title: "请先阅读并勾选同意协议", icon: "none" });
       return;
     }
 
@@ -157,6 +164,7 @@ Page({
   },
 
   completeTeacherVerification() {
+    if (!this.requireTeacherAgreement()) return;
     if (!/^1\d{10}$/.test(this.data.teacherPhone)) {
       wx.showToast({ title: "请输入有效的 11 位手机号", icon: "none" });
       return;
@@ -203,6 +211,7 @@ Page({
   },
 
   async teacherWechatQuickLogin() {
+    if (!this.requireTeacherAgreement()) return;
     this.setData({ isSubmitting: true });
     try {
       await requestWechatLoginCode();

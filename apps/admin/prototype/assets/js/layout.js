@@ -5,12 +5,8 @@ const MENU = [
     key: 'user', label: '用户管理', icon: '👤', expanded: true,
     children: [
       { key: 'teacher-accounts', label: '教师账号', route: null },
-      {
-        key: 'student-accounts', label: '学生账号', expanded: true,
-        children: [
-          { key: 'face-library', label: '人脸信息管理', route: 'face-library' },
-        ]
-      },
+      { key: 'student-accounts', label: '学生账号', route: null },
+      { key: 'face-library', label: '人脸信息管理', route: 'face-library' },
       { key: 'admin-accounts', label: '后台账号', route: null },
     ]
   },
@@ -19,6 +15,7 @@ const MENU = [
     children: [
       { key: 'device-overview', label: '概览', route: 'device-overview' },
       { key: 'cabinet', label: '柜机管理', route: 'cabinet' },
+      { key: 'cabinet-version', label: '柜机升级', route: 'cabinet-version' },
       { key: 'tablet', label: '平板设备', route: 'tablet' },
       { key: 'device-usage', label: '使用记录', route: 'device-usage' },
       { key: 'device-alert', label: '状态告警', route: 'device-alert' },
@@ -62,6 +59,7 @@ const MENU = [
 ];
 
 const ROUTE_META = {
+  'cabinet-version': { title: '柜机升级', breadcrumb: ['设备管理', '柜机升级'] },
   'mall': { title: '捐赠与爱心池', breadcrumb: ['金币运营', '捐赠与爱心池'] },
   'home-config': { title: '首页配置', breadcrumb: ['内容运营', '万象视界管理', '首页配置'] },
   'hot-recommend': { title: '热门推荐', breadcrumb: ['内容运营', '万象视界管理', '热门推荐'] },
@@ -89,7 +87,9 @@ const ROUTE_META = {
   'third-party-apps': { title: '第三方应用', breadcrumb: ['第三方应用'] },
   'app-library': { title: '第三方应用', breadcrumb: ['第三方应用'] },
   'school-apps': { title: '学校应用', breadcrumb: ['第三方应用', '学校应用'] },
-  'face-library': { title: '人脸信息管理', breadcrumb: ['用户管理', '学生账号', '人脸信息管理'] },
+  'face-sync-status': { title: '上传注册记录', breadcrumb: ['用户管理','人脸信息管理','上传注册记录'] },
+  'face-sync-detail': { title: '注册状态详情', breadcrumb: ['用户管理','人脸信息管理','注册状态','详情'] },
+  'face-library': { title: '人脸信息管理', breadcrumb: ['用户管理', '人脸信息管理'] },
 };
 
 function renderSiderMenu(activeRoute) {
@@ -104,6 +104,7 @@ function isMenuRouteActive(itemRoute, activeRoute) {
     'daily-word': ['word-edit'],
     'cabinet': ['cabinet-detail', 'cabinet-carousel', 'cabinet-carousel-batch'],
     'tablet': ['tablet-detail'],
+    'face-library': ['face-sync-status', 'face-sync-detail'],
     'device-usage': ['device-usage-detail'],
   };
   if (itemRoute === activeRoute) return true;
@@ -149,10 +150,25 @@ function renderBreadcrumb(route) {
 let openTabs = [{ id: 'home-config', route: 'home-config', title: '首页配置', params: null }];
 let tabSeq = 1;
 
+// Restore face tabs after direct entry or refresh.
+function ensureFaceTabs(route, params) {
+  if (route !== 'face-library' && route !== 'face-sync-status') return;
+  if (!openTabs.some(t => t.route === 'face-library')) {
+    openTabs.push({ id: 'face-library', route: 'face-library', title: '人脸信息管理', params: null });
+  }
+  if (route === 'face-sync-status' && !openTabs.some(t => t.route === route && JSON.stringify(t.params || null) === JSON.stringify(params || null))) {
+    openTabs.push({ id: params?._tabId || route + '-' + tabSeq++, route, title: '上传注册记录', params: params || null });
+  }
+}
+
 function openTab(route, title, params, forceNew = false) {
   const meta = ROUTE_META[route];
   const tabTitle = title || meta?.title || route;
   let tab;
+  if (route === 'face-sync-status' && !forceNew) {
+    const existing = openTabs.find(t => t.route === route);
+    if (existing) { existing.params = params || null; existing.title = tabTitle; }
+  }
   if (forceNew) {
     const tabId = `${route}-${tabSeq++}`;
     const tabParams = { ...(params || {}), _tabId: tabId };
@@ -169,7 +185,8 @@ function openTab(route, title, params, forceNew = false) {
     }
   }
   const hash = tab.params ? `${route}?${encodeURIComponent(JSON.stringify(tab.params))}` : route;
-  location.hash = hash;
+  if (location.hash.slice(1) === hash) renderApp(route, tab.params);
+  else location.hash = hash;
 }
 
 function closeTab(tabId, e) {
@@ -179,8 +196,15 @@ function closeTab(tabId, e) {
   const activeTabId = current.params?._tabId ||
     openTabs.find(t => t.route === current.route && JSON.stringify(t.params || null) === JSON.stringify(current.params || null))?.id ||
     current.route;
+  const closingTab = openTabs.find(t => t.id === tabId);
   openTabs = openTabs.filter(t => t.id !== tabId);
   if (tabId === activeTabId) {
+    if (closingTab?.route === 'face-sync-status') {
+      const parent = openTabs.find(t => t.route === 'face-library');
+      if (parent) navigate(parent.route, parent.params);
+      else openTab('face-library');
+      return;
+    }
     const last = openTabs[openTabs.length - 1];
     navigate(last.route, last.params);
   } else {

@@ -1,5 +1,5 @@
 import type { LoginResult, UserRole } from "../types/identity";
-import { DEMO_GUARDIAN_CHILD_IDS } from './schoolDemoRoster';
+import { DEMO_GUARDIAN_CHILD_IDS, getDemoTeachingAssignments } from './schoolDemoRoster';
 
 /**
  * 只获取临时 code，不直接把 openid、unionid 或长期令牌放在小程序端。
@@ -50,6 +50,7 @@ export function createDemoLoginResult(role: UserRole, activeStudentId?: string):
       activeStudentId: isGuardian ? DEMO_GUARDIAN_CHILD_IDS.includes(activeStudentId || '') ? activeStudentId : DEMO_GUARDIAN_CHILD_IDS[0] : undefined,
       linkedStudentIds: isGuardian ? [...DEMO_GUARDIAN_CHILD_IDS] : undefined,
       activeClassId: isGuardian ? undefined : "c1",
+      teachingAssignments: isGuardian ? undefined : getDemoTeachingAssignments('teacher-demo-001'),
     },
   };
 }

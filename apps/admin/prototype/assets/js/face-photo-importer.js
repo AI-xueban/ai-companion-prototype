@@ -17,7 +17,6 @@
 
   async function readZip(file) {
     if (!file?.name?.toLowerCase().endsWith('.zip')) throw new Error('仅支持 ZIP 压缩包');
-    if (file.size > 50 * 1024 * 1024) throw new Error('压缩包不能超过 50MB');
     const buffer = await file.arrayBuffer();
     const bytes = new Uint8Array(buffer);
     const view = new DataView(buffer);
@@ -83,8 +82,7 @@
       const matched = byName.get(name) || [];
       if (!['.jpg', '.jpeg', '.png'].includes(extension)) {
         results.push({ fileName, success: false, reason: '不支持的照片格式' });
-      } else if (entry.size > 5 * 1024 * 1024) {
-        results.push({ fileName, success: false, reason: '照片超过 5MB' });
+
       } else if (matched.length !== 1) {
         results.push({ fileName, success: false, reason: matched.length ? '当前班级完整姓名重复' : '当前班级没有匹配学生' });
       } else if (seenIds.has(matched[0].id)) {
@@ -92,7 +90,7 @@
       } else {
         seenIds.add(matched[0].id);
         try {
-          await uploadPhoto({ studentId: matched[0].id, originalFileName: fileName, file: entry.blob });
+          await uploadPhoto({ studentId: matched[0].id, originalFileName: fileName, file: await window.compressFacePhoto(entry.blob) });
           results.push({ fileName, studentId: matched[0].id, success: true });
         } catch (error) {
           results.push({ fileName, studentId: matched[0].id, success: false, reason: error.message || '照片上传失败' });
