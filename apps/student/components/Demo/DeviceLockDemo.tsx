@@ -86,9 +86,9 @@ export const DeviceLockDemo: React.FC<DeviceLockDemoProps> = ({ type, onExit }) 
       </main>
 
       <footer className="mx-auto flex w-full max-w-[500px] shrink-0 gap-3 px-0 pb-6">
-        <button type="button" onClick={onExit} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-700">
+        {!isLowBattery && <button type="button" onClick={onExit} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-700">
           <LogOut size={17} />退出登录
-        </button>
+        </button>}
         <button type="button" onClick={onExit} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-600 text-sm font-semibold text-white">
           <RotateCcw size={17} />归还设备
         </button>
