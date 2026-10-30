@@ -8,7 +8,7 @@ const document={querySelector:()=>null,getElementById:()=>null,addEventListener:
 const sandbox={window:{addEventListener(){},dispatchEvent(){}},document,Event:class{},setTimeout,clearTimeout,localStorage:{getItem(){storageReads++;throw Error('history must not be read');},setItem(){storageWrites++;throw Error('history must not be written');}}};
 vm.createContext(sandbox);vm.runInContext(code,sandbox);const ui=sandbox.window.homeworkTutorUI;
 const source={accountId:'a',studentId:'child-a',taskId:'homework-a',itemId:'item',submissionVersion:1,question:{id:'apple',stem:'把48个苹果平均装进6袋，卖出2袋，还剩多少个？',answer:'32个'}};
-const open=()=>ui.open({review:true,source,images:[]},{valid:()=>true,render(){},leave(){}});
+const open=()=>{ui.open({review:true,source,images:[]},{valid:()=>true,render(){},leave(){}});for(let i=0;i<4;i++)ui.next();};
 open();assert.equal(ui.inspect().phase,'playing');assert.doesNotMatch(ui.html(),/深度解题|继续上次|讲题记录/);
 assert.equal(ui.inspect().voiceMode,true);assert.equal(ui.inspect().recording,false);assert.ok(ui.html().includes('切换为键盘输入'));assert.ok(ui.html().includes('按住说话'));assert.doesNotMatch(ui.html(),/aria-label="回答或提问"/);
 ui.reviewState('reading');const captionBoard=ui.inspect().board;ui.draft('未发送草稿');ui.toggleCaptions();assert.equal(ui.inspect().captionsVisible,false);assert.equal(ui.inspect().phase,'playing');assert.deepEqual(ui.inspect().board,captionBoard);assert.equal(ui.inspect().draft,'未发送草稿');assert.doesNotMatch(ui.html(),/已知有48个苹果，平均装进6袋，卖出了2袋/);assert.match(ui.html(),/显示讲解文字/);ui.inputMode();assert.equal(ui.inspect().captionsVisible,false);assert.equal(ui.inspect().draft,'未发送草稿');ui.toggleCaptions();assert.equal(ui.inspect().phase,'paused');assert.match(ui.html(),/已知有48个苹果，平均装进6袋，卖出了2袋/);
@@ -61,3 +61,43 @@ sandbox.window.SpeechRecognition=class{constructor(){fakeRecognition=this;}start
 const liveContext={review:true,source,images:[]};ui.open(liveContext,{valid:()=>true,render(){}});ui.reviewState('waiting');liveContext.review=false;
 ui.holdStart({button:0,pointerId:9,preventDefault(){}});fakeRecognition.onresult({results:[[{transcript:'先求一袋有几个，48除以6'}]]});fakeRecognition.onend();assert.equal(ui.inspect().recording,true);assert.equal(ui.inspect().student,'');listeners.pointerup({pointerId:9});assert.equal(ui.inspect().recording,false);assert.equal(ui.inspect().phase,'submitting');assert.equal(ui.inspect().student,'先求一袋有几个，48除以6');ui.close();
 console.log('PASS D03 root continuation, nested questions, explicit continue, answer progression, summary return; direct entry, memory-only sessions, answer branches, no premature answer, preserved draft/modal, retry, access hiding, wrongbook retry, fresh re-entry');
+
+// Preparation precedes teaching; no student input, answer, voice or wrongbook control before ready.
+ui.open({review:true,source,images:[]},{valid:()=>true,render(){},leave(){}});
+assert.equal(ui.inspect().phase,'loading');assert.equal(ui.inspect().board.length,0);
+assert.match(ui.html(),/解析题目信息/);assert.doesNotMatch(ui.html(),/tv-bottom|saveMistake|48 ÷ 6|tv-dock/);
+for(let i=1;i<=3;i++){ui.next();assert.equal(ui.inspect().preparationIndex,i);assert.equal(ui.inspect().phase,'loading');assert.equal(ui.inspect().board.length,0);}
+ui.next();assert.equal(ui.inspect().phase,'playing');assert.equal(ui.inspect().cursor,0);assert.match(ui.html(),/1 对 1 讲题/);assert.doesNotMatch(ui.html(),/tv-preparation/);
+ui.reviewState('prepNetwork');assert.equal(ui.inspect().beforeError,'loading');assert.match(ui.html(),/准备失败/);assert.doesNotMatch(ui.html(),/tv-bottom/);ui.retry();assert.equal(ui.inspect().phase,'loading');assert.equal(ui.inspect().preparationIndex,2);assert.equal(ui.inspect().error,'');ui.next();ui.next();assert.equal(ui.inspect().phase,'playing');
+ui.reviewState('prepTimeout');assert.match(ui.html(),/准备超时/);ui.retry();ui.next();assert.equal(ui.inspect().phase,'playing');
+ui.reviewState('prepPaused');ui.next();assert.equal(ui.inspect().phase,'loading');assert.equal(ui.inspect().preparationIndex,1);assert.match(ui.html(),/继续准备/);ui.resumePreparation();assert.equal(ui.inspect().preparationPaused,false);ui.close();assert.equal(ui.inspect(),null);
+ui.open({review:true,source,images:[]},{valid:()=>false,render(){}});assert.equal(ui.inspect().phase,'blocked');assert.equal(ui.inspect().error,'access');assert.doesNotMatch(ui.html(),/苹果|tv-preparation/);ui.close();
+// An old mock event must never change a newly opened or failed session.
+const prepTimers=[];const prepSandbox={...sandbox,window:{addEventListener(){},dispatchEvent(){}},setTimeout(fn){prepTimers.push(fn);return prepTimers.length;},clearTimeout(){}};
+vm.createContext(prepSandbox);vm.runInContext(code,prepSandbox);const prep=prepSandbox.window.homeworkTutorUI;
+const prepContext={review:true,source,images:[]};prep.open(prepContext,{render(){},valid:()=>true});prep.reviewState('prepDemo');const stale=prepTimers.at(-1);prep.close();prep.open(prepContext,{render(){},valid:()=>true});stale();assert.equal(prep.inspect().preparationIndex,0);assert.equal(prep.inspect().phase,'loading');
+prep.reviewState('prepDemo');for(let i=0;i<4;i++)prepTimers.at(-1)();assert.equal(prep.inspect().phase,'playing');assert.equal(prep.inspect().cursor,0);prep.close();
+console.log('PASS four-stage preparation, ready-to-tutoring, failure retry, background suspension, access recheck, stale events and fresh entry');
+
+// A scripted explanation may begin with a narration-only step. Its summary belongs after the final step.
+sandbox.window.homeworkTutor={tutorPlan:()=>[
+  {title:'找到已知量对应的份数',speech:'24人对应4份。',board:{lines:['男生：24人 ↔ 4份','全班：？人 ↔ 7份']}},
+  {title:'先求每一份',speech:'先求每份。',prompt:'每份有多少人？',board:{lines:['4份 = 24人','1份 = ？人']}},
+  {title:'归纳方法',speech:'先求一份，再求总数。',board:{lines:['24 ÷ 4 = 6','6 × 7 = 42']}}
+]};
+ui.open({review:true,source:{...source,question:{id:'parts',stem:'男生24人对应4份，全班对应7份。',answer:'42人'}},images:[]},{valid:()=>true,render(){}});
+for(let i=0;i<4;i++)ui.next();
+assert.equal(ui.inspect().cursor,0);
+ui.next();
+assert.equal(ui.inspect().cursor,1);
+assert.equal(ui.inspect().phase,'playing');
+assert.doesNotMatch(ui.html(),/本次讲题小结/);
+ui.next();
+assert.equal(ui.inspect().phase,'waiting');
+ui.skip();
+assert.equal(ui.inspect().cursor,2);
+ui.next();
+assert.equal(ui.inspect().phase,'done');
+assert.match(ui.html(),/本次讲题小结/);
+ui.close();
+console.log('PASS narration-only steps continue before the teaching summary');
