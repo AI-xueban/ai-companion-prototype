@@ -746,6 +746,12 @@
     faceBack.hidden = true;
   }
   document.getElementById("faceRegister").addEventListener("click", openRegistration);
+  document.getElementById("toggleFaceRegister").addEventListener("click", (event) => {
+    const entry = document.getElementById("faceRegister");
+    entry.hidden = !entry.hidden;
+    event.currentTarget.setAttribute("aria-pressed", String(!entry.hidden));
+    event.currentTarget.textContent = entry.hidden ? "显示人脸注册入口" : "隐藏人脸注册入口";
+  });
   document.getElementById("backToLoginChoice").addEventListener("click", () => showPage("home"));
   faceBack.addEventListener("click", () => showPage("home"));
   document.getElementById("passwordToFace").addEventListener("click", () => {
