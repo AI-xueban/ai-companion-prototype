@@ -51,6 +51,7 @@
 .control-screen .control-entry-icon svg { width: 21px; height: 21px; }
 .control-screen .control-entry-card h3 { color: var(--control-ink); font-size: 15px; }
 .control-screen .control-entry-card p { margin-top: 5px; color: var(--control-muted); font-size: 12px; }
+.control-screen .control-entry-card .parity-school-status { color: var(--control-ink); line-height: 1.5; }
 .control-screen .control-entry-action { color: #91a6b7; }
 .control-screen .control-primary,
 .control-screen .borrow-editor-actions .control-primary {
@@ -84,6 +85,28 @@
 .control-screen .admin-level-link { min-height: 70px; padding: 15px 16px; }
 .control-screen .admin-level-copy b { color: var(--control-ink); font-size: 14px; }
 .control-screen .admin-level-copy small { color: var(--control-muted); font-size: 11px; }
+.control-screen .parity-scope-overview { display: grid; gap: 3px; margin-top: 8px; line-height: 1.45; }
+.control-screen .parity-scope-overview small { font-size: 11px; white-space: normal; }
+.control-screen .parity-scope-rule-group { padding: 10px 0; border-bottom: 1px solid var(--control-line); }
+.control-screen .parity-scope-rule-group b { color: var(--control-ink); font-size: 13px; }
+.control-screen .parity-scope-rule-group p { margin: 6px 0 0; color: var(--control-muted); font-size: 12px; line-height: 1.6; }
+.control-screen .parity-scope-card-list { display: grid; gap: 12px; padding-bottom: 18px; }
+.control-screen .parity-scope-card { min-width: 0; padding: 16px; border: 1px solid var(--control-line); border-radius: 17px; background: #fff; box-shadow: 0 5px 16px #1933490b; }
+.control-screen .parity-scope-card[role="checkbox"] { cursor: pointer; }
+.control-screen .parity-scope-card[aria-checked="true"] { border-color: #168fe0; background: #f1f9ff; }
+.control-screen .parity-scope-card-head { display: flex; align-items: center; gap: 9px; min-height: 24px; }
+.control-screen .parity-scope-card-head h3 { flex: 1; margin: 0; color: var(--control-ink); font-size: 15px; line-height: 1.4; }
+.control-screen .parity-scope-check { display: flex; align-items: center; }
+.control-screen .parity-scope-check input { width: 18px; height: 18px; accent-color: #168fe0; }
+.control-screen .parity-scope-navigate { border: 0; background: transparent; color: #087fc5; font-size: 12px; white-space: nowrap; }
+.control-screen .parity-scope-card-rules { display: grid; gap: 8px; margin-top: 12px; }
+.control-screen .parity-scope-rule { display: grid; gap: 3px; padding: 10px 11px; border-radius: 10px; background: #f4f8fc; }
+.control-screen .parity-scope-rule b { color: var(--control-ink); font-size: 12px; }
+.control-screen .parity-scope-rule span { color: var(--control-muted); font-size: 12px; line-height: 1.5; }
+.control-screen .parity-scope-empty { margin: 0; color: var(--control-muted); font-size: 12px; }
+.control-screen .parity-scope-more { justify-self: start; border: 0; background: transparent; color: #087fc5; font-size: 12px; }
+.control-screen .parity-scope-card-footer { display: flex; justify-content: flex-end; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--control-line); }
+.control-screen .parity-scope-card-footer button { flex: none; min-height: 34px; padding: 7px 14px; font-size: 12px; }
 .control-screen .borrow-student-list,
 .control-screen .flat-control-list { margin: 8px -17px 0; }
 .control-screen .borrow-list-toolbar,
@@ -172,6 +195,10 @@
 .parity-radio-row { display: flex; flex-wrap: wrap; gap: 16px; margin: 18px 0; color: #537891; font-size: 12px; }
 .parity-radio-row label, .parity-permission label { display: flex; align-items: center; gap: 6px; }
 .parity-borrow-choice { min-width: 0; margin: 20px 0 0; padding: 0; border: 0; }
+.control-subject-tabs { display: inline-flex; max-width: 100%; gap: 4px; margin: 10px 0 8px; padding: 3px; border: 1px solid #dcebf2; border-radius: 10px; background: #edf6fc; }
+.control-screen .control-subject-tabs button { flex: 0 0 auto; min-width: 68px; min-height: 32px; padding: 5px 10px; border: 0; border-radius: 7px; background: transparent; color: #648099; font-size: 12px; font-weight: 600; cursor: pointer; }
+.control-screen .control-subject-tabs button[aria-selected="true"] { background: #fff; color: #087fc5; box-shadow: 0 2px 8px rgba(31,95,147,.12); }
+.control-screen .control-subject-tabs button:focus-visible { outline: 2px solid #168fe0; outline-offset: 2px; }
 .parity-borrow-choice legend { margin-bottom: 10px; }
 .parity-borrow-option { position: relative; display: block; margin-top: 10px; cursor: pointer; }
 .parity-borrow-option input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
