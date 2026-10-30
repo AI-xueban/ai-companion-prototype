@@ -33,6 +33,7 @@
       <button type="button" class="nav-btn nav-demo" id="simulateScanFail">模拟扫码失败</button>
       <button type="button" class="nav-btn nav-demo" id="simulateFaceFail">模拟人脸未匹配</button>
       <button type="button" class="nav-btn nav-demo" id="simulateEnrollFail">模拟录入失败</button>
+      <button type="button" class="nav-btn nav-demo" id="toggleFaceRegister" aria-pressed="false">显示人脸注册入口</button>
       <button type="button" class="nav-btn nav-demo" id="simulateNotCharging">模拟未充电</button>
       <button type="button" class="nav-btn nav-demo" id="simulateDoorOpen">模拟门没关</button>
       <button type="button" class="nav-btn nav-demo" id="simulateCabinetUpgrade">模拟柜机版本升级</button>
@@ -122,7 +123,7 @@
             </div>
           </div>
           <footer class="home-footer">
-            <button type="button" class="feedback-btn" id="faceRegister">人脸注册</button>
+            <button type="button" class="feedback-btn" id="faceRegister" hidden>人脸注册</button>
             <button type="button" class="feedback-btn" id="feedbackOpenBtn">问题反馈</button>
             <button type="button" class="feedback-btn" data-goto="admin-login">管理员登录</button>
             <button type="button" id="cabinetVersionEntry" class="cabinet-version">版本 <span id="cabinetVersion">V1.3.0</span><span class="cabinet-upgrade-badge" id="cabinetUpdateBadge" hidden>可升级</span></button>

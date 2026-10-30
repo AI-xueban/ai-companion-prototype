@@ -769,6 +769,10 @@ button {
   transition: transform 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
 }
 
+#faceRegister[hidden] {
+  display: none;
+}
+
 .feedback-btn {
   border: 2px solid rgba(100, 116, 139, 0.35);
   background: rgba(255, 255, 255, 0.92);
