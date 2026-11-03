@@ -280,8 +280,8 @@ const classifyPaperActivation = (text: string): PaperActivationLevel => {
 };
 
 const INITIAL_HISTORY: HistoryItem[] = [
-    { id: 'h-inline-print', title: '演示打印', date: '今天', preview: '对话中生成题目、保存 PDF、去打印', isDemo: true },
-    { id: 'h-inline-image', title: '演示生成图片', date: '今天', preview: '对话中生成、保存图片及继续修改', isDemo: true },
+    { id: 'h-inline-print', title: '演示生成试题', date: '今天', preview: '生成试题、保存 PDF 与打印', isDemo: true },
+    { id: 'h-inline-image', title: '演示生成图片', date: '今天', preview: '对话中生成图片、再生成及输入修改', isDemo: true },
     {
         id: 'h-paper-composition',
         title: '组卷演示',
