@@ -77,7 +77,21 @@ export interface QuizSessionReviewItem {
     reviewed?: boolean;
 }
 
+/** 将选项全文统一成选项字母，供各来源的结果适配器使用。 */
+export function normalizeQuestionAnswer(question: UniversalQuizQuestion, answer: string | string[] | undefined) {
+    if (!question.type.includes('choice') || answer === undefined) return answer;
+    const normalize = (value: string) => {
+        const label = value.trim().match(/^([A-Z])(?:[.．、\s]|$)/i);
+        if (label) return label[1].toUpperCase();
+        const index = question.content.options?.findIndex(option => option === value);
+        return index !== undefined && index >= 0 ? String.fromCharCode(65 + index) : value;
+    };
+    return Array.isArray(answer) ? answer.map(normalize).sort() : normalize(answer);
+}
+
 export type QuizSubmitPayload = {
+    questionTimesSec?: Record<string, number>;
+    totalTimeSec?: number;
     answers: Record<string, any>;
     paperDraftSnapshots?: Record<string, string | null>;
     paperSelfGrades?: Record<string, PaperSelfGrade>;
@@ -87,6 +101,8 @@ export function normalizeQuizSubmitPayload(payload: any): QuizSubmitPayload {
     if (payload && typeof payload === 'object' && payload.answers != null) {
         return {
             answers: payload.answers,
+            questionTimesSec: payload.questionTimesSec,
+            totalTimeSec: payload.totalTimeSec,
             paperDraftSnapshots: payload.paperDraftSnapshots,
             paperSelfGrades: payload.paperSelfGrades,
         };
@@ -95,6 +111,7 @@ export function normalizeQuizSubmitPayload(payload: any): QuizSubmitPayload {
 }
 
 interface UniversalQuizViewProps {
+    allowSimilarPractice?: boolean;
     mode: QuizMode;
     questions: UniversalQuizQuestion[];
     initialQuestionIndex?: number;
@@ -209,6 +226,7 @@ const QuizConfirmDialog: React.FC<QuizConfirmDialogProps> = ({
 
 // --- Main Component ---
 export const UniversalQuizView: React.FC<UniversalQuizViewProps> = ({
+    allowSimilarPractice = true,
     mode,
     questions,
     initialQuestionIndex = 0,
@@ -263,6 +281,15 @@ export const UniversalQuizView: React.FC<UniversalQuizViewProps> = ({
     const isLast = currentIndex === totalQ - 1;
     const showProgressUI = !singleQuestionMode && totalQ > 1 && !isMistakeDaily;
     const hasAudio = Boolean(currentQ?.content?.audioUrl);
+    const questionTimesRef = useRef<Record<string, number>>({});
+    const questionEnteredRef = useRef(performance.now());
+    useEffect(() => {
+        const id = currentQ.id;
+        questionEnteredRef.current = performance.now();
+        return () => {
+            if (questionTimesRef.current[id] === undefined) questionTimesRef.current[id] = Math.max(0, (performance.now() - questionEnteredRef.current) / 1000);
+        };
+    }, [currentQ.id]);
     const listeningRules = currentQ?.content?.examRules;
     const listeningTranscript = currentQ?.content?.transcript;
     const isReadingComp = currentQ.type === 'reading_comp';
@@ -354,6 +381,8 @@ export const UniversalQuizView: React.FC<UniversalQuizViewProps> = ({
         }
         return {
             answers,
+            questionTimesSec: { ...questionTimesRef.current, [currentQ.id]: questionTimesRef.current[currentQ.id] ?? Math.max(0, (performance.now() - questionEnteredRef.current) / 1000) },
+            totalTimeSec: elapsedTime,
             paperDraftSnapshots: snapshots,
             paperSelfGrades,
         };
@@ -458,6 +487,7 @@ export const UniversalQuizView: React.FC<UniversalQuizViewProps> = ({
 
     const handleSubmitCurrent = () => {
         const qId = currentQ.id;
+        if (questionTimesRef.current[qId] === undefined) questionTimesRef.current[qId] = Math.max(0, (performance.now() - questionEnteredRef.current) / 1000);
         const payload = buildSubmitPayload();
         if (isPaperSourceQuestion) {
             setPaperDraftSnapshots(payload.paperDraftSnapshots ?? {});
@@ -540,14 +570,14 @@ export const UniversalQuizView: React.FC<UniversalQuizViewProps> = ({
             submitCurrentFlow();
             return;
         }
-        if (onSubmit) onSubmit(answers);
+        if (onSubmit) onSubmit(buildSubmitPayload());
         else onClose();
     };
 
     const primaryActionMeta = useMemo(() => {
         if (isReviewMode) {
             return {
-                label: isLast ? '返回总结' : '下一题',
+                label: isLast ? (showSummaryTab ? '返回总结' : '返回结果') : '下一题',
                 variant: isLast ? ('success' as const) : ('default' as const),
                 disabled: false,
                 showPrimaryAction: true,
@@ -569,14 +599,14 @@ export const UniversalQuizView: React.FC<UniversalQuizViewProps> = ({
         }
         if (showProgressUI) {
             return {
-                label: isLast ? '提交试卷' : '下一题',
+                label: isLast ? '提交' : '下一题',
                 variant: isLast ? ('success' as const) : ('default' as const),
                 disabled: false,
                 showPrimaryAction: true,
             };
         }
-        return { label: '完成本题', variant: 'default' as const, disabled: false, showPrimaryAction: true };
-    }, [isReviewMode, isMistakeDaily, isStepping, submittedMap, currentQ.id, isLast, showProgressUI, answers, isPaperSourceQuestion, totalQ]);
+        return { label: '完成', variant: 'default' as const, disabled: false, showPrimaryAction: true };
+    }, [isReviewMode, isMistakeDaily, isStepping, submittedMap, currentQ.id, isLast, showProgressUI, answers, isPaperSourceQuestion, totalQ, showSummaryTab]);
 
     const canJumpQuestions = isReviewMode || (showProgressUI && !isMistakeDaily && !isStepping);
 
@@ -799,6 +829,7 @@ export const UniversalQuizView: React.FC<UniversalQuizViewProps> = ({
             {isReviewMode ? (
                 <div className="flex-1 min-h-0 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-sm">
                     <QuizReviewPanel
+                        allowSimilarPractice={allowSimilarPractice}
                         question={currentQ}
                         userAnswer={reviewUserAnswer}
                         isCorrect={reviewIsCorrect}
@@ -1245,7 +1276,7 @@ export const UniversalQuizView: React.FC<UniversalQuizViewProps> = ({
                 </AnimatePresence>
 
                 {/* Mistake-daily 单题：提交后展示即时反馈；多题批量订正统一在结果页查看 */}
-                {isMistakeDaily && !isPaperSourceQuestion && totalQ === 1 && (
+                {isMistakeDaily && !isPaperSourceQuestion && totalQ === 1 && currentSubmitted && (
                     <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
                         <div className="text-xs font-bold text-slate-500 mb-2 flex items-center justify-between">
                             <span>当前题反馈</span>

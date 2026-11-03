@@ -1,4 +1,6 @@
 import { mathKnowledgeDir } from '../../../data/math_knowledge_dir';
+import chineseKnowledgeDir from '../../../data/chinese_knowlege_dir';
+import englishKnowledgeDir from '../../../data/english_knowlege_dir';
 import { KnowledgeNode, KnowledgeLink, UniverseData, KnowledgeNodeStatus } from '../../../knowledgeGraphTypes';
 
 type SourceNode = {
@@ -6,10 +8,6 @@ type SourceNode = {
   level: string;
   children?: SourceNode[];
 };
-
-const SUBJECT_ID = 'math-root';
-const SUBJECT_LABEL = '数学';
-const SUBJECT = '数学';
 
 const statuses: KnowledgeNodeStatus[] = ['mastered', 'weak', 'reviewing', 'exploring', 'unknown'];
 
@@ -75,7 +73,7 @@ const slugify = (name: string) =>
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '');
 
-const flattenNodes = (nodes: SourceNode[], parentId: string, accNodes: KnowledgeNode[], accLinks: KnowledgeLink[]) => {
+const flattenNodes = (nodes: SourceNode[], parentId: string, accNodes: KnowledgeNode[], accLinks: KnowledgeLink[], subject: KnowledgeNode['subject']) => {
   nodes.forEach((node, idx) => {
     const fileLevel = Number(node.level) || 1;
     const group = mapFileLevelToGroup(fileLevel);
@@ -86,7 +84,8 @@ const flattenNodes = (nodes: SourceNode[], parentId: string, accNodes: Knowledge
     accNodes.push({
       id,
       label: node.name,
-      subject: SUBJECT,
+      subject,
+      parentId,
       status,
       group,
       val,
@@ -96,26 +95,37 @@ const flattenNodes = (nodes: SourceNode[], parentId: string, accNodes: Knowledge
     accLinks.push({ source: parentId, target: id, value: 1 });
 
     if (node.children && node.children.length > 0) {
-      flattenNodes(node.children, id, accNodes, accLinks);
+      flattenNodes(node.children, id, accNodes, accLinks, subject);
     }
   });
 };
 
-export const buildMathUniverseFromDir = (): UniverseData => {
+const buildSubjectUniverse = (directory: SourceNode[], subject: KnowledgeNode['subject'], rootId: string): UniverseData => {
   const nodes: KnowledgeNode[] = [
     {
-      id: SUBJECT_ID,
-      label: SUBJECT_LABEL,
-      subject: SUBJECT,
+      id: rootId,
+      label: subject,
+      subject,
       status: 'mastered',
       group: 0, // UI L1
       val: 50,
-      stats: buildStats(SUBJECT_ID, 'mastered'),
+      stats: buildStats(rootId, 'mastered'),
     },
   ];
   const links: KnowledgeLink[] = [];
 
-  flattenNodes(mathKnowledgeDir as SourceNode[], SUBJECT_ID, nodes, links);
+  flattenNodes(directory, rootId, nodes, links, subject);
 
   return { nodes, links };
+};
+
+export const buildMathUniverseFromDir = (): UniverseData => buildSubjectUniverse(mathKnowledgeDir as SourceNode[], '数学', 'math-root');
+
+export const buildTeacherUniverseFromDirs = (): UniverseData => {
+  const groups = [
+    buildMathUniverseFromDir(),
+    buildSubjectUniverse(chineseKnowledgeDir as SourceNode[], '语文', 'chinese-root'),
+    buildSubjectUniverse(englishKnowledgeDir as SourceNode[], '英语', 'english-root'),
+  ];
+  return { nodes: groups.flatMap(group => group.nodes), links: groups.flatMap(group => group.links) };
 };

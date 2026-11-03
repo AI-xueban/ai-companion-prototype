@@ -1,0 +1,20 @@
+.series-page{min-height:100vh;box-sizing:border-box;padding:24rpx 28rpx 72rpx;background:#f5fbff;color:#193349;font-size:24rpx}
+.series-overview{padding:30rpx 28rpx;border:1rpx solid #dbe9f0;border-radius:24rpx;background:#fff}
+.series-title{font-size:34rpx;font-weight:700}
+.series-meta{margin-top:12rpx;color:#7792a5;font-size:22rpx;line-height:1.5}
+.series-description{margin-top:15rpx;color:#527086;font-size:23rpx;line-height:1.5}
+.series-total{display:flex;align-items:baseline;justify-content:space-between;gap:12rpx;margin-top:28rpx;padding-top:24rpx;border-top:1rpx solid #ebf1f5;color:#6c8395;font-size:22rpx}
+.series-total>view{display:flex;align-items:baseline;gap:8rpx}
+.series-total-num{color:#168fe0;font-size:36rpx;font-weight:700}
+.series-section{margin:32rpx 4rpx 16rpx;font-size:29rpx;font-weight:700}
+.series-day{margin-top:14rpx;padding:26rpx 28rpx;border:1rpx solid #e2ebf1;border-radius:22rpx;background:#fff}
+.series-day-head,.series-day-bottom{display:flex;align-items:center;justify-content:space-between;gap:16rpx}
+.series-day-title{font-size:27rpx;font-weight:700}
+.series-status{flex:none;padding:6rpx 12rpx;border-radius:20rpx;background:#e5f5ff;color:#087fc5;font-size:19rpx}
+.series-deadline{margin-top:9rpx;color:#8ba0af;font-size:21rpx}
+.series-day-bottom{margin-top:22rpx;color:#647e91;font-size:22rpx}
+.series-link{color:#087fc5;font-weight:700}
+.series-meter{height:8rpx;margin-top:17rpx;overflow:hidden;border-radius:99rpx;background:#e7f2f8}
+.series-meter>view{height:100%;border-radius:99rpx;background:#168fe0}
+.series-empty{padding:68rpx 18rpx;color:#7890a2;text-align:center}
+.series-back{margin-top:22rpx;color:#087fc5;font-weight:700}

@@ -1,0 +1,12 @@
+<view wx:if="{{rows.length}}" class="attachment-list">
+  <view wx:for="{{rows}}" wx:key="id" class="attachment-row">
+    <view class="attachment-main" data-id="{{item.id}}" bindtap="open" role="button" aria-label="查看附件 {{item.name}}">
+      <image wx:if="{{item.type === 'image'}}" class="attachment-thumbnail" src="{{item.path}}" mode="aspectFill" />
+      <view wx:else class="attachment-icon {{item.iconKind}}"><view class="attachment-icon-mark">{{item.iconMark}}</view></view>
+      <view class="attachment-info"><view class="attachment-name">{{item.name}}</view><view class="attachment-meta">{{item.label}}{{item.sizeLabel ? ' · ' + item.sizeLabel : ''}}</view><view wx:if="{{item.previewNotice}}" class="attachment-meta">{{item.previewNotice}}</view></view>
+      <text wx:if="{{!removable}}" class="attachment-arrow">›</text>
+    </view>
+    <view wx:if="{{removable}}" class="attachment-remove" data-id="{{item.id}}" bindtap="remove" role="button" aria-label="移除附件 {{item.name}}">×</view>
+  </view>
+</view>
+<view wx:if="{{audioFile}}" class="attachment-audio-mask" bindtap="closeAudio"><view class="attachment-audio-sheet" catchtap="noop"><view class="attachment-audio-title"><text>{{audioFile.name}}</text><text bindtap="closeAudio">×</text></view><audio src="{{audioFile.path}}" name="{{audioFile.name}}" controls /></view></view>

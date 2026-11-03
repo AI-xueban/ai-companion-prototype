@@ -21,12 +21,14 @@ const LEVEL_LABELS: Record<number, string> = {
 };
 
 const HealthSummaryBanner = ({
+  subject,
   summary,
   level,
   mastery,
   coverage,
   quality,
 }: {
+  subject: string;
   summary: { red: number; yellow: number; green: number };
   level: number | 'all';
   mastery: {
@@ -60,7 +62,7 @@ const HealthSummaryBanner = ({
             <Target size={20} className="text-slate-900" />
           </div>
           <div>
-            <h4 className="text-lg font-black text-slate-900 tracking-tight">班级掌握概览（数学）</h4>
+            <h4 className="text-lg font-black text-slate-900 tracking-tight">班级掌握概览（{subject}）</h4>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
               统计维度: {level === 'all' ? '全量层级' : LEVEL_LABELS[level as number]} · 总人次 {mastery.baseTotal}
             </p>
@@ -173,13 +175,10 @@ export const TeacherAnalytics: React.FC<{ scopeLabel?: string }> = ({ scopeLabel
   
   const currentGroup = useMemo(() => knowledgeGraphBySubject.find((g) => g.subject === subject), [subject]);
   
-  // 根据层级与状态筛选节点，并按风险排序
+  // 详情清单包含当前层级的全部节点，避免已掌握节点被隐藏后显示空清单。
   const filteredNodes = useMemo(() => {
     if (!currentGroup) return [];
-    let list = viewLevel === 'all' ? currentGroup.allNodes : currentGroup.allNodes.filter((n) => n.level === viewLevel);
-    if (UI_LIMITS.showOnlyNonGreen) {
-      list = list.filter((n) => n.status !== 'green');
-    }
+    const list = viewLevel === 'all' ? currentGroup.allNodes : currentGroup.allNodes.filter((n) => n.level === viewLevel);
     return [...list].sort((a, b) => b.riskScore - a.riskScore);
   }, [currentGroup, viewLevel]);
 
@@ -281,6 +280,7 @@ export const TeacherAnalytics: React.FC<{ scopeLabel?: string }> = ({ scopeLabel
   // 分页控制
   useEffect(() => {
     setPage(1);
+    setOpenNode(null);
   }, [viewLevel, subject]);
   const totalPages = Math.max(1, Math.ceil(filteredNodes.length / UI_LIMITS.listPageSize));
   const pagedNodes = useMemo(() => {
@@ -397,6 +397,7 @@ export const TeacherAnalytics: React.FC<{ scopeLabel?: string }> = ({ scopeLabel
           )}
           {/* Section 1: Health Banner */}
           <HealthSummaryBanner
+            subject={subject}
             summary={displaySummary}
             level={viewLevel}
             mastery={masteryStat.mastery}
@@ -517,7 +518,7 @@ export const TeacherAnalytics: React.FC<{ scopeLabel?: string }> = ({ scopeLabel
               <div className="flex items-center justify-between mb-8">
                 <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
                   <div className="w-2 h-6 bg-slate-200 rounded-full" />
-                  节点详情清单
+                  知识点详情清单
                 </h3>
                 <Filter size={16} className="text-slate-300" />
               </div>
@@ -548,6 +549,8 @@ export const TeacherAnalytics: React.FC<{ scopeLabel?: string }> = ({ scopeLabel
                           </div>
                         </div>
                         <button
+                          aria-label={`${open ? '收起' : '展开'}${item.knowledgePoint}详情`}
+                          aria-expanded={open}
                           onClick={() => setOpenNode(open ? null : item.id)}
                           className={`p-2.5 rounded-xl transition-all ${open ? 'bg-slate-900 text-white rotate-180' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
                         >

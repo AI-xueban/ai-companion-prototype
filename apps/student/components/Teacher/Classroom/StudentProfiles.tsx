@@ -106,7 +106,6 @@ export const StudentProfiles: React.FC<{ classNames?: string[] }> = ({ className
               <th className="px-4 py-3 text-left">学号</th>
               <th className="px-4 py-3 text-left">姓名</th>
               <th className="px-4 py-3 text-left">等级(1-10)</th>
-              <th className="px-4 py-3 text-left">积分</th>
               <th className="px-4 py-3 text-left">今日任务</th>
               <th className="px-4 py-3 text-left">最近登录</th>
               <th className="px-4 py-3 text-left">操作</th>
@@ -114,8 +113,6 @@ export const StudentProfiles: React.FC<{ classNames?: string[] }> = ({ className
           </thead>
           <tbody>
             {filtered.map((s) => {
-              const points = Object.values(s.abilitySnapshot).reduce((a, b) => a + b, 0);
-              const levelNumber = s.level ?? Math.min(10, Math.max(1, Math.round(points / 50)));
               const taskStatus = s.recentTrend === 'up' ? '已完成' : '待完成';
 
               return (
@@ -128,8 +125,7 @@ export const StudentProfiles: React.FC<{ classNames?: string[] }> = ({ className
                       <span className="px-2 py-0.5 text-[10px] rounded-full bg-amber-100 text-amber-700 font-black">关注</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-slate-700">{levelNumber}</td>
-                  <td className="px-4 py-3 text-slate-700">{points}</td>
+                  <td className="px-4 py-3 text-slate-700">{s.level ?? '—'}</td>
                   <td className="px-4 py-3 text-slate-700">{taskStatus}</td>
                   <td className="px-4 py-3 text-slate-700">{s.lastActive}</td>
                   <td className="px-4 py-3 space-x-2">

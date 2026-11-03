@@ -1388,6 +1388,7 @@ function renderPage(route, params) {
     case 'layout-template': return renderLayoutTemplatePage(params?.type);
     case 'device-overview': return renderDeviceOverviewPage();
     case 'cabinet': return renderCabinetPage();
+    case 'cabinet-version': return renderCabinetVersionPage();
     case 'cabinet-detail': return renderCabinetDetailPage(params);
     case 'tablet': return renderTabletPage();
     case 'tablet-detail': return renderTabletDetailPage(params);
@@ -1395,6 +1396,8 @@ function renderPage(route, params) {
     case 'device-usage-detail': return renderDeviceUsageDetailPage(params);
     case 'device-alert': return renderDeviceAlertPage(params);
     case 'face-library': return renderFaceLibraryPage();
+    case 'face-sync-status': return renderFaceSyncStatusPage(params);
+    case 'face-sync-detail': return renderFaceSyncDetailPage(params);
     case 'face-login-record': return renderFaceLoginRecordPage();
     case 'mall': return renderMallPage(params);
     case 'third-party-apps':

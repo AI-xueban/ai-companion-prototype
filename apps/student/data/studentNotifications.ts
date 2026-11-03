@@ -18,6 +18,15 @@ export interface StudentNotification {
   isPersistentRisk?: boolean;
 }
 
+export const createWorldLockNotification = (locked: boolean): StudentNotification => ({
+  id: `world-lock-${locked ? 'on' : 'off'}-${Date.now()}`,
+  group: 'rule',
+  title: locked ? '万象视界已锁定' : '万象视界已解锁',
+  summary: locked ? '老师已锁定万象视界，暂时无法进入' : '老师已解除锁定，现在可以进入万象视界了',
+  timeLabel: '刚刚',
+  isUnread: true,
+});
+
 /**
  * 教师答案策略变化时，只告知学生当前能否查看及下一步，不暴露“策略更新”等内部术语。
  */

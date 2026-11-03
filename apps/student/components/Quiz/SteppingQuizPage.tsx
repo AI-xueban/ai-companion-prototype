@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useRef } from 'react';
 import { UniversalQuizView, UniversalQuizQuestion } from './UniversalQuizView';
 import { UniversalQuizResult, QuizSessionResult } from './UniversalQuizResult';
 import {
@@ -10,9 +10,12 @@ import {
 } from '../../services/questionSteppingService';
 import { QuestionItem, getQuestionsBySubject } from '../../data/questionBank';
 import { UserStats } from '../../types';
+import { grantQuizSessionReward } from '../../services/rewardService';
+import type { RewardGrantResult } from '../../types/reward';
 
 interface SteppingQuizPageProps {
   onExit: () => void;
+  onRewardGranted?: (result: RewardGrantResult) => void;
   subject: 'math' | 'chinese' | 'english';
   knowledgePointId?: string;
   knowledgePointLabel?: string;
@@ -46,6 +49,7 @@ const isAnswerMatch = (userAns: unknown, correct: unknown) =>
 
 export const SteppingQuizPage: React.FC<SteppingQuizPageProps> = ({
   onExit,
+  onRewardGranted,
   subject,
   knowledgePointId,
   knowledgePointLabel,
@@ -64,8 +68,9 @@ export const SteppingQuizPage: React.FC<SteppingQuizPageProps> = ({
       knowledgePointId,
     }),
   );
+  const questionStartedRef = useRef(performance.now());
   const [history, setHistory] = useState<
-    Array<{ question: UniversalQuizQuestion; userAnswer: unknown; isCorrect: boolean }>
+    Array<{ question: UniversalQuizQuestion; userAnswer: unknown; isCorrect: boolean; timeSpentSec: number }>
   >([]);
   const [currentQuestion, setCurrentQuestion] = useState<UniversalQuizQuestion | null>(() => {
     const first = pickQuestionByDifficulty(pool, session.currentDiff, []);
@@ -78,7 +83,7 @@ export const SteppingQuizPage: React.FC<SteppingQuizPageProps> = ({
 
   const finishSession = useCallback(
     (
-      nextHistory: Array<{ question: UniversalQuizQuestion; userAnswer: unknown; isCorrect: boolean }>,
+      nextHistory: Array<{ question: UniversalQuizQuestion; userAnswer: unknown; isCorrect: boolean; timeSpentSec: number }>,
       reason?: SteppingStopReason,
     ) => {
       setStopReason(reason);
@@ -86,7 +91,7 @@ export const SteppingQuizPage: React.FC<SteppingQuizPageProps> = ({
         questionId: item.question.id,
         index: index + 1,
         isCorrect: item.isCorrect,
-        timeSpentSec: 45,
+        timeSpentSec: item.timeSpentSec,
         difficulty: item.question.difficulty || session.currentDiff,
         stemSummary: item.question.content.stem,
         correctAnswer: String(item.question.result?.correctAnswer ?? ''),
@@ -102,15 +107,18 @@ export const SteppingQuizPage: React.FC<SteppingQuizPageProps> = ({
       }));
 
       const correctCount = processed.filter((q) => q.isCorrect).length;
+      const grantResult = grantQuizSessionReward({ sessionId: crypto.randomUUID(), quizSetId: 'stepping_' + processed.map(q => q.questionId).join('_'), title: '逐题探索练习', correctCount, totalCount: processed.length, questions: processed, questionTimesSec: processed.map(q => q.timeSpentSec), totalTimeSec: processed.reduce((sum,q) => sum + q.timeSpentSec, 0) });
+      onRewardGranted?.(grantResult);
       setResultData({
         sessionId: `stepping_${Date.now()}`,
         timestamp: Date.now(),
-        totalTimeSec: processed.length * 45,
+        totalTimeSec: processed.reduce((sum,q) => sum + q.timeSpentSec, 0),
         score: Math.round((correctCount / Math.max(processed.length, 1)) * 100),
         correctCount,
         totalCount: processed.length,
         questions: processed,
-        rewards: { baseXp: correctCount * 10, bonusXp: 0, coins: correctCount * 5 },
+        rewards: { baseXp: grantResult.xp, bonusXp: 0, coins: grantResult.coins },
+        grantResult,
         skillChanges: [],
         aiComment:
           reason === 'micro_lesson_required'
@@ -121,7 +129,7 @@ export const SteppingQuizPage: React.FC<SteppingQuizPageProps> = ({
       });
       setShowResult(true);
     },
-    [knowledgePointLabel, session.currentDiff, subject],
+    [knowledgePointLabel, session.currentDiff, subject, onRewardGranted],
   );
 
   const handleSteppingNext = useCallback(
@@ -131,7 +139,8 @@ export const SteppingQuizPage: React.FC<SteppingQuizPageProps> = ({
       const userAns = payload[currentQuestion.id];
       const isCorrect = isAnswerMatch(userAns, currentQuestion.result?.correctAnswer);
       const lastR = (isCorrect ? 1 : 0) as 0 | 1;
-      const nextHistory = [...history, { question: currentQuestion, userAnswer: userAns, isCorrect }];
+      const nextHistory = [...history, { question: currentQuestion, userAnswer: userAns, isCorrect, timeSpentSec: (performance.now() - questionStartedRef.current) / 1000 }];
+      questionStartedRef.current = performance.now();
 
       const step = afterSteppingSubmit(
         {

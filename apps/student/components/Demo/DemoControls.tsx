@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, User, Baby, X, ChevronRight, LayoutDashboard, RotateCcw, CheckCircle2, Trophy, Users, Sparkles } from 'lucide-react';
+import { BatteryLow, Settings, User, Baby, X, ChevronRight, LayoutDashboard, RotateCcw, CheckCircle2, Trophy, Users, Sparkles, LockKeyhole } from 'lucide-react';
 import { UserPersona } from '../../types';
 import type { DonationStageStatus } from '../../data/charityStage';
 import type { TeacherPortalRole } from '../Teacher/data/teacherAccess';
+import type { DemoLockType } from './DeviceLockDemo';
+
+import { controlExceptionScenarios, type ControlExceptionDemo } from '../Teacher/data/controlExceptionDemo';
 
 interface DemoControlsProps {
+    onControlException?: (scenario: ControlExceptionDemo) => void;
     onSwitchPersona: (type: UserPersona, calibrated?: boolean, grade?: string) => void;
     onSwitchMode: (mode: 'student' | 'teacher') => void;
     onSwitchTeacherRole: (role: TeacherPortalRole) => void;
@@ -21,9 +25,14 @@ interface DemoControlsProps {
     onResetDemoData?: () => void;
     onDemoLeagueSparse?: () => void;
     onDemoAchievement?: (achievementId: string) => void;
+    onDemoLockScreen?: (type: DemoLockType) => void;
+    lowBatteryDemoNext?: 'reminder' | 'lock';
+    worldLocked?: boolean;
+    onDemoWorldLockToggle?: () => void;
 }
 
 export const DemoControls: React.FC<DemoControlsProps> = ({ 
+    onControlException,
     onSwitchPersona, 
     onSwitchMode,
     onSwitchTeacherRole,
@@ -38,7 +47,12 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
     onResetDemoData,
     onDemoLeagueSparse,
     onDemoAchievement,
+    onDemoLockScreen,
+    lowBatteryDemoNext = 'reminder',
+    worldLocked = false,
+    onDemoWorldLockToggle,
 }) => {
+    const [exceptionModule, setExceptionModule] = useState<ControlExceptionDemo['module']>('duration');
     const [isOpen, setIsOpen] = useState(false);
     const [resetComplete, setResetComplete] = useState(false);
     const [selectedMode, setSelectedMode] = useState(currentMode);
@@ -115,14 +129,23 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
                           <div className="space-y-3 pt-2 border-t border-white/10">
                             <div>
                               <p className="text-gray-300 text-xs font-bold">教师端角色登录</p>
-                              <p className="mt-1 text-[10px] leading-relaxed text-gray-500">进入教师端后选择角色；菜单与数据范围会随角色变化。</p>
+                              <p className="mt-1 text-[10px] leading-relaxed text-gray-500">选择演示账号进入；学校管理员账号同时演示任教多班多科和班主任职责。</p>
                             </div>
                             {[
                               { key: 'teacher' as const, role: '教师', account: '13800000000', scope: '查看授权教学班' },
                               { key: 'class-teacher' as const, role: '班主任', account: '13800000001', scope: '管理所带班级与班级激励' },
-                              { key: 'school-admin' as const, role: '学校管理员', account: 'admin@luohu.edu', scope: '管理罗湖实验学校全校' },
+                              { key: 'school-admin' as const, role: '学校管理员', account: 'admin@luohu.edu', scope: '全校管理 · 兼任教师与班主任' },
                             ].map((item) => <button key={item.role} type="button" onClick={() => { onSwitchTeacherRole(item.key); setIsOpen(false); }} className="w-full rounded-xl border border-white/10 bg-white/5 p-3 text-left transition-colors hover:bg-white/10"><div className="flex items-center justify-between"><span className="text-xs font-bold text-white">{item.role}</span><ChevronRight size={14} className="text-gray-500"/></div><div className="mt-1 text-[10px] text-gray-400">{item.account} · {item.scope}</div></button>)}
                             <p className="text-[10px] text-gray-600">演示密码：12345678</p>
+                            <div className="border-t border-white/10 pt-3 space-y-2">
+                              <p className="text-xs font-bold text-white">全校设备管控 · 异常场景</p>
+                              <select aria-label="异常演示模块" value={exceptionModule} onChange={e => setExceptionModule(e.target.value as ControlExceptionDemo['module'])} className="w-full rounded-lg bg-gray-800 p-2 text-xs text-white">
+                                <option value="borrowing">柜机借用管控</option><option value="duration">使用时长管控</option><option value="homework">智阅作业管控</option><option value="world">万象视界管控</option>
+                              </select>
+                              <p className="text-[10px] leading-4 text-gray-400">设置冲突需进入编辑后最终提交才会提示；保存失败保留表单。组织空态在使用时长页面展示。</p>
+                              <div className="grid grid-cols-2 gap-2">{controlExceptionScenarios.map(item => <button type="button" key={item.id} className="rounded-lg border border-white/10 bg-white/5 p-2 text-left text-xs text-white hover:bg-white/10" onClick={() => { onControlException?.({ kind: item.id, module: item.id.startsWith('no-') ? 'duration' : exceptionModule, key: Date.now() }); setIsOpen(false); }}>{item.label}</button>)}</div>
+                              <button type="button" className="w-full rounded-lg bg-indigo-500/20 p-2 text-xs text-indigo-200" onClick={() => { onControlException?.({ kind: 'normal', module: exceptionModule, key: Date.now() }); setIsOpen(false); }}>恢复正常管控页面</button>
+                            </div>
                           </div>
                         ) : (
                           <>
@@ -174,6 +197,47 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
                                 </div>
                                 <ChevronRight size={14} className="text-gray-600 group-hover:text-white" />
                             </button>
+                        </div>
+
+                        <div className="space-y-3 border-t border-white/10 pt-2">
+                            <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                                <LockKeyhole size={11} className="text-violet-300" />
+                                学生端锁屏演示
+                            </p>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => { onDemoWorldLockToggle?.(); setIsOpen(false); }}
+                                    aria-pressed={worldLocked}
+                                    className="flex min-h-20 flex-col items-center justify-center rounded-xl border border-sky-300/20 bg-sky-400/10 px-2 text-center transition-colors hover:bg-sky-400/20"
+                                >
+                                    <Sparkles size={20} className="text-sky-300" />
+                                    <span className="mt-2 text-[11px] font-bold text-white">万象视界锁屏</span>
+                                    <span className="mt-1 text-[10px] text-sky-200">{worldLocked ? '已锁定 · 点击解锁' : '未锁定 · 点击锁定'}</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => { onDemoLockScreen?.('teacher'); setIsOpen(false); }}
+                                    className="flex min-h-20 flex-col items-center justify-center rounded-xl border border-violet-300/20 bg-violet-400/10 px-2 text-center transition-colors hover:bg-violet-400/20"
+                                >
+                                    <LockKeyhole size={20} className="text-violet-300" />
+                                    <span className="mt-2 text-[11px] font-bold text-white">教师端手动锁屏</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        onDemoLockScreen?.(lowBatteryDemoNext === 'reminder' ? 'low-battery-reminder' : 'low-battery');
+                                        setIsOpen(false);
+                                    }}
+                                    className="col-span-2 flex min-h-20 items-center justify-center gap-3 rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 text-center transition-colors hover:bg-amber-400/20"
+                                >
+                                    <BatteryLow size={24} className="text-amber-300" />
+                                    <div className="text-left">
+                                        <span className="block text-[11px] font-bold text-white">低电量锁屏</span>
+                                        <span className="mt-1 block text-[10px] text-amber-200">{lowBatteryDemoNext === 'reminder' ? '点击模拟10%低电量提醒' : '下次点击：5%低电量锁屏'}</span>
+                                    </div>
+                                </button>
+                            </div>
                         </div>
 
                         <div className="space-y-3 pt-2 border-t border-white/10">

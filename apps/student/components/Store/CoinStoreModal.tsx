@@ -8,6 +8,7 @@ import avatarChangE from '../../assets/Avatar-嫦娥.jpg';
 import avatarEinstein from '../../assets/Avatar-爱因斯坦.jpg';
 import { OUTFIT_CATALOG, buyOutfit, getUserGrowthData } from '../../services/geminiService';
 import { OutfitItem, OutfitCategory } from '../../types';
+import { recordCoinSpend } from '../../services/rewardHistoryService';
 import {
   INITIAL_WISH_APPLICATIONS,
   WISH_POOL_GOODS,
@@ -21,6 +22,8 @@ interface CoinStoreModalProps {
   onClose: () => void;
   coins: number;
   onCoinsChange?: (newCoins: number) => void;
+  onOpenRewardAccount?: () => void;
+  onWishApplicationsChange?: (applications: WishApplication[]) => void;
 }
 
 type StoreTab = 'outfits' | 'tickets';
@@ -35,7 +38,7 @@ const AVATAR_MAP: Record<string, string> = {
     'scarf': avatarChangE
 };
 
-export const CoinStoreModal: React.FC<CoinStoreModalProps> = ({ isOpen, onClose, coins: initialCoins, onCoinsChange }) => {
+export const CoinStoreModal: React.FC<CoinStoreModalProps> = ({ isOpen, onClose, coins: initialCoins, onCoinsChange, onOpenRewardAccount, onWishApplicationsChange }) => {
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const [activeTab, setActiveTab] = useState<StoreTab>('outfits');
   const [decorationTarget, setDecorationTarget] = useState<DecorationTarget>('user');
@@ -56,7 +59,7 @@ export const CoinStoreModal: React.FC<CoinStoreModalProps> = ({ isOpen, onClose,
     );
     if (isOpen) {
         getUserGrowthData().then(data => {
-            setCurrentCoins(data.coins);
+            setCurrentCoins(initialCoins);
             setUnlockedOutfits(data.unlockedOutfitIds);
         });
     } else {
@@ -64,16 +67,14 @@ export const CoinStoreModal: React.FC<CoinStoreModalProps> = ({ isOpen, onClose,
     }
   }, [isOpen]);
 
-  useEffect(() => {
-      if (initialCoins !== currentCoins && onCoinsChange) {
-          onCoinsChange(currentCoins);
-      }
-  }, [currentCoins]);
+
 
   const handleBuy = async (item: OutfitItem) => {
       setIsBuying(true);
-      const res = await buyOutfit(item.id);
+      const res = await buyOutfit(item.id, currentCoins);
       if (res.success) {
+          recordCoinSpend(item.price, `装扮兑换 · ${item.name}`);
+          onCoinsChange?.(currentCoins - item.price);
           setCurrentCoins(prev => prev - item.price);
           setUnlockedOutfits(prev => [...prev, item.id]);
       } else {
@@ -84,6 +85,7 @@ export const CoinStoreModal: React.FC<CoinStoreModalProps> = ({ isOpen, onClose,
 
   const pendingWishApplications = wishApplications.filter((item) => item.status === 'pending');
   const frozenWishCoins = pendingWishApplications.reduce((sum, item) => sum + item.price, 0);
+  useEffect(() => { onWishApplicationsChange?.(wishApplications); }, [wishApplications, onWishApplicationsChange]);
 
   const { activeWishGoods, exchangedWishGoods } = useMemo(() => {
       const active: WishPoolGoods[] = [];
@@ -168,10 +170,13 @@ export const CoinStoreModal: React.FC<CoinStoreModalProps> = ({ isOpen, onClose,
           hour12: false,
       }).replace(/\//g, '-');
 
+      const applicationId = `w-${Date.now()}`;
+      recordCoinSpend(goods.price, `许愿池兑换申请 · ${goods.name}`, applicationId);
+      onCoinsChange?.(currentCoins - goods.price);
       setCurrentCoins((prev) => prev - goods.price);
       setWishApplications((prev) => [
           {
-              id: `w-${Date.now()}`,
+              id: applicationId,
               goodsId: goods.id,
               goodsName: goods.name,
               price: goods.price,
@@ -213,24 +218,32 @@ export const CoinStoreModal: React.FC<CoinStoreModalProps> = ({ isOpen, onClose,
                       <div className="w-8 h-8 shrink-0 bg-brand rounded-lg flex items-center justify-center text-white shadow-lg shadow-brand/30 border border-white/20">
                           <ShoppingBag size={15} strokeWidth={2.5} />
                       </div>
-                      <div className="min-w-0">
-                          <h2 className="text-[15px] font-semibold text-white leading-none">金币商店</h2>
-                          <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                      <div className="flex min-w-0 items-center gap-3 whitespace-nowrap">
+                          <h2 className="shrink-0 text-[15px] font-semibold text-white leading-none">金币商店</h2>
+                          <div className="flex shrink-0 items-center gap-1.5">
                               <div className="flex items-center gap-1 text-yellow-400 font-bold text-[11px] bg-yellow-400/10 px-1.5 py-0.5 rounded-full w-fit border border-yellow-400/20">
                                   <Coins size={10} className="fill-yellow-400" />
-                                  <span>{currentCoins}</span>
-                                  <span className="text-yellow-400/50 font-medium">可用</span>
+                                  <span className="text-yellow-400/70 font-medium">可用</span>
+                                  <span className="tabular-nums">{currentCoins}</span>
                               </div>
                               {frozenWishCoins > 0 ? (
-                                  <div className="flex items-center gap-1 text-amber-300/80 font-bold text-[11px] bg-amber-400/10 px-1.5 py-0.5 rounded-full border border-amber-400/20">
-                                      {frozenWishCoins} 冻结中
+                                  <div className="flex items-center gap-1 text-white/50 font-medium text-[11px] px-1.5 py-0.5">
+                                      冻结中 <span className="tabular-nums text-white/70">{frozenWishCoins}</span>
                                   </div>
                               ) : null}
+                              {onOpenRewardAccount && <button
+                                  type="button"
+                                  onClick={onOpenRewardAccount}
+                                  className="ml-1 flex items-center gap-1 border-l border-white/10 pl-3 pr-1 py-2 text-[12px] font-medium text-white/60 transition hover:text-white"
+                              >
+                                  明细与规则<ChevronLeft size={13} className="rotate-180" />
+                              </button>}
                           </div>
                       </div>
                   </div>
                   
                   {/* Tabs (iOS Segmented Control Style) */}
+                  <div className="flex shrink-0 items-center gap-3">
                   <div className="hidden md:flex bg-black/20 p-0.5 rounded-full border border-white/5 backdrop-blur-md shrink-0">
                         {(['outfits', 'tickets'] as StoreTab[]).map(tab => (
                             <button
@@ -246,6 +259,7 @@ export const CoinStoreModal: React.FC<CoinStoreModalProps> = ({ isOpen, onClose,
                                 {tab === 'tickets' && '许愿池'}
                             </button>
                         ))}
+                  </div>
                   </div>
               </div>
 

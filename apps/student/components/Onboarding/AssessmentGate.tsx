@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Brain, Ghost, ArrowRight, Clock, ShieldCheck, ChevronRight, Sparkles } from 'lucide-react';
+import { Brain, Ghost, ArrowRight, Clock, ShieldCheck, ChevronRight } from 'lucide-react';
 
 interface AssessmentGateProps {
   nickname: string;
@@ -30,7 +30,7 @@ export const AssessmentGate: React.FC<AssessmentGateProps> = ({ nickname, onStar
                 你好，<span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-light to-cyan-300">{nickname}</span>! 👋
             </h1>
             <p className="text-white/40 text-lg font-medium max-w-md mx-auto leading-relaxed">
-                为了为你定制最适合的“超能力”成长路径，建议进行一次快速能力画像。
+                开始学习前，可以先完成一次测评，了解当前的学习情况。
             </p>
           </motion.div>
       </div>
@@ -69,17 +69,14 @@ export const AssessmentGate: React.FC<AssessmentGateProps> = ({ nickname, onStar
                       <Brain size={36} strokeWidth={2.5} />
                   </div>
                   
-                  <h3 className="text-3xl font-black text-white mb-3 tracking-tight">开启能力测评</h3>
+                  <h3 className="text-3xl font-black text-white mb-3 tracking-tight">开始学习测评</h3>
                   <p className="text-white/50 text-sm mb-8 leading-relaxed font-medium">
-                      小晤深度分析你的逻辑、记忆与专注力，生成专属六边形能力图谱。
+                      完成测评后，可以查看本次结果，再继续学习。
                   </p>
                   
                   <div className="mt-auto space-y-3">
                       <div className="flex items-center gap-3 text-xs text-brand-light font-black bg-brand/10 w-fit px-4 py-2 rounded-full border border-brand/20">
                           <Clock size={14} /> 耗时约 3 分钟
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-cyan-300 font-black bg-cyan-400/10 w-fit px-4 py-2 rounded-full border border-cyan-400/20">
-                          <Sparkles size={14} /> 解锁专属画像
                       </div>
                   </div>
 
@@ -105,7 +102,7 @@ export const AssessmentGate: React.FC<AssessmentGateProps> = ({ nickname, onStar
               
               <h3 className="text-2xl font-bold text-white/60 mb-3 group-hover:text-white transition-colors">以后再说</h3>
               <p className="text-white/30 text-sm mb-8 leading-relaxed font-medium group-hover:text-white/40 transition-colors">
-                  直接进入学习空间。你可以随时在「我的」页面补测能力画像。
+                  直接进入学习空间，之后也可以再进行测评。
               </p>
               
               <div className="mt-auto pt-6 border-t border-white/5 flex items-center justify-between text-white/30 text-xs font-black uppercase tracking-widest group-hover:text-white transition-colors">

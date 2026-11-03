@@ -2,6 +2,18 @@ function renderThirdPartyIcon(icon, fallback = '▦') { return icon && String(ic
 const THIRD_PARTY_SCHOOLS = ['实验中学', '培英小学', '湖丰镇中学', '莲王柏中学'];
 const THIRD_PARTY_STATUS = { enabled: '已上架', disabled: '已下架' };
 
+const DEMO_APP_VERSION_HISTORY = {
+  'demo-wechat': [
+    { name: '微信', icon: '微', packageName: 'com.tencent.mm', version: '8.0.50', uploadedAt: '2026-09-23 10:00:00', resource: 'wechat-8.0.50.apk' },
+    { name: '微信', icon: '微', packageName: 'com.tencent.mm', version: '8.0.49', uploadedAt: '2026-08-28 15:20:00', resource: 'wechat-8.0.49.apk' },
+    { name: '微信', icon: '微', packageName: 'com.tencent.mm', version: '8.0.48', uploadedAt: '2026-07-16 09:35:00', resource: 'wechat-8.0.48.apk' }
+  ],
+  'demo-browser': [
+    { name: '浏览器', icon: '网', packageName: 'com.android.browser', version: '12.4.1', uploadedAt: '2026-09-22 16:30:00', resource: 'browser-12.4.1.apk' },
+    { name: '浏览器', icon: '网', packageName: 'com.android.browser', version: '12.3.8', uploadedAt: '2026-08-11 11:10:00', resource: 'browser-12.3.8.apk' }
+  ]
+};
+
 function openSimpleModal({ title, body, footer, size = 'lg' }) {
   const overlay = document.getElementById('modal-overlay');
   const modal = document.getElementById('modal');
@@ -41,6 +53,10 @@ function getThirdPartyApps() {
   data.thirdPartyApps.forEach((app) => {
     if (!Array.isArray(app.schools)) app.schools = [];
     if (!app.type) app.type = app.launchUrl ? 'web' : 'apk';
+    if ((!Array.isArray(app.versionHistory) || !app.versionHistory.length) && DEMO_APP_VERSION_HISTORY[app.id]) {
+      app.versionHistory = DEMO_APP_VERSION_HISTORY[app.id].map((item) => ({ ...item }));
+      changed = true;
+    }
   });
   if (changed) saveData(data);
   return data.thirdPartyApps;
@@ -192,7 +208,7 @@ function renderAppLibraryPage(params = {}) {
   const totalPages = Math.max(1, Math.ceil(allFiltered.length / pageSize));
   const page = Math.min(Math.max(1, Number(params.page) || 1), totalPages);
   const filtered = allFiltered.slice((page - 1) * pageSize, page * pageSize);
-  return `<div class="page third-party-app-page"><div class="page-header"><div><h2>应用库</h2><p class="page-subtitle">维护应用本身。版本号和安装包只在应用库中管理。</p></div></div><div class="third-party-filters library-filters"><label><span>应用名称</span><input class="input" id="library-filter-name" value="${esc(filters.name)}" placeholder="搜索应用名称"></label><label><span>学校</span><select class="select" id="library-filter-school"><option value="">全部学校</option>${THIRD_PARTY_SCHOOLS.map((school) => `<option value="${esc(school)}" ${filters.school === school ? 'selected' : ''}>${esc(school)}</option>`).join('')}</select></label><label><span>状态</span><select class="select" id="library-filter-status"><option value="">全部状态</option><option value="enabled" ${filters.status === 'enabled' ? 'selected' : ''}>已上架</option><option value="disabled" ${filters.status === 'disabled' ? 'selected' : ''}>已下架</option></select></label><label class="third-party-date-range"><span>上传时间</span><div><input class="input" id="library-filter-start" type="date" value="${esc(filters.start)}"><b>至</b><input class="input" id="library-filter-end" type="date" value="${esc(filters.end)}"></div></label><div class="third-party-filter-actions"><button class="btn btn-primary btn-sm" onclick="applyLibraryFilters()">查询</button><button class="btn btn-sm" onclick="resetLibraryFilters()">重置</button></div></div><div class="panel"><div class="third-party-list-toolbar"><button class="btn btn-primary" onclick="openLibraryAppForm()">上传应用</button></div><div class="table-wrap"><table class="third-party-table"><thead><tr><th>序号</th><th>名称</th><th>图标</th><th>包名</th><th>版本号</th><th>安装包</th><th>Web 地址</th><th>状态</th><th>上传时间</th><th>操作</th></tr></thead><tbody>${filtered.length ? filtered.map((app, index) => `<tr><td>${(page - 1) * pageSize + index + 1}</td><td><strong>${esc(app.name)}</strong></td><td><span class="third-party-app-icon">${renderThirdPartyIcon(app.icon)}</span></td><td class="muted">${app.type === 'web' ? '—' : esc(app.packageName || '未提取')}</td><td>${app.type === 'web' ? '—' : esc(app.version || '未提取')}</td><td>${app.type === 'web' ? '—' : esc(app.fileName || '未上传')}</td><td class="muted third-party-web-url">${app.type === 'web' ? esc(app.launchUrl || '—') : '—'}</td><td><span class="status-tag ${app.enabled === false ? 'disabled' : 'enabled'}">${app.enabled === false ? '已下架' : '已上架'}</span></td><td>${esc(app.updatedAt || '—')}</td><td><button class="btn-link" onclick="openLibraryAppForm('${app.id}')">编辑</button><button class="btn-link" onclick="openAppVersionHistory('${app.id}')">版本历史</button><button class="btn-link" onclick="${app.enabled === false ? `toggleLibraryApp('${app.id}')` : `openLibraryAppStatusConfirm('${app.id}')`}">${app.enabled === false ? '上架' : '下架'}</button></td></tr>`).join('') : '<tr><td colspan="10" class="empty-state">没有符合条件的应用。</td></tr>'}</tbody></table></div>${renderThirdPartyPagination(allFiltered.length, page, pageSize, 'goLibraryPage', 'changeLibraryPageSize')}</div></div>`;
+  return `<div class="page third-party-app-page"><div class="page-header"><div><h2>应用库</h2><p class="page-subtitle">维护应用本身。版本号和安装包只在应用库中管理。</p></div></div><div class="third-party-filters library-filters"><label><span>应用名称</span><input class="input" id="library-filter-name" value="${esc(filters.name)}" placeholder="搜索应用名称"></label><label><span>学校</span><select class="select" id="library-filter-school"><option value="">全部学校</option>${THIRD_PARTY_SCHOOLS.map((school) => `<option value="${esc(school)}" ${filters.school === school ? 'selected' : ''}>${esc(school)}</option>`).join('')}</select></label><label><span>状态</span><select class="select" id="library-filter-status"><option value="">全部状态</option><option value="enabled" ${filters.status === 'enabled' ? 'selected' : ''}>已上架</option><option value="disabled" ${filters.status === 'disabled' ? 'selected' : ''}>已下架</option></select></label><label class="third-party-date-range"><span>上传时间</span><div><input class="input" id="library-filter-start" type="date" value="${esc(filters.start)}"><b>至</b><input class="input" id="library-filter-end" type="date" value="${esc(filters.end)}"></div></label><div class="third-party-filter-actions"><button class="btn btn-primary btn-sm" onclick="applyLibraryFilters()">查询</button><button class="btn btn-sm" onclick="resetLibraryFilters()">重置</button></div></div><div class="panel"><div class="third-party-list-toolbar"><button class="btn btn-primary" onclick="openLibraryAppForm()">上传应用</button></div><div class="table-wrap"><table class="third-party-table"><thead><tr><th>序号</th><th>名称</th><th>图标</th><th>包名</th><th>版本号</th><th>安装包</th><th>Web 地址</th><th>状态</th><th>上传时间</th><th>操作</th></tr></thead><tbody>${filtered.length ? filtered.map((app, index) => `<tr><td>${(page - 1) * pageSize + index + 1}</td><td><strong>${esc(app.name)}</strong></td><td><span class="third-party-app-icon">${renderThirdPartyIcon(app.icon)}</span></td><td class="muted">${app.type === 'web' ? '—' : esc(app.packageName || '未提取')}</td><td>${app.type === 'web' ? '—' : esc(app.version || '未提取')}</td><td>${app.type === 'web' ? '—' : esc(app.fileName || '未上传')}</td><td class="muted third-party-web-url">${app.type === 'web' ? esc(app.launchUrl || '—') : '—'}</td><td><span class="status-tag ${app.enabled === false ? 'disabled' : 'enabled'}">${app.enabled === false ? '已下架' : '已上架'}</span></td><td>${esc(app.updatedAt || '—')}</td><td><button class="btn-link" onclick="openLibraryAppForm('${app.id}')">编辑</button><button class="btn-link" onclick="openAppVersionHistory('${app.id}')">版本历史</button><button class="btn-link" onclick="openLibraryAppStatusConfirm('${app.id}')">${app.enabled === false ? '上架' : '下架'}</button></td></tr>`).join('') : '<tr><td colspan="10" class="empty-state">没有符合条件的应用。</td></tr>'}</tbody></table></div>${renderThirdPartyPagination(allFiltered.length, page, pageSize, 'goLibraryPage', 'changeLibraryPageSize')}</div></div>`;
 }
 function applyLibraryFilters() { navigate('app-library', { ...getLibraryFilterParams(), page: 1, pageSize: 10 }); }
 function resetLibraryFilters() { navigate('app-library'); }
@@ -203,11 +219,22 @@ function openAppVersionHistory(appId) {
   const app = getLibraryApps().find((item) => String(item.id) === String(appId));
   if (!app) return;
   const currentResource = app.type === 'web' ? (app.launchUrl || '—') : (app.fileName || '—');
-  const history = (Array.isArray(app.versionHistory) && app.versionHistory.length ? app.versionHistory : [{ name: app.name || '—', icon: app.icon || '', packageName: app.type === 'web' ? '—' : (app.packageName || '—'), version: app.type === 'web' ? '—' : (app.version || '—'), uploadedAt: app.updatedAt || '—', resource: currentResource }])
-    .slice()
-    .sort((a, b) => String(b.uploadedAt || '').localeCompare(String(a.uploadedAt || '')));
-  const body = `<div class="table-wrap"><table class="third-party-table version-history-table"><thead><tr><th>名称</th><th>图标</th><th>包名</th><th>版本号</th><th>上传时间</th><th>${app.type === 'web' ? 'Web 地址' : '安装包'}</th></tr></thead><tbody>${history.map((item) => `<tr><td><strong>${esc(item.name || app.name || '—')}</strong></td><td><span class="third-party-app-icon">${renderThirdPartyIcon(item.icon || app.icon)}</span></td><td class="muted">${esc(app.type === 'web' ? '—' : (item.packageName || app.packageName || '—'))}</td><td>${esc(app.type === 'web' ? '—' : (item.version || app.version || '—'))}</td><td>${esc(item.uploadedAt || '—')}</td><td class="muted">${esc(item.resource || '—')}</td></tr>`).join('')}</tbody></table></div>`;
+  const currentRecord = { name: app.name || '—', icon: app.icon || '', packageName: app.type === 'web' ? '—' : (app.packageName || '—'), version: app.type === 'web' ? '—' : (app.version || '—'), uploadedAt: app.updatedAt || '—', resource: currentResource };
+  const storedHistory = Array.isArray(app.versionHistory) ? app.versionHistory.slice() : [];
+  const hasCurrentRecord = storedHistory.some((item) => String(item.resource || '') === String(currentResource) && String(item.version || '—') === String(currentRecord.version));
+  if (!hasCurrentRecord) storedHistory.push(currentRecord);
+  const history = (storedHistory.length ? storedHistory : [currentRecord]).slice().sort((x, y) => String(y.uploadedAt || '').localeCompare(String(x.uploadedAt || '')));
+  const body = `<div class="table-wrap"><table class="third-party-table version-history-table"><thead><tr><th>名称</th><th>图标</th><th>包名</th><th>版本号</th><th>上传时间</th><th>${app.type === 'web' ? 'Web 地址' : '安装包'}</th>${app.type === 'apk' ? '<th>操作</th>' : ''}</tr></thead><tbody>${history.map((item, index) => `<tr><td><strong>${esc(item.name || app.name || '—')}</strong></td><td><span class="third-party-app-icon">${renderThirdPartyIcon(item.icon || app.icon)}</span></td><td class="muted">${esc(app.type === 'web' ? '—' : (item.packageName || app.packageName || '—'))}</td><td>${esc(app.type === 'web' ? '—' : (item.version || app.version || '—'))}</td><td>${esc(item.uploadedAt || '—')}</td><td class="muted">${app.type === 'web' ? `<a class="btn-link" href="${esc(item.resource || '#')}" target="_blank" rel="noopener noreferrer">${esc(item.resource || '—')}</a>` : esc(item.resource || '—')}</td>${app.type === 'apk' ? `<td><button class="btn btn-primary btn-sm" onclick="downloadAppVersionApk('${app.id}', ${index})">下载 APK</button></td>` : ''}</tr>`).join('')}</tbody></table></div>`;
+  window.__activeAppVersionHistory = { appId: app.id, history };
   openSimpleModal({ size: 'xl', title: '版本历史 - ' + app.name, body, footer: '<button class="btn btn-primary" onclick="closeModal()">关闭</button>' });
+}
+
+function downloadAppVersionApk(appId, historyIndex) {
+  const active = window.__activeAppVersionHistory;
+  if (!active || String(active.appId) !== String(appId)) return toast('未找到安装包记录', 'warning');
+  const record = active.history?.[Number(historyIndex)];
+  if (!record?.resource || record.resource === '—') return toast('未找到可下载的 APK', 'warning');
+  toast(`已开始下载 ${record.resource}`, 'success');
 }
 function openAppSchoolRelationForm(appId) {
   const app = getLibraryApps().find((item) => String(item.id) === String(appId));
@@ -267,7 +294,7 @@ function saveLibraryApp(id) {
   if (!Array.isArray(app.versionHistory)) app.versionHistory = existing && previousResource ? [{ name: existing.name || '—', icon: existing.icon || '', packageName: existing.packageName || '—', version: existing.version || '—', uploadedAt: existing.updatedAt || uploadedAt, resource: previousResource }] : [];
   Object.assign(app, { name, type, launchUrl, icon, iconFileName: iconFile?.name || existing?.iconFileName || '', packageName: type === 'apk' ? packageName : '', version: type === 'apk' ? version : '', fileName: type === 'apk' ? (file?.name || existing?.fileName || '') : '', forceUpdate: type === 'apk' ? forceUpdateValue === 'force' : false, enabled: true, updatedAt: uploadedAt });
   const currentResource = type === 'web' ? launchUrl : app.fileName;
-  if (!existing || currentResource !== previousResource) app.versionHistory.unshift({ name: name || '—', icon: icon || '', packageName: type === 'web' ? '—' : (packageName || '—'), version: type === 'web' ? '—' : (version || '—'), uploadedAt, resource: currentResource || '—' });
+  if (!existing || (type === 'apk' && file) || (type === 'web' && currentResource !== previousResource)) app.versionHistory.unshift({ name: name || '—', icon: icon || '', packageName: type === 'web' ? '—' : (packageName || '—'), version: type === 'web' ? '—' : (version || '—'), uploadedAt, resource: currentResource || '—' });
   saveData(data); closeModal(); toast('应用库保存成功', 'success'); navigate('app-library');
 }
 function toggleLibraryApp(id) {
@@ -282,16 +309,20 @@ function toggleLibraryApp(id) {
 
 function openLibraryAppStatusConfirm(id) {
   const app = getLibraryApps().find((item) => String(item.id) === String(id));
-  if (!app || app.enabled === false) return toggleLibraryApp(id);
-  const body = `<div class="confirm-message"><p>确认下架应用“<strong>${esc(app.name)}</strong>”吗？</p><small class="muted">下架后，学生端将不再展示该应用的安装或更新入口。</small></div>`;
-  openSimpleModal({ size: 'md', title: '确认下架', body, footer: `<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-danger" onclick="confirmLibraryAppOffline('${app.id}')">确认下架</button>` });
+  if (!app) return;
+  const willEnable = app.enabled === false;
+  const action = willEnable ? '上架' : '下架';
+  const tip = willEnable
+    ? '上架后，已关联学校将恢复展示该应用的安装或更新入口。'
+    : '下架后，学生端将不再展示该应用的安装或更新入口。';
+  const body = `<div class="confirm-message"><p>确认${action}应用“<strong>${esc(app.name)}</strong>”吗？</p><small class="muted">${tip}</small></div>`;
+  openSimpleModal({ size: 'md', title: `确认${action}`, body, footer: `<button class="btn" onclick="closeModal()">取消</button><button class="btn ${willEnable ? 'btn-primary' : 'btn-danger'}" onclick="confirmLibraryAppStatusChange('${app.id}')">确认${action}</button>` });
 }
 
-function confirmLibraryAppOffline(id) {
+function confirmLibraryAppStatusChange(id) {
   closeModal();
   toggleLibraryApp(id);
 }
-
 function getSchoolAppFilterParams() {
   return {
     schoolKeyword: document.getElementById('school-filter-keyword')?.value.trim() || '',

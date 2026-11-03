@@ -8,6 +8,9 @@ export interface PaperTaskSnapshot {
     questions: PaperPdfQuestion[];
     phase: 'understanding' | 'composing' | 'checking' | 'assembling' | 'validating' | 'pdf' | 'ready' | 'draft' | 'error';
     runId: string;
+    phaseStatus?: 'running' | 'completed';
+    // Only supplied by the current run's validation result; never inferred from candidate or previous-version questions.
+    validatedCount?: number;
     selectedQuestionIds?: number[];
     error?: string;
     simulateExportFailure?: boolean;

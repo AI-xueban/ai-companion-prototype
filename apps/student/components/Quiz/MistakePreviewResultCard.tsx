@@ -3,8 +3,9 @@ import { Sparkles, ArrowRight, RefreshCw, FileText, Play, ChevronRight, Star, Ch
 import { StatusRing } from './StatusRing';
 import { CognitiveState } from '../../data/questionBank';
 import { allQuestions } from '../../data/questionBank';
-import { mathQuestions } from '../../data/questionBank/mathQuestions';
-import { DIFFICULTY_BADGE, getDifficultyColor, DifficultyStars } from './components/QuestionBadges';
+import { SimilarPracticeEntry } from './SimilarPracticePage';
+import { WrongReviewRewardMarker } from '../Rewards/WrongReviewRewardMarker';
+import { DifficultyStars } from './components/QuestionBadges';
 import { getQuestionTypeLabel } from '../../data/questionBank';
 import { UniversalQuizQuestion } from './UniversalQuizView';
 import { QuestionRichContent } from './components/QuestionRichContent';
@@ -17,11 +18,6 @@ import { QuestionFeedbackScene } from '../../types/questionFeedback';
 import { MistakeReasonPicker, MistakeReasonTrigger } from './components/MistakeReasonPicker';
 import { MistakeReasonKey } from '../../data/mistakeReasons';
 import { getMistakeReasons, recordMistakeReasons } from '../../services/mistakeReasonService';
-import {
-  getSimilarAttemptStatus,
-  SIMILAR_ATTEMPT_EVENT,
-  SimilarAttemptStatus,
-} from '../../utils/similarQuestionAttempts';
 import { parseXkwFillAnswers } from '../../utils/xkwQuestion';
 import {
   isBlankMatch,
@@ -30,6 +26,7 @@ import {
 } from '../../utils/manualGrade';
 
 export interface MistakePreviewResultCardProps {
+  allowSimilarPractice?: boolean;
   question: UniversalQuizQuestion;  // 改为接收完整对象
   practiceStats?: { correct: number; wrong: number };
   onOpenKnowledgeNode?: (name: string) => void;
@@ -51,6 +48,7 @@ export interface MistakePreviewResultCardProps {
 
 // 扁平化错题预览主体：单层容器 + 同级分块，便于维护
 export const MistakePreviewResultCard: React.FC<MistakePreviewResultCardProps> = ({
+  allowSimilarPractice = true,
   question,
   practiceStats = { correct: 0, wrong: 0 },
   onOpenKnowledgeNode,
@@ -110,8 +108,6 @@ export const MistakePreviewResultCard: React.FC<MistakePreviewResultCardProps> =
   );
   const cognitiveState = question.cognitiveState || 'GAP';
   const explanationText = question.result?.explanation;
-  const [activeTab, setActiveTab] = useState<'analysis' | 'similar'>('analysis');
-  const [similarAttemptTick, setSimilarAttemptTick] = useState(0);
   const [isBookmarked, setIsBookmarked] = useState(() => isQuestionBookmarked(question.id));
   const [reasonSheetOpen, setReasonSheetOpen] = useState(false);
   const [localMistakeReasons, setLocalMistakeReasons] = useState<MistakeReasonKey[]>(
@@ -124,16 +120,10 @@ export const MistakePreviewResultCard: React.FC<MistakePreviewResultCardProps> =
   }, [question]);
 
   useEffect(() => {
-    setActiveTab('analysis');
     setIsBookmarked(isQuestionBookmarked(question.id));
     setLocalMistakeReasons(getMistakeReasons(question.id));
   }, [question.id]);
 
-  useEffect(() => {
-    const refreshSimilarAttempts = () => setSimilarAttemptTick((tick) => tick + 1);
-    window.addEventListener(SIMILAR_ATTEMPT_EVENT, refreshSimilarAttempts);
-    return () => window.removeEventListener(SIMILAR_ATTEMPT_EVENT, refreshSimilarAttempts);
-  }, []);
 
   // Mock 健康分（可替换为真实数据）
   const MOCK_KP_HEALTH: Record<string, { health: number; delta: number }> = {
@@ -245,47 +235,6 @@ export const MistakePreviewResultCard: React.FC<MistakePreviewResultCardProps> =
     openReasonSheet('bookmark');
   };
 
-  const similarList = useMemo(() => {
-    const bankQuestion = allQuestions.find((q) => q.id === question.id);
-    const similarIds = bankQuestion?.similarIds ?? question.similarIds ?? [];
-    const resolvedQuestions = similarIds
-      .map((id) => allQuestions.find((q) => q.id === id))
-      .filter(Boolean);
-
-    const pool = resolvedQuestions.length > 0
-      ? resolvedQuestions
-      : mathQuestions.filter((q) => q.id !== question.id).slice(0, 3);
-
-    const demoStatuses: SimilarAttemptStatus[] = ['correct', 'wrong', 'unattempted'];
-
-    return pool.slice(0, 3).map((q, index) => ({
-      id: q.id,
-      stem: q.content.stem,
-      difficulty: q.difficulty,
-      type: q.type,
-      knowledgePoint: q.knowledgePoints?.[0] || '数学',
-      attemptStatus: resolvedQuestions.length > 0
-        ? getSimilarAttemptStatus(q.id, { correctCount: q.correctCount, wrongCount: q.wrongCount })
-        : demoStatuses[index % demoStatuses.length],
-    }));
-  }, [question.id, question.similarIds, similarAttemptTick]);
-
-  const renderSimilarAttemptBadge = (status: SimilarAttemptStatus) => {
-    if (status === 'unattempted') return null;
-
-    const isCorrect = status === 'correct';
-    return (
-      <span
-        className={`absolute top-0 right-0 z-10 inline-flex items-center gap-0.5 px-2 py-1 rounded-bl-xl rounded-tr-xl text-[10px] font-black shadow-sm ${
-          isCorrect ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
-        }`}
-      >
-        {isCorrect ? <Check size={10} strokeWidth={3} /> : <X size={10} strokeWidth={3} />}
-        {isCorrect ? '答对' : '答错'}
-      </span>
-    );
-  };
-
   const isImageQuestion = Boolean(question.content.stemImages?.length);
   const isPaperSourceQuestion = Boolean(question.content.originalImageUrl);
 
@@ -357,6 +306,7 @@ export const MistakePreviewResultCard: React.FC<MistakePreviewResultCardProps> =
         </section>
 
         <aside className={`rounded-[28px] bg-white border border-slate-100 shadow-sm p-4 md:p-5 ${isPaperSourceQuestion ? 'flex flex-col min-h-[360px]' : 'space-y-4'}`}>
+          {allowSimilarPractice && <div className="mb-4"><SimilarPracticeEntry key={question.id} question={question} /></div>}
           {isPaperSourceQuestion ? (
             <PaperSourceAnalysisPanel
               draftImageUrl={draftImageUrl}
@@ -380,38 +330,19 @@ export const MistakePreviewResultCard: React.FC<MistakePreviewResultCardProps> =
           ) : (
           <>
           {/* 顶部分段导航 */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-stretch gap-2 [&_svg]:shrink-0">
             <button
               type="button"
-              onClick={() => setActiveTab('analysis')}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-black transition-all ${
-                activeTab === 'analysis'
-                  ? 'bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-sm'
-                  : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
-              }`}
+              className="flex-1 min-h-10 whitespace-nowrap flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-black bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-sm"
             >
               <FileText size={14} />
               解析
             </button>
-            {similarList.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setActiveTab('similar')}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-black transition-all ${
-                  activeTab === 'similar'
-                    ? 'bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-sm'
-                    : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                <FileText size={14} />
-                相似题
-              </button>
-            )}
             {onOpenTutor && (
               <button
                 type="button"
                 onClick={onOpenTutor}
-                className="flex-[1.15] flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-sky-500 to-indigo-500 text-white shadow-md shadow-indigo-500/20 hover:brightness-105 active:scale-[0.98] transition-all"
+                className="flex-[1.6] min-h-10 whitespace-nowrap flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-sky-500 to-indigo-500 text-white shadow-md shadow-indigo-500/20 hover:brightness-105 active:scale-[0.98] transition-all"
               >
                 <Sparkles size={14} />
                 AI 1对1解答
@@ -420,7 +351,7 @@ export const MistakePreviewResultCard: React.FC<MistakePreviewResultCardProps> =
             )}
           </div>
 
-          {activeTab === 'analysis' ? (
+          {(
             <>
               {/* 答案摘要 */}
               <div className="rounded-2xl border border-slate-100 bg-slate-50/60 px-4 py-3 space-y-2">
@@ -549,6 +480,7 @@ export const MistakePreviewResultCard: React.FC<MistakePreviewResultCardProps> =
                     {explanationText || '正在生成 AI 解析中...'}
                   </p>
                 )}
+                {(question.content.htmlExplanation || explanationText) && <WrongReviewRewardMarker questionId={question.id} hasReason={resolvedMistakeReasons.length > 0} />}
               </div>
 
               {/* 本题练习情况 */}
@@ -639,33 +571,6 @@ export const MistakePreviewResultCard: React.FC<MistakePreviewResultCardProps> =
               )}
 
             </>
-          ) : (
-            <div className="space-y-3">
-              <div className="text-xs font-black text-slate-700">相似题推荐</div>
-              {similarList.map((q) => (
-                <button
-                  key={q.id}
-                  type="button"
-                  onClick={() => onSimilarItemSelect?.(q.id)}
-                  className="relative w-full text-left bg-white rounded-xl p-4 border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all active:scale-[0.98] group overflow-hidden"
-                >
-                  {renderSimilarAttemptBadge(q.attemptStatus)}
-                  <div className="flex items-center gap-2 mb-2 pr-14">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${getDifficultyColor(q.difficulty)}`}>
-                      {DIFFICULTY_BADGE[q.difficulty]}
-                    </span>
-                    <span className="px-2 py-0.5 rounded bg-slate-50 text-slate-500 text-[10px] font-bold">
-                      {getQuestionTypeLabel(q.type as any)}
-                    </span>
-                  </div>
-                  <p className="text-sm text-slate-700 line-clamp-2 mb-2 font-medium">{q.stem}</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-indigo-600 font-medium">{q.knowledgePoint}</span>
-                    <ArrowRight size={14} className="text-slate-300 group-hover:text-indigo-500 transition-colors" />
-                  </div>
-                </button>
-              ))}
-            </div>
           )}
           </>
           )}

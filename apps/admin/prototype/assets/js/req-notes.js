@@ -115,7 +115,7 @@ const REQ_PAGE_NOTES = {
   },
   'device-alert': {
     title: '状态告警',
-    summary: '列表：告警ID、类型、设备SN、格口、所属柜机ID、内容、状态、产生时间。类型含外观损坏、逾期提醒、未关门、未充电、柜机离线、人工问题反馈。待处理可点「处理」；已解决显示「已处理」不可点。默认按当月筛选。',
+    summary: '列表：告警ID、类型、设备SN、格口、所属柜机ID、内容、状态、产生时间。类型含外观损坏、逾期提醒、未关门、未充电、柜机离线、人工问题反馈。待处理可点「标记已解决」，已解决可点「恢复待处理」，两种操作均需二次确认。产生时间支持起止日期筛选，默认当月第一天至当天。',
     doc: '设备管理需求文档 §4.7 / §5.5',
   },
 };
@@ -373,7 +373,7 @@ const REQ_FIELD_NOTES = {
   },
   '记录状态': {
     title: '记录状态',
-    body: '开门中 / 已归还 / 借出中 / 归还异常 / 已逾期 / 取消借用。取消借用需设备未拔充电器且关门；归还需放入、充电、关门、确认同时完成；归还门未关为开门中，其他归还问题为归还异常；满24小时未还为已逾期。',
+    body: '开门中 / 已归还 / 借出中 / 归还异常 / 已逾期 / 取消借用。取消借用需设备未拔充电器且关门；归还需放入、充电、关门、确认同时完成；归还门未关为开门中，其他归还问题为归还异常；超过应归还时间仍未归还为已逾期。',
     doc: '设备管理需求文档 §4.2.1 / §4.10.1',
   },
   '取消借用': {
@@ -782,8 +782,35 @@ function onReqAnnotateMouseOut(e) {
 
 function refreshReqPanelForRoute() {
   clearReqHighlight();
-  if (reqAnnotateOn) renderReqPanelHint();
-  else renderReqPanelIdle();
+  renderConsolePanel();
+}
+
+function renderConsolePanel() {
+  const bodyEl = document.getElementById('req-panel-body');
+  if (!bodyEl) return;
+  const route = getCurrentRouteKey();
+  const routeTitle = ROUTE_META?.[route]?.title || route;
+
+  if (['face-library','face-sync-status','face-sync-detail'].includes(route) && typeof renderFaceConsole === 'function') {
+    bodyEl.innerHTML = renderFaceConsole();
+    return;
+  }
+
+  if (route === 'cabinet-version' && typeof renderCabinetUpgradeConsole === 'function') {
+    bodyEl.innerHTML = renderCabinetUpgradeConsole();
+    return;
+  }
+
+  bodyEl.innerHTML = `
+    <div class="console-page-head">
+      <span class="console-route-label">当前菜单</span>
+      <strong>${esc(routeTitle)}</strong>
+    </div>
+    <div class="console-empty">
+      <div class="console-empty-icon">⌁</div>
+      <p>当前菜单暂无控制项</p>
+    </div>
+  `;
 }
 
 function toggleReqPanel(force) {
@@ -793,7 +820,8 @@ function toggleReqPanel(force) {
   const open = typeof force === 'boolean' ? force : panel.classList.contains('is-hidden');
   panel.classList.toggle('is-hidden', !open);
   button?.classList.toggle('is-active', open);
-  if (button) button.setAttribute('aria-label', open ? '关闭需求说明' : '打开需求说明');
+  if (button) button.setAttribute('aria-label', open ? '关闭控制台' : '打开控制台');
+  if (open) renderConsolePanel();
 }
 
 function initReqNotes() {
@@ -801,21 +829,17 @@ function initReqNotes() {
   const panel = document.getElementById('req-panel');
   panel?.classList.add('is-hidden');
   floatButton?.addEventListener('click', () => toggleReqPanel());
-  const toggle = document.getElementById('req-annotate-toggle');
-  if (toggle) {
-    toggle.checked = reqAnnotateOn;
-    toggle.addEventListener('change', () => setReqAnnotateOn(toggle.checked));
-  }
-  document.body.classList.toggle('req-annotate-on', reqAnnotateOn);
-  document.addEventListener('click', onReqAnnotateClick, true);
-  document.addEventListener('mouseover', onReqAnnotateMouseOver, true);
-  document.addEventListener('mouseout', onReqAnnotateMouseOut, true);
-  if (reqAnnotateOn) renderReqPanelHint();
-  else renderReqPanelIdle();
+  document.getElementById('req-panel-close')?.addEventListener('click', () => toggleReqPanel(false));
+  reqAnnotateOn = false;
+  localStorage.removeItem(REQ_ANNOTATE_KEY);
+  document.body.classList.remove('req-annotate-on');
+  clearReqHighlight();
+  renderConsolePanel();
 }
 
 window.toggleReqPanel = toggleReqPanel;
 window.isReqAnnotateOn = isReqAnnotateOn;
 window.setReqAnnotateOn = setReqAnnotateOn;
 window.refreshReqPanelForRoute = refreshReqPanelForRoute;
+window.renderConsolePanel = renderConsolePanel;
 window.initReqNotes = initReqNotes;

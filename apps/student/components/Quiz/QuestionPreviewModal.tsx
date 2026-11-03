@@ -329,7 +329,7 @@ export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({
                             : 'text-slate-400 border-transparent hover:text-slate-600'
                           }`}
                       >
-                        相似题推荐
+                        举一反三
                       </button>
                       <button
                         onClick={() => setActiveFunctionTab(activeFunctionTab === 'spark' ? 'none' : 'spark')}
@@ -386,7 +386,7 @@ export const QuestionPreviewModal: React.FC<QuestionPreviewModalProps> = ({
                           ) : (
                             <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
                               <p className="text-xs text-slate-400 text-center py-2">
-                                暂无相似题数据
+                                暂无举一反三题目
                               </p>
                             </div>
                           )}

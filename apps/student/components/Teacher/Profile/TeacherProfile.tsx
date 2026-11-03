@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { 
-  User, 
   Mail, 
   Phone, 
   Shield, 
@@ -11,7 +10,9 @@ import {
   Edit3
 } from 'lucide-react';
 
-export const TeacherProfile: React.FC = () => {
+import { TeacherPortalUser } from '../data/teacherAccess';
+
+export const TeacherProfile: React.FC<{ user: TeacherPortalUser }> = ({ user }) => {
   const [classOpen, setClassOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<{ name: string; type: string; students: number; homeroom: string; alerts: number; completion: number } | null>(null);
   const [pwdOpen, setPwdOpen] = useState(false);
@@ -29,13 +30,12 @@ export const TeacherProfile: React.FC = () => {
   const [emailCountdown, setEmailCountdown] = useState(0);
 
   const teacherInfo = {
-    name: '张雨薇',
-    role: '数学教研组长',
-    employeeId: 'T202308001',
-    email: 'zhangyuwei@turing-edu.com',
-    phone: '138****8888',
-    department: '初中数学组',
-    avatar: 'Z'
+    name: user.name,
+    position: user.roleLabel,
+    email: user.account.includes('@') ? user.account : '未绑定',
+    phone: user.phone ? user.phone.replace(/^(\d{3})\d{4}(\d{4})$/, '$1****$2') : '未绑定',
+    department: user.schoolName,
+    avatar: user.name.slice(0, 1)
   };
   const [emailDisplay, setEmailDisplay] = useState(teacherInfo.email);
 
@@ -108,7 +108,7 @@ export const TeacherProfile: React.FC = () => {
                 <div>
                   <h1 className="text-2xl font-black text-slate-900">{teacherInfo.name}</h1>
                   <p className="text-slate-500 font-medium flex items-center gap-2 mt-1">
-                    <span className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-600 font-bold">{teacherInfo.role}</span>
+                    <span className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-600 font-bold">{teacherInfo.position}</span>
                     <span className="text-slate-300">|</span>
                     <span className="text-sm">{teacherInfo.department}</span>
                   </p>
@@ -124,10 +124,6 @@ export const TeacherProfile: React.FC = () => {
                 <div className="flex items-center gap-2 text-slate-500">
                   <Phone size={14} className="text-slate-400" />
                   <span className="text-sm font-medium">{teacherInfo.phone}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-500">
-                  <User size={14} className="text-slate-400" />
-                  <span className="text-sm font-medium">工号: {teacherInfo.employeeId}</span>
                 </div>
               </div>
             </div>

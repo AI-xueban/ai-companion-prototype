@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { Check, ChevronDown, ChevronLeft, FileText, Printer, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, FileText, Printer } from 'lucide-react';
 import type { MistakeItem } from '../../types';
 import { allQuestions } from '../../data/questionBank';
+import { loadAcademicContext } from '../../services/academicContextStore';
 import type { PaperPrintJob } from '../SubjectMap/PaperPrintFlow';
 
 type AnswerMode = 'paper_only' | 'paper_answer' | 'paper_answer_analysis';
@@ -28,7 +29,7 @@ const questionTypeLabel = (type?: string) => {
   return '题目';
 };
 
-const mistakeSources = ['智阅作业', '灵镜讲题', '个性化学习', '相似题练习', '精准练习', '一课一练'];
+const mistakeSources = ['智阅作业', '灵镜讲题', '个性化学习', '举一反三练习', '精准练习', '一课一练'];
 const getMistakeSource = (item: MistakeItem) => {
   if (item.category === 'synchronous') return '一课一练';
   const hash = Array.from(item.id).reduce((sum, character) => sum + character.charCodeAt(0), 0);
@@ -43,10 +44,7 @@ export const MistakePrintSetup: React.FC<MistakePrintSetupProps> = ({ items, ini
   const [source, setSource] = useState('全部来源');
   const [answerMode, setAnswerMode] = useState<AnswerMode>('paper_only');
   const [selectionNotice, setSelectionNotice] = useState<string | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => {
-    if (initialIds?.length) return new Set(initialIds);
-    return new Set(items.filter((item) => !initialSubject || item.subject === initialSubject).slice(0, 50).map((item) => item.id));
-  });
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set((initialIds ?? []).slice(0, 50)));
 
   const reasons = useMemo(() => Array.from(new Set(items.map((item) => item.errorType).filter(Boolean))), [items]);
   const filtered = useMemo(() => items.filter((item) => {
@@ -58,9 +56,8 @@ export const MistakePrintSetup: React.FC<MistakePrintSetupProps> = ({ items, ini
   }), [items, reason, source, status, subject]);
 
   const selectedItems = items.filter((item) => selectedIds.has(item.id)).slice(0, 50);
+  const totalItems = items.filter((item) => (!initialSubject || item.subject === initialSubject) && Boolean(item.fullQuestion || item.questionSnippet)).length;
   const allFilteredSelected = filtered.length > 0 && filtered.every((item) => selectedIds.has(item.id));
-  const filteredSelectedCount = filtered.filter((item) => selectedIds.has(item.id)).length;
-  const estimatedPages = Math.max(1, Math.ceil(selectedItems.length / 6) + (answerMode === 'paper_only' ? 0 : 1));
 
   const toggleItem = (id: string) => {
     setSelectedIds((current) => {
@@ -103,11 +100,14 @@ export const MistakePrintSetup: React.FC<MistakePrintSetupProps> = ({ items, ini
   const createJob = () => {
     if (!selectedItems.length) return;
     const selectedSubjects = Array.from(new Set(selectedItems.map((item) => item.subject)));
-    const date = new Date().toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' });
+    const grade = loadAcademicContext().grade.trim() || '未设年级';
+    const subjectLabel = selectedSubjects.length === 1 ? selectedSubjects[0] : '综合学科';
+    const now = new Date();
+    const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     onCreate({
-      title: `${selectedSubjects.length === 1 ? selectedSubjects[0] : '综合'}错题复习卷·${date}`,
+      title: `${grade}·${subjectLabel}错题复习卷·${date}`,
       questionCount: selectedItems.length,
-      subject: selectedSubjects.length === 1 ? selectedSubjects[0] : '综合',
+      subject: subjectLabel,
       answerMode,
       includeAnswerAnalysis: answerMode === 'paper_answer_analysis',
       questionItems: selectedItems.map((item) => {
@@ -130,14 +130,19 @@ export const MistakePrintSetup: React.FC<MistakePrintSetupProps> = ({ items, ini
   };
 
   return <div className="absolute inset-0 z-[740] flex flex-col bg-[#f5f7fb] text-slate-900">
-    <header className="flex h-16 shrink-0 items-center border-b border-slate-200 bg-white px-5">
-      <button type="button" onClick={onClose} aria-label="返回" className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-slate-100"><ChevronLeft size={20} /></button>
-      <div className="ml-3"><h1 className="text-[17px] font-semibold">打印错题</h1><p className="text-[10px] text-slate-400">选择需要打印的错题范围</p></div>
-      <button type="button" onClick={onClose} aria-label="关闭" className="ml-auto flex h-9 w-9 items-center justify-center rounded-full hover:bg-slate-100"><X size={18} /></button>
+    <header className="flex min-h-[76px] shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-5 py-2">
+      <button type="button" onClick={onClose} aria-label="返回" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition-colors hover:bg-slate-200"><ChevronLeft size={20} /></button>
+      <h1 className="min-w-[160px] text-[17px] font-semibold">打印错题</h1>
+      <div className="ml-auto min-w-0 text-right">
+        <p aria-label={`已选 ${selectedItems.length} 题，共 ${totalItems} 题`} className="text-[15px] font-semibold tabular-nums"><span className="font-bold text-indigo-600">{selectedItems.length}</span><span className="text-slate-600">/{totalItems}</span></p>
+        {selectionNotice ? <p role="status" className="text-[10px] font-medium leading-4 text-amber-600">{selectionNotice}</p> : null}
+      </div>
+      <button type="button" onClick={createJob} disabled={!selectedItems.length} className="flex h-10 shrink-0 items-center gap-2 rounded-xl bg-indigo-600 px-4 text-[12px] font-semibold text-white disabled:opacity-40"><Printer size={15} />生成并预览PDF</button>
     </header>
 
     <div className="shrink-0 border-b border-slate-200 bg-white px-5 py-2.5">
       <div className="flex items-center gap-2 overflow-visible">
+        <button type="button" onClick={toggleCurrentResults} disabled={!filtered.length} className="h-9 shrink-0 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-semibold text-indigo-600 transition-colors hover:border-indigo-200 hover:bg-indigo-50 disabled:text-slate-300">{allFilteredSelected ? '取消全选' : '全选'}</button>
         <FilterSelect label="学科" value={subject} disabled={Boolean(initialSubject)} options={initialSubject ? [initialSubject] : ['全部学科', ...availableSubjects]} onChange={setSubject} />
         <FilterSelect label="状态" value={status} options={['all', 'new', 'reviewing', 'mastered']} optionLabels={['全部状态', '未掌握', '待复习', '已掌握']} onChange={(value) => setStatus(value as typeof status)} />
         <FilterSelect label="错因" value={reason} options={['全部错因', ...reasons]} onChange={setReason} />
@@ -155,7 +160,6 @@ export const MistakePrintSetup: React.FC<MistakePrintSetupProps> = ({ items, ini
       })}</div> : <div className="mx-auto mt-20 max-w-sm text-center"><FileText size={32} className="mx-auto text-slate-300" /><h2 className="mt-3 text-[15px] font-semibold">当前条件下没有错题</h2><p className="mt-1 text-[11px] text-slate-400">请调整筛选条件后再试</p><button type="button" onClick={clearFilters} className="mt-4 h-9 rounded-xl bg-indigo-50 px-4 text-[11px] font-semibold text-indigo-600">清除筛选</button></div>}
     </main>
 
-    <footer className="shrink-0 border-t border-slate-200 bg-white px-5 py-3"><div className="mx-auto flex max-w-[940px] items-center"><div><p className="text-[13px] font-semibold">已选 {selectedItems.length} 题 · 预计 {estimatedPages} 页</p><p className={`mt-0.5 text-[10px] ${selectionNotice ? 'font-medium text-amber-600' : 'text-slate-400'}`}>{selectionNotice || `当前结果已选 ${filteredSelectedCount}/${filtered.length} 题 · 切换筛选会保留已选题`}</p></div><button type="button" onClick={toggleCurrentResults} disabled={!filtered.length} className="ml-auto h-10 px-4 text-[11px] font-semibold text-slate-500 disabled:opacity-40">{allFilteredSelected ? '取消选择当前结果' : '全选当前结果'}</button><button type="button" onClick={createJob} disabled={!selectedItems.length} className="flex h-11 items-center gap-2 rounded-xl bg-indigo-600 px-5 text-[12px] font-semibold text-white disabled:opacity-40"><Printer size={15} />下一步：预览错题</button></div></footer>
   </div>;
 };
 

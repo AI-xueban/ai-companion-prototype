@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Camera, Mic } from 'lucide-react';
+import { ArrowRight, Camera, FileText, Languages, Lightbulb, Mic } from 'lucide-react';
 import {
   KIND_TAG,
   type HubCuriosityCard,
@@ -147,8 +147,29 @@ export const LumiHubStage: React.FC<LumiHubStageProps> = ({
         ) : null)}
       </motion.div>
 
-      {/* 统一表达入口：三个操作保持真实语义，输入区进入会话并直接聚焦。 */}
+      {/* 统一表达入口：功能快捷入口暂只展示，输入区进入会话并直接聚焦。 */}
       <div className="absolute bottom-3 left-3 right-3 z-20 pointer-events-auto">
+        <motion.div
+          animate={isExiting ? { opacity: 0, y: 42 } : { opacity: 1, y: 0 }}
+          transition={exitTransition}
+          className="mx-auto mb-2 flex w-full max-w-[620px] items-center justify-center gap-2"
+        >
+          {[
+            { label: '组卷', Icon: FileText },
+            { label: '翻译', Icon: Languages },
+            { label: '1对1解题', Icon: Lightbulb },
+          ].map(({ label, Icon }) => (
+            <button
+              key={label}
+              type="button"
+              disabled
+              className="inline-flex items-center justify-center gap-1.5 rounded-full border border-white/70 bg-white/90 px-3 py-1.5 text-[12px] font-semibold text-slate-700 shadow-sm backdrop-blur-md"
+            >
+              <Icon size={15} strokeWidth={2} aria-hidden="true" />
+              {label}
+            </button>
+          ))}
+        </motion.div>
         <motion.div
           layoutId="lumi-composer"
           transition={{ layout: { type: 'spring', stiffness: 190, damping: 28, mass: 0.9 } }}

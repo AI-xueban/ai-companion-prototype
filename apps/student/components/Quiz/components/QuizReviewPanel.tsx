@@ -1,15 +1,17 @@
 import React, { useMemo, useState } from 'react';
 import { Lightbulb, FileText, Bot, PlayCircle, ChevronRight } from 'lucide-react';
 import { UniversalQuizQuestion } from '../UniversalQuizView';
-import { allQuestions, QuestionItem } from '../../../data/questionBank';
+import { SimilarPracticeEntry } from '../SimilarPracticePage';
+import { WrongReviewRewardMarker } from '../../Rewards/WrongReviewRewardMarker';
 import { QuestionFeedbackEntry } from './QuestionFeedbackEntry';
 import { QuestionFeedbackScene } from '../../../types/questionFeedback';
 import { MistakeReasonPicker } from './MistakeReasonPicker';
 import { MistakeReasonKey } from '../../../data/mistakeReasons';
 
-type ReviewTab = 'analysis' | 'similar' | 'ai';
+type ReviewTab = 'analysis' | 'ai';
 
 interface QuizReviewPanelProps {
+  allowSimilarPractice?: boolean;
   question: UniversalQuizQuestion;
   userAnswer?: string | string[];
   isCorrect: boolean;
@@ -21,6 +23,7 @@ interface QuizReviewPanelProps {
 }
 
 export const QuizReviewPanel: React.FC<QuizReviewPanelProps> = ({
+  allowSimilarPractice = true,
   question,
   userAnswer,
   isCorrect,
@@ -32,11 +35,6 @@ export const QuizReviewPanel: React.FC<QuizReviewPanelProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<ReviewTab>('analysis');
 
-  const similarQuestions = useMemo(() => {
-    const pool = allQuestions.filter((q) => q.id !== question.id && q.subject === question.subject);
-    return pool.slice(0, 4);
-  }, [question.id, question.subject]);
-
   const formatAnswer = (val: unknown) => {
     if (Array.isArray(val)) return val.map(String).join(', ');
     return String(val ?? '—');
@@ -44,31 +42,12 @@ export const QuizReviewPanel: React.FC<QuizReviewPanelProps> = ({
 
   const tabs: { id: ReviewTab; label: string; icon: React.ReactNode; accent?: boolean }[] = [
     { id: 'analysis', label: '解析', icon: <FileText size={14} /> },
-    { id: 'similar', label: '相似题', icon: <FileText size={14} /> },
     { id: 'ai', label: 'AI 1对1解答', icon: <Bot size={14} />, accent: true },
   ];
 
-  const toUniversalQuestion = (q: QuestionItem): UniversalQuizQuestion => ({
-    id: q.id,
-    type: q.type,
-    content: {
-      stem: q.content.stem,
-      options: q.content.options,
-      audioUrl: q.content.audioUrl,
-      transcript: q.content.transcript,
-      examRules: q.content.examRules,
-      subQuestions: q.content.subQuestions,
-    },
-    result: q.result,
-    tags: q.tags,
-    difficulty: q.difficulty,
-    category: q.category,
-    knowledgePoints: q.knowledgePoints,
-    subject: q.subject,
-  });
-
   return (
     <div className="h-full flex flex-col gap-4">
+      {allowSimilarPractice && <SimilarPracticeEntry key={question.id} question={question} />}
       <div className="flex items-center gap-2 flex-wrap">
         {tabs.map((tab) => (
           <button
@@ -152,6 +131,7 @@ export const QuizReviewPanel: React.FC<QuizReviewPanelProps> = ({
               <p className="text-sm text-sky-900 leading-relaxed whitespace-pre-wrap">
                 {question.result?.explanation || '暂无解析内容'}
               </p>
+              {question.result?.explanation && <WrongReviewRewardMarker questionId={question.id} hasReason={!isCorrect && selectedMistakeReasons.length > 0} />}
             </div>
 
             {question.knowledgePoints && question.knowledgePoints.length > 0 && (
@@ -182,22 +162,6 @@ export const QuizReviewPanel: React.FC<QuizReviewPanelProps> = ({
             </div>
 
           </>
-        )}
-
-        {activeTab === 'similar' && (
-          <div className="space-y-3">
-            {similarQuestions.map((sq) => (
-              <button
-                key={sq.id}
-                type="button"
-                onClick={() => onStartSimilarPractice?.(toUniversalQuestion(sq))}
-                className="w-full text-left rounded-2xl border border-slate-200 bg-white p-4 hover:border-indigo-200 hover:shadow-sm transition flex items-start gap-3"
-              >
-                <p className="flex-1 text-sm text-slate-700 line-clamp-2">{sq.content.stem}</p>
-                <ChevronRight size={16} className="shrink-0 text-slate-300 mt-1" />
-              </button>
-            ))}
-          </div>
         )}
 
         {activeTab === 'ai' && (
