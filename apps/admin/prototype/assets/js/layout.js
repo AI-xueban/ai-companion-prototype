@@ -22,6 +22,12 @@ const MENU = [
     ]
   },
   {
+    key: 'teaching-business', label: '教学业务', icon: '▤', expanded: true,
+    children: [
+      { key: 'homework-management', label: '作业与打卡', route: 'homework-management' },
+    ]
+  },
+  {
     key: 'content-op', label: '内容运营', icon: '📋', expanded: true,
     children: [
       {
@@ -60,6 +66,7 @@ const MENU = [
 
 const ROUTE_META = {
   'cabinet-version': { title: '柜机升级', breadcrumb: ['设备管理', '柜机升级'] },
+  'homework-management': { title: '作业与打卡', breadcrumb: ['教学业务', '作业与打卡'] },
   'mall': { title: '捐赠与爱心池', breadcrumb: ['金币运营', '捐赠与爱心池'] },
   'home-config': { title: '首页配置', breadcrumb: ['内容运营', '万象视界管理', '首页配置'] },
   'hot-recommend': { title: '热门推荐', breadcrumb: ['内容运营', '万象视界管理', '热门推荐'] },
