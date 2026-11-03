@@ -24,7 +24,7 @@ export const ControlScopeCards: React.FC<{
   return <section className="dc-list-card overflow-hidden">
     <div className="dc-list-heading borrow-list-heading flex flex-wrap items-center justify-between gap-3">
       <h3 className="font-bold text-slate-900">{heading}</h3>
-      {module !== 'lock' && <button type="button" className="dc-btn borrow-batch-toggle" aria-pressed={batch} disabled={!selectableRows.length} onClick={onBatch}>{batch ? '退出设置' : settingLabel}</button>}
+      {module !== 'lock' && <button type="button" className="dc-btn borrow-batch-toggle" disabled={!selectableRows.length} onClick={onBatch}>{batch ? '退出设置' : settingLabel}</button>}
     </div>
     {batch && <div className="borrow-batch-bar">
       <label className="borrow-select-all"><input type="checkbox" aria-label="全选当前层级" checked={all} disabled={!selectableRows.length} onChange={() => onSelect(all ? [] : selectableRows.map(row => row.id))} />全选当前层级</label>

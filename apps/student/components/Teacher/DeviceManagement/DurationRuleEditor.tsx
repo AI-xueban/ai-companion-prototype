@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { DurationRule, weekdayNames } from '../data/hierarchicalDeviceControl';
 import { validateDurationRuleSet } from '../data/durationRuleSets';
@@ -7,28 +7,33 @@ import { ControlValidationNotice } from './ControlValidationNotice';
 import { ControlToast } from './ControlToast';
 
 type Props = {
-  blockedWeekdays?: number[]; initialApplyScope?: 'all' | 'unmodified'; label: string; count: number; selectedObjects?: string[];
+  scopeSelector?: React.ReactNode; conflictHint?: string; backToList?: boolean; blockedWeekdays?: number[]; initialApplyScope?: 'all' | 'unmodified'; label: string; count: number; selectedObjects?: string[];
   rule: DurationRule; defaultRule: DurationRule; isDefault?: boolean; requireApplyScope?: boolean;
   onClose: () => void; onSave: (rules: DurationRule[], applyScope?: 'all' | 'unmodified') => void;
 };
 const copyRule = (rule: DurationRule): DurationRule => ({ ...rule, weekdays: [...rule.weekdays], periods: rule.periods.map(period => ({ ...period })) });
-export const DurationRuleEditor: React.FC<Props> = ({ blockedWeekdays = [], initialApplyScope, label, count, rule, defaultRule, isDefault, requireApplyScope, onClose, onSave }) => {
+export const DurationRuleEditor: React.FC<Props> = ({ scopeSelector, conflictHint, backToList, blockedWeekdays = [], initialApplyScope, label, count, rule, defaultRule, isDefault, requireApplyScope, onClose, onSave }) => {
   const [groups, setGroups] = useState(() => [copyRule(rule)]);
+  const blockedKey = blockedWeekdays.join(',');
+  useEffect(() => { setGroups(current => current.map(group => ({ ...group, weekdays: group.weekdays.filter(day => !blockedWeekdays.includes(day)) }))); }, [blockedKey]);
   const [applyScope, setApplyScope] = useState<'all' | 'unmodified' | null>(initialApplyScope ?? null);
   const [error, setError] = useState('');
   const [restoreNotice, setRestoreNotice] = useState(0);
   const initial = useRef(JSON.stringify({ groups, applyScope }));
   const update = (index: number, changes: Partial<DurationRule>) => { setError(''); setGroups(current => current.map((group, i) => i === index ? { ...group, ...changes, useDefault: false } : group)); };
   const submit = () => {
+    if (scopeSelector && !count) return setError('请选择年级');
     if (requireApplyScope && !applyScope) return setError('请选择本次修改范围');
     const problem = validateDurationRuleSet(groups);
     if (problem) return setError(problem);
     if (groups.some(group => group.weekdays.some(day => blockedWeekdays.includes(day)))) return setError('所选星期已有规则，请修改已有规则或删除后再新增');
     onSave(groups.map(group => ({ ...copyRule(group), useDefault: false, weekdays: [...group.weekdays].sort((a, b) => a - b), periods: [...group.periods].sort((a, b) => a.start.localeCompare(b.start)) })), applyScope ?? undefined);
   };
-  return <DeviceControlLayer labelId="duration-rule-editor-title" level={1} onClose={onClose} unsavedChanges={initial.current !== JSON.stringify({ groups, applyScope })}>{close => <>
-    <header className="flex items-center justify-between border-b p-6"><h2 id="duration-rule-editor-title" className="text-xl font-bold">设置使用时长规则</h2><button type="button" aria-label="关闭设置" onClick={close}><X size={20} /></button></header>
+  return <DeviceControlLayer labelId="duration-rule-editor-title" level={0} onClose={onClose} unsavedChanges={initial.current !== JSON.stringify({ groups, applyScope })}>{close => <>
+    <header className="flex items-center justify-between border-b p-6"><div>{backToList && <button type="button" className="mb-2 text-sm text-indigo-600" onClick={close}>返回规则列表</button>}<h2 id="duration-rule-editor-title" className="text-xl font-bold">设置使用时长规则</h2></div><button type="button" aria-label="关闭设置" onClick={close}><X size={20} /></button></header>
     <div className="dc-panel-body space-y-6">
+      {scopeSelector}
+      {conflictHint && <p role="status" className="rounded-lg bg-amber-50 p-3 text-sm leading-6 text-amber-800">{conflictHint}</p>}
       <div className="rounded-xl bg-indigo-50 p-4 text-sm text-indigo-800"><p className="font-bold">{label}</p><p className="mt-1">本次设置范围共 {count} 名学生</p></div>
       <p className="text-sm text-slate-500">多天可共用一组时长，也可每天单独设置。未设置的星期执行默认规则。已有规则的星期不可重复新增。</p>
       {groups.map((group, groupIndex) => <section key={group.id} className="space-y-4 rounded-xl bg-slate-50 p-4">

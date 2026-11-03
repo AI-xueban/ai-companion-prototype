@@ -2,19 +2,20 @@ import React, { useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { BorrowSchedule, borrowingPeriodsForDay, schoolDate, validateSchedule, weekdayNames } from '../data/hierarchicalDeviceControl';
 import { applyBorrowingWeekGroups, borrowingWeekGroups, BorrowingWeekGroup } from '../data/borrowingWeeklyGroups';
+import { ControlGradeSelector } from './ControlGradeSelector';
 import { DeviceControlLayer } from './DeviceControlLayer';
 
 type GradeOption = { grade: number; label: string; count: number; disabled?: boolean; hasWeeklyRule?: boolean };
 export const SchoolBorrowingRuleEditor: React.FC<{
-  rule: BorrowSchedule; grades: GradeOption[]; initialGrades: number[]; editing: boolean;
+  chooseGrades?: boolean; backToList?: boolean; rule: BorrowSchedule; grades: GradeOption[]; initialGrades: number[]; editing: boolean;
   error: string; onClearError: () => void; onClose: () => void;
   onSave: (rule: BorrowSchedule, grades: number[]) => string | undefined;
-}> = ({ rule, grades, initialGrades, editing, error, onClearError, onClose, onSave }) => {
+}> = ({ chooseGrades, backToList, rule, grades, initialGrades, editing, error, onClearError, onClose, onSave }) => {
   const hydrate = (value: BorrowSchedule): BorrowSchedule => value.mode === 'dates'
     ? { ...value, deny: true, periods: [], weekdays: [], weekdayPeriods: undefined }
     : { ...value, deny: false, weekdayPeriods: Object.fromEntries(value.weekdays.map(day => [day, borrowingPeriodsForDay(value, day).map(period => ({ ...period }))])) };
   const [draft, setDraft] = useState(() => hydrate(rule));
-  const selected = initialGrades;
+  const [selected, setSelected] = useState(initialGrades);
   const [weekGroups, setWeekGroups] = useState(() => borrowingWeekGroups(rule));
   const [problem, setProblem] = useState('');
   const initial = useRef(JSON.stringify({ draft, selected, weekGroups }));
@@ -30,9 +31,10 @@ export const SchoolBorrowingRuleEditor: React.FC<{
     if (validation) { setProblem(validation); return; }
     setProblem(onSave(next, selected) ?? '');
   };
-  return <DeviceControlLayer labelId="school-borrow-rule-title" level={1} onClose={onClose} unsavedChanges={initial.current !== JSON.stringify({ draft, selected, weekGroups })}>{close => <>
-    <header className="flex items-center justify-between border-b p-6"><h2 id="school-borrow-rule-title" className="text-xl font-bold">{editing ? '编辑借用规则' : '设置借用规则'}</h2><button type="button" aria-label="关闭设置" onClick={close}><X size={20} /></button></header>
+  return <DeviceControlLayer labelId="school-borrow-rule-title" level={0} onClose={onClose} unsavedChanges={initial.current !== JSON.stringify({ draft, selected, weekGroups })}>{close => <>
+    <header className="flex items-center justify-between border-b p-6"><div>{backToList && <button type="button" className="mb-2 text-sm text-indigo-600" onClick={close}>返回规则列表</button>}<h2 id="school-borrow-rule-title" className="text-xl font-bold">{editing ? '编辑借用规则' : '设置借用规则'}</h2></div><button type="button" aria-label="关闭设置" onClick={close}><X size={20} /></button></header>
     <div className="dc-panel-body space-y-6">
+      {chooseGrades && <ControlGradeSelector options={grades.map(grade => ({ ...grade, disabled: grade.disabled || (draft.mode === 'weekly' && grade.hasWeeklyRule), hint: draft.mode === 'weekly' && grade.hasWeeklyRule ? '已有规则' : undefined }))} selected={selected} onChange={values => { changed(); setSelected(values); }} />}
       <div className="rounded-xl bg-slate-50 p-4"><p className="text-sm font-bold text-slate-800">{grades.filter(grade => selected.includes(grade.grade)).map(grade => grade.label).join('、')} · {draft.mode === 'weekly' ? '每周固定规则' : '指定日期规则'}</p><p className="mt-2 text-sm text-slate-500">影响 {grades.filter(grade => selected.includes(grade.grade)).reduce((sum, grade) => sum + grade.count, 0)} 名学生</p></div>
       {draft.mode === 'weekly' ? <section><h3 className="text-sm font-bold">每周借用时段</h3><p className="mb-4 mt-2 text-sm text-slate-500">多天可共用一组时段，也可分开设置。未选的星期不可借用。</p>
         <div className="space-y-4">{weekGroups.map((group, groupIndex) => <fieldset key={groupIndex} className="rounded-xl bg-slate-50 p-4"><legend className="text-sm font-bold">时段组 {groupIndex + 1}</legend>

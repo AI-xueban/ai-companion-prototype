@@ -18,6 +18,7 @@ export type ControlEditorValue = {
   applyScope?: "all" | "unmodified";
 };
 export const StudentControlEditor: React.FC<{
+  scopeSelector?: React.ReactNode;
   initialApplyScope?: "all" | "unmodified";
   targetLabel: string;
   count: number;
@@ -29,7 +30,7 @@ export const StudentControlEditor: React.FC<{
   activeDateEdit?: boolean;
   onClose: () => void;
   onSave: (value: ControlEditorValue) => void;
-}> = ({ initialApplyScope, targetLabel, count, selectedObjects, schedule, homework, requireApplyScope, batchDefaults, activeDateEdit = false, onClose, onSave }) => {
+}> = ({ scopeSelector, initialApplyScope, targetLabel, count, selectedObjects, schedule, homework, requireApplyScope, batchDefaults, activeDateEdit = false, onClose, onSave }) => {
   const [draft, setDraft] = useState(schedule);
   const [answer, setAnswer] = useState(homework?.answer ?? false);
   const [explanation, setExplanation] = useState(
@@ -46,6 +47,7 @@ export const StudentControlEditor: React.FC<{
     setDraft((current) => (current ? { ...current, ...changes } : current));
   };
   const submit = () => {
+    if (scopeSelector && !count) return setError("请选择年级");
     if (draft) {
       const problem = validateSchedule(draft, new Date(), activeDateEdit ? schedule?.startDate : undefined);
       if (problem) {
@@ -94,6 +96,7 @@ export const StudentControlEditor: React.FC<{
             </button>
           </header>
           <div className="dc-panel-body space-y-6">
+            {scopeSelector}
             {!draft && <div className="text-sm leading-6 text-slate-500"><p>全校默认规则：不允许查看答案和详解。</p></div>}
             <div className="dc-target">
               <p className="text-sm font-bold text-indigo-900">{targetLabel}</p>

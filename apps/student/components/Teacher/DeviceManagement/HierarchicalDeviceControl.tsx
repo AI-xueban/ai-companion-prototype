@@ -1,3 +1,4 @@
+import { ControlGradeSelector } from './ControlGradeSelector';
 import { occupiedSchoolDurationDays, applySchoolPolicySetToStudent, updateSchoolDurationPolicySet, removeSchoolPolicyFromStudent, importSchoolDurationPolicies, SchoolDurationPolicies, schoolDurationGroups, updateSchoolDurationPolicies } from '../data/schoolDurationPolicies';
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -219,7 +220,8 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
     ids: string[];
   } | null>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
-  const [durationOverview, setDurationOverview] = useState<{ ids: string[]; label: string } | null>(null);
+  const [settingsGrades, setSettingsGrades] = useState<number[] | null>(null);
+  const [durationOverview, setDurationOverview] = useState<{ ids: string[]; label: string; global?: boolean } | null>(null);
   const [durationEditor, setDurationEditor] = useState<{ ids: string[]; label: string; rule: DurationRule; isDefault?: boolean; editingId?: string; originalRule?: DurationRule; requireApplyScope?: boolean; selectedObjects?: string[]; baseSignatures: Record<string, string> } | null>(null);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [worldEditor, setWorldEditor] = useState<{ ids: string[]; label: string; value: null; baseSignatures: Record<string, string> } | null>(null);
@@ -550,6 +552,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
   };
   const saveDurationRule = (rules: DurationRule[], applyScope?: "all" | "unmodified") => {
     if (!durationEditor || !rules.length) return;
+    if (!durationEditor.ids.length) { setMessage({ text: "请选择年级", tone: "warning" }); return; }
     const rule = rules[0];
     if (durationEditor.isDefault) {
       setDefaultDuration(rule);
@@ -608,6 +611,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
   });
   const saveEditor = (value: ControlEditorValue) => {
     if (!editor) return;
+    if (!editor.ids.length) { setMessage({ text: "请选择年级", tone: "warning" }); return; }
     const { ids, label, editingId, baseSignatures } = editor;
     const schedule = value.schedule;
     const updateIds = schedule || value.applyScope !== 'unmodified' ? ids : ids.filter(id => controls[id].homeworkSource !== 'teacher');
@@ -910,6 +914,20 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
       </section></div></div>
   </div>;
 
+  const changeSettingsGrades = (grades: number[]) => {
+    setSettingsGrades(grades);
+    const ids = rows.filter(row => grades.includes(row.grade!)).flatMap(row => row.ids);
+    const label = !grades.length ? '请选择年级' : grades.length === rows.length ? '全校' : rows.filter(row => grades.includes(row.grade!)).map(row => row.label).join('、');
+    const signatures = Object.fromEntries(ids.map(id => [id, policySignature(controls[id], tab)]));
+    if (tab === 'duration') setDurationEditor(current => current ? { ...current, ids, label, selectedObjects: [label], baseSignatures: Object.fromEntries(ids.map(id => [id, current.baseSignatures[id] ?? policySignature(durationControls[id], 'duration')])) } : current);
+    else if (tab === 'homework') setEditor(current => current ? { ...current, ids, label, selectedObjects: [label], baseSignatures: Object.fromEntries(ids.map(id => [id, current.baseSignatures[id] ?? signatures[id]])) } : current);
+    else if (tab === 'world') setWorldEditor(current => current ? { ...current, ids, label, baseSignatures: Object.fromEntries(ids.map(id => [id, current.baseSignatures[id] ?? signatures[id]])) } : current);
+  };
+  const settingsGradeSelector = settingsGrades === null ? undefined : <ControlGradeSelector options={rows.map(row => ({ grade: row.grade!, label: row.label, disabled: !row.ids.length || (tab === 'duration' && occupiedSchoolDurationDays(schoolDurationPolicies, deviceControlStudents, row.ids).length > 0), hint: tab === 'duration' && occupiedSchoolDurationDays(schoolDurationPolicies, deviceControlStudents, row.ids).length > 0 ? '已有规则' : undefined }))} selected={settingsGrades} onChange={changeSettingsGrades} />;
+  const durationConflictHint = !durationEditor || durationEditor.originalRule ? undefined : rows.filter(row => row.ids.some(id => durationEditor.ids.includes(id))).flatMap(row => {
+    const days = occupiedSchoolDurationDays(schoolDurationPolicies, deviceControlStudents, row.ids);
+    return days.length ? [`${row.label}${weekdayRangeText(days)}已有规则`] : [];
+  }).join('；');
   return (
     <div className="dc-page flex h-full flex-col">
       <header className="dc-header shrink-0 border-b bg-white">
@@ -990,7 +1008,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
                         ? "设置学生查看答案、详解的权限，默认均不允许。"
                         : tab === "lock"
                           ? <>可对全校或年级临时锁屏，解除后执行当前日常锁屏设置。<strong className="ml-1 font-bold">仍处于临时锁屏的班级，老师暂不能调整日常锁屏。</strong></>
-                          : "可统一设置全校学生是否允许使用万象视界，也可在下方按年级、班级设置。"}
+                          : "可统一设置全校学生是否允许使用万象视界，也可在下方按年级设置。"}
                     {grade && ` 当前 ${currentStudents.length} 名学生。`}
                   </p>
                 </div>
@@ -1003,8 +1021,9 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
             </div>
           </section>
           <ControlScopeCards module={tab} rows={rows} rowType={rowType} controls={controls} durationPolicies={schoolDurationPolicies}
-            batch={batchMode} selected={selected} onBatch={() => { setBatchMode(!batchMode); setSelected([]); }} onSelect={setSelected}
+            batch={batchMode} selected={selected} onBatch={() => { setBatchMode(false); setSelected([]); setSettingsGrades([]); if (tab === 'duration') { setSettingsGrades(null); setDurationOverview({ ids: rows.flatMap(row => row.ids), label: '全校', global: true }); } else if (tab === 'homework') openEditor([], '请选择年级'); else if (tab === 'world') openWorldEditor([], '请选择年级'); }} onSelect={setSelected}
             onSettings={row => {
+              setSettingsGrades(null);
               if (tab === "duration") setDurationOverview({ ids: row.ids, label: row.label });
               else if (tab === "homework") openEditor(row.ids, row.label, undefined, undefined, [row.label]);
               else if (tab === "world") openWorldEditor(row.ids, row.label);
@@ -1072,29 +1091,35 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
       )}
       {editor && (
         <StudentControlEditor
+          scopeSelector={settingsGradeSelector}
           initialApplyScope={(exception === "save-failed" || exception === "conflict") ? "all" : undefined}
-          key={`${tab}-${editor.schedule?.id ?? editor.label}`}
+          key={`${tab}-${editor.schedule?.id ?? "permissions"}`}
           targetLabel={editor.label}
           count={editor.ids.length}
           selectedObjects={editor.selectedObjects}
           schedule={editor.schedule}
           homework={
-            batchMode && tab === "homework" ? { answer: false, explanation: false } : !editor.schedule && !mixed(editor.ids)
+            (batchMode || settingsGrades !== null) && tab === "homework" ? { answer: false, explanation: false } : !editor.schedule && !mixed(editor.ids)
               ? controls[editor.ids[0]]
               : undefined
           }
-          batchDefaults={batchMode && tab === "homework"}
-          requireApplyScope={editor.requireApplyScope}
+          batchDefaults={(batchMode || settingsGrades !== null) && tab === "homework"}
+          requireApplyScope={settingsGrades !== null || editor.requireApplyScope}
           onClose={() => setEditor(null)}
           onSave={saveEditor}
         />
       )}
-      {durationOverview && tab === "duration" && <DurationRulesDrawer ids={durationOverview.ids} label={durationOverview.label} groups={schoolDurationGroups(durationOverview.ids, schoolDurationPolicies[deviceControlStudents.find(student => durationOverview.ids.includes(student.id))?.grade ?? ""] ?? [])}
-        onClose={() => setDurationOverview(null)} onAdd={() => openDurationEditor(durationOverview.ids, durationOverview.label)}
-        onEdit={group => openDurationEditor(durationOverview.ids, durationOverview.label, group.rule)} onDelete={group => requestDurationDelete(group, durationOverview.label)} />}
+      {durationOverview && !durationEditor && tab === "duration" && <DurationRulesDrawer ids={durationOverview.ids} label={durationOverview.label} global={durationOverview.global}
+        groupLabel={group => actualScope(group.ids)}
+        groups={durationOverview.global ? rows.flatMap(row => schoolDurationGroups(row.ids, schoolDurationPolicies[deviceControlStudents.find(student => row.ids.includes(student.id))?.grade ?? ""] ?? []).filter(group => !group.fallback).map(group => ({ ...group, key: `${row.grade}-${group.key}` }))) : schoolDurationGroups(durationOverview.ids, schoolDurationPolicies[deviceControlStudents.find(student => durationOverview.ids.includes(student.id))?.grade ?? ""] ?? [])}
+        onClose={() => setDurationOverview(null)} onAdd={() => { if (durationOverview.global) { setSettingsGrades([]); openDurationEditor([], '请选择年级'); } else { setSettingsGrades(null); openDurationEditor(durationOverview.ids, durationOverview.label); } }}
+        onEdit={group => { setSettingsGrades(null); openDurationEditor(group.ids, actualScope(group.ids), group.rule); }} onDelete={group => requestDurationDelete(group, actualScope(group.ids))} />}
       {durationEditor && <DurationRuleEditor
+        scopeSelector={settingsGradeSelector}
+        backToList={!!durationOverview}
+        conflictHint={durationConflictHint ? `${durationConflictHint}，请取消相应年级，或返回编辑已有规则。` : undefined}
         initialApplyScope={(exception === "save-failed" || exception === "conflict") ? "all" : undefined}
-        key={`${durationEditor.isDefault ? "default" : durationEditor.label}-${durationEditor.rule.id}`}
+        key={durationEditor.rule.id}
         label={durationEditor.label}
         count={durationEditor.ids.length}
         selectedObjects={durationEditor.selectedObjects}
@@ -1107,7 +1132,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
         onSave={saveDurationRule}
       />}
       {lockEditor && <TemporaryLockEditor label={lockEditor.label} selectedObjects={lockEditor.label.startsWith("已选") ? selectedObjectNames : undefined} count={lockEditor.ids.length} lockClassNames={affectedLockClassNames(lockEditor.ids, true)} unlockClassNames={affectedLockClassNames(lockEditor.ids, false)} lockedCount={lockEditor.ids.filter((studentId) => temporaryLockedIds.has(studentId)).length} schoolSessionActive={schoolTemporaryLockSession.active} state={temporaryState(lockEditor.ids)} onClose={() => setLockEditor(null)} onSave={(enabled) => requestTemporaryLock([{ key: "selection", label: lockEditor.label, ids: lockEditor.ids }], enabled, true)} />}
-      {worldEditor && <WorldUsageEditor initialSelection={(exception === "save-failed" || exception === "conflict") ? { value: worldEditor.ids.some(id => !controls[id].world), scope: "all" } : undefined} label={worldEditor.label} selectedObjects={worldEditor.label.startsWith("已选") ? selectedObjectNames : undefined} total={worldEditor.ids.length} allowed={worldEditor.ids.filter((id) => controls[id].world).length} teacherTotal={worldEditor.ids.filter((id) => controls[id].worldSource === 'teacher').length} teacherAllowed={worldEditor.ids.filter((id) => controls[id].worldSource === 'teacher' && controls[id].world).length} onClose={() => setWorldEditor(null)} onSave={(value, scope) => {
+      {worldEditor && <WorldUsageEditor scopeSelector={settingsGradeSelector} initialSelection={(exception === "save-failed" || exception === "conflict") ? { value: worldEditor.ids.some(id => !controls[id].world), scope: "all" } : undefined} label={worldEditor.label} selectedObjects={worldEditor.label.startsWith("已选") ? selectedObjectNames : undefined} total={worldEditor.ids.length} allowed={worldEditor.ids.filter((id) => controls[id].world).length} teacherTotal={worldEditor.ids.filter((id) => controls[id].worldSource === 'teacher').length} teacherAllowed={worldEditor.ids.filter((id) => controls[id].worldSource === 'teacher' && controls[id].world).length} onClose={() => setWorldEditor(null)} onSave={(value, scope) => {
         if (hasConflict(worldEditor.ids, "world", worldEditor.baseSignatures)) return;
         const changedIds = worldEditor.ids.filter((id) => controls[id].world !== value && (scope === 'all' || controls[id].worldSource !== 'teacher'));
         if (!changedIds.length) return;
