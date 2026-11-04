@@ -471,7 +471,10 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
     const pendingPaperRequestRef = useRef<string | null>(null);
 
     const inlineDemoSendRef = useRef<((text: string) => void) | null>(null);
+    const inlineDemoStopRef = useRef<(() => void) | null>(null);
+    const [inlineDemoGenerating, setInlineDemoGenerating] = useState(false);
     const inlineDemoSnapshots = useRef<Partial<Record<LumiInlineDemoKind, InlineDemoSnapshot>>>({});
+    const [inlineDemoSuggestionHost, setInlineDemoSuggestionHost] = useState<HTMLDivElement | null>(null);
 
     // History State
     const [history, setHistory] = useState<HistoryItem[]>(INITIAL_HISTORY);
@@ -1743,6 +1746,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
 
     const handleSendMessage = () => {
         if (inlineDemoKind && inlineDemoSendRef.current) {
+            if (inlineDemoGenerating) return;
             inlineDemoSendRef.current(inputText.trim());
             setInputText('');
             return;
@@ -3091,6 +3095,8 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                         {inlineDemoKind && <LumiInlineDemo
                             key={inlineDemoKind}
                             kind={inlineDemoKind}
+                            suggestionHost={inlineDemoSuggestionHost}
+                            onStopChange={(stop) => { inlineDemoStopRef.current = stop; setInlineDemoGenerating(Boolean(stop)); }}
                             initial={inlineDemoSnapshots.current[inlineDemoKind]}
                             onSnapshot={(snapshot) => { inlineDemoSnapshots.current[inlineDemoKind] = snapshot; }}
                             registerSend={(send) => { inlineDemoSendRef.current = send; }}
@@ -3140,6 +3146,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                 >
                     {/* bottom-24 对应导航栏高度，让输入框紧贴导航栏顶部 */}
                     <div className="w-full max-w-[620px] flex flex-col gap-2">
+                    {inlineDemoKind === 'print' && <div ref={setInlineDemoSuggestionHost} className="empty:hidden" data-testid="inline-demo-suggestions" />}
                     <div className={`w-full flex items-end gap-3 ${isSessionTurnLimited ? 'justify-center' : ''}`}>
                         {isSessionTurnLimited ? (
                             <div className="w-[min(100%,28rem)] rounded-2xl border border-amber-200 bg-amber-50/95 shadow-sm px-4 py-2 flex items-center gap-3">
@@ -3287,6 +3294,11 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                                     )}
                                 </AnimatePresence>
                                 <div className="flex items-center gap-1.5 shrink-0">
+                                    {inlineDemoKind && inlineDemoGenerating ? (
+                                        <button type="button" aria-label="停止生成" title="停止生成" onClick={() => inlineDemoStopRef.current?.()} className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-white shadow-sm transition-all hover:bg-brand-dark active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+                                            <span aria-hidden="true" className="h-3 w-3 rounded-[2px] bg-current" />
+                                        </button>
+                                    ) : <>
                                     <button
                                         type="button"
                                         onClick={handleVoiceInput}
@@ -3304,6 +3316,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                                             <Send size={18} className="ml-0.5" />
                                         </button>
                                     ) : null}
+                                    </>}
                                 </div>
                             </div>
                         </motion.div>
