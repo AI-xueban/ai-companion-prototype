@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, FileText, Loader2, Printer, RefreshCw, X } from 'lucide-react';
+import { Check, FileText, Loader2, Printer, RefreshCw, Sparkles, X } from 'lucide-react';
 import { INLINE_DEMO_ANSWER_SUGGESTIONS, INLINE_DEMO_PROMPTS, INLINE_DEMO_QUESTIONS, type LumiInlineDemoKind } from '../../data/lumiInlineDemos';
 import { createCombinedPaperDocument } from './lumiPaperPdf';
 import { savePaperDocument, retryPrintedFile } from '../../services/printedFileService';
@@ -25,6 +25,23 @@ interface Props {
 const title = '一元一次方程专项练习';
 const smallButton = 'inline-flex items-center justify-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-semibold text-slate-600 shadow-sm hover:bg-sky-50 disabled:opacity-50 disabled:cursor-wait';
 const DemoProgressLine: React.FC<{ text: string }> = ({ text }) => <div role="status" aria-live="polite" aria-atomic="true" className="flex w-fit max-w-full items-center gap-2 rounded-xl bg-white px-3 py-2 text-xs text-slate-600"><Loader2 className="shrink-0 animate-spin text-sky-500" size={14} /><span>{text}</span></div>;
+const ImageGenerationProgress: React.FC = () => {
+  const [progress, setProgress] = useState(1);
+  useEffect(() => {
+    const startedAt = Date.now();
+    // Demo-only progress; never imply completion before the image is ready.
+    const timer = setInterval(() => setProgress(Math.min(99, Math.round(1 + 98 * (Date.now() - startedAt) / 2600))), 80);
+    return () => clearInterval(timer);
+  }, []);
+  return <div role="status" aria-label="图片正在生成中" className="flex aspect-square w-[260px] max-w-full flex-col justify-between rounded-2xl bg-white p-5 text-slate-600">
+    <div className="flex items-center gap-2 text-xs"><Loader2 className="animate-spin text-sky-500" size={14} /><span>正在生成图片…</span></div>
+    <div className="relative flex flex-1 flex-col items-center justify-center gap-3">
+      <div aria-hidden="true" className="absolute h-24 w-24 animate-pulse rounded-full bg-sky-50" />
+      <Sparkles aria-hidden="true" size={28} className="relative animate-pulse text-sky-400" />
+      <span aria-hidden="true" className="relative text-3xl font-semibold tabular-nums text-sky-600">{progress}<span className="ml-0.5 text-sm">%</span></span>
+    </div>
+  </div>;
+};
 
 export const LumiInlineDemo: React.FC<Props> = ({ kind, initial, onSnapshot, registerSend, onPrefill, onContentChange, suggestionHost, onStopChange }) => {
   const [turns, setTurns] = useState<Turn[]>(() => initial?.turns.map(t => t.state === 'generating' ? { ...t, state: 'cancelled' } : t) ?? []);
@@ -141,7 +158,7 @@ export const LumiInlineDemo: React.FC<Props> = ({ kind, initial, onSnapshot, reg
     </div>}
     {turns.map(turn => <div key={turn.id} className="space-y-3">
       <div className="flex justify-end"><p className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-tr-sm bg-brand px-4 py-3 text-sm text-white shadow-sm">{turn.prompt}</p></div>
-      {turn.state === 'generating' ? <DemoProgressLine text={turn.answerTo ? '正在整理答案和解析…' : kind === 'print' ? '正在生成试题…' : '图片生成中…'} /> : turn.state === 'cancelled' ? <div className="flex items-center gap-2 text-xs text-slate-500">已停止生成<button className={smallButton} onClick={() => send(turn.prompt, turn.answerTo)}>重新生成</button></div>
+      {turn.state === 'generating' ? kind === 'image' ? <ImageGenerationProgress /> : <DemoProgressLine text={turn.answerTo ? '正在整理答案和解析…' : '正在生成试题…'} /> : turn.state === 'cancelled' ? <div className="flex items-center gap-2 text-xs text-slate-500">已停止生成<button className={smallButton} onClick={() => send(turn.prompt, turn.answerTo)}>重新生成</button></div>
         : kind === 'print' && turn.answerTo ? <section className="w-full max-w-[420px] rounded-2xl rounded-tl-sm border border-white/60 bg-white/95 p-4 shadow-sm">
           <p className="mb-3 text-xs">好，下面是这 3 道题的答案和解析。</p>
           <h3 className="text-sm font-bold">答案与解析</h3>
