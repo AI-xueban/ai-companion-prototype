@@ -5,8 +5,8 @@ window.demoWorkspace = (() => {
   const enabled = query.get('review') === '1';
   const esc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const entry = (id,label,kind,value,extra={}) => ({id,label,kind,value,...extra});
-  const parentLogin = [entry('p-first','首次登录与绑定','parent','first'),entry('p-returning','再次登录','parent','returning'),entry('p-device','换设备登录','parent','otherDevice'),entry('p-second','第二位家长申请','parent','second'),entry('p-full','绑定人数已满','parent','seventh'),entry('p-wechat','找回：原微信丢失','parent','lostWechat'),entry('p-phone','找回：手机号丢失','parent','lostPhone'),entry('p-both','找回：两者都丢失','parent','bothLost')];
-  const teacherLogin = [entry('t-first','首次登录与绑定微信','teacher','first'),entry('t-returning','再次登录','teacher','returning'),entry('t-device','换设备登录','teacher','otherDevice'),entry('t-expired','会话过期恢复','teacher','expired'),entry('t-replace','更换绑定微信','teacher','replace')];
+  const parentLogin = [entry('p-first','首次登录与绑定','parent','first'),entry('p-wechat-scan','微信扫一扫进入','parent','wechatScan'),entry('p-returning','再次登录','parent','returning'),entry('p-device','换设备登录','parent','otherDevice'),entry('p-second','第二位家长申请','parent','second'),entry('p-full','绑定人数已满','parent','seventh'),entry('p-wechat','找回：原微信丢失','parent','lostWechat'),entry('p-phone','找回：手机号丢失','parent','lostPhone'),entry('p-both','找回：两者都丢失','parent','bothLost')];
+  const teacherLogin = [entry('t-first','教师首次登录','teacher','first'),entry('t-returning','再次登录','teacher','returning'),entry('t-device','换设备登录','teacher','otherDevice'),entry('t-expired','会话过期恢复','teacher','expired'),entry('t-replace','更换绑定微信','teacher','replace')];
   const catalog = [
     {id:'login',label:'登录与绑定',roles:[{id:'parent',label:'家长',items:parentLogin},{id:'teacher',label:'教师',items:teacherLogin}]},
     {id:'learning',label:'学情',items:[entry('learn-parent','孩子学情','parentTab','learning'),entry('learn-subject','任教学情','learning','subject'),entry('learn-class','班主任学情','learning','homeroom'),entry('learn-school','学校学情','learning','school'),entry('learn-students','学生学情','learning','students')]},
