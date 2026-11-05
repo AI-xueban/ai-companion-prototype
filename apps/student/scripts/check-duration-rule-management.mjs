@@ -96,3 +96,31 @@ const afterDelete = updateSchoolDurationPolicies(policies, students, ['a', 'b'],
 assert.doesNotThrow(() => updateSchoolDurationPolicySet(afterDelete, students, ['a', 'b'], [{ ...rule, id: 'recreated' }]));
 assert.throws(() => updateSchoolDurationPolicySet(afterDelete, students, ['a', 'c'], [{ ...rule, id: 'batch-duplicate' }]), /已有使用时长规则/);
 console.log('PASS weekday uniqueness, edit exclusion, delete then recreate and atomic mixed-grade rejection');
+
+const { isDefaultDurationRuleSet } = await load('components/Teacher/data/durationRuleSets.ts');
+const fallbackRule = { ...rule, continuousMinutes: 60, restMinutes: 15, dailyMinutes: 180, periods: [], weekdays: [0,1,2,3,4,5,6] };
+assert.equal(isDefaultDurationRuleSet([fallbackRule]), true);
+assert.equal(isDefaultDurationRuleSet([{ ...fallbackRule, weekdays: [0,1] }, { ...fallbackRule, weekdays: [2,3,4] }]), true);
+assert.equal(isDefaultDurationRuleSet([{ ...fallbackRule, continuousMinutes: 45 }]), false);
+assert.equal(isDefaultDurationRuleSet([{ ...fallbackRule, restMinutes: 10 }]), false);
+assert.equal(isDefaultDurationRuleSet([{ ...fallbackRule, dailyMinutes: 120 }]), false);
+assert.equal(isDefaultDurationRuleSet([{ ...fallbackRule, periods: [{ start: '08:00', end: '18:00' }] }]), false);
+assert.equal(isDefaultDurationRuleSet([]), false);
+console.log('PASS default-only duration detection including grouped weekdays and customized fields/periods');
+
+const { moveSchoolDurationPolicySet } = await load('components/Teacher/data/schoolDurationPolicies.ts');
+const moveStudents = [{ id: 'g1', grade: 1 }, { id: 'g2', grade: 2 }, { id: 'g3', grade: 3 }];
+const movePolicies = { 1: [rule, weekend], 2: [{ ...rule, id: 'other-rule', dailyMinutes: 130 }] };
+const moveBefore = JSON.stringify(movePolicies);
+const movedPolicy = moveSchoolDurationPolicySet(movePolicies, moveStudents, ['g1'], ['g3'], [{ ...rule, dailyMinutes: 100 }], rule);
+assert.deepEqual(movedPolicy[1], [weekend]);
+assert.deepEqual(movedPolicy[2], movePolicies[2]);
+assert.equal(movedPolicy[3][0].dailyMinutes, 100);
+assert.equal(JSON.stringify(movePolicies), moveBefore);
+assert.throws(() => moveSchoolDurationPolicySet(movePolicies, moveStudents, ['g1'], ['g2'], [rule], rule), /已有使用时长规则/);
+assert.equal(JSON.stringify(movePolicies), moveBefore);
+const addedScope = moveSchoolDurationPolicySet(movePolicies, moveStudents, ['g1'], ['g1','g3'], [rule], rule);
+assert.equal(addedScope[1].length, 2);
+assert.deepEqual(addedScope[1].find(r => r.id === weekend.id), weekend);
+assert.equal(addedScope[3].length, 1);
+console.log('PASS duration grade scope move/add, removed-scope fallback, unrelated rules retained and atomic conflict rejection');

@@ -18,7 +18,7 @@ export type ControlEditorValue = {
   applyScope?: "all" | "unmodified";
 };
 export const StudentControlEditor: React.FC<{
-  scopeSelector?: React.ReactNode;
+  scopeChanged?: boolean; defaultHomeworkRule?: boolean; scopeSelector?: React.ReactNode;
   initialApplyScope?: "all" | "unmodified";
   targetLabel: string;
   count: number;
@@ -30,7 +30,7 @@ export const StudentControlEditor: React.FC<{
   activeDateEdit?: boolean;
   onClose: () => void;
   onSave: (value: ControlEditorValue) => void;
-}> = ({ scopeSelector, initialApplyScope, targetLabel, count, selectedObjects, schedule, homework, requireApplyScope, batchDefaults, activeDateEdit = false, onClose, onSave }) => {
+}> = ({ scopeChanged = false, defaultHomeworkRule = false, scopeSelector, initialApplyScope, targetLabel, count, selectedObjects, schedule, homework, requireApplyScope, batchDefaults, activeDateEdit = false, onClose, onSave }) => {
   const [draft, setDraft] = useState(schedule);
   const [answer, setAnswer] = useState(homework?.answer ?? false);
   const [explanation, setExplanation] = useState(
@@ -48,6 +48,7 @@ export const StudentControlEditor: React.FC<{
   };
   const submit = () => {
     if (scopeSelector && !count) return setError("请选择年级");
+    if (!draft && defaultHomeworkRule && !answer && !explanation) return setError("当前仍为默认规则，无需修改");
     if (draft) {
       const problem = validateSchedule(draft, new Date(), activeDateEdit ? schedule?.startDate : undefined);
       if (problem) {
@@ -71,7 +72,7 @@ export const StudentControlEditor: React.FC<{
       labelId="student-control-editor-title"
       level={1}
       onClose={onClose}
-      unsavedChanges={dirty}
+      unsavedChanges={scopeChanged || dirty}
     >
       {(close) => (
         <>
@@ -97,12 +98,9 @@ export const StudentControlEditor: React.FC<{
           </header>
           <div className="dc-panel-body space-y-6">
             {scopeSelector}
-            {!draft && <div className="text-sm leading-6 text-slate-500"><p>全校默认规则：不允许查看答案和详解。</p></div>}
-            <div className="dc-target">
+            {!draft && !scopeSelector && <p className="text-sm text-slate-600">{targetLabel}</p>}
+            {draft && <div className="dc-target">
               <p className="text-sm font-bold text-indigo-900">{targetLabel}</p>
-              <p className="mt-1 text-xs text-indigo-700">
-                {`本次设置影响 ${count} 名学生`}
-              </p>
               {!!selectedObjects?.length && (
                 <ul className="dc-selected-objects" aria-label="本次设置对象列表">
                   {selectedObjects.map((name) => (
@@ -110,7 +108,7 @@ export const StudentControlEditor: React.FC<{
                   ))}
                 </ul>
               )}
-            </div>
+            </div>}
             {draft ? (
               <>
                 <div>
@@ -320,7 +318,7 @@ export const StudentControlEditor: React.FC<{
             )}
             {error && <ControlValidationNotice message={error} onClose={() => setError("")} />}
           </div>
-          {restoreNotice > 0 && <ControlToast key={restoreNotice} message="已填入默认设置，保存后生效" tone="success" duration={3000} onClose={() => setRestoreNotice(0)} />}
+          {restoreNotice > 0 && <ControlToast key={restoreNotice} message="已填入默认设置" tone="success" duration={3000} onClose={() => setRestoreNotice(0)} />}
       <footer className="flex justify-end gap-3 border-t p-5">
             {!draft && <button type="button" className="dc-btn mr-auto" onClick={() => { setAnswer(false); setExplanation(false); setError(""); setRestoreNotice((value) => value + 1); }}>恢复全校默认规则</button>}
             <button type="button" onClick={close} className="dc-btn">

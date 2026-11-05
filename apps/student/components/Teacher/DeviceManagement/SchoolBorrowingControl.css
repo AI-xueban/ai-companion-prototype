@@ -66,3 +66,69 @@
   .borrow-batch-actions { margin-left: 0; }
 }
 .borrow-stage-heading { grid-column: 1 / -1; margin: 0 0 -20px; color: #64748b; font-size: 14px; font-weight: 600; line-height: 20px; }
+
+/* Rule-first school overview. */
+.borrow-order-description { margin: 0; color: #64748b; font-size: 14px; line-height: 1.8; }
+.borrow-policy-section { overflow: hidden; border: 1px solid #e1e7f0; border-radius: 16px; background: #fff; }
+.borrow-policy-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding: 22px 24px; }
+.borrow-policy-title { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; min-width: 0; }
+.borrow-policy-title h2 { color: #172337; font-size: 18px; font-weight: 700; }
+.borrow-policy-number { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 9px; background: #eeecff; color: #5146ef; font-size: 16px; font-weight: 700; }
+.borrow-neutral-badge { border-radius: 7px; padding: 4px 9px; background: #f1f3f8; color: #64748b; font-size: 12px; }
+.borrow-policy-hint { color: #64748b; font-size: 13px; }
+.borrow-policy-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.borrow-policy-list { padding: 0 24px 8px; }
+.borrow-policy-row { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 20px 0; border-top: 1px solid #e9edf4; }
+.borrow-policy-content { min-width: 0; }
+.borrow-policy-content h3 { color: #1e293b; font-size: 17px; font-weight: 700; line-height: 1.6; overflow-wrap: anywhere; }
+.borrow-policy-content p { margin-top: 5px; color: #64748b; font-size: 14px; line-height: 1.7; }
+.borrow-policy-row-actions { display: flex; flex-shrink: 0; gap: 22px; }
+.borrow-policy-row-actions button { color: #5146ef; font-size: 14px; }
+.borrow-policy-row-actions button:hover { text-decoration: underline; }
+.borrow-policy-row-actions button:focus-visible { outline: 2px solid #6366f1; outline-offset: 4px; }
+.borrow-policy-empty { padding: 22px 0; border-top: 1px solid #e9edf4; color: #94a3b8; font-size: 14px; }
+@media (max-width: 640px) { .borrow-policy-heading { padding: 18px; } .borrow-policy-list { padding: 0 18px 6px; } .borrow-policy-row { gap: 14px; } .borrow-policy-row-actions { gap: 14px; } }
+
+.borrow-denied-grades { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 0 24px 22px; }
+.borrow-denied-grade { color: #475569; background: #f4f5f9; border-radius: 6px; padding: 5px 9px; font-size: 14px; font-weight: 600; }
+@media (max-width: 640px) { .borrow-denied-grades { padding: 0 18px 18px; } }
+
+/* Quiet lower-priority rules; only the school stop action is primary. */
+.borrow-policy-section--primary { border-color: #d7dcec; }
+.borrow-policy-section--primary .borrow-policy-title h2 { font-size: 20px; }
+.borrow-policy-section--dates, .borrow-policy-section--weekly { border-color: #e9edf3; border-radius: 12px; }
+.borrow-policy-section--dates .borrow-policy-heading, .borrow-policy-section--weekly .borrow-policy-heading { padding-top: 18px; padding-bottom: 16px; }
+.borrow-policy-section--dates .borrow-policy-title h2, .borrow-policy-section--weekly .borrow-policy-title h2 { font-size: 16px; font-weight: 600; color: #475569; }
+.borrow-policy-section--dates .borrow-policy-content h3, .borrow-policy-section--weekly .borrow-policy-content h3 { font-size: 15px; font-weight: 600; }
+.borrow-policy-section--weekly .borrow-policy-title h2 { color: #64748b; }
+.borrow-policy-section--weekly .borrow-policy-content p { color: #7c899b; }
+.borrow-policy-hint { font-size: 12px; color: #94a3b8; }
+.borrow-policy-add { color: #6366d7; font-size: 13px; font-weight: 500; background: transparent; border: 0; padding: 6px 0; }
+.borrow-policy-add:hover { text-decoration: underline; }
+.borrow-policy-add:disabled { color: #cbd5e1; }
+.borrow-policy-add:focus-visible { outline: 2px solid #6366f1; outline-offset: 4px; }
+.borrow-stopped-summary { margin: -8px 24px 20px; font-size: 12px; line-height: 1.7; color: #94a3b8; }
+.borrow-school-choice { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; }
+.borrow-temporary-grades { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 12px; margin-top: 20px; }
+.borrow-temporary-grades label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #64748b; }
+@media (max-width: 640px) { .borrow-stopped-summary { margin-left: 18px; margin-right: 18px; } }
+
+/* Saved stops share the school module; scheduled rules share one container. */
+.borrow-restore-button { flex-shrink: 0; color: #5146ef; border-color: #c7c2ff; }
+.borrow-rule-subsection { border-top: 1px solid #e9edf4; border-radius: 0; }
+.borrow-rules-module > .borrow-policy-heading { padding-bottom: 20px; }
+.borrow-rule-subsection .borrow-policy-title h2 { font-size: 16px; font-weight: 600; }
+
+.borrow-temporary-grades label.borrow-grade-disabled { color: #cbd5e1; cursor: not-allowed; }
+
+.borrow-order-strip { padding: 12px 16px; border-radius: 10px; background: #eef0f6; }
+.borrow-rule-help { display: inline-flex; vertical-align: middle; align-items: center; justify-content: center; padding: 4px; margin-left: 4px; border: 0; border-radius: 5px; color: #64748b; background: transparent; cursor: pointer; }
+.borrow-rule-help:hover { color: #5146ef; background: #e2e5f0; }
+.borrow-rule-help:focus-visible { outline: 2px solid #6366f1; outline-offset: 2px; }
+.borrow-rule-help-list { list-style: decimal; padding-left: 24px; }
+.borrow-rule-help-list li + li { margin-top: 20px; }
+.borrow-rule-help-list li::marker { font-weight: 700; color: #1e293b; }
+.borrow-rule-help-list h3 { font-size: 16px; font-weight: 700; color: #1e293b; }
+.borrow-rule-help-list p { margin-top: 6px; font-size: 14px; line-height: 1.8; color: #475569; }
+
+.borrow-policy-row--default .borrow-policy-content h3 { color: #94a3b8; font-weight: 600; }

@@ -1,5 +1,8 @@
+import { restoreDefaultHomeworkRule, usesDefaultHomeworkRule } from '../data/homeworkDefaultRule';
+import { SchoolSwitchControl } from './SchoolSwitchControl';
+import { SchoolDurationRuleList } from './SchoolDurationRuleList';
 import { ControlGradeSelector } from './ControlGradeSelector';
-import { occupiedSchoolDurationDays, applySchoolPolicySetToStudent, updateSchoolDurationPolicySet, removeSchoolPolicyFromStudent, importSchoolDurationPolicies, SchoolDurationPolicies, schoolDurationGroups, updateSchoolDurationPolicies } from '../data/schoolDurationPolicies';
+import { moveSchoolDurationPolicySet, occupiedSchoolDurationDays, applySchoolPolicySetToStudent, updateSchoolDurationPolicySet, removeSchoolPolicyFromStudent, importSchoolDurationPolicies, SchoolDurationPolicies, schoolDurationGroups, updateSchoolDurationPolicies } from '../data/schoolDurationPolicies';
 import React, { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
@@ -8,7 +11,6 @@ import {
   ChevronRight,
   Clock,
   Info,
-  History,
   LockKeyhole,
   ShieldCheck,
   Sparkles,
@@ -82,6 +84,7 @@ type ScopeRow = {
   student?: DeviceStudent;
 };
 type Editor = {
+  originalIds?: string[];
   ids: string[];
   label: string;
   selectedObjects?: string[];
@@ -91,6 +94,7 @@ type Editor = {
   baseSignatures: Record<string, string>;
 };
 type Confirmation = {
+  hideCount?: boolean;
   title: string;
   scope: string;
   count: number;
@@ -220,13 +224,13 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
     ids: string[];
   } | null>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
+  const [worldActionValue, setWorldActionValue] = useState<boolean | undefined>(undefined);
   const [settingsGrades, setSettingsGrades] = useState<number[] | null>(null);
   const [durationOverview, setDurationOverview] = useState<{ ids: string[]; label: string; global?: boolean } | null>(null);
-  const [durationEditor, setDurationEditor] = useState<{ ids: string[]; label: string; rule: DurationRule; isDefault?: boolean; editingId?: string; originalRule?: DurationRule; requireApplyScope?: boolean; selectedObjects?: string[]; baseSignatures: Record<string, string> } | null>(null);
+  const [durationEditor, setDurationEditor] = useState<{ originalIds?: string[]; ids: string[]; label: string; rule: DurationRule; isDefault?: boolean; editingId?: string; originalRule?: DurationRule; requireApplyScope?: boolean; selectedObjects?: string[]; baseSignatures: Record<string, string> } | null>(null);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [worldEditor, setWorldEditor] = useState<{ ids: string[]; label: string; value: null; baseSignatures: Record<string, string> } | null>(null);
   const [lockEditor, setLockEditor] = useState<{ ids: string[]; label: string } | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
   const [operationRecords, setOperationRecords] = useState<OperationRecord[]>(readStoredHistory);
   const [message, setMessage] = useState<{
     text: string;
@@ -311,11 +315,8 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
     }
     const entries = values(ids);
     if (ids.length === 1) {
-      const value = entries[0],
-        modified = value.updated[tab];
-      const sub = modified
-        ? `最后操作：${modified.by} · ${modified.at}`
-        : "尚无操作记录";
+      const value = entries[0];
+      const sub = "";
       if (tab === "borrowing")
         return {
           main: value.schedules.length ? "已设置借用规则" : "未设置借用规则",
@@ -363,7 +364,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
           : entries[0]?.answer || entries[0]?.explanation
             ? "学生规则一致"
             : "答案、详解均不允许",
-        sub: `答案允许 ${answers} 人 · 详解允许 ${explanations} 人`,
+        sub: "",
         active: answers + explanations > 0,
       };
     }
@@ -423,7 +424,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
   const targetIds = selectedRows.flatMap((r) => r.ids);
   const targetLabel = selected.length
     ? classId
-      ? `已选 ${selected.length} 名学生`
+      ? "已选范围"
       : `已选 ${selected.length} 个${rowType}`
     : scopeLabel;
   const checkedAll =
@@ -501,7 +502,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
     setOperationRecords((records) => limitHistoryByModule([{ id: `record-${Date.now()}`, module: tab, title: actionTitle, scope: operationScope ?? actualScope(ids), time: at, operator: operatorLabel, source: "teacher-portal", operatorRole: currentUser.role, before, after, ids: [...ids], snapshot }, ...records]));
     setSelected([]);
     setBatchMode(false);
-    setMessage({ text: `设置已生效，影响 ${ids.length} 名学生`, tone: "success" });
+    setMessage({ text: actionTitle.includes('删除') ? '规则已删除' : actionTitle.startsWith('恢复') ? '已恢复默认设置' : '设置已生效', tone: "success" });
   };
   const openEditor = (
     ids: string[],
@@ -517,6 +518,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
     setMessage(null);
     setEditor({
       ids,
+      originalIds: tab === "homework" && ids.length ? [...ids] : undefined,
       label,
       selectedObjects,
       schedule: schedule
@@ -537,12 +539,12 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
     const blocked = isDefault ? [] : occupiedSchoolDurationDays(schoolDurationPolicies, deviceControlStudents, ids, rule);
     const available = [0, 1, 2, 3, 4, 5, 6].filter(day => !blocked.includes(day));
     if (!isDefault && !available.length) { setMessage({ text: "所选年级每天都已有规则，请修改已有规则或删除后再新增", tone: "warning" }); return; }
-    setDurationEditor({ ids, label, selectedObjects: label.startsWith("已选") ? [...selectedObjectNames] : [label], rule: rule ?? { ...newDurationRule(), weekdays: available }, isDefault, editingId: rule?.id, originalRule: rule, requireApplyScope: !classId && ids.length > 1 && !isDefault, baseSignatures: Object.fromEntries(ids.map((id) => [id, policySignature(durationControls[id], "duration")])) });
+    setDurationEditor({ originalIds: rule ? [...ids] : undefined, ids, label, selectedObjects: label.startsWith("已选") ? [...selectedObjectNames] : [label], rule: rule ?? { ...newDurationRule(), weekdays: available }, isDefault, editingId: rule?.id, originalRule: rule, requireApplyScope: !classId && ids.length > 1 && !isDefault, baseSignatures: Object.fromEntries(ids.map((id) => [id, policySignature(durationControls[id], "duration")])) });
   };
   const requestDurationDelete = (group: DurationRuleGroup, label = actualScope(group.ids)) => {
     const signatures = Object.fromEntries(group.ids.map(id => [id, policySignature(durationControls[id], "duration")]));
     setConfirmation({ title: "确认删除使用时长规则？", scope: label, count: group.ids.length,
-      description: `${weekdayRangeText(group.rule.weekdays)}：${durationRuleText(group.rule)}。删除本条规则后，对应星期执行默认设置；其他规则保持不变。`,
+      description: `${weekdayRangeText(group.rule.weekdays)}：${durationRuleText(group.rule)}。删除后指定默认设置`,
       action: "确认删除", danger: true, run: () => {
         if (hasConflict(group.ids, "duration", signatures)) return;
         writeControls(group.ids, control => removeSchoolPolicyFromStudent(control, group.rule), "删除使用时长规则", label);
@@ -569,30 +571,34 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
       setMessage({ text: "默认使用时长规则已保存", tone: "success" });
     } else {
       const { ids, label, originalRule, baseSignatures } = durationEditor;
+      const removedIds = (durationEditor.originalIds ?? []).filter(id => !ids.includes(id));
+      const checkedIds = [...new Set([...ids, ...(durationEditor.originalIds ?? [])])];
       const blocked = occupiedSchoolDurationDays(schoolDurationPolicies, deviceControlStudents, ids, originalRule);
       if (rules.some(item => item.weekdays.some(day => blocked.includes(day)))) { setMessage({ text: "所选星期已有规则，请修改已有规则或删除后再新增", tone: "warning" }); return; }
       const scope = applyScope ?? "all";
       const updateIds = ids.filter((id) => rules.some(item => durationUpdateDays(durationControls[id], item, scope).length > 0) || (!!originalRule && durationUpdateDays(durationControls[id], originalRule, scope).length > 0));
+      const removedUpdateIds = originalRule ? removedIds.filter(id => durationUpdateDays(durationControls[id], originalRule, scope).length > 0) : [];
+      const changedIds = [...new Set([...updateIds, ...removedUpdateIds])];
       setConfirmation({
         title: "确认保存使用时长规则？", scope: label,
-        selectedObjects: durationEditor.selectedObjects,
-        count: updateIds.length,
-        description: `${rules.map(item => `${weekdayRangeText(item.weekdays)}：${durationRuleText(item)}`).join('；')}。${originalRule ? "替换本条原规则；移除的星期执行默认规则。" : ""}${scope === "unmodified" ? "保留班主任已设置的星期。" : "修改本次范围全部学生，包括班主任设置。"}`,
+        hideCount: true,
+        count: changedIds.length,
+        description: `${rules.map(item => `${weekdayRangeText(item.weekdays)}：${durationRuleText(item)}`).join('；')}。${originalRule ? "替换本条原规则；移除的星期执行默认规则。" : ""}${scope === "unmodified" ? "保留班主任已设置的星期。" : "修改本次范围全部学生。"}`,
         action: "确认并生效",
         run: () => {
-          if (hasConflict(ids, "duration", baseSignatures)) { setMessage({ text: "相关设置已被其他人修改，本次未保存，请重新设置。", tone: "warning" }); return; }
+          if (hasConflict(checkedIds, "duration", baseSignatures)) { setMessage({ text: "相关设置已被其他人修改，本次未保存，请重新设置。", tone: "warning" }); return; }
           const latestPolicies = readStoredControls().schoolDurationPolicies ?? {};
           const occupied = occupiedSchoolDurationDays(latestPolicies, deviceControlStudents, ids, originalRule);
           if (rules.some(item => item.weekdays.some(day => occupied.includes(day)))) { setMessage({ text: "所选星期已有规则，本次未保存，请修改已有规则或删除后再新增", tone: "warning" }); return; }
-          setSchoolDurationPolicies(updateSchoolDurationPolicySet(latestPolicies, deviceControlStudents, ids, rules, originalRule));
-          if (updateIds.length) writeControls(updateIds, (control) => applySchoolPolicySetToStudent(control, rules, scope, originalRule), "保存使用时长规则", label);
+          setSchoolDurationPolicies(moveSchoolDurationPolicySet(latestPolicies, deviceControlStudents, durationEditor.originalIds ?? [], ids, rules, originalRule));
+          if (changedIds.length) writeControls(changedIds, (control, id) => removedIds.includes(id) && originalRule ? removeSchoolPolicyFromStudent(control, originalRule, scope) : applySchoolPolicySetToStudent(control, rules, scope, originalRule), "保存使用时长规则", label);
           else {
             setOperationRecords(records => limitHistoryByModule([{ id: `record-${Date.now()}`, module: "duration", title: "保存年级使用时长规则", scope: label,
               time: new Date().toLocaleString("zh-CN", { hour12: false }), operator: operatorLabel, source: "teacher-portal", operatorRole: currentUser.role,
               before: ["学生实际配置为班主任设置"], after: [...rules.map(item => `年级学校规则：${weekdayRangeText(item.weekdays)}；${durationRuleText(item)}`), "保留全部班主任设置，学生实际配置不变"], ids: [...ids], snapshot: {},
             }, ...records]));
             setSelected([]); setBatchMode(false);
-            setMessage({ text: "年级规则已保存；本次保留全部班主任设置，学生实际配置不变", tone: "success" });
+            setMessage({ text: "使用时长规则已保存", tone: "success" });
           }
           setDurationEditor(null);
         },
@@ -615,6 +621,9 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
     const { ids, label, editingId, baseSignatures } = editor;
     const schedule = value.schedule;
     const updateIds = schedule || value.applyScope !== 'unmodified' ? ids : ids.filter(id => controls[id].homeworkSource !== 'teacher');
+    const removedIds = !schedule ? (editor.originalIds ?? []).filter(id => !ids.includes(id) && (value.applyScope !== 'unmodified' || controls[id].homeworkSource !== 'teacher')) : [];
+    const checkedIds = [...new Set([...ids, ...(editor.originalIds ?? [])])];
+    const changedIds = [...new Set([...updateIds, ...removedIds])];
     const conflicts = schedule
       ? ids.filter((id) =>
           controls[id].schedules.some(
@@ -641,14 +650,14 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
         : "确认设置智阅作业权限？",
       scope: label,
       selectedObjects: label.startsWith("已选") ? selectedObjectNames : undefined,
-      count: updateIds.length,
+      count: changedIds.length,
       description: schedule
         ? `${scheduleDateText(schedule)}；${schedulePeriodText(schedule)}`
         : `查看答案：${value.answer ? "允许" : "不允许"}；查看详解：${value.explanation ? "允许" : "不允许"}`,
       warning: schedule
         ? conflicts.length
           ? <>
-              <p>{conflicts.length} 名学生在所选日期已有同类借用规则，将覆盖重叠日期，其他日期保留。</p>
+              <p>所选范围在指定日期已有同类借用规则，将覆盖重叠日期，其他日期保留。</p>
               <div className="mt-3 border-t border-amber-200 pt-3">
                 <p className="font-bold">将覆盖以下原规则：</p>
                 {coveredRules.map((rule) => <p key={rule} className="mt-1">{rule}</p>)}
@@ -666,8 +675,8 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
       </> : undefined,
       action: schedule?.mode === "dates" ? "保存" : "确认并生效",
       run: () => {
-        if (hasConflict(ids, schedule ? "borrowing" : "homework", baseSignatures)) return;
-        if (!updateIds.length) { setEditor(null); setMessage({ text: "所选学生均保留老师设置，无需修改。", tone: "success" }); return; }
+        if (hasConflict(checkedIds, schedule ? "borrowing" : "homework", baseSignatures)) return;
+        if (!changedIds.length) { setEditor(null); setMessage({ text: "无需修改", tone: "success" }); return; }
         if (schedule) {
           const problem = validateSchedule(schedule);
           if (problem) {
@@ -675,8 +684,8 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
             return;
           }
         }
-        writeControls(updateIds, (s) =>
-          schedule
+        writeControls(changedIds, (s, id) =>
+          removedIds.includes(id) ? restoreDefaultHomeworkRule(s) : schedule
             ? {
                 ...s,
                 schedules: mergeBorrowSchedule(
@@ -685,10 +694,10 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
                   editingId,
                 ),
               }
-            : { ...s, answer: value.answer!, explanation: value.explanation!, homeworkSource: 'school' },
+            : { ...s, answer: value.answer!, explanation: value.explanation!, homeworkSource: 'school', homeworkUsesDefault: false },
           schedule ? "保存借用规则" : "设置智阅作业权限", label,
         );
-        if (schedule?.mode === "dates") setMessage({ text: `指定日期借用规则已保存，${borrowScheduleStatus(schedule)}`, tone: "success" });
+        if (schedule?.mode === "dates") setMessage({ text: "指定日期借用规则已保存", tone: "success" });
         setEditor(null);
       },
     });
@@ -772,7 +781,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
         setOperationRecords((records) => limitHistoryByModule([{ id: `record-${Date.now()}`, module: "lock", title: enabled ? "开启临时锁屏" : "解除临时锁屏", scope: schoolAction ? "全校" : actualScope(scopes.flatMap((scope) => scope.ids)), time: at, operator: operatorLabel, source: "teacher-portal", operatorRole: currentUser.role, before: summarize(effectiveTemporaryLocks), after: summarize(nextLocks), ids, snapshot }, ...records]));
         setSelected([]);
         setBatchMode(false);
-        setMessage({ text: enabled ? "临时锁屏已开启" : "已解除临时锁屏，执行当前日常锁屏设置，所选班级老师恢复锁屏管控权限。", tone: "success" });
+        setMessage({ text: enabled ? "临时锁屏已开启" : "已解除临时锁屏", tone: "success" });
       },
     };
     if (confirmed) confirmation.run();
@@ -869,7 +878,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
   ).length;
   const scopeStateLabel =
     tab === "world"
-      ? `允许使用 ${stateStudentCount} 人 ｜ 禁止使用 ${currentStudents.length - stateStudentCount} 人`
+      ? "当前使用状态"
       : tab === "lock"
         ? !grade && schoolTemporaryLockSession.active ? `全校临时锁屏管控中${temporaryLockedIds.size < schoolStudentIds.length ? "，部分年级已单独解除" : ""}` : `临时锁屏${temporaryState(currentStudents.map((student) => student.id))}`
         : tab === "duration"
@@ -877,12 +886,6 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
         : !grade && tab === "borrowing"
           ? "按有效规则借用"
           : scopeStatus.main;
-  const visibleOperationRecords = operationRecords.filter((record, index, records) => {
-    if (record.module !== tab) return false;
-    const signature = JSON.stringify([record.module, record.title, record.scope, record.time, record.before, record.after]);
-    return records.findIndex((item) => JSON.stringify([item.module, item.title, item.scope, item.time, item.before, item.after]) === signature) === index;
-  }).slice(0, 100);
-
   // Demo requests are transient. They never replace school data or write a storage key.
   useEffect(() => {
     if (!demoScenario || demoScenario.kind === 'normal') return;
@@ -919,11 +922,21 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
     const ids = rows.filter(row => grades.includes(row.grade!)).flatMap(row => row.ids);
     const label = !grades.length ? '请选择年级' : grades.length === rows.length ? '全校' : rows.filter(row => grades.includes(row.grade!)).map(row => row.label).join('、');
     const signatures = Object.fromEntries(ids.map(id => [id, policySignature(controls[id], tab)]));
-    if (tab === 'duration') setDurationEditor(current => current ? { ...current, ids, label, selectedObjects: [label], baseSignatures: Object.fromEntries(ids.map(id => [id, current.baseSignatures[id] ?? policySignature(durationControls[id], 'duration')])) } : current);
-    else if (tab === 'homework') setEditor(current => current ? { ...current, ids, label, selectedObjects: [label], baseSignatures: Object.fromEntries(ids.map(id => [id, current.baseSignatures[id] ?? signatures[id]])) } : current);
-    else if (tab === 'world') setWorldEditor(current => current ? { ...current, ids, label, baseSignatures: Object.fromEntries(ids.map(id => [id, current.baseSignatures[id] ?? signatures[id]])) } : current);
+    if (tab === 'duration') setDurationEditor(current => current ? { ...current, ids, label, selectedObjects: [label], baseSignatures: { ...current.baseSignatures, ...Object.fromEntries(ids.map(id => [id, current.baseSignatures[id] ?? policySignature(durationControls[id], 'duration')])) } } : current);
+    else if (tab === 'homework') setEditor(current => current ? { ...current, ids, label, selectedObjects: [label], baseSignatures: { ...current.baseSignatures, ...Object.fromEntries(ids.map(id => [id, current.baseSignatures[id] ?? signatures[id]])) } } : current);
+    else if (tab === 'world') setWorldEditor(current => current ? { ...current, ids, label, baseSignatures: { ...current.baseSignatures, ...Object.fromEntries(ids.map(id => [id, current.baseSignatures[id] ?? signatures[id]])) } } : current);
   };
-  const settingsGradeSelector = settingsGrades === null ? undefined : <ControlGradeSelector options={rows.map(row => ({ grade: row.grade!, label: row.label, disabled: !row.ids.length || (tab === 'duration' && occupiedSchoolDurationDays(schoolDurationPolicies, deviceControlStudents, row.ids).length > 0), hint: tab === 'duration' && occupiedSchoolDurationDays(schoolDurationPolicies, deviceControlStudents, row.ids).length > 0 ? '已有规则' : undefined }))} selected={settingsGrades} onChange={changeSettingsGrades} />;
+  const durationListGroups = new Map<string, DurationRuleGroup>();
+  rows.forEach(row => schoolDurationGroups(row.ids, schoolDurationPolicies[deviceControlStudents.find(student => row.ids.includes(student.id))?.grade ?? ''] ?? []).filter(group => !group.fallback).forEach(group => {
+    const existing = durationListGroups.get(group.key);
+    durationListGroups.set(group.key, existing ? { ...existing, ids: [...new Set([...existing.ids, ...group.ids])] } : group);
+  }));
+  const durationScopeLabel = (ids: string[]) => rows.filter(row => row.ids.some(id => ids.includes(id))).map(row => ['一', '二', '三', '四', '五', '六', '七', '八', '九'][(row.grade ?? 1) - 1] ?? String(row.grade)).join('、') + '年级';
+  const originalSettingsIds = tab === 'duration' ? durationEditor?.originalIds : tab === 'homework' ? editor?.originalIds : undefined;
+  const occupiedSettingsGrade = (row: typeof rows[number]) => !row.ids.some(id => originalSettingsIds?.includes(id)) && (
+    tab === 'duration' ? occupiedSchoolDurationDays(schoolDurationPolicies, deviceControlStudents, row.ids).length > 0
+    : tab === 'homework' && !!originalSettingsIds?.length && row.ids.some(id => !usesDefaultHomeworkRule(controls[id])));
+  const settingsGradeSelector = settingsGrades === null ? undefined : <ControlGradeSelector options={rows.map(row => ({ grade: row.grade!, label: row.label, disabled: !row.ids.length || occupiedSettingsGrade(row), hint: occupiedSettingsGrade(row) ? '已有规则' : undefined }))} selected={settingsGrades} onChange={changeSettingsGrades} />;
   const durationConflictHint = !durationEditor || durationEditor.originalRule ? undefined : rows.filter(row => row.ids.some(id => durationEditor.ids.includes(id))).flatMap(row => {
     const days = occupiedSchoolDurationDays(schoolDurationPolicies, deviceControlStudents, row.ids);
     return days.length ? [`${row.label}${weekdayRangeText(days)}已有规则`] : [];
@@ -970,73 +983,35 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
       >
         <div className="dc-content dc-borrowing-content mx-auto space-y-5">
           {tab === "borrowing" ? <SchoolBorrowingControl currentUser={currentUser} demoScenario={demoScenario?.module === 'borrowing' ? demoScenario : undefined} /> : <>
-          <div className="dc-breadcrumb flex flex-wrap items-center justify-between gap-3">
-            <nav aria-label="管控层级" className="font-bold text-sm text-slate-900">全校</nav>
-            {!grade && (
-              <button
-                type="button"
-                onClick={() => setHistoryOpen(true)}
-                className="dc-btn"
-              >
-                <History size={15} />
-                操作记录
-              </button>
-            )}
-          </div>
-          <section className="dc-scope-card borrow-scope-overview">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="dc-scope-heading">
-                <div>
-                  <h2>
-                    {scopeLabel} · {tabs.find((t) => t.id === tab)?.label}
-                    {tab !== "duration" && tab !== "homework" && <span
-                      role="status"
-                      className={`dc-state-badge ${tab === "world" || tab === "lock" ? "dc-state-count" : ""}`}
-                      data-tone={
-                        tab === "lock" ? switchChecked ? "danger" : "neutral" : switchChecked ? "success" : "neutral"
-                      }
-                    >
-                      {scopeStateLabel}
-                    </span>}
-                  </h2>
-                  <p>
-                    {tab === "duration"
-                      ? "默认规则：周一至周日，连续使用60分钟、休息15分钟、每天累计180分钟，不限使用时段。"
-                      : isScheduleTab
-                      ? "仅可在学生有效规则允许的时段借出；没有有效规则的学生无法借用。特殊日期可设置全天禁止借用，到期后恢复每周规则。"
-                      : tab === "homework"
-                        ? "设置学生查看答案、详解的权限，默认均不允许。"
-                        : tab === "lock"
-                          ? <>可对全校或年级临时锁屏，解除后执行当前日常锁屏设置。<strong className="ml-1 font-bold">仍处于临时锁屏的班级，老师暂不能调整日常锁屏。</strong></>
-                          : "可统一设置全校学生是否允许使用万象视界，也可在下方按年级设置。"}
-                    {grade && ` 当前 ${currentStudents.length} 名学生。`}
-                  </p>
-                </div>
-              </div>
-              {!grade && tab === "lock" && (
-                <div className="flex flex-wrap items-center gap-3">
-                  {tab === "lock" && <button type="button" className={primary} onClick={() => requestTemporaryLock([{ key: "school", label: "全校", ids: schoolStudentIds }], !schoolTemporaryLockSession.active)}>{schoolTemporaryLockSession.active ? "解除临时锁屏" : "全校临时锁屏"}</button>}
-                </div>
-              )}
-            </div>
-          </section>
-          <ControlScopeCards module={tab} rows={rows} rowType={rowType} controls={controls} durationPolicies={schoolDurationPolicies}
-            batch={batchMode} selected={selected} onBatch={() => { setBatchMode(false); setSelected([]); setSettingsGrades([]); if (tab === 'duration') { setSettingsGrades(null); setDurationOverview({ ids: rows.flatMap(row => row.ids), label: '全校', global: true }); } else if (tab === 'homework') openEditor([], '请选择年级'); else if (tab === 'world') openWorldEditor([], '请选择年级'); }} onSelect={setSelected}
+          {tab === 'duration' && <div className="borrow-order-description borrow-order-strip">可按年级设置使用时长和可用时段，未设置时执行默认规则。</div>}
+          {tab === 'homework' && <div className="borrow-order-description borrow-order-strip">可按年级设置查看答案和详解的权限，默认均不允许。</div>}
+          {(tab === 'world' || tab === 'lock') ? <SchoolSwitchControl module={tab} rows={rows} restricted={id => tab === 'world' ? !controls[id].world : temporaryLockedIds.has(id)} onApply={(ids, label, restore) => {
+            if (tab === 'world') { setSettingsGrades(null); setWorldActionValue(restore); openWorldEditor(ids, label); }
+            else requestTemporaryLock([{ key: ids.length === schoolStudentIds.length ? 'school' : 'selection', label, ids }], !restore);
+          }} /> : tab === 'duration' ? <SchoolDurationRuleList defaultIds={rows.filter(row => !(schoolDurationPolicies[row.grade ?? ''] ?? []).length).flatMap(row => row.ids)} groups={[...durationListGroups.values()]} label={durationScopeLabel} disabled={!rows.some(row => row.ids.length)}
+            onAdd={() => { setDurationOverview(null); setSettingsGrades([]); openDurationEditor([], '请选择年级'); }}
+            onEdit={group => { setDurationOverview(null); setSettingsGrades(rows.filter(row => row.ids.some(id => group.ids.includes(id))).map(row => row.grade!)); openDurationEditor(group.ids, durationScopeLabel(group.ids), group.rule); }}
+            onDelete={group => requestDurationDelete(group, durationScopeLabel(group.ids))} /> : <ControlScopeCards module={tab} rows={rows} rowType={rowType} controls={controls} durationPolicies={schoolDurationPolicies}
+            batch={batchMode} selected={selected} onBatch={() => { setBatchMode(false); setSelected([]); setSettingsGrades([]); if (tab === 'homework') openEditor([], '请选择年级'); else if (tab === 'world') openWorldEditor([], '请选择年级'); }} onSelect={setSelected}
+            onDelete={tab === 'homework' ? row => {
+              const signatures = Object.fromEntries(row.ids.map(id => [id, policySignature(controls[id], 'homework')]));
+              setConfirmation({ title: '确认删除智阅作业规则？', scope: row.label, count: row.ids.length, hideCount: true,
+                description: '删除后恢复默认规则：不允许查看答案和详解。', action: '确认删除', danger: true,
+                run: () => { if (hasConflict(row.ids, 'homework', signatures)) return; writeControls(row.ids, restoreDefaultHomeworkRule, '删除智阅作业规则并恢复默认', row.label); },
+              });
+            } : undefined}
             onSettings={row => {
               setSettingsGrades(null);
-              if (tab === "duration") setDurationOverview({ ids: row.ids, label: row.label });
-              else if (tab === "homework") openEditor(row.ids, row.label, undefined, undefined, [row.label]);
+              if (tab === "homework") { setSettingsGrades(rows.filter(item => item.ids.some(id => row.ids.includes(id))).map(item => item.grade!)); openEditor(row.ids, row.label, undefined, undefined, [row.label]); }
               else if (tab === "world") openWorldEditor(row.ids, row.label);
               else openLockAction(row.ids, row.label);
             }}
             onBatchSettings={() => {
-              if (tab === "duration") openDurationEditor(targetIds, targetLabel);
-              else if (tab === "homework") openEditor(targetIds, targetLabel, undefined, undefined, selectedObjectNames);
+              if (tab === "homework") openEditor(targetIds, targetLabel, undefined, undefined, selectedObjectNames);
               else if (tab === "world") openWorldEditor(targetIds, selectedObjectNames.join("、"));
               else openLockAction(targetIds, selectedObjectNames.join("、"));
             }} lockState={temporaryState} lockAction={lockActionLabel}
-            recentOperation={ids => { const record = visibleOperationRecords.find(item => item.ids?.some(id => ids.includes(id))); return record ? { title: record.title, operator: record.operator, at: record.time } : undefined; }}
-            emptyTitle={listEmpty ? emptyState?.title : undefined} emptyDescription={listEmpty ? emptyState?.description : undefined} />
+            emptyTitle={listEmpty ? emptyState?.title : undefined} emptyDescription={listEmpty ? emptyState?.description : undefined} />}
           {message && <ControlToast duration={demoScenario && (exception === "conflict" || exception === "scope-changed" || exception === "save-failed") ? 12000 : undefined} message={message.text} tone={message.tone} onClose={() => setMessage(null)} />}
           </>}
         </div>
@@ -1091,6 +1066,8 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
       )}
       {editor && (
         <StudentControlEditor
+          scopeChanged={!!editor.originalIds && (editor.originalIds.length !== editor.ids.length || editor.originalIds.some(id => !editor.ids.includes(id)))}
+          defaultHomeworkRule={tab === 'homework' && !editor.originalIds?.length && editor.ids.length > 0 && editor.ids.every(id => usesDefaultHomeworkRule(controls[id]))}
           scopeSelector={settingsGradeSelector}
           initialApplyScope={(exception === "save-failed" || exception === "conflict") ? "all" : undefined}
           key={`${tab}-${editor.schedule?.id ?? "permissions"}`}
@@ -1099,7 +1076,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
           selectedObjects={editor.selectedObjects}
           schedule={editor.schedule}
           homework={
-            (batchMode || settingsGrades !== null) && tab === "homework" ? { answer: false, explanation: false } : !editor.schedule && !mixed(editor.ids)
+            (batchMode || settingsGrades !== null) && tab === "homework" && !editor.originalIds?.length ? { answer: false, explanation: false } : !editor.schedule && !mixed(editor.ids)
               ? controls[editor.ids[0]]
               : undefined
           }
@@ -1115,6 +1092,9 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
         onClose={() => setDurationOverview(null)} onAdd={() => { if (durationOverview.global) { setSettingsGrades([]); openDurationEditor([], '请选择年级'); } else { setSettingsGrades(null); openDurationEditor(durationOverview.ids, durationOverview.label); } }}
         onEdit={group => { setSettingsGrades(null); openDurationEditor(group.ids, actualScope(group.ids), group.rule); }} onDelete={group => requestDurationDelete(group, actualScope(group.ids))} />}
       {durationEditor && <DurationRuleEditor
+        scopeChanged={!!durationEditor.originalIds && (durationEditor.originalIds.length !== durationEditor.ids.length || durationEditor.originalIds.some(id => !durationEditor.ids.includes(id)))}
+        creating={!durationEditor.originalRule && !durationEditor.isDefault}
+        noAvailableGrades={!durationEditor.originalRule && settingsGrades !== null && rows.length > 0 && rows.every(row => occupiedSchoolDurationDays(schoolDurationPolicies, deviceControlStudents, row.ids).length > 0)}
         scopeSelector={settingsGradeSelector}
         backToList={!!durationOverview}
         conflictHint={durationConflictHint ? `${durationConflictHint}，请取消相应年级，或返回编辑已有规则。` : undefined}
@@ -1132,44 +1112,24 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
         onSave={saveDurationRule}
       />}
       {lockEditor && <TemporaryLockEditor label={lockEditor.label} selectedObjects={lockEditor.label.startsWith("已选") ? selectedObjectNames : undefined} count={lockEditor.ids.length} lockClassNames={affectedLockClassNames(lockEditor.ids, true)} unlockClassNames={affectedLockClassNames(lockEditor.ids, false)} lockedCount={lockEditor.ids.filter((studentId) => temporaryLockedIds.has(studentId)).length} schoolSessionActive={schoolTemporaryLockSession.active} state={temporaryState(lockEditor.ids)} onClose={() => setLockEditor(null)} onSave={(enabled) => requestTemporaryLock([{ key: "selection", label: lockEditor.label, ids: lockEditor.ids }], enabled, true)} />}
-      {worldEditor && <WorldUsageEditor scopeSelector={settingsGradeSelector} initialSelection={(exception === "save-failed" || exception === "conflict") ? { value: worldEditor.ids.some(id => !controls[id].world), scope: "all" } : undefined} label={worldEditor.label} selectedObjects={worldEditor.label.startsWith("已选") ? selectedObjectNames : undefined} total={worldEditor.ids.length} allowed={worldEditor.ids.filter((id) => controls[id].world).length} teacherTotal={worldEditor.ids.filter((id) => controls[id].worldSource === 'teacher').length} teacherAllowed={worldEditor.ids.filter((id) => controls[id].worldSource === 'teacher' && controls[id].world).length} onClose={() => setWorldEditor(null)} onSave={(value, scope) => {
+      {worldEditor && <WorldUsageEditor fixedValue={worldActionValue} scopeSelector={settingsGradeSelector} initialSelection={(exception === "save-failed" || exception === "conflict") ? { value: worldEditor.ids.some(id => !controls[id].world), scope: "all" } : undefined} label={worldEditor.label} selectedObjects={worldEditor.label.startsWith("已选") ? selectedObjectNames : undefined} total={worldEditor.ids.length} allowed={worldEditor.ids.filter((id) => controls[id].world).length} teacherTotal={worldEditor.ids.filter((id) => controls[id].worldSource === 'teacher').length} teacherAllowed={worldEditor.ids.filter((id) => controls[id].worldSource === 'teacher' && controls[id].world).length} onClose={() => { setWorldEditor(null); setWorldActionValue(undefined); }} onSave={(value, scope) => {
         if (hasConflict(worldEditor.ids, "world", worldEditor.baseSignatures)) return;
         const changedIds = worldEditor.ids.filter((id) => controls[id].world !== value && (scope === 'all' || controls[id].worldSource !== 'teacher'));
         if (!changedIds.length) return;
         const state = value ? "允许使用" : "禁止使用";
         writeControls(changedIds, (control) => ({ ...control, world: value, worldSource: 'school' }), `${state}万象视界`, worldEditor.label);
-        setMessage({ text: `已将 ${changedIds.length} 名学生设为${state}万象视界`, tone: "success" });
+        setMessage({ text: value ? "已恢复使用万象视界" : "已停止使用万象视界", tone: "success" });
       }} />}
-      {historyOpen && (
-        <DeviceControlLayer labelId="operation-history-title" onClose={() => setHistoryOpen(false)}>
-          {(close) => <>
-            <header className="flex items-center justify-between border-b p-6">
-              <div>
-                <h2 id="operation-history-title" className="text-xl font-bold text-slate-900">{tabs.find((item) => item.id === tab)?.label}操作记录</h2>
-
-              </div>
-              <button type="button" aria-label="关闭操作记录" onClick={close} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X size={20} /></button>
-            </header>
-            <div className="dc-panel-body space-y-4">
-              <p className="text-xs text-slate-500">仅记录教师端学校管理员的操作，每个模块显示近100条记录。</p>
-              {visibleOperationRecords.map(record => (
-                <section key={record.id} className="rounded-xl border p-4">
-                  <h3 className="font-bold">{record.title}</h3>
-                  <p className="mt-2 text-sm">操作对象：{record.scope || '未记录'}</p>
-                  <p className="mt-2 text-xs text-slate-500">{record.operator} · {record.time}</p>
-                  <details className="mt-3 text-sm">
-                    <summary>查看修改前后</summary>
-                    <p className="mt-2 whitespace-pre-line">修改前：{record.before.join('\n') || '无'}</p>
-                    <p className="mt-2 whitespace-pre-line">修改后：{record.after.join('\n') || '无'}</p>
-                  </details>
-                </section>
-              ))}
-              {!visibleOperationRecords.length && <p className="py-10 text-center text-slate-500">暂无操作记录</p>}
-            </div>
-          </>}
-        </DeviceControlLayer>
-      )}
-      {confirmation && (
+      {confirmation && tab === 'lock' && <DeviceControlLayer variant="dialog" labelId="lock-confirm-title" level={2} onClose={() => setConfirmation(null)}>{close => <>
+        <header className="flex items-center justify-between border-b p-6"><h2 id="lock-confirm-title" className="text-xl font-bold text-slate-900">{confirmation.title}</h2><button type="button" aria-label="关闭锁屏确认" onClick={close}><X size={20} /></button></header>
+        <div className="dc-panel-body space-y-4"><span className="dc-confirm-icon" data-danger={confirmation.danger === true}>{confirmation.danger ? <LockKeyhole size={21} /> : <ShieldCheck size={21} />}</span>
+          <div className="dc-confirm-scope"><p>影响范围：{confirmation.scope}</p></div>
+          <p className="dc-confirm-description">{confirmation.description}</p>
+          {confirmation.warning && <div className="dc-confirm-warning">{confirmation.warning}</div>}
+          {confirmation.resultPreview && <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-4 text-sm leading-6 text-slate-700">{confirmation.resultPreview}</div>}
+        </div><footer className="dc-confirm-footer"><button type="button" data-autofocus onClick={close} className={button}>取消</button><button type="button" onClick={() => { confirmation.run(); close(); }} className={confirmation.danger ? 'dc-btn-danger' : primary}>{confirmation.action}</button></footer>
+      </>}</DeviceControlLayer>}
+      {confirmation && tab !== 'lock' && (
         <DeviceControlLayer
           variant="dialog"
           labelId="control-confirm-title"
@@ -1193,7 +1153,6 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
               </h2>
               <div className="dc-confirm-scope">
                 <p>影响范围：{confirmation.scope}</p>
-                <p>共 {confirmation.count} 名学生</p>
                 {!!confirmation.selectedObjects?.length && <ul aria-label="本次确认对象列表" className="mt-2 flex flex-wrap gap-2">{confirmation.selectedObjects.map((name) => <li key={name} className="rounded bg-white px-2 py-1 text-sm">{name}</li>)}</ul>}
               </div>
               <p className="dc-confirm-description">
