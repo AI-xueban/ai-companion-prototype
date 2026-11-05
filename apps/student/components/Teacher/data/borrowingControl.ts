@@ -5,6 +5,7 @@ export const borrowingStorageKey = (schoolId: string) => `ai-companion-borrowing
 export type BorrowingHistory = { id: string; at: string; operator: string; title: string; scope: string; classIds?: string[]; before: string[]; after: string[] };
 export type BorrowingState = {
   revision: number;
+  ruleTypesEnabled?: Partial<Record<BorrowSchedule['mode'], boolean>>;
   classRules: Record<string, BorrowSchedule[]>;
   schoolTemporaryActive: boolean;
   temporaryClasses: Record<string, boolean>;
@@ -13,6 +14,10 @@ export type BorrowingState = {
   history: BorrowingHistory[];
 };
 export const initialBorrowingState = (): BorrowingState => ({ revision: 0, classRules: {}, schoolTemporaryActive: false, temporaryClasses: {}, studentBans: {}, history: [] });
+export const borrowingRuleTypeEnabled = (state: BorrowingState, mode: BorrowSchedule['mode']) => state.ruleTypesEnabled?.[mode] !== false;
+export const setBorrowingRuleTypeEnabled = (state: BorrowingState, mode: BorrowSchedule['mode'], enabled: boolean): BorrowingState => ({
+  ...state, ruleTypesEnabled: { ...state.ruleTypesEnabled, [mode]: enabled },
+});
 export const removeExpiredBorrowingDateRules = (state: BorrowingState, now = new Date()): BorrowingState => {
   const today = schoolDate(now);
   let changed = false;
@@ -74,7 +79,7 @@ export const borrowingResult = (state: BorrowingState, student: { id: string; cl
   const date = schoolDate(now);
   const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(now);
   const weekday = (new Date(`${date}T12:00:00+08:00`).getUTCDay() + 6) % 7;
-  const rules = state.classRules[student.classId] ?? [];
+  const rules = (state.classRules[student.classId] ?? []).filter(rule => borrowingRuleTypeEnabled(state, rule.mode));
   const rule = rules.find(item => item.mode === 'dates' && item.startDate <= date && item.endDate >= date)
     ?? rules.find(item => item.mode === 'weekly' && item.weekdays.includes(weekday));
   if (!rule) return rules.some(item => item.mode === 'weekly') ? '当前不在借用时段' : '当前可借用';

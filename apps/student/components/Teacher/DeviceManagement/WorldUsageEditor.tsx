@@ -15,13 +15,13 @@ export const WorldUsageEditor: React.FC<{
   onClose: () => void;
   onSave: (allowed: boolean, scope: "all" | "unmodified") => void;
 }> = ({ fixedValue, scopeSelector, initialSelection, label, selectedObjects, total, allowed, teacherTotal, teacherAllowed, onClose, onSave }) => {
-  const [scope, setScope] = useState<"all" | "unmodified" | null>(initialSelection?.scope ?? null);
+  const scope = "unmodified" as const;
   const [error, setError] = useState("");
   const [value, setValue] = useState<boolean | null>(fixedValue ?? initialSelection?.value ?? null);
   const eligible = total - (scope === "unmodified" ? teacherTotal : 0);
   const eligibleAllowed = allowed - (scope === "unmodified" ? teacherAllowed : 0);
   const changed = value === null ? 0 : value ? eligible - eligibleAllowed : eligibleAllowed;
-  return <DeviceControlLayer labelId="world-usage-title" onClose={onClose} unsavedChanges={value !== null || scope !== null}>
+  return <DeviceControlLayer labelId="world-usage-title" onClose={onClose} unsavedChanges={value !== (fixedValue ?? initialSelection?.value ?? null)}>
     {(close, closeAfterSave) => <>
       <header className="flex items-center justify-between"><h2 id="world-usage-title" className="text-xl font-bold text-slate-900">设置万象视界使用状态</h2><button type="button" aria-label="关闭设置" onClick={close}><X size={20} /></button></header>
       <div className="dc-panel-body">
@@ -35,15 +35,12 @@ export const WorldUsageEditor: React.FC<{
             <span>{option ? "允许使用万象视界" : "禁止使用万象视界"}</span>
           </label>)}
         </fieldset>}
-        <fieldset className="mt-6 space-y-4 rounded-xl border border-slate-200 p-4">
-          <legend className="px-1 text-sm font-bold text-slate-800"><span className="text-red-500">*</span> 本次修改哪些学生？</legend>
-          {([['all', scopeSelector ? '修改所选年级的所有学生' : label === '全校' ? '修改全校所有学生' : label.startsWith('已选') ? '修改所选范围的所有学生' : `修改${label}的所有学生`, '将替换老师此前设置的使用状态。'], ['unmodified', '保留老师的设置，修改其他学生', '老师已设置的学生保持不变，其余学生按本次设置修改。']] as const).map(([option, title, description]) => <label key={option} className="flex cursor-pointer items-start gap-3"><input type="radio" name="world-scope" checked={scope === option} onChange={() => { setScope(option); setError(''); }} className="mt-1" /><span><b className="block text-sm text-slate-900">{title}</b><span className="mt-1 block text-xs leading-5 text-slate-500">{description}</span></span></label>)}
-        </fieldset>
+
       </div>
       {error && <ControlValidationNotice message={error} onClose={() => setError("")} />}
       <div className="dc-confirm-footer">
         <button type="button" className="dc-btn" onClick={closeAfterSave}>取消</button>
-        <button type="button" className="dc-btn-primary" disabled={scope !== null && value !== null && !changed} onClick={() => { if (scopeSelector && !total) { setError('请选择年级'); return; } if (scope === null) { setError('请选择本次修改范围'); return; } if (value === null) { setError("请选择万象视界设置后的状态：允许使用或禁止使用"); return; } if (!changed) return; onSave(value, scope); closeAfterSave(); }}>保存</button>
+        <button type="button" className="dc-btn-primary" disabled={scope !== null && value !== null && !changed} onClick={() => { if (scopeSelector && !total) { setError('请选择年级'); return; } if (value === null) { setError("请选择万象视界设置后的状态：允许使用或禁止使用"); return; } if (!changed) return; onSave(value, scope); closeAfterSave(); }}>保存</button>
       </div>
     </>}
   </DeviceControlLayer>;

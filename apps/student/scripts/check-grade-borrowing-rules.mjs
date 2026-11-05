@@ -4,7 +4,7 @@ const load = async path => {
   const result = await build({ entryPoints: [path], bundle: true, write: false, format: 'esm', platform: 'node' });
   return import(`data:text/javascript;base64,${Buffer.from(result.outputFiles[0].text).toString('base64')}`);
 };
-const { saveGradeBorrowingRule, gradeBorrowingDateConflict, initialBorrowingState, borrowingResult } = await load('components/Teacher/data/borrowingControl.ts');
+const { saveGradeBorrowingRule, gradeBorrowingDateConflict, initialBorrowingState, borrowingResult, borrowingRuleTypeEnabled, setBorrowingRuleTypeEnabled } = await load('components/Teacher/data/borrowingControl.ts');
 const { validateSchedule, schedulePeriodText } = await load('components/Teacher/data/hierarchicalDeviceControl.ts');
 const student = { id: 'a', classId: 'c1' };
 const weekly = { id: 'weekly', mode: 'weekly', weekdays: [0, 1], startDate: '', endDate: '', deny: false, periods: [], weekdayPeriods: { 0: [{ start: '08:00', end: '09:00' }], 1: [{ start: '14:00', end: '15:00' }] } };
@@ -36,6 +36,28 @@ assert.equal(validateSchedule(weekly), '');
 assert.match(validateSchedule({ ...weekly, weekdayPeriods: { ...weekly.weekdayPeriods, 1: [{ start: '15:00', end: '14:00' }] } }), /星期二.*结束时间/);
 assert.match(validateSchedule({ ...weekly, weekdayPeriods: { ...weekly.weekdayPeriods, 1: [{ start: '14:00', end: '15:00' }, { start: '14:30', end: '16:00' }] } }), /星期二.*重叠/);
 console.log('PASS daily periods, single weekly policy, date-only bans, inclusive conflicts, edit self-exclusion, atomic batch rejection and validation');
+
+const toggleTime = new Date('2026-10-26T10:30:00+08:00');
+let toggleState = saveGradeBorrowingRule(initialBorrowingState(), ['c1'], weekly);
+toggleState = saveGradeBorrowingRule(toggleState, ['c1'], { ...date, startDate: '2026-10-26', endDate: '2026-10-26' });
+const originalRules = JSON.stringify(toggleState.classRules);
+assert.equal(borrowingRuleTypeEnabled(toggleState, 'dates'), true);
+assert.equal(borrowingRuleTypeEnabled(toggleState, 'weekly'), true);
+assert.equal(borrowingResult(toggleState, student, toggleTime), '指定日期禁止借用');
+toggleState = setBorrowingRuleTypeEnabled(toggleState, 'dates', false);
+assert.equal(borrowingResult(toggleState, student, toggleTime), '当前不在借用时段');
+toggleState = setBorrowingRuleTypeEnabled(toggleState, 'weekly', false);
+assert.equal(borrowingResult(toggleState, student, toggleTime), '当前可借用');
+assert.equal(borrowingResult({ ...toggleState, studentBans: { a: true } }, student, toggleTime), '班主任已禁止借用');
+assert.equal(borrowingResult({ ...toggleState, schoolTemporaryActive: true }, student, toggleTime), '学校临时禁止借用');
+const restoredToggle = JSON.parse(JSON.stringify(setBorrowingRuleTypeEnabled(toggleState, 'dates', true)));
+assert.equal(borrowingResult(restoredToggle, student, toggleTime), '指定日期禁止借用');
+assert.equal(borrowingRuleTypeEnabled(restoredToggle, 'weekly'), false);
+assert.equal(JSON.stringify(restoredToggle.classRules), originalRules);
+assert.equal(borrowingRuleTypeEnabled(toggleState, 'dates'), false);
+assert.throws(() => saveGradeBorrowingRule(toggleState, ['c1'], weekly), /已有每周固定规则/);
+assert.equal(gradeBorrowingDateConflict(toggleState, ['c1'], { ...date, startDate: '2026-10-26', endDate: '2026-10-27' }), true);
+console.log('PASS independent rule-type switches, fallback priority, preserved bans/configuration, persistence and disabled-rule validation');
 
 const { borrowingWeekGroups, applyBorrowingWeekGroups } = await load('components/Teacher/data/borrowingWeeklyGroups.ts');
 const sharedDays = [{ days: [0, 1, 2, 3, 4], periods: [{ start: '08:00', end: '09:00' }, { start: '14:00', end: '15:00' }] }, { days: [5], periods: [{ start: '10:00', end: '11:00' }] }];

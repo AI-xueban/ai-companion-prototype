@@ -15,7 +15,7 @@ export function occupiedSchoolDurationDays(policies: SchoolDurationPolicies, stu
     .flatMap(rule => rule.weekdays)))].sort((a, b) => a - b);
 }
 
-export function removeSchoolPolicyFromStudent(control: StudentControl, original: DurationRule, scope: DurationApplyScope = 'all'): StudentControl {
+export function removeSchoolPolicyFromStudent(control: StudentControl, original: DurationRule, scope: DurationApplyScope = 'unmodified'): StudentControl {
   const protectedDays = scope === 'unmodified' ? teacherDurationWeekdays(control) : [];
   return { ...control, durationRules: control.durationRules.flatMap(existing => {
     // Keeping teacher settings can split a school rule into fewer weekdays.

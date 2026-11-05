@@ -1,5 +1,6 @@
 import { usesDefaultHomeworkRule } from '../data/homeworkDefaultRule';
 import React from 'react';
+import { RuleEffectSwitch } from './RuleEffectSwitch';
 import { ControlModule, durationRuleText, StudentControl, weekdayRangeText } from '../data/hierarchicalDeviceControl';
 import { SchoolDurationPolicies, schoolDurationGroups } from '../data/schoolDurationPolicies';
 import './SchoolBorrowingControl.css';
@@ -12,7 +13,8 @@ export const ControlScopeCards: React.FC<{
   onDelete?: (row: Row) => void; onSettings: (row: Row) => void;
   onBatchSettings: () => void; lockState: (ids: string[]) => string; lockAction: (ids: string[]) => string;
   emptyTitle?: string; emptyDescription?: string;
-}> = ({ durationPolicies, module, rows, rowType, controls, batch: requestedBatch, selected, onBatch, onSelect, onDelete, onSettings, onBatchSettings, lockState, lockAction, emptyTitle, emptyDescription }) => {
+  enabled?: boolean; onToggle?: () => void;
+}> = ({ durationPolicies, module, rows, rowType, controls, batch: requestedBatch, selected, onBatch, onSelect, onDelete, onSettings, onBatchSettings, lockState, lockAction, emptyTitle, emptyDescription, enabled = true, onToggle }) => {
   const batch = requestedBatch && module !== 'lock';
   const toggle = (id: string) => onSelect(selected.includes(id) ? selected.filter(value => value !== id) : [...selected, id]);
   const selectableRows = rows.filter(row => row.ids.length > 0);
@@ -20,7 +22,7 @@ export const ControlScopeCards: React.FC<{
   const all = selectableRows.length > 0 && selectableRows.every(row => selected.includes(row.id));
   const action = (ids: string[]) => module === 'duration' ? '设置规则' : module === 'homework' ? '修改权限' : module === 'world' ? '设置使用状态' : lockAction(ids);
   const heading = module === 'duration' ? '使用时长规则' : module === 'homework' ? '智阅作业管控' : module === 'world' ? '万象视界管控' : `${rowType}管控`;
-  const settingLabel = module === 'duration' ? '设置全校使用时长规则' : module === 'homework' ? '设置全校权限' : module === 'world' ? '设置全校使用状态' : '批量操作';
+  const settingLabel = module === 'duration' ? '设置全校使用时长规则' : module === 'homework' ? '新增自定义规则' : module === 'world' ? '设置全校使用状态' : '批量操作';
   if (['homework', 'world', 'lock'].includes(module)) {
     const grouped = new Map<string, { rows: Row[]; detail: string }>();
     const defaultRows: Row[] = [];
@@ -47,18 +49,19 @@ export const ControlScopeCards: React.FC<{
     const groupLabel = (items: Row[]) => items.every(row => row.grade && !row.classId)
       ? items.map(row => gradeNames[row.grade!] || String(row.grade)).join('、') + '年级'
       : items.map(row => row.label).join('、');
-    return <section className="borrow-policy-section" aria-label={module === 'lock' ? '锁屏管控' : heading}>
+    return <>{module === 'homework' && <section className="borrow-policy-section borrow-default-summary" aria-label="默认智阅作业规则"><div className="borrow-policy-content">{!!defaultRows.length && <p>{groupLabel(defaultRows)}</p>}<p>查看答案：不允许 · 查看详解：不允许</p></div><span className="borrow-default-label">默认规则</span></section>}<section className="borrow-policy-section" aria-label={module === 'lock' ? '锁屏管控' : heading}>
       <header className="borrow-policy-heading"><div className="borrow-policy-title"><h2>{module === 'lock' ? '锁屏管控' : heading}</h2></div>
-        {module !== 'lock' && <button type="button" className="borrow-policy-add" disabled={!selectableRows.length} onClick={onBatch}>{settingLabel}</button>}
+        {onToggle && <RuleEffectSwitch label="智阅作业规则" enabled={enabled} disabled={!selectableRows.length} onToggle={onToggle} />}
       </header>
-      <div className="borrow-policy-list">{[...grouped.entries()].map(([key, group]) => {
+      {enabled && <div className="borrow-policy-list">{[...grouped.entries()].map(([key, group]) => {
         const ids = group.rows.flatMap(row => row.ids);
         const label = groupLabel(group.rows);
         return <article className="borrow-policy-row" key={key}><div className="borrow-policy-content"><h3>{label}</h3><p>{group.detail}</p></div>
           {!!ids.length && <div className="borrow-policy-row-actions"><button type="button" aria-label={`${action(ids)}：${label}`} onClick={() => onSettings({ ...group.rows[0], id: key, label, ids })}>{action(ids)}</button>{module === 'homework' && onDelete && <button type="button" aria-label={`删除${label}智阅作业规则`} onClick={() => onDelete({ ...group.rows[0], id: key, label, ids })}>删除</button>}</div>}
         </article>;
-      })}{!!defaultRows.length && <article className="borrow-policy-row borrow-policy-row--default" aria-label="默认智阅作业规则"><div className="borrow-policy-content"><h3>默认规则</h3><p>{groupLabel(defaultRows)}</p><p>查看答案：不允许 · 查看详解：不允许</p></div></article>}{!rows.length && <div className="borrow-policy-empty"><p>{emptyTitle ?? `暂无${rowType}`}</p><p>{emptyDescription ?? '当前范围暂无数据'}</p></div>}</div>
-    </section>;
+      })}{!grouped.size && !!rows.length && <p className="borrow-policy-empty">暂无自定义权限</p>}{!rows.length && <div className="borrow-policy-empty"><p>{emptyTitle ?? `暂无${rowType}`}</p><p>{emptyDescription ?? '当前范围暂无数据'}</p></div>}</div>}
+      {enabled && module !== 'lock' && <footer className="borrow-policy-footer"><button type="button" className="borrow-policy-add" disabled={!selectableRows.length} onClick={onBatch}>{settingLabel}</button></footer>}
+    </section></>;
   }
   return <section className="dc-list-card overflow-hidden">
     <div className="dc-list-heading borrow-list-heading flex flex-wrap items-center justify-between gap-3">

@@ -16,9 +16,10 @@ export const DurationRuleEditor: React.FC<Props> = ({ scopeChanged = false, crea
   const [groups, setGroups] = useState(() => [copyRule(rule)]);
   const blockedKey = blockedWeekdays.join(',');
   useEffect(() => { setGroups(current => current.map(group => ({ ...group, weekdays: group.weekdays.filter(day => !blockedWeekdays.includes(day)) }))); }, [blockedKey]);
-  const [applyScope, setApplyScope] = useState<'all' | 'unmodified' | null>(initialApplyScope ?? null);
+  const applyScope = 'unmodified' as const;
   const [error, setError] = useState('');
-  const [restoreNotice, setRestoreNotice] = useState(0);
+  const [dismissedConflictHint, setDismissedConflictHint] = useState('');
+  const [dismissedNoGrades, setDismissedNoGrades] = useState(false);
   const initial = useRef(JSON.stringify({ groups, applyScope }));
   const update = (index: number, changes: Partial<DurationRule>) => { setError(''); setGroups(current => current.map((group, i) => i === index ? { ...group, ...changes, useDefault: false } : group)); };
   const submit = () => {
@@ -27,7 +28,6 @@ export const DurationRuleEditor: React.FC<Props> = ({ scopeChanged = false, crea
     const problem = validateDurationRuleSet(groups);
     if (problem) return setError(problem);
     if (creating && isDefaultDurationRuleSet(groups)) return setError('当前仍为默认规则，无需新增');
-    if (requireApplyScope && !applyScope) return setError('请选择本次修改范围');
     if (groups.some(group => group.weekdays.some(day => blockedWeekdays.includes(day)))) return setError('所选星期已有规则，请修改已有规则或删除后再新增');
     onSave(groups.map(group => ({ ...copyRule(group), useDefault: false, weekdays: [...group.weekdays].sort((a, b) => a - b), periods: [...group.periods].sort((a, b) => a.start.localeCompare(b.start)) })), applyScope ?? undefined);
   };
@@ -35,8 +35,8 @@ export const DurationRuleEditor: React.FC<Props> = ({ scopeChanged = false, crea
     <header className="flex items-center justify-between border-b p-6"><div>{backToList && <button type="button" className="mb-2 text-sm text-indigo-600" onClick={close}>返回规则列表</button>}<h2 id="duration-rule-editor-title" className="text-xl font-bold">设置使用时长规则</h2></div><button type="button" aria-label="关闭设置" onClick={close}><X size={20} /></button></header>
     <div className="dc-panel-body space-y-6">
       {scopeSelector}
-      {noAvailableGrades ? <p role="status" className="text-sm text-slate-500">全部年级已有规则，请编辑或删除后新增</p> : <>
-      {conflictHint && <p role="status" className="rounded-lg bg-amber-50 p-3 text-sm leading-6 text-amber-800">{conflictHint}</p>}
+      {noAvailableGrades ? (!dismissedNoGrades && <ControlToast message="全部年级已有规则，请编辑或删除后新增" tone="info" onClose={() => setDismissedNoGrades(true)} />) : <>
+      {conflictHint && conflictHint !== dismissedConflictHint && <ControlToast key={conflictHint} message={conflictHint} tone="warning" onClose={() => setDismissedConflictHint(conflictHint)} />}
       {!scopeSelector && <p className="text-sm text-slate-600">{label}</p>}
       {groups.map((group, groupIndex) => <section key={group.id} className="space-y-4 rounded-xl bg-slate-50 p-4">
         <div className="flex items-center justify-between"><h3 className="text-sm font-bold">时长组 {groupIndex + 1}</h3>{groups.length > 1 && <button type="button" className="text-sm text-slate-500" onClick={() => { setGroups(current => current.filter((_, index) => index !== groupIndex)); setError(''); }}>删除本组</button>}</div>
@@ -47,11 +47,9 @@ export const DurationRuleEditor: React.FC<Props> = ({ scopeChanged = false, crea
         </fieldset>
       </section>)}
       {!isDefault && <button type="button" className="dc-btn" disabled={new Set([...blockedWeekdays, ...groups.flatMap(group => group.weekdays)]).size === 7} onClick={() => { setGroups(current => [...current, { ...copyRule(defaultRule), id: crypto.randomUUID(), weekdays: [], useDefault: false }]); setError(''); }}>新增时长组</button>}
-      {requireApplyScope && <fieldset className="rounded-xl border border-slate-200 p-4"><legend className="px-1 text-sm font-bold"><span className="mr-1 text-red-500" aria-hidden="true">*</span>本次修改哪些学生？</legend><div className="space-y-4">{([['all', '修改所选范围的所有学生', '将替换班主任在所选星期的设置。'], ['unmodified', '保留班主任的设置，修改其他学生', '班主任已设置的星期保持不变。']] as const).map(([value, title, description]) => <label key={value} className="flex items-start gap-3"><input type="radio" name="duration-apply-scope" checked={applyScope === value} onChange={() => { setApplyScope(value); setError(''); }} className="mt-1" /><span><b className="block text-sm">{title}</b><span className="mt-1 block text-xs text-slate-500">{description}</span></span></label>)}</div></fieldset>}
       {error && <ControlValidationNotice message={error} onClose={() => setError('')} />}
       </>}
     </div>
-    {restoreNotice > 0 && <ControlToast key={restoreNotice} message="已填入默认设置" tone="success" duration={3000} onClose={() => setRestoreNotice(0)} />}
-    <footer className="flex justify-end gap-3 border-t p-5">{!isDefault && !noAvailableGrades && <button type="button" className="dc-btn mr-auto" onClick={() => { setGroups([{ ...copyRule(defaultRule), id: rule.id, weekdays: [0, 1, 2, 3, 4, 5, 6].filter(day => !blockedWeekdays.includes(day)), useDefault: false }]); setError(''); setRestoreNotice(value => value + 1); }}>填入默认设置</button>}<button type="button" className="dc-btn" onClick={close}>取消</button>{!noAvailableGrades && <button type="button" className="dc-btn-primary" onClick={submit}>保存</button>}</footer>
+    <footer className="flex justify-end gap-3 border-t p-5"><button type="button" className="dc-btn" onClick={close}>取消</button>{!noAvailableGrades && <button type="button" className="dc-btn-primary" onClick={submit}>保存</button>}</footer>
   </>}</DeviceControlLayer>;
 };

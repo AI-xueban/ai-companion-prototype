@@ -1,3 +1,5 @@
+import { ControlToast } from './ControlToast';
+import { ControlValidationNotice } from './ControlValidationNotice';
 import React, { useRef, useState } from 'react';
 import { Trash2, X } from 'lucide-react';
 import { BorrowSchedule, borrowingPeriodsForDay, schoolDate, validateSchedule, weekdayNames } from '../data/hierarchicalDeviceControl';
@@ -18,6 +20,7 @@ export const SchoolBorrowingRuleEditor: React.FC<{
   const [selected, setSelected] = useState(initialGrades);
   const [weekGroups, setWeekGroups] = useState(() => borrowingWeekGroups(rule));
   const [problem, setProblem] = useState('');
+  const [dismissedNoGrades, setDismissedNoGrades] = useState(false);
   const initial = useRef(JSON.stringify({ draft, selected, weekGroups }));
   const changed = () => { setProblem(''); onClearError(); };
   const update = (value: Partial<BorrowSchedule>) => { changed(); setDraft(current => ({ ...current, ...value })); };
@@ -39,7 +42,7 @@ export const SchoolBorrowingRuleEditor: React.FC<{
     <div className="dc-panel-body space-y-6">
       {(chooseGrades || editing) && <ControlGradeSelector options={grades.map(grade => ({ ...grade, disabled: grade.disabled || (draft.mode === 'weekly' && grade.hasWeeklyRule && !(editing && initialGrades.includes(grade.grade))), hint: draft.mode === 'weekly' && grade.hasWeeklyRule && !(editing && initialGrades.includes(grade.grade)) ? '已有规则' : undefined }))} selected={selected} onChange={values => { changed(); setSelected(values); }} />}
       {!chooseGrades && !editing && <p className="text-sm text-slate-600">{grades.filter(grade => selected.includes(grade.grade)).map(grade => grade.label.replace('年级', '')).join('、')}年级</p>}
-      {noAvailableGrades ? <p role="status" className="text-sm text-slate-500">全部年级已有规则，请编辑或删除后新增</p> : <>
+      {noAvailableGrades ? (!dismissedNoGrades && <ControlToast message="全部年级已有规则，请编辑或删除后新增" tone="info" onClose={() => setDismissedNoGrades(true)} />) : <>
       {draft.mode === 'weekly' ? <section><div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1"><h3 className="text-sm font-bold"><span className="mr-1 text-red-500" aria-hidden="true">*</span>选择星期</h3><span className="text-sm text-slate-500">时段不设置则全天可用</span></div>
         <div className="space-y-4">{weekGroups.map((group, groupIndex) => <fieldset key={groupIndex} className="rounded-xl bg-slate-50 p-4"><legend className="text-sm font-bold">时段组 {groupIndex + 1}</legend>
           <div className="mb-3 flex flex-wrap gap-3">{weekdayNames.map((name, day) => <label key={day} className="flex items-center gap-1 text-sm"><input type="checkbox" aria-label={`时段组${groupIndex + 1}${name}`} checked={group.days.includes(day)} disabled={weekGroups.some((other, index) => index !== groupIndex && other.days.includes(day))} onChange={event => updateGroup(groupIndex, { days: event.target.checked ? [...group.days, day].sort((a, b) => a - b) : group.days.filter(value => value !== day) })} />{name.replace('星期', '周')}</label>)}</div>
@@ -48,7 +51,7 @@ export const SchoolBorrowingRuleEditor: React.FC<{
         </fieldset>)}</div>
         <button type="button" className="dc-btn mt-4" disabled={weekGroups.flatMap(group => group.days).length === 7} onClick={() => { changed(); setWeekGroups(current => [...current, { days: [], periods: [] }]); }}>新增时段组</button>
       </section> : <section><div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1"><h3 className="text-sm font-bold"><span className="mr-1 text-red-500" aria-hidden="true">*</span>适用日期</h3><span className="text-sm text-slate-500">所选日期全天禁止借用</span></div><div className="flex flex-wrap items-center gap-3"><input className={input} type="date" aria-label="开始日期" min={editing ? undefined : schoolDate()} value={draft.startDate} onChange={event => update({ startDate: event.target.value })} /><span>至</span><input className={input} type="date" aria-label="结束日期" min={editing ? draft.startDate || undefined : draft.startDate > schoolDate() ? draft.startDate : schoolDate()} value={draft.endDate} onChange={event => update({ endDate: event.target.value })} /></div></section>}
-      {(problem || error) && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{problem || error}</p>}
+      {(problem || error) && <ControlValidationNotice message={problem || error} onClose={() => { setProblem(''); onClearError(); }} />}
       </>}
     </div><footer className="flex justify-end gap-3 border-t p-5"><button type="button" className="dc-btn" onClick={close}>取消</button>{!noAvailableGrades && <button type="button" className="dc-btn-primary" onClick={submit}>保存规则</button>}</footer>
   </>}</DeviceControlLayer>;

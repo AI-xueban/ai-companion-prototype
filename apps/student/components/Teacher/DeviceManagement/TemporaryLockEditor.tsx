@@ -1,3 +1,4 @@
+import { ControlToast } from "./ControlToast";
 import React, { useState } from "react";
 import { X } from "lucide-react";
 import { DeviceControlLayer } from "./DeviceControlLayer";
@@ -16,9 +17,9 @@ export const TemporaryLockEditor: React.FC<{
   onSave: (enabled: boolean) => void;
 }> = ({ label, selectedObjects, count, lockedCount, lockClassNames, unlockClassNames, schoolSessionActive, state, onClose, onSave }) => {
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [value, setValue] = useState<boolean | null>(null);
   const changed = value === null ? 0 : value ? count - lockedCount : lockedCount;
-  const actionState = value ? "开启临时锁屏" : "解除临时锁屏";
   const unchanged = value === true && state === "已开启" || value === false && state === "未开启";
   return <DeviceControlLayer labelId="temporary-lock-editor-title" onClose={onClose} unsavedChanges={value !== null}>
     {(close, closeAfterSave) => <>
@@ -30,7 +31,7 @@ export const TemporaryLockEditor: React.FC<{
         <fieldset className="mt-5 space-y-3">
           <legend className="mb-3 font-bold"><span className="mr-1 text-red-500" aria-hidden="true">*</span>请选择要执行的操作</legend>
           {[true, false].map((enabled) => <label key={String(enabled)} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-4 ${value === enabled ? "border-indigo-500 bg-indigo-50" : "border-slate-200"}`}>
-            <input type="radio" name="temporary-lock-action" checked={value === enabled} onChange={() => setValue(enabled)} />
+            <input type="radio" name="temporary-lock-action" checked={value === enabled} onChange={() => { setValue(enabled); setError(""); setNotice((enabled ? count - lockedCount : lockedCount) === 0 ? "无需修改" : ""); }} />
             <span>
               <span className="block font-medium text-slate-900">{enabled ? "开启临时锁屏" : "解除临时锁屏"}</span>
               <span className="mt-1 block text-sm text-slate-500">{enabled ? `${lockClassNames.length}个班有学生未开启` : `${unlockClassNames.length}个班有学生已开启`}</span>
@@ -38,7 +39,8 @@ export const TemporaryLockEditor: React.FC<{
           </label>)}
         </fieldset>
         {value === false && <p className="mt-4 text-sm leading-6 text-slate-600">解除后执行当前日常锁屏设置，恢复所选班级老师的锁屏管控权限；其他班级不受影响。</p>}
-        {value !== null && <div role="status" className="mt-5 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600"><p>{changed ? `将${actionState}。` : `所选学生均已${value ? "开启" : "解除"}临时锁屏，无需修改。`}</p>{changed > 0 && <p className="mt-2 max-h-32 overflow-y-auto text-xs leading-6">本次涉及班级：{(value ? lockClassNames : unlockClassNames).join("、")}</p>}</div>}
+        {value !== null && changed > 0 && <p className="mt-4 max-h-32 overflow-y-auto text-xs leading-6 text-slate-500">本次涉及班级：{(value ? lockClassNames : unlockClassNames).join("、")}</p>}
+        {notice && <ControlToast message={notice} tone="info" onClose={() => setNotice("")} />}
       {error && <ControlValidationNotice message={error} onClose={() => setError("")} />}
       </div>
       <footer className="dc-confirm-footer">
