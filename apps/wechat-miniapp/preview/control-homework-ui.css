@@ -1,0 +1,134 @@
+/* Homework's card, typography and interaction scale, scoped to the new theme. */
+body.dw-ui-new #app main.control-screen {
+  --accent:#4a98c0; --dw-accent:#4a98c0; --dw-accent-strong:#367eaa;
+  --dw-accent-soft:#eaf5fb; --dw-ink:#314b61; --dw-heading:#243d55;
+  --dw-muted:#718699; --dw-border:#e4ebf3; --dw-shadow:#5b7b9b18;
+  --control-ink:#314b61; --control-muted:#718699; --control-line:#e4ebf3; --control-soft:#eaf5fb;
+  background:#f3f8fc; color:#314b61; font-size:13px; line-height:1.6;
+}
+body.dw-ui-new #app main.control-screen :is(.control-entry,.control-content,.borrow-editor-content) {padding-left:16px;padding-right:16px;background:transparent;}
+body.dw-ui-new #app main.control-screen .control-workbench-tools {padding:16px;background:transparent;border:0;}
+body.dw-ui-new #app main.control-screen :is(.control-entry-card,.control-entry-lock,.admin-school-toggle,.control-module-panel,.admin-module-actions,.control-student-detail-card,.borrow-editor-card,.parity-scope-card,.borrowing-scope-card,.admin-level-list,.control-current,.parity-rule,.homework-subject-card) {border:1px solid #e4ebf3;border-radius:19px;background:#fff;box-shadow:0 10px 28px #5b7b9b18;}
+body.dw-ui-new #app main.control-screen :is(.control-entry-lock,.admin-school-toggle,.control-module-panel,.admin-module-actions,.control-student-detail-card,.borrow-editor-card,.parity-scope-card,.borrowing-scope-card,.homework-subject-card) {padding:16px;margin-bottom:12px;}
+body.dw-ui-new #app main.control-screen :is(.control-entry-card h3,.control-entry-lock h3,.control-module-panel h3,.admin-school-toggle h3,.admin-module-actions h3,.control-entry-subtitle,.control-grade-group-title,.borrowing-rule-section>h3) {color:#243d55;font-size:17px;font-weight:700;line-height:1.5;}
+body.dw-ui-new #app main.control-screen :is(.control-entry-card p,.control-entry-lock-head p,.control-module-panel>p,.parity-note,.control-scope,.control-form-note,.parity-context) {font-size:13px;line-height:1.65;color:#718699;}
+body.dw-ui-new #app main.control-screen :is(.control-primary,.control-secondary,.control-add-period) {min-height:44px;padding:10px 13px;border-radius:11px;font-size:14px;font-weight:600;line-height:1.5;box-shadow:none;}
+body.dw-ui-new #app main.control-screen :is(.control-primary,.borrow-editor-actions .control-primary,.parity-borrow-floating .control-primary) {border:1px solid #4a98c0;background:#4a98c0;color:#fff;box-shadow:none;}
+body.dw-ui-new #app main.control-screen .control-primary:hover {background:#3d89b1;border-color:#3d89b1;}
+body.dw-ui-new #app main.control-screen .control-secondary {border:1px solid #dce8ef;background:#fff;color:#367eaa;}
+body.dw-ui-new #app main.control-screen .control-add-period {border:1px dashed #a4cede;background:#f5fbff;color:#428bae;}
+body.dw-ui-new #app main.control-screen :is(.control-primary,.control-secondary):disabled {border-color:#e7edf2;background:#f1f4f7;color:#a0adba;box-shadow:none;}
+body.dw-ui-new #app main.control-screen :is(.control-entry-lock-head button,.admin-scope-summary button,.borrow-list-head button,.flat-control-head button,.control-detail-head button) {color:#428bae;font-size:12px;}
+body.dw-ui-new #app main.control-screen :is(.control-entry-icon,.parity-apply-scope,.admin-scope-path) {background:#eaf5fb;color:#428bae;border-color:#dce8ef;}
+body.dw-ui-new #app main.control-screen :is(.control-description-fold>summary,.school-help) {color:#7d91a2;font-size:12px;}
+body.dw-ui-new #app main.control-screen :is(input:not([type=checkbox]):not([type=radio]),select,textarea) {border:1px solid #dce5ed;border-radius:9px;background:#fbfcfe;color:#354e65;font-family:inherit;font-size:13px;}
+body.dw-ui-new #app main.control-screen :is(input[type=checkbox],input[type=radio]) {accent-color:#4a98c0;}
+body.dw-ui-new #app main.control-screen :is(button,input,select,textarea,summary):focus-visible {outline:2px solid #84b9df;outline-offset:2px;}
+body.dw-ui-new #app main.control-screen :is(.control-sheet,.borrow-editor-actions,.control-batchbar,.admin-batchbar,.borrowing-footer) {background:#fff;box-shadow:none;border-color:#e4ebf3;}
+body.dw-ui-new #app main.control-screen .control-sheet {padding:13px 18px max(20px,env(safe-area-inset-bottom));border-radius:22px 22px 0 0;}
+body.dw-ui-new #app main.control-screen .control-sheet-head {min-height:44px;gap:14px;}
+body.dw-ui-new #app main.control-screen .control-sheet-head h3 {font-size:18px;color:#243d55;letter-spacing:0;}
+body.dw-ui-new #app main.control-screen .control-sheet-head button {width:44px;height:44px;min-width:44px;background:transparent;border-radius:0;color:#7d8b9b;font-size:24px;}
+body.dw-ui-new #app main.control-screen .control-confirm-copy {color:#718294;font-size:13px;line-height:1.75;}
+body.dw-ui-new #app main.control-screen .school-section-heading {gap:12px;}
+body.dw-ui-new #app main.control-screen .school-section-heading .control-actions {gap:8px;}
+body.dw-ui-new #app main.control-screen .school-section-heading button {min-height:38px;padding:8px 10px;border-radius:9px;font-size:12px;}
+body.dw-ui-new #app main.control-screen .school-rule {padding:16px 0;border-color:#edf1f5;}
+body.dw-ui-new #app main.control-screen .school-rule b {font-size:15px;font-weight:600;color:#314b61;}
+body.dw-ui-new #app main.control-screen .school-rule p {margin:8px 0;color:#718699;font-size:13px;line-height:1.75;}
+body.dw-ui-new #app main.control-screen .school-rule>div:last-child button {min-height:38px;padding:8px 14px;font-size:12px;border-radius:9px;}
+body.dw-ui-new #app main.control-screen .school-default {padding:12px;border:0;border-radius:9px;background:#f5f8fb;}
+body.dw-ui-new #app main.control-screen .school-default b {font-size:13px;color:#677e91;}
+body.dw-ui-new #app main.control-screen .school-default p {margin-bottom:0;font-size:12px;}
+body.dw-ui-new #app main.control-screen .school-grade-options {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0 20px;}
+body.dw-ui-new #app main.control-screen :is(.school-grade-options label,.control-group-weekdays label) {min-height:44px;padding:8px 12px;border:1px solid #dce8ef;border-radius:9px;background:#fff;color:#6d869a;font-size:13px;}
+body.dw-ui-new #app main.control-screen :is(.school-grade-options,.control-group-weekdays) label:has(input:checked) {background:#e8f6fc;border-color:#7bb5d0;color:#327ca2;}
+body.dw-ui-new #app main.control-screen .school-grade-options label:has(input:disabled) {background:#f3f5f7;color:#a0adba;border-color:#e7edf2;}
+body.dw-ui-new #app main.control-screen :is(.school-rule-group,[data-duration-group],[data-borrow-group]) {padding:16px;margin:12px 0;border:1px solid #e4ebf3;border-radius:17px;background:#fff;}
+body.dw-ui-new #app main.control-screen .school-rule-group h3 {font-size:15px;color:#314b61;}
+body.dw-ui-new #app main.control-screen .school-weekdays {gap:8px;margin:12px 0;}
+body.dw-ui-new #app main.control-screen .school-weekdays label {font-size:12px;}
+body.dw-ui-new #app main.control-screen .school-duration-grid {gap:10px;}
+body.dw-ui-new #app main.control-screen .school-duration-grid .control-number-row {font-size:12px;color:#547089;}
+body.dw-ui-new #app main.control-screen .school-duration-grid input[type=number] {min-height:44px;font-size:16px;}
+body.dw-ui-new #app main.control-screen .school-periods summary {font-size:12px;color:#428bae;min-height:44px;display:flex;align-items:center;padding:0;}
+body.dw-ui-new #app main.control-screen fieldset {margin:16px 0;padding:12px 14px;border:1px solid #e4ebf3;border-radius:12px;background:#fff;font-size:13px;}
+body.dw-ui-new #app main.control-screen fieldset legend {color:#547089;font-size:12px;font-weight:600;padding:0 5px;}
+body.dw-ui-new #app main.control-screen .borrow-editor-actions {display:flex;flex:none;align-items:center;gap:12px;padding:12px 16px max(16px,env(safe-area-inset-bottom));border-top:1px solid #e4ebf3;}
+body.dw-ui-new #app main.control-screen .borrow-editor-actions button {min-height:45px;font-size:14px;}
+body.dw-ui-new #app main.control-screen .control-primary.parity-delete-confirm {border-color:#b6665d;background:#b6665d;}
+
+/* Keep help beside its heading, school actions central, and grade actions local. */
+.school-mobile .school-panel-heading {display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.school-mobile .school-panel-heading h3 {margin:0;min-width:0;}
+.school-mobile .school-panel-heading .school-help {position:relative;flex:none;margin:0;}
+.school-mobile .school-panel-heading .school-help summary {padding:8px 0;min-height:44px;display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap;}
+.school-mobile .school-panel-heading .school-help summary::before {content:'ⓘ';}
+.school-mobile .school-panel-heading .school-help p {position:absolute;right:0;top:100%;z-index:8;width:min(290px,75vw);margin:0;padding:14px;border:1px solid #dce8ef;border-radius:12px;background:#fff;box-shadow:0 8px 24px #314b6120;font-size:12px;color:#718699;line-height:1.8;}
+body.dw-ui-new #app main.control-screen .school-global-action {display:flex;justify-content:center;padding:16px 0 22px;}
+body.dw-ui-new #app main.control-screen .school-global-action .control-primary {width:100%;max-width:300px;min-height:48px;font-size:15px;}
+.school-mobile .school-restricted {border-top:1px solid #edf1f5;padding-top:16px;}
+.school-mobile .school-restricted>h4 {margin:0 0 8px;color:#547089;font-size:13px;font-weight:600;}
+.school-mobile .school-grade-status {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #edf1f5;}
+.school-mobile .school-grade-status:last-child {border-bottom:0;padding-bottom:0;}
+.school-mobile .school-grade-status>b {flex:1;min-width:0;font-size:15px;font-weight:600;}
+.school-mobile .school-grade-status small {font-size:11px;font-weight:400;margin-top:3px;}
+body.dw-ui-new #app main.control-screen .school-grade-status>.control-secondary {flex:none;width:auto;min-height:40px;padding:8px 12px;font-size:12px;}
+body.dw-ui-new #app main.control-screen .school-default-panel {background:#f8fbfd;}
+body.dw-ui-new #app main.control-screen .school-default-panel .school-default-values {margin:8px 0;font-size:13px;color:#547089;}
+body.dw-ui-new #app main.control-screen .school-default-panel .school-default-scope {margin:8px 0 0;padding-top:10px;border-top:1px solid #e9eff4;font-size:12px;color:#8496a8;}
+.control-screen .school-entry-card .school-entry-status {margin-top:14px;padding:12px;border-radius:10px;background:#f5f8fb;}
+.control-screen .school-entry-card .school-panel-heading {display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.control-screen .school-entry-card .school-panel-heading h3 {margin:0;}
+.control-screen .school-entry-status>span {font-size:12px;color:#8496a8;}
+.control-screen .school-entry-status>p {margin:6px 0 0;font-size:13px;color:#547089;line-height:1.8;}
+body.dw-ui-new #app main.control-screen .school-entry-card .school-global-action {padding:16px 0 0;}
+body.dw-ui-new #app main.control-screen .school-entry-detail {border:0;background:none;color:#428bae;font-size:12px;min-height:44px;flex:none;}
+.control-screen .school-action-options {display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 20px;}
+.control-screen .school-action-options button {min-height:44px;padding:8px;border:1px solid #dce8ef;border-radius:9px;background:#fff;color:#718699;font-size:13px;}
+.control-screen .school-action-options button[aria-pressed=true] {background:#e8f6fc;border-color:#7bb5d0;color:#327ca2;font-weight:600;}
+.control-screen .school-modal-grade-title {font-size:13px;color:#547089;}
+.control-screen .school-action-modal .school-grade-options {display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0;}
+.control-screen .school-action-modal .school-grade-options label {display:flex;align-items:center;gap:6px;min-height:44px;padding:8px 12px;border:1px solid #dce8ef;border-radius:9px;background:#fff;color:#6d869a;font-size:13px;}
+.control-screen .school-action-modal .school-grade-options label:has(input:checked) {background:#e8f6fc;border-color:#7bb5d0;color:#327ca2;}
+.control-screen .school-action-modal .school-grade-options label:has(input:disabled) {background:#f3f5f7;color:#a0adba;border-color:#e7edf2;}
+.control-screen .school-action-modal input[type=checkbox] {width:17px;height:17px;margin:0;min-height:0;}
+.control-screen .school-restricted-heading {display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.control-screen .school-restricted-heading>span {color:#718699;font-size:13px;font-weight:600;}
+body.dw-ui-new #app main.control-screen .school-restricted-heading>.control-secondary {flex:none;width:auto;min-height:38px;padding:8px 12px;font-size:12px;}
+/* Compact grade selection, shared by rule pages and temporary-control sheets. */
+.control-screen .school-grade-heading {display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 10px;color:#547089;font-size:13px;}
+.control-screen .school-grade-heading>label {display:flex;align-items:center;gap:5px;min-height:44px;font-size:12px;white-space:nowrap;}
+.control-screen .school-grade-heading input {width:16px;height:16px;min-height:0;margin:0;}
+body.dw-ui-new #app main.control-screen .school-grade-options {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 18px;}
+body.dw-ui-new #app main.control-screen .school-grade-options label {display:flex;align-items:center;justify-content:center;gap:4px;min-width:0;min-height:44px;padding:6px 3px;font-size:12px;white-space:nowrap;}
+body.dw-ui-new #app main.control-screen .school-grade-options input {flex:none;width:15px;height:15px;min-height:0;margin:0;}
+.school-mobile .school-list-toolbar {margin:20px 0 12px;padding:0 2px;}
+.school-mobile .school-list-toolbar h3 {color:#243d55;}
+.school-mobile .school-policy-list>.school-rule:first-child {border-top:0;padding-top:0;}
+.control-screen .control-group-heading {display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;}
+.control-screen .control-group-heading h3 {margin:0;}
+.control-screen .control-group-delete {display:grid;place-items:center;flex:none;width:44px;height:44px;padding:10px;border:0;border-radius:9px;background:transparent;color:#b6665d;cursor:pointer;}
+.control-screen .control-group-delete svg {width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;}
+.control-screen .control-period-heading {display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:8px 0 12px;color:#547089;font-size:13px;}
+.control-screen .control-period-heading small {display:inline;color:#8496a8;font-size:12px;}
+.control-screen .control-add-group {display:flex;justify-content:center;margin:16px 0;}
+body.dw-ui-new #app main.control-screen .control-add-group>button {width:auto;min-width:160px;}
+.control-screen .control-shade.school-centered-shade {align-items:center;justify-content:center;padding:20px;}
+body.dw-ui-new #app main.control-screen .school-centered-shade .control-sheet {width:100%;max-width:360px;max-height:85%;padding:16px 16px 20px;border-radius:18px;box-shadow:0 16px 48px #19334926;animation:none;}
+.control-screen .school-centered-shade .control-sheet::before {display:none;}
+body.dw-ui-new #app main.control-screen .school-centered-shade .school-grade-heading {margin:4px 0 8px;font-size:12px;}
+body.dw-ui-new #app main.control-screen .school-centered-shade .school-grade-options {gap:6px;margin-bottom:8px;}
+body.dw-ui-new #app main.control-screen .school-centered-shade .school-grade-options label {min-height:36px;padding:5px 1px;gap:3px;border-color:transparent;background:#f5f8fa;color:#718699;border-radius:7px;font-size:11px;}
+body.dw-ui-new #app main.control-screen .school-centered-shade .school-grade-options label:has(input:checked) {border-color:transparent;background:#eaf4f9;color:#367eaa;}
+body.dw-ui-new #app main.control-screen .school-centered-shade .school-grade-options input {width:13px;height:13px;}
+.control-screen .school-centered-shade .control-sheet-actions {margin-top:20px;}
+.control-screen .school-centered-shade #school-error:empty {display:none;}
+.school-mobile .school-permission-options {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+body.dw-ui-new #app main.control-screen .school-permission-options label {position:relative;display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;margin:4px 0;padding:10px;border:1px solid #e4ebf3;border-radius:9px;background:#f8fafc;color:#718699;font-size:14px;cursor:pointer;}
+body.dw-ui-new #app main.control-screen .school-permission-options label:has(input:checked) {border-color:#7bb5d0;background:#eaf5fb;color:#327ca2;font-weight:600;}
+body.dw-ui-new #app main.control-screen .school-permission-options input[type=radio] {flex:none;width:17px;height:17px;min-height:0;margin:0;}
+.school-mobile .school-borrow-tabs {display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:20px 0 12px;padding:4px;border-radius:11px;background:#eaf0f5;}
+.school-mobile .school-borrow-tabs button {min-height:42px;border:0;border-radius:8px;background:transparent;color:#718699;font:inherit;font-size:14px;cursor:pointer;}
+.school-mobile .school-borrow-tabs button[aria-selected=true] {background:#fff;color:#367eaa;font-weight:600;box-shadow:0 2px 6px #314b610a;}
+.school-mobile .school-borrow-tabs+.school-list-toolbar {margin-top:0;}

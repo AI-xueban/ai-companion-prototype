@@ -49,9 +49,11 @@
     if (operation.type === 'temporary') {
       if (operation.school) { next.schoolTemporaryActive = operation.value; next.temporaryClasses = {}; }
       else operation.names.forEach(name => { next.temporaryClasses[name] = operation.value; });
+    } else if (operation.type === 'student') {
+      next.studentBans ||= {}; next.studentBans[operation.names[0]] ||= {}; next.studentBans[operation.names[0]][operation.id] = operation.value;
     } else if (operation.type === 'class') {
       next.classBans ||= {};
-      operation.names.forEach(name => { next.classBans[name] = operation.value; });
+      operation.names.forEach(name => { next.classBans[name] = operation.value; if(next.studentBans) delete next.studentBans[name]; });
     } else if (operation.type === 'save' || operation.type === 'delete') operation.names.forEach(name => {
       const rules = next.classRules[name] || [];
       next.classRules[name] = operation.type === 'delete' ? rules.filter(r => r.id !== operation.editingIds[name]) : operation.rule.mode === 'weekly' ? [...rules.filter(r => r.mode !== 'weekly'), R.copy(operation.rule)] : [...rules.filter(r => r.id !== operation.editingIds?.[name]), R.copy(operation.rule)];
@@ -63,17 +65,18 @@
   const targets = (data, names) => JSON.stringify([...names].sort().map(name => [name, (data[name] || []).map(s => String(s.id)).sort()]));
   const gradeOf = name => name.match(/^[一二三四五六七八九]+年级/)?.[0] || name;
   function commit(state, operation, data, role, associatedClasses) {
-    if (!operation.names.length || operation.names.some(name => !Array.isArray(data[name]) || !data[name].length)) throw Error('所选范围包含没有学生的班级，请重新选择');
+    if (!operation.names.length || operation.names.some(name => !Array.isArray(data[name]) || !data[name].length)) throw Error('所选范围包含不可管控班级，请重新选择');
     if (state.revision !== operation.revision) throw Error('借用设置已被其他人修改，请重新设置');
-    if (targets(data, operation.names) !== operation.targets) throw Error('所选班级或学生有变化，请重新选择');
-    if (operation.type === 'class') {
+    if (targets(data, operation.names) !== operation.targets) throw Error('所选班级信息有变化，请重新选择');
+    if (['class','student'].includes(operation.type)) {
       if (role !== 'homeroom' || operation.names.length !== 1 || operation.names.some(name => !associatedClasses.includes(name))) throw Error('当前没有这个班级的管理权限');
+      if(operation.type==='student' && !data[operation.names[0]].some(student=>student.id===operation.id)) throw Error('所选学生已变化');
       if (operation.names.some(name => denied(state, name))) throw Error('学校正在临时禁止借用，暂时无法修改');
     } else if (!['save','delete','temporary'].includes(operation.type) || role !== 'school') throw Error('只有学校管理员可以修改借用时间和临时禁借');
     if (role === 'school' && !operation.school && ['save', 'temporary'].includes(operation.type)) {
       const grades = [...new Set(operation.names.map(gradeOf))];
-      if (grades.length !== 1) throw Error('请选择一个年级');
-      const eligible = Object.keys(data).filter(name => gradeOf(name) === grades[0] && Array.isArray(data[name]) && data[name].length);
+      if (operation.type !== 'save' && grades.length !== 1) throw Error('请选择一个年级');
+      const eligible = Object.keys(data).filter(name => grades.includes(gradeOf(name)) && Array.isArray(data[name]) && data[name].length);
       if (eligible.some(name => !operation.names.includes(name)) || operation.names.some(name => !eligible.includes(name))) throw Error('学校管理员只能按年级设置');
     }
     if (operation.type === 'save') {
@@ -90,7 +93,7 @@
   }
   function result(state, name, id, now = new Date()) {
     if (denied(state, name)) return '学校临时禁止借用';
-    if (state.classBans?.[name]) return '班主任已禁止借用';
+    if (state.studentBans?.[name]?.[id] ?? state.classBans?.[name]) return '班主任已禁止借用';
     const date = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai' }).format(now);
     const time = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(now);
     const rule = R.effectiveBorrow({ schedules: state.classRules[name] || [] }, date);

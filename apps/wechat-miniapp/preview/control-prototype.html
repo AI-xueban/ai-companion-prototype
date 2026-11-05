@@ -366,7 +366,7 @@
     .control-workbench-tools .lp-chip{min-height:34px}
     .control-entry .control-entry-intro{display:none}
   </style>
-  <link rel="stylesheet" href="control-prototype.css?v=20261021-teacher-parity">
+  <link rel="stylesheet" href="control-prototype.css?v=20261105-new-rule-check">
 <link rel="stylesheet" href="parent-prototype.css">
 <script src="page-demo-tools.js"></script>
 <style>#teacher-review-branches{display:none}</style>
@@ -407,22 +407,22 @@
     function unbindTeacherWechat(){const error=document.getElementById('teacher-security-error');if(document.getElementById('teacher-reauth').value!=='Demo@123456'){error.textContent='二次验证失败，请检查登录密码';return}localStorage.removeItem('ai_companion_demo_teacher_wechat_binding');demoTeacherWechatBound=false;teacherSecurityNotice='已解绑当前微信；下次请使用教师账号登录。';teacherSecurity()}
     let teacherTab='control',controlDemoRole='teacher',controlWorkView='homeroom',controlEntryGrade='',controlEntryClass='',adminModuleRoot='school';
     const controlRoleNames={school:'学校管理员',homeroom:'班主任',subject:'任课老师'};
-    function controlEntryScopeName(){return controlDemoRole==='admin'?(controlEntryClass||controlEntryGrade||'全校'):selectedTeacherClass}
-    function controlEntryStudents(){return controlDemoRole==='admin'?schoolControlClasses.filter(name=>controlEntryClass?name===controlEntryClass:!controlEntryGrade||name.startsWith(controlEntryGrade)).flatMap(name=>controlData[name]):controlStudents()}
+    function controlEntryScopeName(){return controlDemoRole==='admin'?(controlEntryGrade||'全校'):selectedTeacherClass}
+    function controlEntryStudents(){return controlDemoRole==='admin'?schoolControlClasses.filter(name=>!controlEntryGrade||name.startsWith(controlEntryGrade)).flatMap(name=>controlData[name]):controlStudents()}
     function controlScopeChip(label,action,selected){return '<button type="button" class="lp-chip'+(selected?' active':'')+'" onclick="'+action+'">'+label+'</button>'}
     function controlScopeSwitcher(){
       const scope=controlEntryScopeName();
       if(controlWorkView==='homeroom')return '<div class="wb-scope-static"><strong>'+scope+'</strong></div>';
       let options='';
       if(controlWorkView==='school'){
-        options='<div class="wb-filter-row"><span class="wb-filter-label">年级</span><div class="wb-filter-options">'+controlScopeChip('全校',"selectControlEntryGrade('')",!controlEntryGrade)+schoolGrades().map(grade=>controlScopeChip(grade,"selectControlEntryGrade('"+grade+"')",controlEntryGrade===grade)).join('')+'</div></div><div class="wb-filter-row"><span class="wb-filter-label">班级</span><div class="wb-filter-options">'+controlScopeChip('全部班级',"selectControlEntryClass('')",!controlEntryClass)+schoolControlClasses.filter(name=>!controlEntryGrade||name.startsWith(controlEntryGrade)).map(name=>controlScopeChip(name,"selectControlEntryClass('"+name+"')",controlEntryClass===name)).join('')+'</div></div>';
+        options='<div class="wb-filter-row"><span class="wb-filter-label">年级</span><div class="wb-filter-options">'+controlScopeChip('全校',"selectControlEntryGrade('')",!controlEntryGrade)+schoolGrades().map(grade=>controlScopeChip(grade,"selectControlEntryGrade('"+grade+"')",controlEntryGrade===grade)).join('')+'</div></div>';
       }else{
         options='<div class="wb-filter-row"><span class="wb-filter-label">班级</span><div class="wb-filter-options">'+controlClasses.map(name=>controlScopeChip(name,"changeControlClass('"+name+"')",selectedTeacherClass===name)).join('')+'</div></div>';
       }
       return '<details class="wb-scope-details"><summary aria-label="调整查看范围，当前'+scope+'"><strong>'+scope+'</strong><span class="wb-chevron" aria-hidden="true"></span></summary><div class="wb-scope-options">'+options+'</div></details>';
     }
     function selectControlEntryGrade(grade){if(grade&&!schoolGrades().includes(grade))return;controlEntryGrade=grade;controlEntryClass='';renderControl()}
-    function selectControlEntryClass(name){if(name&&!schoolControlClasses.includes(name))return;controlEntryClass=name;if(name)controlEntryGrade=name.split('年级')[0]+'年级';renderControl()}
+    function selectControlEntryClass(name){if(controlWorkView==='school'){selectControlEntryGrade(name?name.split('年级')[0]+'年级':'');return;}if(name&&!schoolControlClasses.includes(name))return;controlEntryClass=name;renderControl()}
     document.addEventListener('click',event=>document.querySelectorAll('.control-workbench-tools details[open]').forEach(menu=>{if(!menu.contains(event.target))menu.open=false}));
     document.addEventListener('keydown',event=>{if(event.key==='Escape')document.querySelectorAll('.control-workbench-tools details[open]').forEach(menu=>menu.open=false)});
     document.addEventListener('toggle',event=>{if(event.target.matches?.('.control-workbench-tools details[open]'))document.querySelectorAll('.control-workbench-tools details[open]').forEach(menu=>{if(menu!==event.target)menu.open=false})},true);
@@ -467,7 +467,9 @@
     }
 
     const controlClasses=['五年级 2 班','五年级 3 班'];
-    const schoolControlClasses=['四年级 1 班','四年级 2 班','五年级 1 班','五年级 2 班','五年级 3 班','六年级 1 班','六年级 2 班'];
+    const schoolGradeOrder=['一年级','二年级','三年级','四年级','五年级','六年级','七年级','八年级','九年级'];
+    // Preserve the original class seed order so saved student IDs stay stable.
+    const schoolControlClasses=['四年级 1 班','四年级 2 班','五年级 1 班','五年级 2 班','五年级 3 班','六年级 1 班','六年级 2 班',...['一年级','二年级','三年级','七年级','八年级','九年级'].flatMap(grade=>[grade+' 1 班',grade+' 2 班'])];
     let controlModule='homework',controlBatch=false,controlSelected=new Set(),controlQuery='',controlFilter='all',controlTarget=null,controlTrigger=null;
     const controlLabels={borrowing:'柜机借用管控',duration:'使用时长管控',homework:'智阅作业',world:'万象视界',lock:'锁屏'};
     let controlData={};
@@ -568,15 +570,15 @@
     function applyHomeworkDefaults(){const operatedAt=Date.now();controlStudents().forEach(s=>{s.answer=false;s.explanation=false;s.operatedAt={...s.operatedAt,homework:operatedAt};s.by=controlDemoRole==='admin'?'学校管理员':'陈老师';s.at=new Date().toLocaleString('zh-CN',{hour12:false})});try{localStorage.setItem('teacher-control-prototype-v1',JSON.stringify(controlData))}catch{}controlFilter='all';renderControl();controlToast('已恢复默认规则')}
     function renderControlDetailRows(){renderControlStateTabs();const rows=filteredControlStudents(),wrap=document.getElementById('control-detail-rows');if(controlModule==='borrowing'||controlModule==='duration'){wrap.innerHTML=rows.length?rows.map(s=>'<button type="button" class="borrow-student-row" onclick="openControlStudentDetail('+s.id+')"><span class="borrow-student-main"><b>'+s.name+'</b><span aria-hidden="true">›</span></span><span class="borrow-student-rule'+((controlModule==='borrowing'?s.schedules.length:s.durationRules.length)?'':' unset')+'">'+(controlModule==='borrowing'?borrowRulePreview(s):studentRuleDetail(s))+'</span></button>').join(''):'<div class="control-empty">没有符合条件的学生</div>';return}const direct=controlModule==='world'||controlModule==='lock';wrap.innerHTML=rows.length?rows.map(s=>{if(controlModule==='homework')return '<div class="control-detail-row homework-control-row"><button type="button" class="control-detail-main" onclick="openControlStudentDetail('+s.id+')"><span class="control-detail-name">'+s.name+'</span></button><span class="homework-inline-permissions">'+permissionMiniSwitch(s,'answer','答案')+permissionMiniSwitch(s,'explanation','详解')+'</span></div>';if(!direct)return '<button type="button" class="control-detail-row" onclick="openControlStudentDetail('+s.id+')"><span class="control-detail-name">'+s.name+'</span><span class="control-detail-rule">'+controlStudentBadges(s)+'</span><span class="control-detail-arrow">›</span></button>';const on=controlModule==='world'?s.world:s.locked,verb=controlModule==='world'?(on?'关闭':'开放'):(on?'解锁':'锁屏');return '<div class="control-detail-row direct-control-row"><button type="button" class="control-detail-main" onclick="openControlStudentDetail('+s.id+')"><span class="control-detail-name">'+s.name+'</span><span class="control-detail-rule">'+controlStudentBadges(s)+'</span></button>'+binaryToggleButton(controlModule,on,'confirmControl('+s.id+','+!on+')',verb+s.name+(controlModule==='world'?'的万象视界':'的平板'))+'</div>'}).join(''):'<div class="control-empty">没有符合条件的学生</div>'}
     let controlStudentDetailId=null;
-    function openControlStudentDetail(id){if(controlDemoRole!=='admin')return controlToast('老师仅可设置班级');controlStudentDetailId=id;controlView='studentDetail';renderControl()}
+    function openControlStudentDetail(id){if(controlDemoRole==='admin')return controlToast('学校管理员按班级设置');controlStudentDetailId=id;controlView='studentDetail';renderControl()}
     function studentControlDetail(s){if(controlModule==='borrowing'||controlModule==='duration')return '<b>当前规则</b>'+studentRuleDetail(s)+(controlModule==='borrowing'&&s.schedules.some(r=>r.mode==='dates')&&s.schedules.some(r=>r.mode==='weekly')?'<p class="control-form-note">指定日期内按指定日期规则借用，到期后自动恢复每周规则。</p>':'');if(controlModule==='homework')return '<b>当前权限</b>查看答案：'+(s.answer?'允许':'不允许')+'<br>查看解析：'+(s.explanation?'允许':'不允许');const allowed=controlModule==='world'?s.world:!s.locked,label=controlModule==='world'?(s.world?'已开放万象视界权限':'已关闭万象视界权限'):(s.locked?'平板已锁屏':'平板未锁屏');return '<b>当前状态</b><div style="display:flex;align-items:center;gap:9px;margin:9px 0 13px;padding:13px 15px;border-radius:11px;background:'+(allowed?'#eaf7f0':'#fff0f0')+';color:'+(allowed?'#20865e':'#c54c56')+';font-size:17px;font-weight:700;line-height:1.5"><span aria-hidden="true" style="width:8px;height:8px;flex:none;border-radius:50%;background:currentColor"></span>'+label+'</div>'}
     function openModuleScope(module){if(!isHeadTeacherClass())return;controlModule=module;const title=module==='borrowing'?'设置柜机借用管控':'设置使用时长';controlOverlay(title,'<p class="control-scope">'+selectedTeacherClass+' · 班主任权限</p><button class="control-scope-choice" onclick="openControlEditor(\'all\')"><b>全班学生</b><span>'+controlStudents().length+'名学生一起设置 ›</span></button><button class="control-scope-choice" onclick="openControlStudents(\''+module+'\')"><b>指定学生</b><span>选择一名或多名学生 ›</span></button>','')}
     let adminLevel='school',adminSelectedGrade='',schoolBorrowingEnabled=localStorage.getItem('school-borrowing-enabled')!=='false',adminBatchMode=false,adminSelectedScopes=new Set(),adminBulkRefs=[];
-    const schoolGrades=()=>[...new Set(schoolControlClasses.map(name=>name.split('年级')[0]+'年级'))];
+    const schoolGrades=()=>schoolGradeOrder.filter(grade=>schoolControlClasses.some(name=>name.startsWith(grade)));
     const adminClasses=()=>adminSelectedGrade?schoolControlClasses.filter(name=>name.startsWith(adminSelectedGrade)):schoolControlClasses;
     const adminAllStudents=()=>schoolControlClasses.flatMap(name=>controlData[name]);
     function adminSummary(students,module){if(module==='borrowing')return controlRuleCount(students,'schedules')+'人已设置规则';if(module==='duration')return controlRuleCount(students,'durationRules')+'人已设置时长规则';if(module==='homework')return students.filter(s=>s.answer||s.explanation).length+'人已开放部分权限';if(module==='world')return students.filter(s=>s.world).length+'人已开放权限';return students.filter(s=>s.locked).length+'人已锁屏'}
-    function enterAdminModule(module){controlModule=module;controlView='module';adminLevel=controlEntryClass?'class':controlEntryGrade?'grade':'school';adminModuleRoot=adminLevel;adminSelectedGrade=controlEntryGrade;if(controlEntryClass)selectedTeacherClass=controlEntryClass;adminBatchMode=false;adminSelectedScopes.clear();controlFilter='all';controlQuery='';controlSelected.clear();renderControl()}
+    function enterAdminModule(module){controlModule=module;controlView='module';adminLevel=controlEntryGrade?'grade':'school';adminModuleRoot=adminLevel;adminSelectedGrade=controlEntryGrade;adminBatchMode=false;adminSelectedScopes.clear();controlFilter='all';controlQuery='';controlSelected.clear();renderControl()}
     function enterAdminGrade(grade){adminSelectedGrade=grade;adminLevel='grade';adminBatchMode=false;adminSelectedScopes.clear();renderControl()}
     function enterAdminClass(name){selectedTeacherClass=name;adminLevel='class';adminBatchMode=false;adminSelectedScopes.clear();controlFilter='all';controlQuery='';controlSelected.clear();renderControl()}
     function adminBack(){if(controlView==='students'||controlView==='studentDetail'){controlView='module';renderControl();return}adminBatchMode=false;adminSelectedScopes.clear();if(adminLevel===adminModuleRoot){controlView='entry';renderControl();return}if(adminLevel==='class'){adminLevel='grade';renderControl();return}if(adminLevel==='grade'){adminLevel='school';renderControl();return}controlView='entry';renderControl()}
@@ -787,12 +789,15 @@ app.innerHTML='<main class="screen control-screen">'+top+'<section class="contro
     if(['school','homeroom','subject'].includes(params.get('workView'))){controlWorkView=params.get('workView');controlDemoRole=controlWorkView==='school'?'admin':'teacher';}
     if(!restoreDefaultTeacherPageOnReload()){document.querySelectorAll('[data-stage]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.stage)));document.querySelectorAll('[data-teacher-flow]').forEach(b=>b.addEventListener('click',()=>startTeacherFlow(b.dataset.teacherFlow)));restoreDemoTeacherOnLaunch();({home,auth,code,confirm,pending,approved,teacherLaunch,teacherLogin,teacherPhone:teacherPhoneLogin,teacherBind,teacherDesk,teacherSecurity}[stage]||home)();}
   </script>
-  <script src="control-rules.js?v=20261021-teacher-parity"></script>
-  <script src="control-parity.js?v=20261024-borrow"></script>
+  <script src="control-rules.js?v=20261105-new-rule-check"></script>
+  <script src="control-parity.js?v=20261105-new-rule-check"></script>
   <link rel="stylesheet" href="control-borrowing.css?v=20261024">
-  <script src="control-borrowing-model.js?v=20261024"></script>
-  <script src="control-borrowing.js?v=20261024"></script>
+  <script src="control-borrowing-model.js?v=20261105-new-rule-check"></script>
+  <script src="control-borrowing.js?v=20261105-new-rule-check"></script>
+  <script src="control-school-model.js?v=20261105-new-rule-check"></script>
+  <script src="control-school.js?v=20261105-new-rule-check"></script>
   <script src="control-page-demo.js"></script>
   <script src="demo-workspace.js"></script>
+  <link rel="stylesheet" href="control-homework-ui.css?v=20261105-new-rule-check">
 </body>
 </html>
