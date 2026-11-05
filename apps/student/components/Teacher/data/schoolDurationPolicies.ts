@@ -15,7 +15,7 @@ export function occupiedSchoolDurationDays(policies: SchoolDurationPolicies, stu
     .flatMap(rule => rule.weekdays)))].sort((a, b) => a - b);
 }
 
-export function removeSchoolPolicyFromStudent(control: StudentControl, original: DurationRule, scope: DurationApplyScope = 'all'): StudentControl {
+export function removeSchoolPolicyFromStudent(control: StudentControl, original: DurationRule, scope: DurationApplyScope = 'unmodified'): StudentControl {
   const protectedDays = scope === 'unmodified' ? teacherDurationWeekdays(control) : [];
   return { ...control, durationRules: control.durationRules.flatMap(existing => {
     // Keeping teacher settings can split a school rule into fewer weekdays.
@@ -73,4 +73,11 @@ export function updateSchoolDurationPolicySet(policies: SchoolDurationPolicies, 
   const occupied = occupiedSchoolDurationDays(policies, students, ids, original);
   if (rules.some(rule => rule.weekdays.some(day => occupied.includes(day)))) throw new Error('所选星期已有使用时长规则，请修改已有规则或删除后再新增');
   return rules.reduce((current, rule, index) => updateSchoolDurationPolicies(current, students, ids, rule, index === 0 ? original : undefined), policies);
+}
+
+export function moveSchoolDurationPolicySet(policies: SchoolDurationPolicies, students: DeviceStudent[], originalIds: string[], ids: string[], rules: DurationRule[], original?: DurationRule): SchoolDurationPolicies {
+  // Validate the destination before releasing anything from the original scope.
+  const saved = updateSchoolDurationPolicySet(policies, students, ids, rules, original);
+  const removedIds = originalIds.filter(id => !ids.includes(id));
+  return original && removedIds.length ? updateSchoolDurationPolicies(saved, students, removedIds, original, undefined, true) : saved;
 }
