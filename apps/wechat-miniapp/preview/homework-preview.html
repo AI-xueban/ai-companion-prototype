@@ -4816,11 +4816,12 @@ window.parentPrototype = (() => {
     if (!state.wechatAuthOpen) return '';
     return `<div class="teacher-phone-shade" aria-hidden="true" onclick="parentPrototype.action('cancelWechatAuth')"></div>
       <section id="parent-wechat-auth" class="teacher-phone-sheet" role="dialog" aria-modal="true" aria-labelledby="parent-wechat-auth-title" onkeydown="if(event.key==='Escape')parentPrototype.action('cancelWechatAuth')">
-        <div class="teacher-phone-app"><span class="teacher-phone-app-mark">家</span><span>通晤纪AI伴学</span></div>
-        <h2 id="parent-wechat-auth-title">授权微信信息</h2>
-        <p>用于确认家长身份并登录小程序。</p>
-        <button type="button" class="parent-primary" onclick="parentPrototype.action('allowWechatAuth')">允许</button>
-        <button type="button" class="parent-secondary" onclick="parentPrototype.action('cancelWechatAuth')">不允许</button>
+        <div class="teacher-phone-app"><span class="teacher-phone-app-mark">家</span><span>通晤纪AI伴学</span><span class="teacher-phone-info">i</span></div>
+        <h2 id="parent-wechat-auth-title">使用微信绑定的手机号</h2>
+        <p>继续验证家长账号</p>
+        <button type="button" class="teacher-phone-number" onclick="parentPrototype.action('continueWechatLogin')"><strong>138****8000</strong><span>微信绑定的手机号</span></button>
+        <button type="button" class="teacher-phone-deny" onclick="parentPrototype.action('continueWechatLogin')">不允许</button>
+        <button type="button" class="teacher-phone-other" onclick="parentPrototype.action('continueWechatLogin')">使用其他手机号登录</button>
       </section>`;
   }
 
@@ -4835,7 +4836,7 @@ window.parentPrototype = (() => {
   const views = {
     entry() { const canQuickEnter = state.boundStudents.length && state.currentWechatLinked;
       const fromWechatScan = state.flow === 'wechatScan';
-      return `${hero('查看孩子的学习情况', canQuickEnter ? '当前微信已关联孩子，可直接进入。' : fromWechatScan ? '已从微信扫一扫打开学生绑定码。' : '首次使用，请扫描学校发给家庭的孩子专属二维码进行绑定。')}<div class="parent-login-illustration" aria-hidden="true"><span class="parent-login-sun"></span><span class="parent-login-book"></span><span class="parent-login-bookmark"></span></div><div class="parent-login-tip"><strong>${canQuickEnter?'欢迎回来':'首次使用？'}</strong><span>${canQuickEnter?'当前微信已关联孩子，可以直接继续。':fromWechatScan?'授权微信信息后，直接核对孩子的姓名、学校和班级。':'登录后扫描学校发给家庭的孩子专属二维码，即可查看学习情况。'}</span></div>${notice()}${actions(canQuickEnter ? button('使用当前微信继续', 'quick') : button('微信登录', 'scan'), '<button class="parent-link" onclick="parentPrototype.action(\'recover\')">家长账号登录有问题？</button>', agreementRow())}`; },
+      return `${hero('查看孩子的学习情况', canQuickEnter ? '当前微信已关联孩子，可直接进入。' : fromWechatScan ? '已从微信扫一扫打开学生绑定码。' : '首次使用，请扫描学校发给家庭的孩子专属二维码进行绑定。')}<div class="parent-login-illustration" aria-hidden="true"><span class="parent-login-sun"></span><span class="parent-login-book"></span><span class="parent-login-bookmark"></span></div><div class="parent-login-tip"><strong>${canQuickEnter?'欢迎回来':'首次使用？'}</strong><span>${canQuickEnter?'当前微信已关联孩子，可以直接继续。':fromWechatScan?'微信登录后，直接核对孩子的姓名、学校和班级。':'登录后扫描学校发给家庭的孩子专属二维码，即可查看学习情况。'}</span></div>${notice()}${actions(canQuickEnter ? button('使用当前微信继续', 'quick') : button('微信登录', 'scan'), '<button class="parent-link" onclick="parentPrototype.action(\'recover\')">家长账号登录有问题？</button>', agreementRow())}`; },
     deviceConfirm() { return `${hero('此账号正在另一设备使用', '继续登录后，原设备将退出登录。')}${actions(button('继续登录', 'continueDeviceLogin'), button('取消', 'cancelDeviceLogin', 'secondary'))}`; },
     deviceKicked() { return `${hero('账号已在另一设备登录', '本设备已退出登录。重新登录后，另一设备也将退出。')}${actions(button('重新登录', 'retryAfterKick'))}`; },
     scan() { return `${hero('扫描孩子专属二维码', '请使用学校发给家庭的二维码。')}<div class="parent-info">扫描后，请核对孩子姓名、学校和班级。</div>${notice()}${actions(button('扫一扫', 'startScan'), button('从相册选择二维码', 'scanResult', 'secondary'), button('取消', 'cancelScan', 'secondary'))}`; },
@@ -4998,10 +4999,10 @@ window.parentPrototype = (() => {
       if (state.view !== 'entry') return;
       state.wechatAuthOpen = true;
       render();
-      document.querySelector('#parent-wechat-auth .parent-primary')?.focus();
+      document.querySelector('#parent-wechat-auth .teacher-phone-number')?.focus();
       return;
     }
-    if (name === 'cancelWechatAuth' || name === 'allowWechatAuth') {
+    if (name === 'cancelWechatAuth' || name === 'continueWechatLogin') {
       if (!state.wechatAuthOpen || state.view !== 'entry') return;
       state.wechatAuthOpen = false;
       if (name === 'cancelWechatAuth' || !state.agreementAccepted) return render();
@@ -5009,7 +5010,7 @@ window.parentPrototype = (() => {
         state.error = '微信登录暂未成功，请重试，或使用原手机号找回账号。';
         return render();
       }
-      // 演示微信扫一扫带入绑定码，授权后复用二维码解析和孩子核对流程。
+      // 演示微信扫一扫带入绑定码，登录后复用二维码解析和孩子核对流程。
       if (state.view === 'entry' && state.flow === 'wechatScan') return action('scanResult');
       state.view = 'scan';
       return render();

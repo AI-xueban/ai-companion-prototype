@@ -202,11 +202,15 @@ for (const exception of ['expiredInvite', 'revokedInvite', 'full']) {
   demo.p.action('scan');
   assert.equal(demo.state().view, 'entry');
   assert.match(demo.html(), /role="dialog"[^>]*aria-labelledby="parent-wechat-auth-title"/);
+  assert.match(demo.html(), /使用微信绑定的手机号/);
+  assert.ok(demo.html().includes('138****8000'));
+  assert.match(demo.html(), /teacher-phone-deny[^>]*>不允许</);
+  assert.match(demo.html(), /使用其他手机号登录/);
   demo.p.action('cancelWechatAuth');
   assert.equal(demo.state().view, 'entry');
   assert.equal(demo.state().wechatAuthOpen, false);
   demo.p.action('scan');
-  demo.p.action('allowWechatAuth');
+  demo.p.action('continueWechatLogin');
   assert.equal(demo.state().view, 'confirm', 'WeChat scan entry opens child confirmation after authorization');
   assert.match(demo.html(), /parent-student/);
   assert.equal(demo.state().bound, false);
@@ -214,7 +218,7 @@ for (const exception of ['expiredInvite', 'revokedInvite', 'full']) {
   assert.equal(demo.state().view, 'entry');
   assert.equal(demo.state().bound, false);
   demo.p.action('scan');
-  demo.p.action('allowWechatAuth');
+  demo.p.action('continueWechatLogin');
   demo.p.action('confirm');
   demo.flushTimers();
   demo.flushTimers();
@@ -314,7 +318,7 @@ console.log('Passed: 6-person capacity, direct transfer, sole guardian promotion
 console.log('Passed: page anomalies, first-binding races, school contact guidance without online application, stale-manager denial, disabled-student approval denial and rejection, duplicate requests, network retry and removal access.');
 
 {
- const d=create();d.p.scenario('first');d.p.setAgreement(true);d.p.action('scan');assert.equal(d.state().wechatAuthOpen,true);assert.doesNotMatch(d.html(),/家长微信手机号授权/);d.p.action('allowWechatAuth');assert.equal(d.state().view,'scan');d.p.action('scanResult');d.p.action('confirm');d.flushTimers();assert.equal(d.state().view,'bindSuccess');assert.equal(d.state().verifiedPhone,'');assert.equal(d.state().families[0].members[0].phone,'');const r=create(d.storage);r.p.start();assert.equal(r.state().verifiedPhone,'');r.p.tab('mine');assert.match(r.html(),/绑定本人手机号/);r.p.action('changePhone');assert.doesNotMatch(r.html(),/跳过手机号|暂不绑定手机号/);r.p.input('phone','13900139000');r.p.action('sendCode');r.p.input('code','123456');r.p.action('verifyPhone');assert.equal(r.state().verifiedPhone,'13900139000');assert.equal(r.state().families[0].members.length,1);assert.equal(r.state().families[0].members[0].phone,'13900139000');assert.equal(r.state().families[0].primaryId,'owner');
+ const d=create();d.p.scenario('first');d.p.setAgreement(true);d.p.action('scan');assert.equal(d.state().wechatAuthOpen,true);assert.doesNotMatch(d.html(),/家长微信手机号授权/);d.p.action('continueWechatLogin');assert.equal(d.state().view,'scan');d.p.action('scanResult');d.p.action('confirm');d.flushTimers();assert.equal(d.state().view,'bindSuccess');assert.equal(d.state().verifiedPhone,'');assert.equal(d.state().families[0].members[0].phone,'');const r=create(d.storage);r.p.start();assert.equal(r.state().verifiedPhone,'');r.p.tab('mine');assert.match(r.html(),/绑定本人手机号/);r.p.action('changePhone');assert.doesNotMatch(r.html(),/跳过手机号|暂不绑定手机号/);r.p.input('phone','13900139000');r.p.action('sendCode');r.p.input('code','123456');r.p.action('verifyPhone');assert.equal(r.state().verifiedPhone,'13900139000');assert.equal(r.state().families[0].members.length,1);assert.equal(r.state().families[0].members[0].phone,'13900139000');assert.equal(r.state().families[0].primaryId,'owner');
 }
 {
  const d=create();d.p.scenario('second');d.p.action('beginRequest');d.p.familyInput('name','王女士');d.p.action('submitFamilyRequest');d.p.setAgreement(true);d.p.action('skipPhone');assert.equal(d.state().request,'pending');assert.equal(d.state().families[0].application.phone,'');d.p.familyReview('manager');d.p.action('approve');d.p.familyReview('recipient');assert.equal(d.state().bound,true);assert.equal(d.state().verifiedPhone,'');assert.equal(d.state().families[0].members.length,2);
