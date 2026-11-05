@@ -170,7 +170,11 @@ for (const exception of ['expiredInvite', 'revokedInvite', 'full']) {
   demo.p.scenario('first');
   demo.p.action('scanResult');
   assert.match(demo.html(), />确认绑定</);
-  assert.doesNotMatch(demo.html(), /不是我的孩子/);
+  assert.match(demo.html(), /<button class="parent-secondary"[^>]*>不是我的孩子</);
+  demo.p.action('back');
+  assert.equal(demo.state().view, 'scan');
+  assert.equal(demo.state().bound, false);
+  demo.p.action('scanResult');
   demo.p.action('confirm');
   assert.equal(demo.state().view, 'confirm', 'Agreement still gates binding');
   demo.p.setAgreement(true);
