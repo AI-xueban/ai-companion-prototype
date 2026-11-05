@@ -55,6 +55,11 @@
 .borrowing-form input[type=date], .borrowing-form select { width:100%; padding:12px; margin-top:6px; border:1px solid #dce9f3; border-radius:10px; background:white; color:#19384e; }
 .borrowing-form fieldset { border:0; padding:0; }
 .borrowing-days { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.borrowing-weekdays { display:grid; gap:10px; margin-top:10px; }
+.borrowing-weekday { border:1px solid #dce9f3; border-radius:12px; padding:10px 12px; background:#fff; }
+.borrowing-weekday > label { display:flex; align-items:center; gap:8px; margin:0; font-weight:600; }
+.borrowing-weekday > label input { width:18px; height:18px; }
+.borrowing-weekday > button { margin-top:4px; }
 .borrowing-period { display:flex; gap:6px; align-items:center; margin:12px 0; }
 .borrowing-period input { width:0; flex:1; min-width:0; padding:10px 3px; border:1px solid #dce9f3; border-radius:8px; }
 .borrowing-period button { padding:10px 8px; }

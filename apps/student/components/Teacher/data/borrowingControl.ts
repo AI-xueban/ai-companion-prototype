@@ -1,4 +1,4 @@
-import { BorrowSchedule, deviceControlStudents, mergeBorrowSchedule, schoolDate } from './hierarchicalDeviceControl';
+import { BorrowSchedule, borrowingPeriodsForDay, deviceControlStudents, mergeBorrowSchedule, schoolDate } from './hierarchicalDeviceControl';
 import { schoolDeviceClasses } from './schoolDeviceClasses';
 
 export const borrowingStorageKey = (schoolId: string) => `ai-companion-borrowing-v3:${schoolId}`;
@@ -40,10 +40,12 @@ export const saveClassBorrowingRule = (state: BorrowingState, classIds: string[]
   classRules: { ...state.classRules, ...Object.fromEntries(classIds.map(id => [id, mergeBorrowSchedule(state.classRules[id] ?? [], rule, editingId)])) },
 });
 export type BorrowingRuleEntry = { classId: string; ruleId: string };
-export const saveGroupedBorrowingRule = (state: BorrowingState, entries: BorrowingRuleEntry[], rule: BorrowSchedule): BorrowingState => ({
+export const saveGroupedBorrowingRule = (state: BorrowingState, entries: BorrowingRuleEntry[], rule: BorrowSchedule, targetClassIds = entries.map(entry => entry.classId)): BorrowingState => ({
   ...state,
-  classRules: { ...state.classRules, ...Object.fromEntries(entries.map(({ classId, ruleId }) => [classId,
-    mergeBorrowSchedule(state.classRules[classId] ?? [], { ...rule, id: ruleId }, ruleId)])) },
+  classRules: { ...state.classRules, ...Object.fromEntries(targetClassIds.map(classId => {
+    const original = entries.find(entry => entry.classId === classId);
+    return [classId, mergeBorrowSchedule(state.classRules[classId] ?? [], { ...rule, id: original?.ruleId ?? rule.id }, original?.ruleId ?? rule.id)];
+  })) },
 });
 export const deleteGroupedBorrowingRule = (state: BorrowingState, entries: BorrowingRuleEntry[]): BorrowingState => ({
   ...state,
@@ -61,15 +63,36 @@ export const borrowingResult = (state: BorrowingState, student: { id: string; cl
     ?? rules.find(item => item.mode === 'weekly' && item.weekdays.includes(weekday));
   if (!rule) return rules.some(item => item.mode === 'weekly') ? '当前不在借用时段' : '当前可借用';
   if (rule.deny) return '指定日期禁止借用';
-  return rule.periods.some(period => period.start <= parts && parts < period.end) ? '当前可借用' : '当前不在借用时段';
+  const periods = rule.mode === 'weekly' ? borrowingPeriodsForDay(rule, weekday) : rule.periods;
+  return periods.some(period => period.start <= parts && parts < period.end) ? '当前可借用' : '当前不在借用时段';
 };
 
 export const borrowingRuleSignature = (rule: BorrowSchedule) => JSON.stringify({
   mode: rule.mode,
   days: rule.mode === 'weekly' ? [...rule.weekdays].sort() : [rule.startDate, rule.endDate],
   deny: rule.mode === 'dates' && rule.deny,
-  periods: rule.mode === 'dates' && rule.deny ? [] : rule.periods.map(p => p.start + '-' + p.end).sort(),
+  periods: rule.mode === 'dates' && rule.deny ? [] : rule.mode === 'weekly'
+    ? [...rule.weekdays].sort().map(day => [day, borrowingPeriodsForDay(rule, day).map(p => p.start + '-' + p.end).sort()])
+    : rule.periods.map(p => p.start + '-' + p.end).sort(),
 });
+
+// Date ranges include both endpoints; a rejected save must not alter any grade.
+export function gradeBorrowingDateConflict(state: BorrowingState, classIds: string[], rule: BorrowSchedule, originals: BorrowingRuleEntry[] = []): boolean {
+  return rule.mode === 'dates' && classIds.some(classId => (state.classRules[classId] ?? []).some(existing =>
+    existing.mode === 'dates' && !originals.some(entry => entry.classId === classId && entry.ruleId === existing.id)
+    && existing.startDate <= rule.endDate && rule.startDate <= existing.endDate));
+}
+
+export function saveGradeBorrowingRule(state: BorrowingState, classIds: string[], rule: BorrowSchedule, originals: BorrowingRuleEntry[] = [], confirmWeeklyChange = false): BorrowingState {
+  if (rule.mode === 'weekly' && !confirmWeeklyChange && !originals.length && classIds.some(classId => (state.classRules[classId] ?? []).some(existing => existing.mode === 'weekly'))) throw new Error('所选年级已有每周固定规则，请编辑已有规则或删除后再新增');
+  if (gradeBorrowingDateConflict(state, classIds, rule, originals)) throw new Error('所选日期已有规则，请重新选择');
+  const normalized: BorrowSchedule = rule.mode === 'dates' ? { ...rule, deny: true, periods: [], weekdays: [], weekdayPeriods: undefined } : { ...rule, deny: false };
+  return { ...state, classRules: { ...state.classRules, ...Object.fromEntries(classIds.map(classId => [classId,
+    [...(state.classRules[classId] ?? []).filter(existing => rule.mode === 'weekly'
+      ? existing.mode !== 'weekly'
+      : !originals.some(entry => entry.classId === classId && entry.ruleId === existing.id)), structuredClone(normalized)],
+  ])) } };
+}
 export const groupBorrowingRules = (state: BorrowingState, classIds: string[], mode: BorrowSchedule['mode']) => {
   const groups = new Map<string, { key: string; rule: BorrowSchedule; entries: BorrowingRuleEntry[] }>();
   classIds.forEach(classId => (state.classRules[classId] ?? []).filter(rule => rule.mode === mode).forEach(rule => {

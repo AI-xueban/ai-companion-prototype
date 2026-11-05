@@ -11,16 +11,16 @@ export const DeviceControlLayer: React.FC<{
   labelId: string;
   onClose: () => void;
   unsavedChanges?: boolean;
-  variant?: "drawer" | "dialog";
-  size?: "normal" | "wide";
+  variant?: "dialog";
+  size?: "normal" | "wide" | "compact";
   level?: number;
   children: (close: () => void, closeAfterSave: () => void) => React.ReactNode;
 }> = ({
   labelId,
   onClose,
   unsavedChanges = false,
-  variant = "drawer",
-  size = "normal",
+  variant,
+  size = variant === "dialog" ? "compact" : "normal",
   level = 0,
   children,
 }) => {
@@ -111,7 +111,7 @@ export const DeviceControlLayer: React.FC<{
   return createPortal(
     <div
       className="dc-overlay"
-      data-variant={variant}
+      data-variant="dialog"
       data-size={size}
       data-level={level}
       data-closing={closing}

@@ -39,7 +39,7 @@ for (const name of ['parent-prototype.css', 'homework-prototype.css', 'learning-
   if (!marker || !offline.includes(marker)) throw new Error(`无法定位样式文件：${name}`);
   offline = offline.replace(marker, `<style data-offline-source="${name}">\n${await readFile(join(root, name), 'utf8')}\n</style>`);
 }
-for (const name of ['learning-data.js', 'learning-prototype.js', 'workbench-prototype.js', 'homework-tutor.js', 'homework-prototype.js', 'page-demo-tools.js', 'homework-console.js', 'parent-prototype.js', 'learning-demo.js', 'demo-workspace.js']) {
+for (const name of ['learning-data.js', 'learning-prototype.js', 'workbench-prototype.js', 'homework-tutor.js', 'homework-prototype.js', 'page-demo-tools.js', 'homework-console.js', 'parent-prototype.js', 'learning-demo.js', 'homework-tutor-walkthrough.js', 'demo-workspace.js']) {
   const marker = offline.match(new RegExp(`<script src="${name.replaceAll(".", "\\.")}(?:\\?[^"]*)?"></script>`))?.[0];
   if (!marker || !offline.includes(marker)) throw new Error(`无法定位脚本文件：${name}`);
   const source = (name === 'learning-data.js' ? dataScript : await readFile(join(root, name), 'utf8')).replace(/<\/script/gi, '<\\/script');

@@ -59,7 +59,7 @@ export interface GradingWaitEstimate {
 }
 export interface GradingWaitRecord {
   taskId:string; itemId:string; studentId:string; version?:number;
-  questions?:Array<{state:string}>; gradingQueueState?:'queued'|'processing';
+  gradingDelayed?:boolean; questions?:Array<{state:string}>; gradingQueueState?:'queued'|'processing';
   gradingWaitEstimate?:GradingWaitEstimate; gradingError?:string; gradingResult?:SubmissionGradingImages;
 }
 export function gradingWaitNotice(records:GradingWaitRecord[],now=Date.now()):string {
@@ -79,6 +79,24 @@ export function gradingWaitNotice(records:GradingWaitRecord[],now=Date.now()):st
   if(estimates.some(e=>!e))return '正在排队批改，完成时间暂无法估算';
   const min=Math.ceil(Math.max(...estimates.map(e=>e!.minMinutes))),max=Math.ceil(Math.max(...estimates.map(e=>e!.maxMinutes)));
   return `批改预计还需${min===max?min:min+'—'+max}分钟完成`;
+}
+
+export function gradingOverviewStatus(records:GradingWaitRecord[]){
+  const active=records.filter(r=>submissionGradingComplete(r)!==true),questions=active.flatMap(r=>r.questions||[]);
+  const waiting=active.filter(r=>!r.gradingError&&(r.questions?.some(q=>['queued','processing'].includes(q.state))||(!r.questions?.length&&r.gradingQueueState)));
+  const failed=questions.some(q=>q.state==='failed')||active.some(r=>r.gradingError&&!/未接入|等待|已重试/.test(r.gradingError));
+  const review=questions.filter(q=>q.state==='review').length;
+  if(waiting.length){const delayed=waiting.some(r=>r.gradingDelayed),processing=waiting.some(r=>r.gradingQueueState==='processing'||r.questions?.some(q=>q.state==='processing')),notice=gradingWaitNotice(waiting),estimate=notice.startsWith('批改预计')?notice.replace('批改预计','预计'):'';return {title:delayed?'批改时间较长':processing?'正在批改':'等待批改',text:delayed?'正在继续处理，完成后自动更新':estimate||'完成时间暂无法估算，完成后自动更新',note:'仅指当前已提交内容'+(failed?' · 部分内容批改失败':'')+(review?' · 待复核 '+review+' 题次':''),tone:delayed||failed?'warning':'waiting'};}
+  if(failed)return {title:'部分内容批改失败',text:'已完成结果保留，失败内容不计入对错统计',note:'请进入对应作业项查看详情',tone:'warning'};
+  if(review)return {title:'待教师复核 '+review+' 题次',text:'请核对学生原图，未复核题次不计入正确率',note:'',tone:'warning'};
+  return null;
+}
+
+export function gradingOverviewBrief(status:ReturnType<typeof gradingOverviewStatus>):string{
+  if(!status)return '';
+  const extra=status.note.split(' · ').slice(1).join(' · ');
+  const text=status.title==='正在批改'?'其余已提交内容批改中，'+status.text.replace('完成时间暂无法估算，完成后自动更新','完成后自动更新'):status.title==='等待批改'?'其余已提交内容排队中，'+status.text.replace('完成时间暂无法估算，完成后自动更新','完成后自动更新'):status.title==='批改时间较长'?'其余已提交内容处理较慢，完成后自动更新':status.title.includes('失败')?'部分内容批改失败，已完成结果保留':status.title;
+  return text.replace(/分钟完成$/,'分钟')+(extra?' · '+extra:'');
 }
 
 export function canUseAIExplanation(q:GradingQuestion){return isFormalGrade(q)&&!q.explanationInvalidated&&!(q.decisionSource==='teacher'&&typeof q.aiCorrect==='boolean'&&q.aiCorrect!==q.correct);}
@@ -235,13 +253,12 @@ export function homeworkDocumentError(name: string, bytes: Uint8Array): string {
   if (text.includes('EncryptionInfo') || text.includes('EncryptedPackage')) return '文档已加密，请导出为无需密码的 Word 或 PDF。';
   return '';
 }
-export function homeworkPublishError(task: {title:string;description:string;attachments?:HomeworkFileReadiness[];allowSupplement?:boolean;deadline:string;submitDeadline:string;items:Array<{title:string;type?:string;submitType?:string;expectedPages?:number}>}, now=Date.now()): string {
+export function homeworkPublishError(task: {title:string;description:string;attachments?:HomeworkFileReadiness[];allowSupplement?:boolean;deadline:string;submitDeadline:string;items:Array<{title:string;type?:string;submitType?:string}>}, now=Date.now()): string {
   if (!task.title.trim()) return '请填写作业标题。';
   if (!task.description.trim() && !task.attachments?.length) return '请填写老师的要求或添加附件。';
   const capacityError=homeworkAttachmentError(task.attachments||[]);if(capacityError)return capacityError;
   const attachmentError=task.attachments?.map(homeworkOriginalError).find(Boolean);if(attachmentError)return attachmentError;
   if (!task.items.length || task.items.some(i=>!i.title.trim() || !(i.type || i.submitType))) return '请补全每项要求和提交方式。';
-  if (task.items.some(i=>i.expectedPages !== undefined && (!Number.isInteger(i.expectedPages) || i.expectedPages < 0 || i.expectedPages > 9))) return '预计页数请填写 1—9，留空表示不限。';
   if (!(homeworkTime(task.deadline)>now)) return '截止时间已过，请重新设置。';
   if (!(task.allowSupplement===false?homeworkTime(task.submitDeadline)===homeworkTime(task.deadline):homeworkTime(task.submitDeadline)>homeworkTime(task.deadline))) return '请调整补交时间：开启补交时须晚于正常截止，关闭时与正常截止一致。';
   return '';

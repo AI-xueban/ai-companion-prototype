@@ -25,7 +25,7 @@ try{
   for(const scenario of baseline.parentScenarios)assert.ok(entries.some(e=>e.kind==='parent'&&e.value===scenario),'Missing parent scenario '+scenario);
   for(const flow of baseline.teacherFlows)assert.ok(entries.some(e=>e.kind==='teacher'&&e.value===flow),'Missing teacher flow '+flow);
   for(const state of baseline.availability)assert.equal(await page.locator('[data-availability="'+state+'"]').count(),1);
-  for(const e of entries.filter(e=>!['control','controlModule','reference'].includes(e.kind))){await choose(e.id);assert.ok((await page.locator('#app .screen').count())>0,e.id);await externalState();results.push({entry:e.id,title:await page.locator('#app .wx-title').textContent()});}
+  for(const e of entries.filter(e=>!['control','controlModule','reference'].includes(e.kind))){await choose(e.id);assert.ok((await page.locator('#app .screen').count())>0,e.id);await externalState();if(e.id==='hw-parent-tutor'){assert.equal(await page.locator('#dw-state-toggle').isVisible(),false,'AI 解题不应显示批改结果状态');assert.equal(await page.locator('#page-demo-tools-host').count(),0,'AI 解题不应挂载批改状态面板');}results.push({entry:e.id,title:await page.locator('#app .wx-title').textContent()});}
   // Actual directory clicks, independent role groups and search results.
   const homeworkGroups=await page.locator('[data-dw-group="homework"]>.dw-role>summary').allTextContents();
   assert.deepEqual(homeworkGroups,['教师','家长'],'Homework entries are grouped by role');

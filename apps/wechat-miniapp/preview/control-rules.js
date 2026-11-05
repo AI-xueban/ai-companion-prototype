@@ -11,22 +11,15 @@
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   };
   const periods = rule => Array.isArray(rule.periods) ? copy(rule.periods) : rule.start && rule.end ? [{ start: rule.start, end: rule.end }] : [];
+  const borrowDayPeriods = (rule, day) => Array.isArray(rule.dailyPeriods?.[day]) ? copy(rule.dailyPeriods[day]) : periods(rule);
   const normalize = (rule, id) => ({ ...copy(rule), id: rule.id || id, weekdays: [...(rule.weekdays || [])].sort(), periods: periods(rule) });
   const prune = (rules, date = today()) => rules.filter(rule => rule.mode !== 'dates' || !rule.endDate || rule.endDate >= date);
   const overlap = (a, b) => a.mode === b.mode && (a.mode === 'weekly' ? a.weekdays.some(day => b.weekdays.includes(day)) : a.startDate <= b.endDate && b.startDate <= a.endDate);
   function mergeBorrow(existing, next, editingId) {
-    const retained = existing.filter(rule => rule.id !== editingId).flatMap(rule => {
-      if (!overlap(rule, next)) return [copy(rule)];
-      if (rule.mode === 'weekly') {
-        const days = rule.weekdays.filter(day => !next.weekdays.includes(day));
-        return days.length ? [{ ...copy(rule), weekdays: days }] : [];
-      }
-      const pieces = [];
-      if (rule.startDate < next.startDate) pieces.push({ ...copy(rule), id: rule.id + '-before-' + next.id, endDate: dateOffset(next.startDate, -1) });
-      if (rule.endDate > next.endDate) pieces.push({ ...copy(rule), id: rule.id + '-after-' + next.id, startDate: dateOffset(next.endDate, 1) });
-      return pieces;
-    });
-    return [...retained, copy(next)];
+    const retained = existing.filter(rule => rule.id !== editingId);
+    if (next.mode === 'weekly') return [...retained.filter(rule => rule.mode !== 'weekly').map(copy), copy(next)];
+    if (retained.some(rule => rule.mode === 'dates' && overlap(rule, next))) throw Error('所选日期已有规则，请重新选择');
+    return [...retained.map(copy), copy(next)];
   }
   function mergeDuration(existing, next, editingId) {
     return [...existing.map(rule => ({ ...copy(rule), id: rule.id === editingId ? rule.id + '-retained' : rule.id, weekdays: rule.weekdays.filter(day => !next.weekdays.includes(day)) })).filter(rule => rule.weekdays.length), copy(next)];
@@ -37,7 +30,7 @@
     const rules = prune(student.schedules || [], date);
     const matched = [...rules].reverse().find(rule => rule.mode === 'dates' && rule.startDate <= date && rule.endDate >= date)
       || [...rules].reverse().find(rule => rule.mode === 'weekly' && rule.weekdays.includes(day));
-    return matched ? { ...copy(matched), periods: matched.deny ? [] : periods(matched) } : { deny: rules.some(rule => rule.mode === 'weekly'), periods: [], reason: rules.some(rule => rule.mode === 'weekly') ? '当前星期不在借用安排内' : '未设置借用时间，默认随时可借' };
+    return matched ? { ...copy(matched), periods: matched.deny ? [] : matched.mode === 'weekly' ? borrowDayPeriods(matched, day) : periods(matched) } : { deny: rules.some(rule => rule.mode === 'weekly'), periods: [], reason: rules.some(rule => rule.mode === 'weekly') ? '当前星期不在借用安排内' : '未设置借用时间，默认随时可借' };
   }
   function effectiveDuration(student, day) {
     const own = [...(student.durationRules || [])].reverse().find(rule => rule.weekdays.includes(day));
@@ -56,7 +49,7 @@
     return parts.join('、');
   };
   const periodText = rule => rule.deny ? '全天禁止借用' : periods(rule).length ? periods(rule).map(p => p.start + '–' + p.end).join('、') : '全天可用';
-  const borrowText = rule => (rule.mode === 'dates' ? rule.startDate + ' 至 ' + rule.endDate : dayText(rule.weekdays)) + ' · ' + periodText(rule);
+  const borrowText = rule => rule.mode === 'dates' ? rule.startDate + ' 至 ' + rule.endDate + ' · ' + periodText(rule) : (rule.weekdays || []).map(day => dayText([day]) + ' ' + (rule.deny ? '全天禁止借用' : periodText({ periods: borrowDayPeriods(rule, day) }))).join('；');
   const durationText = rule => `连续 ${rule.continuousMinutes} 分钟 · 休息 ${rule.restMinutes} 分钟 · 每日 ${rule.dailyMinutes} 分钟 · ${periodText(rule)}`;
   function durationGroups(student) {
     const groups = [];
@@ -81,7 +74,14 @@
     return '生效中';
   }
   function validateBorrow(rule, now = new Date(), original = null) {
-    if (rule.mode === 'weekly' && !rule.weekdays.length) return '请至少选择一个星期';
+    if (rule.mode === 'weekly') {
+      if (!rule.weekdays.length) return '请至少选择一个星期';
+      for (const day of rule.weekdays) {
+        const error = validatePeriods(borrowDayPeriods(rule, day));
+        if (error) return dayText([day]) + '：' + error;
+      }
+      return '';
+    }
     if (rule.mode === 'dates') {
       if (!rule.startDate || !rule.endDate || rule.startDate > rule.endDate) return '请选择正确的开始和结束日期';
       const currentDate = schoolDate(now);
@@ -148,7 +148,7 @@
     });
     return { data: next, count };
   }
-  const api = { copy, today, defaultDuration, normalize, periods, prune, overlap, mergeBorrow, mergeDuration, effectiveBorrow, effectiveDuration, dayText, periodText, borrowText, borrowStatus, durationText, durationGroups, validatePeriods, validateBorrow, homeworkValue, signature, modified, resolve, prepare, durationDays, deletionPreview, transaction };
+  const api = { copy, today, defaultDuration, normalize, periods, borrowDayPeriods, prune, overlap, mergeBorrow, mergeDuration, effectiveBorrow, effectiveDuration, dayText, periodText, borrowText, borrowStatus, durationText, durationGroups, validatePeriods, validateBorrow, homeworkValue, signature, modified, resolve, prepare, durationDays, deletionPreview, transaction };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.controlRules = api;
 })(typeof window !== 'undefined' ? window : globalThis);

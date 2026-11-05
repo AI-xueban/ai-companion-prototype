@@ -538,40 +538,39 @@
   position: fixed;
   inset: 0;
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
   background: #17233959;
   backdrop-filter: blur(3px);
   animation: dc-backdrop-in 180ms ease-out;
-}
-.dc-overlay[data-variant="dialog"] {
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
 }
 .dc-panel {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 680px;
-  height: 100%;
+  max-width: 760px;
+  height: auto;
+  max-height: calc(100dvh - 48px);
   min-height: 0;
+  overflow: hidden;
+  border-radius: 17px;
   background: #fff;
-  box-shadow: -12px 0 40px #14203d14;
+  box-shadow: 0 18px 60px #14203d29;
   outline: none;
-  animation: dc-drawer-in 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  animation: dc-dialog-in 180ms ease-out;
 }
 .dc-overlay[data-size="wide"] .dc-panel {
-  max-width: 900px;
+  max-width: 960px;
 }
-.dc-overlay[data-variant="dialog"] .dc-panel {
-  height: auto;
-  max-height: calc(100dvh - 40px);
+.dc-overlay[data-size="compact"] .dc-panel {
   max-width: 480px;
   padding: 25px;
-  border-radius: 17px;
   overflow-y: auto;
-  animation: dc-dialog-in 180ms ease-out;
-  box-shadow: 0 18px 60px #14203d29;
+}
+.dc-panel > header,
+.dc-panel > .dc-confirm-footer {
+  flex-shrink: 0;
 }
 .dc-panel > header {
   padding: 24px;
@@ -773,7 +772,7 @@
   pointer-events: none;
 }
 .dc-overlay[data-closing="true"] .dc-panel {
-  animation: dc-drawer-out 170ms ease-in forwards;
+  animation: dc-dialog-out 170ms ease-in forwards;
 }
 .dc-overlay[data-closing="true"][data-variant="dialog"] .dc-panel {
   animation: dc-dialog-out 170ms ease-in forwards;
@@ -816,22 +815,6 @@
   to {
     background-color: #17233900;
     backdrop-filter: blur(0);
-    opacity: 0;
-  }
-}
-@keyframes dc-drawer-in {
-  from {
-    transform: translateX(28px);
-    opacity: 0.4;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-@keyframes dc-drawer-out {
-  to {
-    transform: translateX(28px);
     opacity: 0;
   }
 }
@@ -1087,9 +1070,12 @@
   .dc-overlay[data-variant="dialog"] {
     padding: 16px;
   }
-  .dc-overlay[data-variant="dialog"] .dc-panel {
-    padding: 21px;
+  .dc-panel {
+    max-height: calc(100dvh - 32px);
     border-radius: 15px;
+  }
+  .dc-overlay[data-size="compact"] .dc-panel {
+    padding: 21px;
   }
   .dc-confirm-footer button {
     flex: 1;

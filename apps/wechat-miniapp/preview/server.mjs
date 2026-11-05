@@ -42,12 +42,16 @@ export async function handlePreviewRequest(request, response) {
       response.writeHead(200, { 'Content-Type': pathname.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8', 'Cache-Control': 'no-store' });
       response.end(await readFile(join(root, pathname.slice(1)))); return;
     }
+    if (['/assets/tutor/geometry-original.jpg','/assets/tutor/geometry-crop.png'].includes(pathname)) {
+      response.writeHead(200, {'Content-Type':pathname.endsWith('.jpg')?'image/jpeg':'image/png','Cache-Control':'no-store'});
+      response.end(await readFile(join(root,pathname.slice(1))));return;
+    }
     const teacherArt = pathname === '/assets/teacher-login-illustration.png';
     const homeworkPaper = ['/miniprogram/assets/homework-demo-paper.png', '/miniprogram/assets/homework-real-page-1.jpg', '/miniprogram/assets/homework-real-page-2.png'].includes(pathname) || /^\/miniprogram\/assets\/homework-worksheets\/[a-z0-9-]+\.(?:webp|png)$/.test(pathname);
     const scenarioAsset = /^\/assets\/tutor-scenarios\/[0-9]{2}-[\p{L}0-9-]+\.png$/u.test(pathname) ? pathname.slice(1) : null;
     const homeworkDemoFile = /^\/assets\/homework-demo-files\/[a-z0-9-]+\.(?:mp4|mp3|pdf)$/i.test(pathname) ? pathname.slice(1) : null;
     const homeworkDemoPreview = /^\/assets\/homework-demo-files\/(?:campus-intro|exercise-paper)-pages\/page-\d+\.jpg$/i.test(pathname) ? pathname.slice(1) : null;
-    const parentAsset = ['/homework-ai-review.html', '/homework-tutor.js', '/demo-workspace.js', '/demo-workspace.css', '/learning-demo.js', '/page-demo-tools.js', '/homework-console.js', '/parent-prototype.css', '/parent-prototype.js', '/homework-prototype.css', '/homework-prototype.js', '/homework-flow-lab.css', '/homework-flow-lab.js', '/homework-flow-lab.html', '/homework-preview.html', '/教师发布任务-新版预览.html', '/learning-prototype.css', '/learning-prototype.js', '/workbench-prototype.js', '/control-prototype.html', '/control-prototype.css', '/control-rules.js', '/control-parity.js'].includes(pathname) ? pathname.slice(1) : null;
+    const parentAsset = ['/homework-ai-review.html', '/homework-tutor-walkthrough.js', '/homework-tutor.js', '/demo-workspace.js', '/demo-workspace.css', '/learning-demo.js', '/page-demo-tools.js', '/homework-console.js', '/parent-prototype.css', '/parent-prototype.js', '/homework-prototype.css', '/homework-prototype.js', '/homework-flow-lab.css', '/homework-flow-lab.js', '/homework-flow-lab.html', '/homework-preview.html', '/教师发布任务-新版预览.html', '/learning-prototype.css', '/learning-prototype.js', '/workbench-prototype.js', '/control-prototype.html', '/control-prototype.css', '/control-rules.js', '/control-parity.js'].includes(pathname) ? pathname.slice(1) : null;
     if (!assetName && !teacherArt && !homeworkPaper && !scenarioAsset && !homeworkDemoFile && !homeworkDemoPreview && !parentAsset && pathname !== '/' && pathname !== '/index.html') {
       response.writeHead(404); response.end('Preview page or asset not found'); return;
     }
