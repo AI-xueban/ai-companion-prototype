@@ -3100,6 +3100,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                             initial={inlineDemoSnapshots.current[inlineDemoKind]}
                             onSnapshot={(snapshot) => { inlineDemoSnapshots.current[inlineDemoKind] = snapshot; }}
                             registerSend={(send) => { inlineDemoSendRef.current = send; }}
+                            onSaveSuccess={showBusyToast}
                             onPrefill={(text) => { setInputText(text); window.setTimeout(() => chatInputRef.current?.focus(), 0); }}
                             onContentChange={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })}
                         />}
