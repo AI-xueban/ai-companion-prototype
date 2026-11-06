@@ -343,3 +343,33 @@ body.dw-ui-new #app .control-screen :is(.parity-student-list,.borrow-student-lis
 body.dw-ui-new #app .control-screen :is(.borrow-list-toolbar,.flat-control-toolbar) { padding-left:16px; padding-right:16px; background:#f3f9ff; }
 body.dw-ui-new #app .control-screen :is(.control-batchbar,.admin-batchbar,.borrow-editor-actions,.borrowing-footer) { border-color:var(--dw-border); background:#fffffff5; box-shadow:0 -7px 22px var(--dw-shadow); }
 body.dw-ui-new #app .control-screen .control-sheet { border-radius:24px 24px 0 0; background:#fff; box-shadow:0 -8px 28px var(--dw-shadow); }
+
+/* Multi-weekday groups share one configuration within the weekly rule. */
+.control-screen .control-group-weekdays { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:12px 0; }
+.control-screen .control-group-weekdays label { display:flex; align-items:center; justify-content:center; gap:5px; min-height:40px; padding:4px; border:1px solid #dce8ef; border-radius:10px; font-size:13px; background:#fff; }
+.control-screen .control-group-weekdays input { width:16px; height:16px; min-height:0; margin:0; accent-color:#168ad0; }
+.control-screen .control-group-weekdays label:has(input:checked) { border-color:#168ad0; background:#edf7ff; color:#0874bd; }
+.control-screen .control-group-weekdays label:has(input:disabled) { opacity:.45; }
+.control-screen [data-duration-group], .control-screen [data-borrow-group] { margin:16px 0; padding:14px; border:1px solid #dce8ef; border-radius:16px; background:#fff; }
+
+.control-screen .borrowing-day-line { display:block; margin:0 0 6px; line-height:1.6; }
+.control-screen .borrowing-day-line:last-child { margin-bottom:0; }
+
+.school-mobile .school-strip {padding:12px;background:#f0f4f7;color:#60758b;border-radius:12px;line-height:1.7;}
+.school-mobile .school-rule {display:flex;justify-content:space-between;gap:14px;border-top:1px solid #e4edf3;padding:18px 0;align-items:flex-start;}
+.school-mobile .school-rule>div:first-child {flex:1;min-width:0;}.school-mobile .school-rule p {line-height:1.7;margin:8px 0;white-space:pre-line;}
+.school-mobile .school-rule>div:last-child button {margin:3px;padding:8px 12px;}.school-mobile .school-default {color:#8796a4;}
+.school-mobile .school-grade-options,.school-mobile .school-weekdays {display:flex;gap:12px;flex-wrap:wrap;margin:16px 0;}
+.school-mobile label {line-height:1.8;}.school-mobile fieldset {border:1px solid #dce8ef;border-radius:12px;margin:16px 0;padding:12px;}.school-mobile fieldset label {display:block;margin:10px 0;}
+.school-mobile input[type=checkbox],.school-mobile input[type=radio] {width:18px;height:18px;min-height:0;margin-right:6px;accent-color:#168ad0;}
+.school-mobile input[type=date],.school-mobile input[type=number],.school-mobile input[type=time] {border:1px solid #dce8ef;padding:8px;border-radius:10px;max-width:100%;}.school-mobile small {display:block;color:#8496a8;}
+
+/* Mobile administrator: direct module switch and one clear primary action. */
+.school-mobile .school-help {margin:0 0 14px;color:#8494a7;font-size:13px;}.school-mobile .school-help summary {cursor:pointer;padding:8px 2px;}.school-mobile .school-help p {line-height:1.7;margin:4px 0 10px;}
+.school-mobile .control-module-panel {padding:18px;margin-bottom:14px;}.school-mobile .school-section-heading {display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}.school-mobile .school-section-heading h3 {margin:0;font-size:17px;}.school-mobile .school-section-heading .control-actions {margin:0;gap:6px;}.school-mobile .school-section-heading button {padding:10px 13px;min-height:42px;font-size:14px;}
+.school-mobile .school-rule {display:block;padding:16px 0;}.school-mobile .school-rule>div:last-child:not(:first-child) {display:flex;justify-content:flex-end;gap:8px;margin-top:12px;}.school-mobile .school-rule>div:last-child button {min-height:40px;padding:8px 16px;margin:0;}.school-mobile .school-default {background:#f6f8fb;border:0;border-radius:12px;padding:14px;margin-top:14px;font-size:13px;}.school-mobile .school-default b {font-size:14px;}
+.school-mobile #school-form {padding-bottom:12px;}.school-mobile .school-grade-options {gap:8px;}.school-mobile .school-grade-options label {display:flex;align-items:center;padding:8px 12px;min-height:42px;border:1px solid #e1eaf2;border-radius:12px;background:#fff;font-size:14px;}.school-mobile .school-grade-options label:has(input:checked) {background:#edf7ff;border-color:#168ad0;color:#0879cb;}.school-mobile .school-grade-options label:has(input:disabled) {background:#f5f7fa;color:#9daab7;}
+.school-mobile .school-rule-group {padding:16px;border:1px solid #e1eaf2;border-radius:18px;background:#fff;margin:14px 0;}.school-mobile .school-rule-group h3 {margin:0 0 10px;font-size:16px;}.school-mobile .school-weekdays {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;}.school-mobile .school-weekdays label {display:flex;align-items:center;min-height:38px;font-size:13px;white-space:nowrap;}
+.school-mobile .school-duration-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0;}.school-mobile .school-duration-grid .control-number-row {display:flex;flex-direction:column;gap:6px;align-items:stretch;margin:0;font-size:13px;}.school-mobile .school-duration-grid input {width:100%;min-width:0;box-sizing:border-box;min-height:44px;text-align:center;font-size:17px;}.school-mobile .school-duration-grid small {text-align:center;font-size:12px;}
+.school-mobile .school-periods {border-top:1px solid #edf1f5;margin-top:14px;padding-top:12px;}.school-mobile .school-periods summary {cursor:pointer;font-size:14px;color:#57738b;padding:4px 0 10px;}.school-mobile .school-periods .control-date-row {gap:6px;margin:8px 0;}.school-mobile .school-periods input {min-width:0;width:100%;}.school-mobile .school-rule-group>button {margin-top:10px;min-height:38px;font-size:13px;}
+.school-mobile .borrow-editor-actions {gap:12px;padding:12px 18px max(16px,env(safe-area-inset-bottom));}.school-mobile .borrow-editor-actions button {min-height:48px;flex:1;}.school-mobile .borrow-editor-actions .control-secondary {flex:0 0 28%;}
