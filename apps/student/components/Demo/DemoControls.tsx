@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BatteryLow, Settings, User, Baby, X, ChevronRight, LayoutDashboard, RotateCcw, CheckCircle2, Trophy, Users, Sparkles, LockKeyhole } from 'lucide-react';
+import { BatteryLow, Settings, User, Baby, X, ChevronRight, LayoutDashboard, RotateCcw, CheckCircle2, Trophy, Users, Sparkles, LockKeyhole, Printer } from 'lucide-react';
 import { UserPersona } from '../../types';
 import type { DonationStageStatus } from '../../data/charityStage';
 import type { TeacherPortalRole } from '../Teacher/data/teacherAccess';
 import type { DemoLockType } from './DeviceLockDemo';
+import { PrinterConnectionScenario } from './PrinterConnectionScenario';
+import { printerDemoScenarios, type PrinterDemoScenarioId } from './printerDemoScenarios';
 
 import { controlExceptionScenarios, type ControlExceptionDemo } from '../Teacher/data/controlExceptionDemo';
 
@@ -54,10 +56,18 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
 }) => {
     const [exceptionModule, setExceptionModule] = useState<ControlExceptionDemo['module']>('duration');
     const [isOpen, setIsOpen] = useState(false);
+    const [showPrinterDemo, setShowPrinterDemo] = useState(false);
+    const [printerDemoScenario, setPrinterDemoScenario] = useState<PrinterDemoScenarioId>('same-wifi');
     const [resetComplete, setResetComplete] = useState(false);
     const [selectedMode, setSelectedMode] = useState(currentMode);
 
     useEffect(() => setSelectedMode(currentMode), [currentMode]);
+
+    useEffect(() => {
+        if (new URLSearchParams(window.location.search).get('demo') === 'wifi-printer') {
+            setShowPrinterDemo(true);
+        }
+    }, []);
 
     const handlePersonaClick = (p: UserPersona, calibrated = false, grade?: string) => {
         onSwitchPersona(p, calibrated, grade);
@@ -151,6 +161,26 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
                           <>
                         {/* Scenario Switcher */}
                         <div className="space-y-3 pt-2 border-t border-white/10">
+                            <label className="block text-[10px] font-medium text-gray-300">
+                                打印机演示场景
+                                <select value={printerDemoScenario} onChange={(event) => setPrinterDemoScenario(event.target.value as PrinterDemoScenarioId)} className="mt-1 block w-full rounded-lg bg-gray-800 p-2 text-xs text-white">
+                                    {printerDemoScenarios.map(({ id, label }) => <option key={id} value={id}>{label}</option>)}
+                                </select>
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => { setShowPrinterDemo(true); setIsOpen(false); }}
+                                className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all"
+                            >
+                                <span className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                                    <Printer size={18} />
+                                </span>
+                                <span className="flex-1 text-left">
+                                    <span className="block text-white text-xs font-bold">Wi-Fi 打印机连接演示</span>
+                                    <span className="block text-gray-400 text-[10px]">从我的文件打开 PDF 并连接打印机</span>
+                                </span>
+                                <ChevronRight size={14} className="text-gray-600" />
+                            </button>
                             {onResetDemoData ? (
                               <button
                                 type="button"
@@ -302,12 +332,16 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
                 )}
             </AnimatePresence>
 
+            {showPrinterDemo && currentMode === 'student' && (
+                <PrinterConnectionScenario scenario={printerDemoScenario} onClose={() => setShowPrinterDemo(false)} />
+            )}
             <button 
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
+                disabled={showPrinterDemo}
                 aria-label={isOpen ? '关闭演示控制台' : '打开演示控制台'}
                 aria-expanded={isOpen}
-                className={`flex items-center gap-2 pl-4 pr-5 py-3 rounded-full shadow-2xl transition-all border-2 border-gray-900 text-base font-bold ${isOpen ? 'bg-brand text-white scale-105' : 'bg-gray-800 text-white hover:bg-gray-700 animate-pulse-slow'}`}
+                className={`flex items-center gap-2 pl-4 pr-5 py-3 rounded-full shadow-2xl transition-all border-2 border-gray-900 text-base font-bold disabled:invisible ${isOpen ? 'bg-brand text-white scale-105' : 'bg-gray-800 text-white hover:bg-gray-700 animate-pulse-slow'}`}
             >
                 <Settings size={28} className={isOpen ? "animate-spin-slow" : ""} />
                 <span className="whitespace-nowrap tracking-wide">{isOpen ? '收起控制台' : '演示控制台'}</span>
