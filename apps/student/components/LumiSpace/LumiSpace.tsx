@@ -54,6 +54,9 @@ import {
     type PaperDemoStatusCard,
 } from '../../data/paperConversationDemos';
 
+import { LumiInlineDemo, type InlineDemoSnapshot } from './LumiInlineDemo';
+import type { LumiInlineDemoKind } from '../../data/lumiInlineDemos';
+
 // Chat Data Types
 interface Message {
     interrupted?: boolean;
@@ -277,6 +280,8 @@ const classifyPaperActivation = (text: string): PaperActivationLevel => {
 };
 
 const INITIAL_HISTORY: HistoryItem[] = [
+    { id: 'h-inline-print', title: '演示生成试题', date: '今天', preview: '生成试题、保存 PDF 与打印', isDemo: true },
+    { id: 'h-inline-image', title: '演示生成图片', date: '今天', preview: '对话中生成图片、再生成及输入修改', isDemo: true },
     {
         id: 'h-paper-composition',
         title: '组卷演示',
@@ -465,11 +470,18 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
     const [paperPdfOutput, setPaperPdfOutput] = useState<{ pdf: Blob; previewPages: Blob[]; title: string; version: number; fileId?: string; contentMode?: PaperContentMode } | null>(null);
     const pendingPaperRequestRef = useRef<string | null>(null);
 
+    const inlineDemoSendRef = useRef<((text: string) => void) | null>(null);
+    const inlineDemoStopRef = useRef<(() => void) | null>(null);
+    const [inlineDemoGenerating, setInlineDemoGenerating] = useState(false);
+    const inlineDemoSnapshots = useRef<Partial<Record<LumiInlineDemoKind, InlineDemoSnapshot>>>({});
+    const [inlineDemoSuggestionHost, setInlineDemoSuggestionHost] = useState<HTMLDivElement | null>(null);
+
     // History State
     const [history, setHistory] = useState<HistoryItem[]>(INITIAL_HISTORY);
     // 旧版热更新可能保留预置场景状态；学生历史只展示真实会话及其他既有演示。
     const visibleHistory = history.filter((item) => !item.paperDemoScenarioId);
     const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
+    const inlineDemoKind: LumiInlineDemoKind | null = activeHistoryId === 'h-inline-print' ? 'print' : activeHistoryId === 'h-inline-image' ? 'image' : null;
     /** 当前会话用户已发轮次（演示 token：满 100 锁定） */
     const [sessionTurnCount, setSessionTurnCount] = useState(0);
     /** 本登录周期图片上传累计（演示 token：满 50 禁拍照） */
@@ -552,7 +564,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                 ? {
                     ...item,
                     title: sessionTitle || item.title,
-                    preview: previewFromMessages(messages),
+                    preview: item.id === 'h-inline-print' ? '对话中生成题目、保存 PDF、去打印' : item.id === 'h-inline-image' ? '对话中生成、保存图片及继续修改' : previewFromMessages(messages),
                     messages,
                 }
                 : item
@@ -1733,6 +1745,12 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
     };
 
     const handleSendMessage = () => {
+        if (inlineDemoKind && inlineDemoSendRef.current) {
+            if (inlineDemoGenerating) return;
+            inlineDemoSendRef.current(inputText.trim());
+            setInputText('');
+            return;
+        }
         if (isSessionTurnLimited) {
             showBusyToast('这个话题聊得够久啦，新建一个会话继续吧～');
             return;
@@ -2192,7 +2210,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                 ? {
                     ...item,
                     title: title || item.title,
-                    preview: previewFromMessages(currentMessages),
+                    preview: item.id === 'h-inline-print' ? '对话中生成题目、保存 PDF、去打印' : item.id === 'h-inline-image' ? '对话中生成、保存图片及继续修改' : previewFromMessages(currentMessages),
                     messages: currentMessages,
                 }
                 : item
@@ -2355,7 +2373,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
             setHistory((prev) => commitSessionToHistory(prev, currentId, currentTitle, currentMessages));
         }
         const failureDemoTaskId = item.paperPdfFailureDemo ? `${item.id}-${Date.now()}` : undefined;
-        const loaded: Message[] = item.paperClarificationDemo
+        const loaded: Message[] = item.id === 'h-inline-print' || item.id === 'h-inline-image' ? [] : item.paperClarificationDemo
             ? [{
                 id: `${item.id}-choose-${Date.now()}`, sender: 'lumi', type: 'quick-reply',
                 text: '组卷前必须确定年级、科目和出版社；能从对话或当前课本唯一获取时直接使用。本演示模拟缺失信息无法从上下文获取，选择场景后发送示例，小晤只追问缺失项，多项缺失会合并询问。',
@@ -3074,6 +3092,18 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                                 )}
                             </motion.div>
                         ))}
+                        {inlineDemoKind && <LumiInlineDemo
+                            key={inlineDemoKind}
+                            kind={inlineDemoKind}
+                            suggestionHost={inlineDemoSuggestionHost}
+                            onStopChange={(stop) => { inlineDemoStopRef.current = stop; setInlineDemoGenerating(Boolean(stop)); }}
+                            initial={inlineDemoSnapshots.current[inlineDemoKind]}
+                            onSnapshot={(snapshot) => { inlineDemoSnapshots.current[inlineDemoKind] = snapshot; }}
+                            registerSend={(send) => { inlineDemoSendRef.current = send; }}
+                            onSaveSuccess={showBusyToast}
+                            onPrefill={(text) => { setInputText(text); window.setTimeout(() => chatInputRef.current?.focus(), 0); }}
+                            onContentChange={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })}
+                        />}
                         <div ref={messagesEndRef} />
                     </div>
                 </motion.div>
@@ -3117,6 +3147,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                 >
                     {/* bottom-24 对应导航栏高度，让输入框紧贴导航栏顶部 */}
                     <div className="w-full max-w-[620px] flex flex-col gap-2">
+                    {inlineDemoKind === 'print' && <div ref={setInlineDemoSuggestionHost} className="empty:hidden" data-testid="inline-demo-suggestions" />}
                     <div className={`w-full flex items-end gap-3 ${isSessionTurnLimited ? 'justify-center' : ''}`}>
                         {isSessionTurnLimited ? (
                             <div className="w-[min(100%,28rem)] rounded-2xl border border-amber-200 bg-amber-50/95 shadow-sm px-4 py-2 flex items-center gap-3">
@@ -3264,6 +3295,11 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                                     )}
                                 </AnimatePresence>
                                 <div className="flex items-center gap-1.5 shrink-0">
+                                    {inlineDemoKind && inlineDemoGenerating ? (
+                                        <button type="button" aria-label="停止生成" title="停止生成" onClick={() => inlineDemoStopRef.current?.()} className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-white shadow-sm transition-all hover:bg-brand-dark active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+                                            <span aria-hidden="true" className="h-3 w-3 rounded-[2px] bg-current" />
+                                        </button>
+                                    ) : <>
                                     <button
                                         type="button"
                                         onClick={handleVoiceInput}
@@ -3281,6 +3317,7 @@ export const LumiSpace: React.FC<LumiSpaceProps> = ({
                                             <Send size={18} className="ml-0.5" />
                                         </button>
                                     ) : null}
+                                    </>}
                                 </div>
                             </div>
                         </motion.div>

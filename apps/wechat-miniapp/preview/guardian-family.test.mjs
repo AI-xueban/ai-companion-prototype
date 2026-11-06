@@ -6,18 +6,20 @@ import assert from 'node:assert/strict';
 const source = readFileSync(new URL('./parent-prototype.js', import.meta.url), 'utf8')
   .replace('render, start, scenario,', 'inspect: () => JSON.parse(JSON.stringify(state)), render, start, scenario,');
 function create(storage = new Map()) {
+  let nextTimer = 0;
+  const timers = new Map();
   const context = {
     window: {}, app: { innerHTML: '' }, URLSearchParams, location: { search: '?review=1' },
     document: { getElementById: () => null, querySelector: () => null, querySelectorAll: () => [] },
     localStorage: { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },
-    syncReview() {}, setTimeout: () => 1, clearTimeout() {}, setInterval: () => 1, clearInterval() {},
+    syncReview() {}, setTimeout(fn) { timers.set(++nextTimer, fn); return nextTimer; }, clearTimeout(id) { timers.delete(id); }, setInterval: () => 1, clearInterval() {},
     learningPrototype: { resetDetail() {}, renderParent: () => '学习详情' },
     homeworkPrototype: { resetParentView() {}, getParentNavigation: () => ({ detail: false }), renderParent: () => '作业详情' },
     go() { context.window.parentPrototype.render(); }
   };
   runInNewContext(source, context);
   const controller = context.window.parentPrototype;
-  return { p: controller, state: () => controller.inspect(), html: () => context.app.innerHTML, storage };
+  return { p: controller, state: () => controller.inspect(), html: () => context.app.innerHTML, storage, flushTimers() { const callbacks = [...timers.values()]; timers.clear(); callbacks.forEach(fn => fn()); } };
 }
 function submit(demo, scenario = 'second') {
   const { p } = demo;
@@ -167,14 +169,60 @@ for (const exception of ['expiredInvite', 'revokedInvite', 'full']) {
   const demo = create();
   demo.p.scenario('first');
   demo.p.action('scanResult');
+  assert.match(demo.html(), />确认绑定</);
+  assert.match(demo.html(), /<button class="parent-secondary"[^>]*>不是我的孩子</);
+  demo.p.action('back');
+  assert.equal(demo.state().view, 'scan');
+  assert.equal(demo.state().bound, false);
+  demo.p.action('scanResult');
   demo.p.action('confirm');
-  demo.p.input('phone', '13800138000');
-  demo.p.action('sendCode');
-  demo.p.input('code', '123456');
-  demo.p.setAgreement?.(true);
-  demo.p.action('verifyPhone');
+  assert.equal(demo.state().view, 'confirm', 'Agreement still gates binding');
+  demo.p.setAgreement(true);
+  demo.p.action('confirm');
+  assert.equal(demo.state().view, 'binding');
+  assert.match(demo.html(), /绑定中/);
+  assert.equal(demo.state().bound, false, 'Do not grant access until binding completes');
+  demo.p.action('confirm');
+  demo.flushTimers();
+  assert.equal(demo.state().families[0].members.length, 1, 'Repeated taps create a single relationship');
   assert.equal(demo.state().view, 'bindSuccess');
   assert.equal(demo.state().families[0].primaryId, 'owner');
+  assert.doesNotMatch(demo.html(), /<button[^>]*>进入家长首页/);
+  demo.flushTimers();
+  assert.equal(demo.state().view, 'home', 'Successful binding opens the parent home automatically');
+}
+{
+  const demo = create();
+  demo.p.scenario('wechatScan');
+  assert.match(demo.html(), />微信登录</);
+  assert.doesNotMatch(demo.html(), /parent-student/);
+  demo.p.action('scan');
+  assert.equal(demo.state().view, 'entry');
+  demo.p.setAgreement(true);
+  demo.p.action('scan');
+  assert.equal(demo.state().view, 'entry');
+  assert.match(demo.html(), /role="dialog"[^>]*aria-labelledby="parent-wechat-auth-title"/);
+  assert.match(demo.html(), /使用微信绑定的手机号/);
+  assert.ok(demo.html().includes('138****8000'));
+  assert.match(demo.html(), /teacher-phone-deny[^>]*>不允许</);
+  assert.match(demo.html(), /使用其他手机号登录/);
+  demo.p.action('cancelWechatAuth');
+  assert.equal(demo.state().view, 'entry');
+  assert.equal(demo.state().wechatAuthOpen, false);
+  demo.p.action('scan');
+  demo.p.action('continueWechatLogin');
+  assert.equal(demo.state().view, 'confirm', 'WeChat scan entry opens child confirmation after authorization');
+  assert.match(demo.html(), /parent-student/);
+  assert.equal(demo.state().bound, false);
+  demo.p.back();
+  assert.equal(demo.state().view, 'entry');
+  assert.equal(demo.state().bound, false);
+  demo.p.action('scan');
+  demo.p.action('continueWechatLogin');
+  demo.p.action('confirm');
+  demo.flushTimers();
+  demo.flushTimers();
+  assert.equal(demo.state().view, 'home');
 }
 {
   const demo=create();
@@ -232,7 +280,15 @@ console.log('Passed: 6-person capacity, direct transfer, sole guardian promotion
  const original=JSON.stringify(d.state().families);d.p.exception('bindingDispute');assert.match(d.html(),/请联系学校协助处理/);assert.doesNotMatch(d.html(),/schoolAssist|submitAssistance|核实申请/);assert.equal(d.state().view,'needInvite');assert.equal(JSON.stringify(d.state().families),original);assert.equal(d.state().bound,false);
 }
 {
- const d=create();d.p.scenario('first');d.p.action('scanResult');d.p.action('confirm');d.p.input('phone','13800138000');d.p.action('sendCode');d.p.input('code','123456');d.p.setAgreement(true);d.p.exception('firstBindRace');d.p.action('verifyPhone');assert.equal(d.state().view,'needInvite');assert.equal(d.state().families[0].members.length,1);assert.equal(d.state().bound,false);
+  const d = create();
+  d.p.scenario('first');
+  d.p.setAgreement(true);
+  d.p.action('scanResult');
+  d.p.action('confirm');
+  d.p.scenario('first');
+  d.flushTimers();
+  assert.equal(d.state().view, 'entry');
+  assert.equal(d.state().bound, false, 'A previous attempt must not bind after the scenario is reset');
 }
 {
  const d=create();submit(d);d.p.familyReview('manager');d.p.action('inviter');const applicant=d.state().families[0].application.id;d.p.exception('managerChanged');assert.match(d.html(),/主管理权限已变更/);assert.doesNotMatch(d.html(),/>同意绑定<|>拒绝申请</);d.p.action('approve');assert.equal(d.state().families[0].application.status,'pending');assert.equal(d.state().families[0].members.some(m=>m.id===applicant),false);d.p.familyReview('manager');d.p.action('approve');assert.equal(d.state().families[0].application.status,'approved');
@@ -245,7 +301,16 @@ console.log('Passed: 6-person capacity, direct transfer, sole guardian promotion
 }
 {
  const d=create();d.p.scenario('first');d.p.action('scanResult');d.p.exception('alreadyLinked');assert.equal(d.state().view,'needInvite');d.p.exception('normal');assert.equal(d.state().view,'confirm');assert.equal(d.state().families[0].members.length,0);
- d.p.action('confirm');d.p.input('phone','13800138000');d.p.action('sendCode');d.p.input('code','123456');d.p.setAgreement(true);d.p.exception('submitNetwork');d.p.action('verifyPhone');assert.equal(d.state().view,'phone');assert.equal(d.state().families[0].members.length,0);d.p.exception('normal');d.p.action('verifyPhone');assert.equal(d.state().view,'bindSuccess');d.p.action('verifyPhone');assert.equal(d.state().families[0].members.length,1);
+ d.p.setAgreement(true);
+ d.p.exception('submitNetwork');
+ d.p.action('confirm');
+ assert.equal(d.state().view, 'confirm');
+ assert.match(d.html(), /暂未绑定成功/);
+ assert.equal(d.state().families[0].members.length, 0);
+ d.p.action('confirm');
+ d.flushTimers();
+ assert.equal(d.state().view, 'bindSuccess');
+ assert.equal(d.state().families[0].members.length, 1);
 }
 {
  const d=create();d.p.scenario('twoChildren');d.p.exception('bindingRemoved');assert.equal(d.state().view,'pending');assert.equal(d.state().boundStudents.includes(0),false);assert.equal(d.state().boundStudents.includes(1),true);d.p.action('home');assert.notEqual(d.state().view,'home');d.p.action('remainingChildren');assert.equal(d.state().activeStudent,1);assert.equal(d.state().view,'home');
@@ -253,22 +318,19 @@ console.log('Passed: 6-person capacity, direct transfer, sole guardian promotion
 console.log('Passed: page anomalies, first-binding races, school contact guidance without online application, stale-manager denial, disabled-student approval denial and rejection, duplicate requests, network retry and removal access.');
 
 {
- const d=create();d.p.scenario('first');d.p.setAgreement(true);d.p.action('scan');d.p.action('denyWechatPhone');assert.equal(d.state().view,'scan');d.p.action('scanResult');d.p.action('confirm');d.p.action('skipPhone');assert.equal(d.state().view,'bindSuccess');assert.equal(d.state().verifiedPhone,'');assert.equal(d.state().families[0].members[0].phone,'');const r=create(d.storage);r.p.start();assert.equal(r.state().verifiedPhone,'');r.p.tab('mine');assert.match(r.html(),/绑定本人手机号/);r.p.action('changePhone');assert.doesNotMatch(r.html(),/跳过手机号|暂不绑定手机号/);r.p.input('phone','13900139000');r.p.action('sendCode');r.p.input('code','123456');r.p.action('verifyPhone');assert.equal(r.state().verifiedPhone,'13900139000');assert.equal(r.state().families[0].members.length,1);assert.equal(r.state().families[0].members[0].phone,'13900139000');assert.equal(r.state().families[0].primaryId,'owner');
+ const d=create();d.p.scenario('first');d.p.setAgreement(true);d.p.action('scan');assert.equal(d.state().wechatAuthOpen,true);assert.doesNotMatch(d.html(),/家长微信手机号授权/);d.p.action('continueWechatLogin');assert.equal(d.state().view,'scan');d.p.action('scanResult');d.p.action('confirm');d.flushTimers();assert.equal(d.state().view,'bindSuccess');assert.equal(d.state().verifiedPhone,'');assert.equal(d.state().families[0].members[0].phone,'');const r=create(d.storage);r.p.start();assert.equal(r.state().verifiedPhone,'');r.p.tab('mine');assert.match(r.html(),/绑定本人手机号/);r.p.action('changePhone');assert.doesNotMatch(r.html(),/跳过手机号|暂不绑定手机号/);r.p.input('phone','13900139000');r.p.action('sendCode');r.p.input('code','123456');r.p.action('verifyPhone');assert.equal(r.state().verifiedPhone,'13900139000');assert.equal(r.state().families[0].members.length,1);assert.equal(r.state().families[0].members[0].phone,'13900139000');assert.equal(r.state().families[0].primaryId,'owner');
 }
 {
  const d=create();d.p.scenario('second');d.p.action('beginRequest');d.p.familyInput('name','王女士');d.p.action('submitFamilyRequest');d.p.setAgreement(true);d.p.action('skipPhone');assert.equal(d.state().request,'pending');assert.equal(d.state().families[0].application.phone,'');d.p.familyReview('manager');d.p.action('approve');d.p.familyReview('recipient');assert.equal(d.state().bound,true);assert.equal(d.state().verifiedPhone,'');assert.equal(d.state().families[0].members.length,2);
 }
-{
- const d=create();d.p.scenario('first');d.p.action('scanResult');d.p.action('confirm');d.p.setAgreement(true);d.p.exception('firstBindRace');d.p.action('skipPhone');assert.equal(d.state().view,'needInvite');assert.equal(d.state().families[0].members.length,1);assert.equal(d.state().bound,false);
-}
-console.log('Passed: optional phone on first binding and invitations, empty phone across reload, verified later binding and race protection on skip.');
+console.log('Passed: first binding without phone, optional phone on invitations, and verified phone added after reload.');
 
 {
  const d=create();d.p.scenario('first');d.p.action('scanResult');d.p.back();assert.equal(d.state().view,'scan');d.p.toggleExceptionMenu(true);assert.match(d.html(),/role="dialog"[^>]*aria-label="异常演示"/);d.p.back();assert.equal(d.state().exceptionMenuOpen,false);assert.equal(d.state().view,'scan');
  d.p.exception('invalid');assert.equal(d.state().view,'cardError');assert.match(d.html(),/恢复正常/);d.p.exception('alreadyLinked');assert.equal(d.state().view,'needInvite');assert.equal(d.state().families[0].members.length,1);d.p.exception('foreign');assert.equal(d.state().view,'cardError');assert.equal(d.state().families[0].members.length,0,'Switching must remove the previous injected binding');d.p.exception('normal');assert.equal(d.state().view,'scan');assert.equal(d.state().families[0].members.length,0);assert.doesNotMatch(d.html(),/class="parent-demo-restore"/);
 }
 {
- const d=create();d.p.scenario('first');d.p.action('scanResult');d.p.action('confirm');d.p.input('phone','13800138000');d.p.exception('smsLimited');d.p.exception('submitNetwork');d.p.exception('normal');assert.equal(d.state().phoneDraft,'13800138000');assert.equal(d.state().view,'phone');
+ const d=create();d.p.scenario('second');d.p.action('beginRequest');d.p.familyInput('name','王女士');d.p.action('submitFamilyRequest');d.p.input('phone','13800138000');d.p.exception('smsLimited');d.p.exception('submitNetwork');d.p.exception('normal');assert.equal(d.state().phoneDraft,'13800138000');assert.equal(d.state().view,'phone');
 }
 console.log('Passed: exception sheet close/back, immediate QR results, isolated switching, one-click restoration and preserved phone draft.');
 

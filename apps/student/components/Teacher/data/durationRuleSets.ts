@@ -1,4 +1,4 @@
-import { DurationRule, weekdayNames } from './hierarchicalDeviceControl';
+import { defaultDurationRule, DurationRule, weekdayNames } from './hierarchicalDeviceControl';
 
 export function validateDurationRuleSet(rules: DurationRule[]): string {
   if (!rules.length) return '请至少添加一组时长设置';
@@ -17,4 +17,11 @@ export function validateDurationRuleSet(rules: DurationRule[]): string {
     if (periods.some((period, i) => i > 0 && period.start < periods[i - 1].end)) return prefix + '每日可用时段不能重叠';
   }
   return '';
+}
+
+// Weekday grouping does not change the result when every value equals the fallback.
+export function isDefaultDurationRuleSet(rules: DurationRule[]): boolean {
+  return rules.length > 0 && rules.every(rule => rule.continuousMinutes === defaultDurationRule.continuousMinutes
+    && rule.restMinutes === defaultDurationRule.restMinutes
+    && rule.dailyMinutes === defaultDurationRule.dailyMinutes && rule.periods.length === 0);
 }

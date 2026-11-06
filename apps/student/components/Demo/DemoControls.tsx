@@ -142,8 +142,8 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
                               <select aria-label="异常演示模块" value={exceptionModule} onChange={e => setExceptionModule(e.target.value as ControlExceptionDemo['module'])} className="w-full rounded-lg bg-gray-800 p-2 text-xs text-white">
                                 <option value="borrowing">柜机借用管控</option><option value="duration">使用时长管控</option><option value="homework">智阅作业管控</option><option value="world">万象视界管控</option>
                               </select>
-                              <p className="text-[10px] leading-4 text-gray-400">设置冲突需进入编辑后最终提交才会提示；保存失败保留表单。组织空态在使用时长页面展示。</p>
-                              <div className="grid grid-cols-2 gap-2">{controlExceptionScenarios.map(item => <button type="button" key={item.id} className="rounded-lg border border-white/10 bg-white/5 p-2 text-left text-xs text-white hover:bg-white/10" onClick={() => { onControlException?.({ kind: item.id, module: item.id.startsWith('no-') ? 'duration' : exceptionModule, key: Date.now() }); setIsOpen(false); }}>{item.label}</button>)}</div>
+                              <p className="text-[10px] leading-4 text-gray-400">设置冲突需进入编辑后最终提交才会提示。学校暂无年级场景在使用时长页面展示。</p>
+                              <div className="grid grid-cols-2 gap-2">{controlExceptionScenarios.filter(item => !['load-failed', 'save-failed', 'permission', 'no-classes', 'no-students'].includes(item.id)).map(item => <button type="button" key={item.id} className="rounded-lg border border-white/10 bg-white/5 p-2 text-left text-xs text-white hover:bg-white/10" onClick={() => { onControlException?.({ kind: item.id, module: item.id.startsWith('no-') ? 'duration' : exceptionModule, key: Date.now() }); setIsOpen(false); }}>{item.label}</button>)}</div>
                               <button type="button" className="w-full rounded-lg bg-indigo-500/20 p-2 text-xs text-indigo-200" onClick={() => { onControlException?.({ kind: 'normal', module: exceptionModule, key: Date.now() }); setIsOpen(false); }}>恢复正常管控页面</button>
                             </div>
                           </div>
