@@ -96,7 +96,7 @@
     if (state.studentBans?.[name]?.[id] ?? state.classBans?.[name]) return '班主任已禁止借用';
     const date = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai' }).format(now);
     const time = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(now);
-    const rule = R.effectiveBorrow({ schedules: state.classRules[name] || [] }, date);
+    const rule = R.effectiveBorrow({ schedules: (state.classRules[name] || []).filter(r=>(r.mode!=='weekly'||state.weeklyRestrictionEnabled!==false)&&(r.mode!=='dates'||state.dateRestrictionEnabled!==false)) }, date);
     return rule.deny ? '当前禁止借用' : !rule.periods.length || rule.periods.some(p => p.start <= time && time < p.end) ? '当前可借用' : '当前不在借用时段';
   }
   const api = { initial, denied, signature, groups, summary, preview, change, targets, commit, result };

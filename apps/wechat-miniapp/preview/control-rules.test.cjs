@@ -31,9 +31,9 @@ test('管理员和老师能看到三个模块的现有规则与状态摘要', ()
   context.window = context;
   vm.runInNewContext(fs.readFileSync(require.resolve('./control-parity.js'), 'utf8'), context);
   context.renderControl();
-  assert.match(context.app.innerHTML, /部分班级规则有差异/);
+  assert.doesNotMatch(context.app.innerHTML, /部分班级规则有差异/);
   assert.doesNotMatch(context.app.innerHTML, /答案允许 \d+ 人 · 详解允许 \d+ 人/);
-  assert.match(context.app.innerHTML, /关闭/);
+  assert.doesNotMatch(context.app.innerHTML,/部分班级开放/);
   context.controlView = 'module';
   context.renderControl();
   assert.match(context.app.innerHTML, /部分班级有差异/);
@@ -64,7 +64,7 @@ test('管理员和老师能看到三个模块的现有规则与状态摘要', ()
   context.controlModule = 'duration';
   context.controlView = 'module';
   context.renderControl();
-  assert.match(context.app.innerHTML, /设置本班使用时长/);
+  assert.match(context.app.innerHTML, /新增学生规则/);assert.doesNotMatch(context.app.innerHTML,/编辑本班规则|恢复默认规则|按学生设置/);
   assert.doesNotMatch(context.app.innerHTML, /学校暂未开放|仅可查看/);
 });
 
@@ -117,7 +117,7 @@ test('老师智阅作业按学生设置，任课老师仅显示所教科目', ()
   context.window = context;
   vm.runInNewContext(fs.readFileSync(require.resolve('./control-parity.js'), 'utf8'), context);
   context.renderControl();
-  assert.match(context.app.innerHTML,/搜索学生姓名或编号/);
+  assert.match(context.app.innerHTML,/openHomeworkSubject/);context.parity.openHomeworkSubject('数学');assert.match(context.app.innerHTML,/设置学生权限/);assert.doesNotMatch(context.app.innerHTML,/parity-student-rows|搜索学生姓名或编号/);
   context.parity.homeworkSubject('语文'); context.toggleHomeworkPermission(1,'answer',true);
   assert.equal(R.homeworkValue(JSON.parse(stored).A[0],'语文').answer,true);
   context.controlWorkView='subject'; context.controlView='module'; context.renderControl();
@@ -125,7 +125,7 @@ test('老师智阅作业按学生设置，任课老师仅显示所教科目', ()
   assert.equal(R.homeworkValue(JSON.parse(stored).A[0],'数学').explanation,true);
 
 });
-test('智阅作业设置页平铺科目，一次保存所改权限并保留其他科目', () => {
+test('智阅作业从科目进入，仅保存当前科目并保留其他科目', () => {
   const fs=require('node:fs'), vm=require('node:vm');
   let stored, toast, inputs=[]; const error={textContent:''};
   const first=student(1), second=student(2); second.homeworkSubjects={语文:{answer:true,explanation:false}};
@@ -139,29 +139,29 @@ test('智阅作业设置页平铺科目，一次保存所改权限并保留其�
     isHeadTeacherClass(){return true;},controlRoleSwitcher(){return '';},teacherTabBar(){return '';},controlCardIcon(){return '';},
     document:{getElementById(id){return id==='parity-rule-form'?form:id==='parity-error'?error:null;}},localStorage:{getItem(key){return key==='teacher-control-prototype-v1'?stored||null:null;},setItem(key,value){if(key==='teacher-control-prototype-v1')stored=value;}},controlToast(value){toast=value;},controlOverlay(){}};
   context.window=context;vm.runInNewContext(fs.readFileSync(require.resolve('./control-parity.js'),'utf8'),context);
-  context.parity.editClass();
-  assert.match(context.app.innerHTML,/语文.*查看答案.*查看详解.*数学.*查看答案.*查看详解.*英语/s);
-  assert.doesNotMatch(context.app.innerHTML,/保留|名学生|aria-label="智阅作业科目"/);
-  inputs=[row('语文','explanation','true'),row('数学','answer','true'),row('数学','explanation','false'),row('英语','answer','false'),row('英语','explanation','false')];
+  context.parity.editClass();context.parity.selectDurationStudent('1',true);context.parity.selectDurationStudent('2',true);context.parity.confirmDurationStudents();
+  assert.match(context.app.innerHTML,/数学.*查看答案.*查看详解/s);assert.doesNotMatch(context.app.innerHTML,/语文|英语|选择科目/);
+  assert.doesNotMatch(context.app.innerHTML,/保留|aria-label="智阅作业科目"/);
+  inputs=[row('语文','explanation','true'),row('数学','answer',''),row('数学','explanation','false'),row('英语','answer','false'),row('英语','explanation','false')];
   context.parity.saveEditor();
   assert.equal(error.textContent,'请为每个科目选择答案和详解权限');
   inputs=[row('语文','answer','false'),row('语文','explanation','true'),row('数学','answer','true'),row('数学','explanation','false'),row('英语','answer','false'),row('英语','explanation','false')];
   context.parity.saveEditor();
   const saved=JSON.parse(stored).A[0];
-  assert.deepEqual(R.homeworkValue(saved,'语文'),{answer:false,explanation:true});
+  assert.deepEqual(R.homeworkValue(saved,'语文'),{answer:false,explanation:false});assert.equal(R.homeworkValue(JSON.parse(stored).A[1],'语文').answer,true);
   assert.deepEqual(R.homeworkValue(saved,'数学'),{answer:true,explanation:false});
   assert.deepEqual(R.homeworkValue(saved,'英语'),{answer:false,explanation:false});
   assert.equal(saved.updated['homework:英语'],undefined);
   assert.equal(toast,'已保存并生效');
-  context.controlWorkView='subject';context.controlView='module';context.renderControl();context.parity.editClass();
+  context.controlWorkView='subject';context.controlView='module';context.renderControl();context.openControlEditor('all');
   assert.match(context.app.innerHTML,/数学.*查看答案.*查看详解/s);
   assert.doesNotMatch(context.app.innerHTML,/语文|英语/);
   inputs=[row('数学','answer','false'),row('数学','explanation','false')];
   context.parity.saveEditor();
   const after=JSON.parse(stored).A[0];
   assert.equal(R.homeworkValue(after,'数学').answer,false);
-  assert.equal(R.homeworkValue(after,'语文').explanation,true);
-  context.parity.editClass();
+  assert.equal(R.homeworkValue(after,'语文').explanation,false);
+  context.openControlEditor('all');
   inputs=[row('数学','answer','true'),row('数学','explanation','false')];
   const external=R.transaction(JSON.parse(stored),[{className:'A',id:1}], 'homework:数学',null,'all',entry=>{
     entry.homeworkSubjects={...entry.homeworkSubjects,数学:{answer:false,explanation:true}};
@@ -355,8 +355,8 @@ test('管理员锁屏只到年级，老师在管控首页直接设置锁屏', ()
   assert.equal(JSON.parse(stored).schoolSettings.temporaryClassStates[classes[1]],true);
   context.controlDemoRole='teacher'; context.controlWorkView='homeroom'; context.controlView='module';
   context.renderControl();
-  assert.equal(context.controlView,'module');
-  assert.match(context.app.innerHTML,/搜索学生/);
+  assert.equal(context.controlView,'entry');
+  assert.doesNotMatch(context.app.innerHTML,/搜索学生|按学生设置/);
   assert.doesNotMatch(context.app.innerHTML,/查看详情 ›/);
 });
 test('每周规则按每天独立时段执行，编辑时仍只保留一条每周规则', () => {
@@ -541,7 +541,7 @@ test('借用管控上下展示两类规则，悬浮新增选择类型，编辑�
   assert.match(dialog.actions, /取消/);
 });
 
-test('老师锁屏和万象保留班级入口并支持学生设置', () => {
+test('老师日常锁屏整班直接生效，万象保留原班级规则', () => {
   const fs = require('node:fs'), vm = require('node:vm');
   const locked = student(1), unlocked = student(2);
   let dialog, toast;
@@ -575,23 +575,34 @@ test('老师锁屏和万象保留班级入口并支持学生设置', () => {
     return context.app.innerHTML;
   };
   const lock = renderActions('lock', [1, 2]);
-  assert.notEqual(context.controlView, 'entry');
-  assert.match(lock, /设置锁屏/);
-  assert.match(lock, /学生/);
-  context.parity.teacherLockChoice('all');
-  assert.equal(dialog.title, '设置锁屏');
-  assert.match(dialog.body, /1 人将解锁/);
-  assert.match(dialog.body, /1 人将锁屏/);
-  context.parity.saveTeacherLock(); assert.equal(toast, '请选择设置后的状态');
-  context.parity.cancelTeacherLock();
+  assert.equal(context.controlView,'entry');
+  assert.match(lock,/全班锁屏/);assert.doesNotMatch(lock,/按学生设置|teacherLockChoice/);
+  for(const role of ['homeroom','subject']){
+    context.controlWorkView=role;dialog=null;
+    context.parity.toggleClassLock(true);assert.ok(context.controlData.A.every(s=>s.locked));assert.equal(dialog,null);
+    assert.match(context.app.innerHTML,/解除锁屏/);
+    context.parity.toggleClassLock(false);assert.ok(context.controlData.A.every(s=>!s.locked));assert.equal(dialog,null);
+    context.parity.openStudentLocks();assert.equal(context.controlView,'studentLocks');assert.match(context.app.innerHTML,/已锁屏学生（0人）/);
+    context.parity.chooseLockStudents();assert.match(dialog.body,/搜索姓名或学号/);context.closeControlOverlay();assert.ok(context.controlData.A.every(s=>!s.locked));
+    context.parity.chooseLockStudents();context.parity.toggleLockStudent('2',true);context.parity.filterLockStudents('学生2');context.parity.saveLockStudents();
+    assert.equal(context.controlData.A[0].locked,false);assert.equal(context.controlData.A[1].locked,true);assert.match(context.app.innerHTML,/已锁屏学生（1人）/);
+    context.parity.unlockStudent(2);assert.ok(context.controlData.A.every(s=>!s.locked));context.controlView='entry';dialog=null;
+
+  }
+  context.controlWorkView='homeroom';
+  context.controlData.schoolSettings ||= {};
+  context.controlData.schoolSettings.temporaryClassStates={A:true};
+  context.parity.toggleClassLock(false);assert.ok(context.controlData.A.every(s=>!s.locked));
+  assert.equal(context.controlData.schoolSettings.temporaryClassStates.A,true);
+  delete context.controlData.schoolSettings.temporaryClassStates;
   const world = renderActions('world', [2]);
   assert.equal(context.controlView, 'module');
   assert.doesNotMatch(world, /单独开放|选择要开放的学生|开放所选学生/);
-  assert.match(world, /关闭/);
+  assert.match(world,/已停止使用学生|恢复使用/);
   context.parity.selectedBoolean(false); assert.equal(toast, '老师仅可设置整个班级');
   context.parity.selectedBoolean(true); assert.equal(toast, '老师仅可设置整个班级');
   dialog = null;
-  assert.match(world, /parity.toggleClassWorld\(true\)/);
+  assert.match(world,/parity.chooseWorldStudents/);assert.doesNotMatch(world,/parity-student-rows|搜索学生姓名或编号/);
   assert.doesNotMatch(world, /设置全班使用状态|booleanEditor/);
   context.parity.toggleClassWorld(true);
   assert.equal(dialog.title, '确认开放万象视界？');
@@ -600,7 +611,7 @@ test('老师锁屏和万象保留班级入口并支持学生设置', () => {
   assert.ok(context.controlData.A.every(s => s.world === false));
   context.parity.toggleClassWorld(true); context.parity.apply();
   assert.ok(context.controlData.A.every(s => s.world === true));
-  assert.match(context.app.innerHTML, /parity.toggleClassWorld\(false\)/);
+  assert.match(context.app.innerHTML,/parity.chooseWorldStudents/);
   context.parity.toggleClassWorld(false);
   assert.equal(dialog.title, '确认关闭万象视界？');
   assert.ok(context.controlData.A.every(s => s.world === true));
@@ -634,7 +645,7 @@ test('整周时长兼容旧规则，七天参数独立且重复保存只留一�
   assert.match(R.validateDurationWeek(edited),/周六.*每日累计/);
 });
 
-test('整周时长编辑回填、确认取消保留表单、保存及新生沿用班级规则', () => {
+test('整周时长编辑回填、确认取消保留表单、保存不覆盖后续新生', () => {
   const fs=require('node:fs'),vm=require('node:vm'); let stored,dialog;
   const week=R.durationWeek(student(1),'existing'); week.dailySettings[0].continuousMinutes=35;
   const first=student(1); first.durationRules=[week];
@@ -644,19 +655,19 @@ test('整周时长编辑回填、确认取消保留表单、保存及新生沿�
     schoolBorrowingEnabled:true,stage:'other',app:{innerHTML:''},header:t=>'<span></span><h2>'+t+'</h2>',syncReview(){},isHeadTeacherClass:()=>true,
     document:{getElementById:()=>null},localStorage:{getItem:()=>stored||null,setItem:(k,v)=>{stored=v;}},controlToast(){},controlOverlay:(title,body,actions)=>{dialog={title,body,actions};}};
   context.window=context;vm.runInNewContext(fs.readFileSync(require.resolve('./control-parity.js'),'utf8'),context);
-  context.parity.editClass();
+  context.parity.editClass();context.parity.selectDurationStudent('1',true);context.parity.confirmDurationStudents();
   assert.equal((context.app.innerHTML.match(/data-duration-group=/g)||[]).length,2);
   assert.match(context.app.innerHTML,/value="35"/);
   assert.doesNotMatch(context.app.innerHTML,/新增使用时长规则|适用星期/);
   context.parity.saveEditor(); assert.match(dialog.title,/确认/); assert.equal(dialog.body,'');
   context.closeControlOverlay(); assert.match(context.app.innerHTML,/value="35"/);
-  context.parity.fillDefault(); context.parity.saveEditor(); context.parity.apply();
+  context.parity.saveEditor(); context.parity.apply();
   assert.equal(context.controlData.A[0].durationRules.length,1);
-  assert.equal(R.effectiveDuration(context.controlData.A[0],0).continuousMinutes,60);
+  assert.equal(R.effectiveDuration(context.controlData.A[0],0).continuousMinutes,35);
   const data=JSON.parse(stored);data.A.push(student(2));stored=JSON.stringify(data);
-  context.renderControl();assert.equal(context.controlData.A[1].durationRules.length,1);
+  context.renderControl();assert.equal(context.controlData.A[1].durationRules.length,0);assert.equal(context.controlData.schoolSettings.durationClasses?.A,undefined);
   assert.equal(R.effectiveDuration(context.controlData.A[1],6).dailyMinutes,180);
-  context.parity.editClass(); context.parity.addDurationGroup();
+  context.parity.editClass();context.parity.selectDurationStudent('1',true);context.parity.confirmDurationStudents(); context.parity.addDurationGroup();
   context.parity.removeDurationGroup(0);
   assert.equal((context.app.innerHTML.match(/data-duration-group=/g)||[]).length,1);
   const listeners={}, defaultButton={disabled:true};
@@ -665,7 +676,7 @@ test('整周时长编辑回填、确认取消保留表单、保存及新生沿�
   const form={addEventListener:(event,fn)=>listeners[event]=fn,querySelectorAll:()=>[section]};
   context.document.getElementById=id=>id==='parity-rule-form'?form:id==='parity-fill-default'?defaultButton:null;
   context.parity.durationGroupChanged();
-  assert.match(context.app.innerHTML, /id="parity-fill-default"/);
+  assert.doesNotMatch(context.app.innerHTML, /id="parity-fill-default"|恢复默认规则|<h3>默认规则/);
   for(const key of Object.keys(values)) {
     const original=values[key].value;
     values[key].value='90'; listeners.input(); assert.equal(defaultButton.disabled,false,key+' enables reset immediately');
@@ -673,8 +684,8 @@ test('整周时长编辑回填、确认取消保留表单、保存及新生沿�
   }
   values.continuousMinutes.value='40';values.restMinutes.value='10';values.dailyMinutes.value='120';listeners.input();
   context.parity.fillDefault();
-  assert.match(context.app.innerHTML,/连续使用60分钟 · 休息15分钟 · 每日累计180分钟/);
-  assert.match(context.app.innerHTML,/保存后全周使用默认规则/);
+  assert.doesNotMatch(context.app.innerHTML,/<h3>默认规则|恢复默认规则/);
+  assert.match(context.app.innerHTML,/已选 1 名学生/);
 
 });
 
@@ -704,7 +715,74 @@ test('老师单人时长及万象持久化且不覆盖同班其他学生，任�
  const c={controlRules:R,closeControlOverlay(){},addEventListener(){},setInterval(){},crypto:require('crypto'),schoolControlClasses:['A'],controlClasses:['A'],selectedTeacherClass:'A',controlData:JSON.parse(stored),controlStudents(){return c.controlData.A;},controlDemoRole:'teacher',controlWorkView:'homeroom',controlModule:'duration',controlView:'module',controlLabels:{duration:'使用时长管控',world:'万象视界'},controlSelected:new Set(),adminSelectedScopes:new Set(),schoolBorrowingEnabled:true,stage:'other',app:{innerHTML:''},header:t=>'<span></span><h2>'+t+'</h2>',syncReview(){},isHeadTeacherClass:()=>true,document:{getElementById:()=>null},localStorage:{getItem:()=>stored,setItem:(k,v)=>stored=v},controlToast:m=>toast=m,controlOverlay:(title,body)=>dialog={title,body}};c.window=c;vm.runInNewContext(fs.readFileSync(require.resolve('./control-parity.js'),'utf8'),c);
  c.openControlEditor(1);c.parity.fillDefault();c.parity.saveEditor();c.parity.apply();c.renderControl();
  assert.equal(R.effectiveDuration(c.controlData.A[0],0).continuousMinutes,60);assert.equal(R.effectiveDuration(c.controlData.A[1],0).continuousMinutes,30);
+ c.controlModule='duration';c.controlView='module';c.parity.toggleClassDuration(false);assert.match(c.app.innerHTML,/aria-label="本班使用时长规则" aria-checked="false"/);assert.equal(R.effectiveDuration(c.controlData.A[1],0).continuousMinutes,60);
+ c.parity.toggleClassDuration(true);assert.equal(R.effectiveDuration(c.controlData.A[1],0).continuousMinutes,30);
+ c.schoolControl={pickExternalTime(periods,index,done){done([{start:'08:00',end:'17:30'}]);}};c.parity.editClass();c.parity.selectDurationStudent('1',true);c.parity.confirmDurationStudents();c.parity.addDurationGroup();c.parity.pickDurationPeriod(0);assert.match(c.app.innerHTML,/选择星期：/);assert.match(c.app.innerHTML,/08:00 至 17:30/);assert.doesNotMatch(c.app.innerHTML,/type="time"/);c.parity.cancelEditor(true);
+
  c.controlModule='world';c.parity.booleanEditor([{className:'A',id:1}],'学生1',true);c.parity.saveBoolean();c.parity.apply();c.renderControl();assert.equal(c.controlData.A[0].world,true);assert.equal(c.controlData.A[1].world,false);
- c.controlQuery='';c.controlFilter='all';c.binaryToggleButton=()=>'';c.controlModule='lock';c.confirmControl(1,true);c.parity.apply();assert.equal(c.controlData.A[0].locked,true);assert.equal(c.controlData.A[1].locked,false);
+ c.controlQuery='';c.controlFilter='all';c.controlCardIcon=()=>'';c.controlRoleSwitcher=()=>'';c.teacherTabBar=()=>'';c.binaryToggleButton=()=>'';c.controlModule='lock';c.confirmControl(1,true);c.parity.apply();assert.equal(c.controlData.A[0].locked,true);assert.equal(c.controlData.A[1].locked,true);
  c.controlWorkView='subject';c.controlModule='duration';c.openControlEditor(1);assert.match(toast,/权限/);
+});
+test('时长暂停按学校与老师来源分离，保留原配置并恢复默认',()=>{
+ const week=R.durationWeek({durationRules:[]});Object.values(week.dailySettings).forEach(v=>v.continuousMinutes=30);week.dailySettings[0].continuousMinutes=45;
+ const s={durationRules:[week],durationTeacherWeekdays:[0]},before=JSON.stringify(s.durationRules);
+ s.durationSchoolPaused=true;assert.equal(R.effectiveDuration(s,0).continuousMinutes,45);assert.equal(R.effectiveDuration(s,1).continuousMinutes,60);
+ s.durationSchoolPaused=false;s.durationTeacherPaused=true;assert.equal(R.effectiveDuration(s,0).continuousMinutes,60);assert.equal(R.effectiveDuration(s,1).continuousMinutes,30);
+ s.durationTeacherPaused=false;assert.equal(R.effectiveDuration(s,0).continuousMinutes,45);assert.equal(JSON.stringify(s.durationRules),before);
+});
+test('班主任时长先选学生再设置，详情紧凑展开且只保存所选学生',()=>{
+ const fs=require('node:fs'),vm=require('node:vm');let stored,dialog;const make=id=>{const s=student(id);s.name='同学'+id;const w=R.durationWeek(s);Object.values(w.dailySettings).forEach(v=>v.continuousMinutes=45);s.durationRules=[w];return s;};
+ const c={controlRules:R,closeControlOverlay(){},addEventListener(){},setInterval(){},crypto:require('crypto'),schoolControlClasses:['A'],controlClasses:['A'],selectedTeacherClass:'A',controlData:{A:[make(1),make(2)]},controlStudents(){return c.controlData.A;},controlDemoRole:'teacher',controlWorkView:'homeroom',controlModule:'duration',controlView:'module',controlLabels:{duration:'使用时长'},controlSelected:new Set(),adminSelectedScopes:new Set(),schoolBorrowingEnabled:true,stage:'other',app:{innerHTML:''},header:t=>'<span></span><h2>'+t+'</h2>',syncReview(){},isHeadTeacherClass:()=>true,document:{getElementById:()=>null,querySelector:()=>null},localStorage:{getItem:()=>stored||null,setItem:(k,v)=>stored=v},controlToast(){},controlOverlay:(title,body,actions)=>dialog={title,body,actions}};c.window=c;vm.runInNewContext(fs.readFileSync(require.resolve('./control-parity.js'),'utf8'),c);
+ c.parity.editClass();assert.match(dialog.title,/选择A学生/);assert.match(dialog.actions,/下一步/);c.parity.confirmDurationStudents();assert.doesNotMatch(c.app.innerHTML,/parity-rule-form/);
+ c.parity.selectDurationStudent('1',true);c.parity.searchDurationStudents('同学1');c.parity.confirmDurationStudents();assert.match(c.app.innerHTML,/已选 1 名学生/);assert.match(c.app.innerHTML,/查看详情/);assert.match(c.app.innerHTML,/同学1/);assert.doesNotMatch(c.app.innerHTML,/同学2|恢复默认规则|<h3>默认规则/);
+ c.parity.durationDetails(true);c.parity.renderEditor();assert.match(c.app.innerHTML,/<details class="duration-selected-details" open/);
+ const fields={continuousMinutes:{value:'30'},restMinutes:{value:'10'},dailyMinutes:{value:'120'}};
+ const section={dataset:{durationGroup:'0'},querySelector:selector=>fields[selector.match(/"(.*?)"/)[1]],querySelectorAll:selector=>selector.includes('data-group-day')?[0,1,2,3,4,5,6].map(value=>({value:String(value)})):[]};
+ c.document.getElementById=id=>id==='parity-rule-form'?{querySelectorAll:()=>[section]}:null;
+ c.parity.saveEditor();c.parity.apply();assert.equal(R.effectiveDuration(c.controlData.A[0],0).continuousMinutes,30);assert.equal(R.effectiveDuration(c.controlData.A[1],0).continuousMinutes,45);assert.equal(c.controlData.schoolSettings.durationClasses?.A,undefined);
+});
+test('智阅先选学生和科目且仅保存选中范围，万象新名单支持多选停止和逐人恢复',()=>{
+ const fs=require('node:fs'),vm=require('node:vm');let stored,dialog,fields=[];const error={textContent:''};
+ const form={querySelectorAll(){return fields;}};
+ const c={controlRules:R,closeControlOverlay(){},addEventListener(){},setInterval(){},crypto:require('crypto'),schoolControlClasses:['A'],controlClasses:['A'],selectedTeacherClass:'A',controlData:{A:[student(1),student(2)]},controlStudents(){return c.controlData.A;},controlDemoRole:'teacher',controlWorkView:'homeroom',controlModule:'homework',controlView:'module',controlLabels:{homework:'智阅作业',world:'万象视界'},controlSelected:new Set(),adminSelectedScopes:new Set(),schoolBorrowingEnabled:true,stage:'other',app:{innerHTML:''},header:t=>'<span></span><h2>'+t+'</h2>',syncReview(){},isHeadTeacherClass:()=>true,document:{getElementById:id=>id==='parity-rule-form'?form:id==='parity-error'?error:null,querySelector:()=>null},localStorage:{getItem:()=>stored||null,setItem:(k,v)=>stored=v},controlToast(){},controlOverlay:(title,body,actions)=>dialog={title,body,actions}};c.window=c;vm.runInNewContext(fs.readFileSync(require.resolve('./control-parity.js'),'utf8'),c);
+ c.renderControl();assert.doesNotMatch(c.app.innerHTML,/parity-student-rows|toggleHomeworkPermission|搜索学生姓名或编号/);
+ assert.match(c.app.innerHTML,/openHomeworkSubject/);assert.doesNotMatch(c.app.innerHTML,/control-fixed-select/);c.parity.openHomeworkSubject('数学');assert.match(c.app.innerHTML,/设置学生权限/);c.parity.editClass();assert.match(dialog.body,/选择需要设置权限的学生/);c.parity.selectDurationStudent('1',true);c.parity.confirmDurationStudents();assert.match(c.app.innerHTML,/科目：数学/);assert.doesNotMatch(c.app.innerHTML,/选择科目/);assert.match(c.app.innerHTML,/已选 1 名学生/);
+ const field=(name,key,value)=>({dataset:{homeworkSubject:name,homeworkField:key},value});fields=[field('数学','answer','true'),field('数学','explanation','false')];c.parity.saveEditor();assert.equal(R.homeworkValue(c.controlData.A[0],'数学').answer,true);assert.equal(R.homeworkValue(c.controlData.A[1],'数学').answer,false);assert.equal(R.homeworkValue(c.controlData.A[0],'语文').answer,false);
+ c.controlModule='world';c.controlView='individuals';c.renderControl();assert.equal(c.controlView,'module');assert.doesNotMatch(c.app.innerHTML,/parity-student-rows|搜索学生姓名或编号/);
+ c.parity.chooseWorldStudents();c.parity.selectWorldStudent('2',true);c.parity.saveWorldStudents();assert.equal(c.controlData.A[0].world,true);assert.equal(c.controlData.A[1].world,false);assert.equal(c.controlData.A[1].worldSource,'teacher');assert.match(c.app.innerHTML,/已停止使用学生（1人）/);
+ c.parity.restoreStudentWorld(2);assert.ok(c.controlData.A.every(s=>s.world));c.parity.chooseWorldStudents();c.parity.selectWorldStudent('1',true);c.closeControlOverlay();assert.ok(c.controlData.A.every(s=>s.world));
+ c.controlWorkView='subject';c.controlModule='homework';c.parity.editClass();c.parity.selectDurationStudent('2',true);c.parity.confirmDurationStudents();assert.match(c.app.innerHTML,/科目：数学/);assert.doesNotMatch(c.app.innerHTML,/选择科目/);assert.doesNotMatch(c.app.innerHTML,/语文|英语/);
+});
+
+test('老师时长页年级规则独立只读，学生规则可停用及删除后回到年级规则',()=>{
+ const fs=require('node:fs'),vm=require('node:vm');let stored,dialog,toast;
+ const name='五年级 2 班',days=[0,1,2,3,4,5,6],grade={continuousMinutes:35,restMinutes:10,dailyMinutes:100,periods:[]};
+ const baseline=R.expandSettingGroups(R.durationWeek({durationRules:[]}),[{weekdays:days,value:grade}],'duration');
+ const a=student(1),b=student(2);a.durationRules=[baseline];b.durationRules=[{...R.copy(baseline),source:'homeroom'}];b.durationRules[0].dailySettings[0].continuousMinutes=25;b.durationTeacherWeekdays=[...days];b.durationIndividual=true;
+ const c={controlRules:R,closeControlOverlay(){},addEventListener(){},setInterval(){},crypto:require('crypto'),schoolControlClasses:[name],controlClasses:[name],selectedTeacherClass:name,controlData:{[name]:[a,b],schoolSettings:{adminPolicies:{duration:[{id:'grade',grades:['五年级'],groups:[{weekdays:days,value:grade}]}]}}},controlStudents(){return c.controlData[name];},controlDemoRole:'teacher',controlWorkView:'homeroom',controlModule:'duration',controlView:'module',controlLabels:{duration:'使用时长管控'},controlSelected:new Set(),adminSelectedScopes:new Set(),schoolBorrowingEnabled:true,stage:'other',app:{innerHTML:''},header:t=>'<span></span><h2>'+t+'</h2>',syncReview(){},isHeadTeacherClass:()=>true,document:{getElementById:()=>null},localStorage:{getItem:()=>stored||null,setItem:(k,v)=>stored=v},controlToast(message){toast=message;},controlOverlay:(title,body,actions)=>dialog={title,body,actions}};c.window=c;vm.runInNewContext(fs.readFileSync(require.resolve('./control-parity.js'),'utf8'),c);
+ c.renderControl();assert.match(c.app.innerHTML, /年级规则.*35分钟.*使用时长规则.*适用学生 1 人/s);assert.doesNotMatch(c.app.innerHTML,/编辑本班规则|恢复默认规则|按学生设置/);
+ c.parity.chooseDurationStudents('duration');c.parity.selectDurationStudent('1',true);c.parity.confirmDurationStudents();const before=stored,priorDialog=dialog;c.parity.saveEditor();assert.equal(toast,'已是年级规则，无需重复保存');assert.equal(stored,before);assert.equal(dialog,priorDialog);assert.equal(c.controlView,'ruleEditor');c.parity.cancelEditor();
+ c.parity.toggleClassDuration(false);assert.equal(R.effectiveDuration(c.controlData[name][1],0).continuousMinutes,35);assert.match(c.app.innerHTML,/fieldset class="school-weekly-rules" disabled/);
+ c.parity.toggleClassDuration(true);assert.equal(R.effectiveDuration(c.controlData[name][1],0).continuousMinutes,25);
+ c.parity.removeStudentDuration(0);assert.match(dialog.title,/删除学生规则/);c.closeControlOverlay();c.parity.confirmRemoveStudentDuration();assert.equal(R.effectiveDuration(c.controlData[name][1],0).continuousMinutes,25);
+ c.parity.removeStudentDuration(0);c.parity.confirmRemoveStudentDuration();assert.equal(R.effectiveDuration(c.controlData[name][1],0).continuousMinutes,35);assert.equal(c.controlData[name][1].durationTeacherWeekdays.length,0);assert.match(c.app.innerHTML,/暂无自定义规则/);assert.equal(c.controlData[name][0].durationRules[0].dailySettings[0].continuousMinutes,35);
+});
+
+test('智阅学科子页仅列偏离年级默认的学生，双开关只改本科且一致后移出名单',()=>{
+ const fs=require('node:fs'),vm=require('node:vm'),name='五年级 2 班';let stored,dialog,toast;
+ const a=student(1),b=student(2);a.homeworkSubjects={数学:{answer:true,explanation:true},语文:{answer:false,explanation:false}};
+ const c={controlRules:R,closeControlOverlay(){},addEventListener(){},setInterval(){},crypto:require('crypto'),schoolControlClasses:[name],controlClasses:[name],selectedTeacherClass:name,controlData:{[name]:[a,b],schoolSettings:{adminPolicies:{homework:[{grades:['五年级'],answer:true,explanation:true}]}}},controlStudents(){return c.controlData[name];},controlDemoRole:'teacher',controlWorkView:'subject',controlModule:'homework',controlView:'module',controlLabels:{homework:'智阅作业'},controlSelected:new Set(),adminSelectedScopes:new Set(),schoolBorrowingEnabled:true,stage:'other',app:{innerHTML:''},header:t=>'<span></span><h2>'+t+'</h2>',syncReview(){},isHeadTeacherClass:()=>false,document:{getElementById:()=>null},localStorage:{getItem:()=>stored||null,setItem:(k,v)=>stored=v},controlToast(message){toast=message;},controlOverlay(title,body,actions){dialog={title,body,actions};}};c.window=c;vm.runInNewContext(fs.readFileSync(require.resolve('./control-parity.js'),'utf8'),c);
+ c.parity.openHomeworkSubject('数学');assert.match(c.app.innerHTML,/学生权限（1人）/);assert.match(c.app.innerHTML,/学生2/);assert.doesNotMatch(c.app.innerHTML,/学生1|当前科目权限/);assert.equal((c.app.innerHTML.match(/role="switch"/g)||[]).length,2);assert.match(c.app.innerHTML,/答案/);assert.match(c.app.innerHTML,/解析/);
+ c.toggleHomeworkPermission(2,'answer',true);assert.match(c.app.innerHTML,/学生权限（1人）/);assert.equal(R.homeworkValue(c.controlData[name][1],'数学').explanation,false);
+ c.toggleHomeworkPermission(2,'explanation',true);assert.match(c.app.innerHTML,/暂无与默认规则不同的学生/);assert.equal(R.homeworkValue(c.controlData[name][1],'语文').answer,false);assert.equal(R.homeworkValue(c.controlData[name][0],'语文').answer,false);
+ c.controlWorkView='homeroom';c.parity.openHomeworkSubject('语文');assert.match(c.app.innerHTML,/学生权限（2人）/);c.toggleHomeworkPermission(1,'answer',true);assert.equal(R.homeworkValue(c.controlData[name][0],'数学').answer,true);assert.equal(R.homeworkValue(c.controlData[name][1],'语文').answer,false);
+ assert.match(c.app.innerHTML,/年级规则.*答案：允许查看.*解析：允许查看.*学生权限/s);
+ c.controlData.schoolSettings.adminPolicies.homework=[];c.parity.openHomeworkSubject('语文');assert.match(c.app.innerHTML,/学校默认规则.*答案：不允许查看.*解析：不允许查看.*学生权限/s);
+ c.controlModule='world';c.controlView='module';c.renderControl();assert.match(c.app.innerHTML,/学校默认规则.*万象视界：允许使用.*已停止使用学生/s);
+ c.controlData.schoolSettings.adminWorldClasses={[name]:true};c.renderControl();assert.match(c.app.innerHTML,/年级规则.*万象视界：停止使用.*已停止使用学生/s);
+
+ c.controlModule='homework';c.parity.openHomeworkSubject('数学');c.parity.chooseDurationStudents('homework');assert.match(dialog.body,/0\/1 人/);assert.match(dialog.body,/学生1/);assert.doesNotMatch(dialog.body,/学生2/);
+ c.parity.selectDurationStudent('2',true);c.parity.confirmDurationStudents();assert.equal(c.controlView,'module');
+ c.parity.selectDurationStudent('1',true);const latest=JSON.parse(stored);latest[name][0].teacherModified||={};latest[name][0].teacherModified['homework:数学']=true;stored=JSON.stringify(latest);c.parity.confirmDurationStudents();assert.equal(toast,'学生权限已变化，请重新选择');assert.equal(c.controlView,'module');
+
 });

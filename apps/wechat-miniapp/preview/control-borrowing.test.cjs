@@ -21,9 +21,9 @@ test('借用异常预览从可操作页通知，确认后只读或刷新时间�
   vm.runInContext(fs.readFileSync(require.resolve('./control-borrowing.js'),'utf8'),context);
   context.borrowing.demoStart('temporary');
   assert.equal(overlay.title,'学校已开启临时禁借');
-  assert.match(context.app.innerHTML,/全班禁止借用<\/button>/);
+  assert.match(context.app.innerHTML,/选择禁借学生/);
   context.borrowing.demoAcknowledge();
-  assert.match(context.app.innerHTML,/学校已临时禁止该班借用/);
+  assert.match(context.app.innerHTML,/学校临时禁止借用/);
   assert.doesNotMatch(context.app.innerHTML,/全班禁止借用<\/button>/);
   context.borrowing.toggleClass(true);assert.match(notices.at(-1),/异常场景预览/);
   context.borrowing.demoRestore();assert.equal(context.controlDemoRole,'admin');assert.equal(context.controlView,'entry');
@@ -42,7 +42,7 @@ test('合并预览两类规则，单项或整校管理并保留返回层级', ()
     controlData:{'五年级 2 班':[{id:1}], schoolSettings:{borrowing:s}}, controlDemoRole:'admin', controlWorkView:'school',
     controlView:'module', controlModule:'borrowing', adminLevel:'school', adminModuleRoot:'school', adminSelectedGrade:'',
     selectedTeacherClass:'五年级 2 班', stage:'other', teacherTab:'control', app:{innerHTML:''},
-    crypto:require('node:crypto'), localStorage:{getItem:()=>null}, header:t=>'<span></span><h2>'+t+'</h2>', syncReview(){},
+    crypto:require('node:crypto'), localStorage:{getItem:()=>null,setItem(){}}, header:t=>'<span></span><h2>'+t+'</h2>', syncReview(){},
     openControlModule(){}, enterAdminModule(){}, renderControl(){}, closeControlOverlay(){}, controlOverlay(title,body,actions){ overlay = {title,body,actions}; }, document:{querySelector:()=>null} };
   context.window=context; vm.createContext(context);
   vm.runInContext(fs.readFileSync(require.resolve('./control-borrowing.js'),'utf8'),context);
@@ -158,29 +158,29 @@ test('班主任只设置全班借用状态，学校临时禁借时只读', () =>
   let overlay;
   const context = { controlRules:R, borrowingModel:M, schoolControlClasses:['五年级 2 班'], schoolGrades:()=>['五年级'],
     controlData:{'五年级 2 班':[{id:1,name:'林小满'},{id:2,name:'陈子涵'}],schoolSettings:{borrowing:s}},
-    selectedTeacherClass:'五年级 2 班', controlDemoRole:'teacher', controlWorkView:'homeroom', isHeadTeacherClass:()=>true,
+    controlClasses:['五年级 2 班'],selectedTeacherClass:'五年级 2 班', controlDemoRole:'teacher', controlWorkView:'homeroom', isHeadTeacherClass:()=>true,
     controlView:'module', controlModule:'borrowing', stage:'other', teacherTab:'control', app:{innerHTML:''},
-    localStorage:{getItem:()=>null}, header:t=>'<span></span><h2>'+t+'</h2>', syncReview(){}, openControlModule(){}, enterAdminModule(){},
+    localStorage:{getItem:()=>null,setItem(){}}, header:t=>'<span></span><h2>'+t+'</h2>', syncReview(){}, openControlModule(){}, enterAdminModule(){},
     controlToast:message=>notices.push(message), controlOverlay:(title,body,actions)=>{ overlay={title,body,actions}; }, closeControlOverlay(){},
     document:{ getElementById:()=>rowHost, querySelector:()=>footer } };
   context.window=context; vm.createContext(context);
   vm.runInContext(fs.readFileSync(require.resolve('./control-borrowing.js'),'utf8'),context);
-  context.borrowing.render(); assert.match(context.app.innerHTML,/本班未禁借/);
+  context.borrowing.render(); assert.match(context.app.innerHTML,/已禁止借用学生（0人）/);
   assert.doesNotMatch(context.app.innerHTML,/1人已禁借|1人未禁借/);
   const entry=context.borrowing.teacherEntryCard();
   assert.match(entry,/柜机借用管控/); assert.match(entry,/查看借用时间/);
   assert.match(entry,/全班禁止借用/); assert.doesNotMatch(entry,/查看详情/);
-  assert.match(context.app.innerHTML,/borrowing.toggleClass\(true\)/);
+  assert.doesNotMatch(context.app.innerHTML,/borrowing.toggleClass\(/);
   assert.doesNotMatch(context.app.innerHTML,/搜索学生|筛选学生|borrowing.studentChoice\(\)/);
   context.borrowing.batch(); assert.doesNotMatch(context.app.innerHTML,/已选 1 名学生/);
   assert.equal(context.borrowing.student,undefined);
   assert.equal(context.borrowing.studentChoice,undefined);
-  context.borrowing.toggleClass(true); assert.equal(overlay.title,'确认全班禁止借用？');
-  assert.doesNotMatch(overlay.body,/radio|解除禁止借用/);
+  context.borrowing.chooseStudents();context.borrowing.pickStudent('2',true);context.borrowing.saveStudents();assert.equal(notices.at(-1),'已禁止借用');assert.equal(context.controlData.schoolSettings.borrowing.studentBans['五年级 2 班'][2],true);context.borrowing.toggleStudent(2,false);assert.equal(context.controlData.schoolSettings.borrowing.studentBans['五年级 2 班'][2],false);
+  context.borrowing.toggleClass(true);assert.equal(context.controlData.schoolSettings.borrowing.classBans['五年级 2 班'],true);
   context.controlData.schoolSettings.borrowing.classBans['五年级 2 班'] = true;
   assert.match(context.borrowing.teacherEntryCard(),/解除禁止借用<\/button>/);
   assert.doesNotMatch(context.borrowing.teacherEntryCard(),/>全班禁止借用<\/button>/);
-  context.borrowing.toggleClass(false); assert.equal(overlay.title,'确认解除禁止借用？');
+  context.borrowing.toggleClass(false);assert.equal(context.controlData.schoolSettings.borrowing.classBans['五年级 2 班'],false);
   context.controlData.schoolSettings.borrowing.temporaryClasses['五年级 2 班'] = true;
   context.borrowing.render();
   assert.match(context.borrowing.teacherEntryCard(),/学校已临时禁止该班借用/);
@@ -337,3 +337,13 @@ test('一次保存多个完整年级，任一年级范围不完整或规则冲�
 });
 
 test('学生禁借只作用本人，整班操作清除例外，临时禁借优先',()=>{let s=M.initial();const roster={A:[{id:1},{id:2}]};const save=fields=>s=M.commit(s,{...fields,names:['A'],revision:s.revision,targets:M.targets(roster,['A'])},roster,'homeroom',['A']);save({type:'student',id:1,value:true});assert.equal(M.result(s,'A',1),'班主任已禁止借用');assert.equal(M.result(s,'A',2),'当前可借用');save({type:'class',value:true});save({type:'student',id:1,value:false});assert.equal(M.result(s,'A',1),'当前可借用');assert.equal(M.result(s,'A',2),'班主任已禁止借用');s.temporaryClasses.A=true;assert.throws(()=>save({type:'student',id:1,value:false}),/学校正在/);});
+test('每周限制开关保留配置并独立于日期、学校临时禁借',()=>{
+ const s=M.initial();s.classRules.A=[weekly('w',[0])];s.classRules.A[0].periods=[{start:'08:00',end:'10:00'}];const now=new Date('2026-11-09T04:00:00Z');
+ assert.equal(M.result(s,'A',1,now),'当前不在借用时段');s.weeklyRestrictionEnabled=false;assert.equal(M.result(s,'A',1,now),'当前可借用');assert.equal(s.classRules.A.length,1);
+ s.classRules.A.push(dated('d','2026-11-09','2026-11-09'));assert.equal(M.result(s,'A',1,now),'当前禁止借用');s.temporaryClasses.A=true;assert.equal(M.result(s,'A',1,now),'学校临时禁止借用');
+});
+test('日期开关独立停用整组日期规则，保留每周规则和临时禁借',()=>{
+ const s=M.initial();s.classRules.A=[weekly('w',[0]),dated('d','2026-11-09','2026-11-09')];s.classRules.A[0].periods=[{start:'08:00',end:'10:00'}];const now=new Date('2026-11-09T04:00:00Z');
+ assert.equal(M.result(s,'A',1,now),'当前禁止借用');s.dateRestrictionEnabled=false;assert.equal(M.result(s,'A',1,now),'当前不在借用时段');assert.equal(s.classRules.A.length,2);
+ s.weeklyRestrictionEnabled=false;assert.equal(M.result(s,'A',1,now),'当前可借用');s.dateRestrictionEnabled=true;assert.equal(M.result(s,'A',1,now),'当前禁止借用');s.temporaryClasses.A=true;s.dateRestrictionEnabled=false;assert.equal(M.result(s,'A',1,now),'学校临时禁止借用');
+});

@@ -35,8 +35,10 @@
     return matched ? { ...copy(matched), periods: matched.deny ? [] : matched.mode === 'weekly' ? borrowDayPeriods(matched, day) : periods(matched) } : { deny: rules.some(rule => rule.mode === 'weekly'), periods: [], reason: rules.some(rule => rule.mode === 'weekly') ? '当前星期不在借用安排内' : '未设置借用时间，默认随时可借' };
   }
   function effectiveDuration(student, day) {
-    const own = [...(student.durationRules || [])].reverse().find(rule => rule.weekdays.includes(day));
-    const selected = own?.dailySettings?.[day] || own;
+    const schoolOwned=durationDays(student,[day],'unmodified').length>0;
+    const paused=schoolOwned?student.durationSchoolPaused:student.durationTeacherPaused;
+    const own = paused?null:[...(student.durationRules || [])].reverse().find(rule => rule.weekdays.includes(day));
+    const selected = !schoolOwned&&student.durationTeacherPaused&&!student.durationSchoolPaused&&student.durationGradeSettings?.[day] || own?.dailySettings?.[day] || own;
     const rule = !selected || selected.useDefault ? defaultDuration : selected;
     return { ...copy(rule), unavailable: false, allDay: periods(rule).length === 0, source: own && !own.useDefault ? '单独规则' : '默认规则' };
   }
@@ -106,7 +108,7 @@
     const homework = subject ? homeworkValue(student, subject) : null;
     const value = module === 'borrowing' ? student.schedules || [] : module === 'duration' ? student.durationRules || [] : module === 'homework' ? [student.answer, student.explanation] : subject ? [homework.answer, homework.explanation] : student[module === 'lock' ? 'locked' : 'world'];
     const subjectVersions = module === 'homework' ? Object.keys(student.homeworkSubjects || {}).sort().map(key => [key, student.homeworkSubjects[key], student.updated?.['homework:' + key]?.version || 0]) : null;
-    return JSON.stringify([value, student.updated?.[module]?.version || 0, module === 'duration' ? student.durationTeacherWeekdays || [] : module === 'world' ? student.worldSource : subject ? student.updated?.homework?.version || 0 : subjectVersions]);
+    return JSON.stringify([value, student.updated?.[module]?.version || 0, module === 'duration' ? [student.durationTeacherWeekdays || [],!!student.durationSchoolPaused,!!student.durationTeacherPaused,student.durationGradeSettings || null] : module === 'world' ? student.worldSource : subject ? student.updated?.homework?.version || 0 : subjectVersions]);
   }
   const modified = (student, module) => module === 'world' && student.worldSource !== undefined ? student.worldSource === 'teacher' : module === 'homework' ? Object.entries(student.teacherModified || {}).some(([key, value]) => value && (key === 'homework' || key.startsWith('homework:'))) : Boolean(student.teacherModified?.[module] ?? (module.startsWith('homework:') ? student.teacherModified?.homework : false)) && (module === 'borrowing' ? prune(student.schedules || []).length > 0 : module === 'duration' ? (student.durationRules || []).length > 0 : true);
   function resolve(data, refs) {
