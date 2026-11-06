@@ -8,9 +8,9 @@ export function effectiveSchoolDurationRules(control: StudentControl, enabled: S
   const teacherDays = new Set(teacherDurationWeekdays(control));
   return Array.from({ length: 7 }, (_, day) => {
     const teacher = teacherDays.has(day);
-    if (!teacher && enabled.duration === false) return [];
-    const rule = control.durationRules.find(item => item.weekdays.includes(day) && (teacher ? item.source === 'homeroom' : true))
-      ?? (teacher ? control.durationRules.find(item => item.weekdays.includes(day)) : undefined);
+    const rule = !teacher && enabled.duration === false ? undefined
+      : control.durationRules.find(item => item.weekdays.includes(day) && (teacher ? item.source === 'homeroom' : true))
+        ?? (teacher ? control.durationRules.find(item => item.weekdays.includes(day)) : undefined);
     return [{ ...(rule ?? { ...defaultDurationRule, id: `default-${day}`, useDefault: true }), weekdays: [day] }];
   }).flat();
 }
@@ -18,5 +18,5 @@ export function effectiveSchoolDurationRules(control: StudentControl, enabled: S
 export function effectiveSchoolHomeworkPermission(control: StudentControl, enabled: SchoolRuleModulesEnabled = {}) {
   return control.homeworkSource === 'teacher' || enabled.homework !== false
     ? { answer: control.answer, explanation: control.explanation }
-    : { answer: true, explanation: true };
+    : { answer: false, explanation: false };
 }

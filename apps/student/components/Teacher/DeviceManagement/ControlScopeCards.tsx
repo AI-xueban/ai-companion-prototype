@@ -28,7 +28,7 @@ export const ControlScopeCards: React.FC<{
     const defaultRows: Row[] = [];
     rows.forEach(row => {
       const entries = row.ids.map(id => controls[id]).filter(Boolean);
-      if (module === 'homework' && entries.length > 0 && entries.every(usesDefaultHomeworkRule)) {
+      if (module === 'homework' && entries.length > 0 && (!enabled || entries.every(usesDefaultHomeworkRule))) {
         defaultRows.push(row);
         return;
       }
@@ -49,10 +49,11 @@ export const ControlScopeCards: React.FC<{
     const groupLabel = (items: Row[]) => items.every(row => row.grade && !row.classId)
       ? items.map(row => gradeNames[row.grade!] || String(row.grade)).join('、') + '年级'
       : items.map(row => row.label).join('、');
-    return <>{module === 'homework' && <section className="borrow-policy-section borrow-default-summary" aria-label="默认智阅作业规则"><div className="borrow-policy-content">{!!defaultRows.length && <p>{groupLabel(defaultRows)}</p>}<p>查看答案：不允许 · 查看详解：不允许</p></div><span className="borrow-default-label">默认规则</span></section>}<section className="borrow-policy-section" aria-label={module === 'lock' ? '锁屏管控' : heading}>
+    return <>{module === 'homework' && <section className="borrow-policy-section borrow-default-summary" aria-label="默认智阅作业规则"><h2 className="borrow-default-label">默认规则</h2><div className="borrow-policy-content">{!!defaultRows.length && <p className="borrow-default-scope">{groupLabel(defaultRows)}</p>}<p>查看答案：不允许 · 查看详解：不允许</p></div></section>}<section className="borrow-policy-section" aria-label={module === 'lock' ? '锁屏管控' : heading}>
       <header className="borrow-policy-heading"><div className="borrow-policy-title"><h2>{module === 'lock' ? '锁屏管控' : heading}</h2></div>
         {onToggle && <RuleEffectSwitch label="智阅作业规则" enabled={enabled} disabled={!selectableRows.length} onToggle={onToggle} />}
       </header>
+      {enabled && module !== 'lock' && <div className="borrow-policy-add-row"><button type="button" className="borrow-policy-add" disabled={!selectableRows.length} onClick={onBatch}>{settingLabel}</button></div>}
       {enabled && <div className="borrow-policy-list">{[...grouped.entries()].map(([key, group]) => {
         const ids = group.rows.flatMap(row => row.ids);
         const label = groupLabel(group.rows);
@@ -60,7 +61,6 @@ export const ControlScopeCards: React.FC<{
           {!!ids.length && <div className="borrow-policy-row-actions"><button type="button" aria-label={`${action(ids)}：${label}`} onClick={() => onSettings({ ...group.rows[0], id: key, label, ids })}>{action(ids)}</button>{module === 'homework' && onDelete && <button type="button" aria-label={`删除${label}智阅作业规则`} onClick={() => onDelete({ ...group.rows[0], id: key, label, ids })}>删除</button>}</div>}
         </article>;
       })}{!grouped.size && !!rows.length && <p className="borrow-policy-empty">暂无自定义权限</p>}{!rows.length && <div className="borrow-policy-empty"><p>{emptyTitle ?? `暂无${rowType}`}</p><p>{emptyDescription ?? '当前范围暂无数据'}</p></div>}</div>}
-      {enabled && module !== 'lock' && <footer className="borrow-policy-footer"><button type="button" className="borrow-policy-add" disabled={!selectableRows.length} onClick={onBatch}>{settingLabel}</button></footer>}
     </section></>;
   }
   return <section className="dc-list-card overflow-hidden">
