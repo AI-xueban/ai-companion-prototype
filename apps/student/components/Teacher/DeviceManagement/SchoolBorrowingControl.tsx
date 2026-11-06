@@ -182,6 +182,7 @@ export const SchoolBorrowingControl: React.FC<{ currentUser: TeacherPortalUser; 
       const groups = groupBorrowingRules(state, empty ? [] : allClasses, mode).sort((a, b) => mode === 'dates' ? a.rule.startDate.localeCompare(b.rule.startDate) : 0);
       return <section className={`borrow-policy-section borrow-policy-section--${mode}`} key={mode} aria-label={mode === 'dates' ? '指定日期规则' : '每周固定规则'}>
         <header className="borrow-policy-heading"><div className="borrow-policy-title"><h2>{mode === 'dates' ? '指定日期规则' : '每周固定规则'}</h2><span className="borrow-policy-hint">{mode === 'dates' ? '禁止借用日期' : '每周可用时间'}</span></div><label className="borrow-rule-enabled"><span>生效</span><button type="button" role="switch" aria-label={`${mode === 'dates' ? '指定日期规则' : '每周固定规则'}生效`} aria-checked={borrowingRuleTypeEnabled(state, mode)} disabled={!selectableRows.length} onClick={() => toggleRuleType(mode)}><span /></button></label></header>
+        {borrowingRuleTypeEnabled(state, mode) && <div className="borrow-policy-add-row"><button type="button" className="borrow-policy-add" disabled={!selectableRows.length} onClick={() => addRule(mode)}>{mode === 'dates' ? '新增日期规则' : '新增每周规则'}</button></div>}
         {borrowingRuleTypeEnabled(state, mode) && <div className="borrow-policy-list">{groups.map(({ key, rule, entries }) => {
           const grades = new Set(schoolDeviceClasses.filter(group => entries.some(entry => entry.classId === group.id)).map(group => group.grade));
           const classIds = schoolDeviceClasses.filter(group => grades.has(group.grade)).map(group => group.id);
@@ -189,7 +190,6 @@ export const SchoolBorrowingControl: React.FC<{ currentUser: TeacherPortalUser; 
           const detail = mode === 'dates' ? scheduleDateText(rule) : ruleText(rule);
           return <article key={key} className="borrow-policy-row"><div className="borrow-policy-content"><h3>{target.label}</h3>{detail.split('；').map((line, index) => <p key={index}>{line}</p>)}</div><div className="borrow-policy-row-actions"><button aria-label={`编辑${target.label}${mode === 'dates' ? '日期' : '每周'}规则`} onClick={() => openRule(target, rule, rule.id, entries)}>编辑</button><button aria-label={`删除${target.label}${mode === 'dates' ? '日期' : '每周'}规则`} onClick={() => deleteRule(target, rule, entries)}>删除</button></div></article>;
         })}{!groups.length && <p className="borrow-policy-empty text-center">{mode === 'dates' ? '暂无日期规则，可新增日期规则' : '暂无每周规则，可新增每周规则'}</p>}</div>}
-        {borrowingRuleTypeEnabled(state, mode) && <footer className="borrow-policy-footer"><button type="button" className="borrow-policy-add" disabled={!selectableRows.length} onClick={() => addRule(mode)}>{mode === 'dates' ? '新增日期规则' : '新增每周规则'}</button></footer>}
       </section>;
     })}
     {ruleHelpOpen && <DeviceControlLayer labelId="borrow-rule-help-title" onClose={() => setRuleHelpOpen(false)}>{close => <>
