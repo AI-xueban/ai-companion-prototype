@@ -153,7 +153,7 @@ assert.equal(protectedDelete.durationRules.find(r => r.weekdays.includes(1)).sou
 console.log('PASS mandatory teacher protection on school save/delete/default restoration and per-weekday teacher defaults');
 
 const { effectiveSchoolDurationRules, effectiveSchoolHomeworkPermission } = await load('components/Teacher/data/schoolRuleExecution.ts');
-const pausedModules = JSON.parse(JSON.stringify({ duration: false, homework: false }));
+const pausedModules = JSON.parse(JSON.stringify({ duration: false, homework: false, durationDefault: true }));
 const pausedBefore = JSON.stringify(mixedTeacherDays);
 const defaultWhenPaused = effectiveSchoolDurationRules(control, pausedModules);
 assert.equal(defaultWhenPaused.length, 7);
@@ -170,3 +170,17 @@ assert.equal(JSON.stringify(mixedTeacherDays), pausedBefore);
 assert.deepEqual(effectiveSchoolHomeworkPermission(control), { answer: control.answer, explanation: control.explanation });
 assert.deepEqual(effectiveSchoolHomeworkPermission({ ...control, answer: true, explanation: true, homeworkSource: 'school' }, { homework: true }), { answer: true, explanation: true });
 console.log('PASS paused custom rules fall back to school defaults, preserve teacher rules and stored configuration, and resume independently');
+const partialSchool = { ...control, durationRules: [{ ...rule, weekdays: [0] }] };
+assert.deepEqual(effectiveSchoolDurationRules(partialSchool, { durationDefault: false }).flatMap(r => r.weekdays), [0]);
+assert.deepEqual(effectiveSchoolDurationRules(partialSchool, { duration: false, durationDefault: false }), []);
+assert.equal(effectiveSchoolDurationRules(partialSchool, { durationDefault: true }).length, 7);
+const teacherWithDefaultOff = effectiveSchoolDurationRules(mixedTeacherDays, { duration: false, durationDefault: false });
+assert.deepEqual(teacherWithDefaultOff.flatMap(r => r.weekdays), [1,3]);
+assert.equal(teacherWithDefaultOff.find(r => r.weekdays.includes(1)).dailyMinutes, 70);
+assert.equal(teacherWithDefaultOff.find(r => r.weekdays.includes(3)).dailyMinutes, 120);
+assert.equal(JSON.stringify(mixedTeacherDays), pausedBefore);
+console.log('PASS independent default-duration switch preserves custom/teacher rules and removes only school fallback limits');
+
+assert.deepEqual(effectiveSchoolDurationRules(partialSchool).flatMap(r => r.weekdays), [0]);
+assert.deepEqual(effectiveSchoolDurationRules({ ...control, durationRules: [] }), []);
+console.log("PASS default duration is disabled when no switch value is stored");
