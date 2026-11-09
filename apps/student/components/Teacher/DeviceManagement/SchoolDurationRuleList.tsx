@@ -7,9 +7,9 @@ import './SchoolBorrowingControl.css';
 export const SchoolDurationRuleList: React.FC<{
   groups: DurationRuleGroup[]; label: (ids: string[]) => string; disabled?: boolean;
   onAdd: () => void; onEdit: (group: DurationRuleGroup) => void; onDelete: (group: DurationRuleGroup) => void;
-  enabled?: boolean; onToggle?: () => void;
-}> = ({ groups, label, disabled, onAdd, onEdit, onDelete, enabled = true, onToggle }) => <>
-  <section className="borrow-policy-section borrow-default-summary" aria-label="默认使用时长规则"><h2 className="borrow-default-label">默认规则</h2><div className="borrow-policy-content"><p>各年级未设置自定义规则的星期，执行默认规则</p><p>周一至周日 · 连续60分钟 · 休息15分钟 · 每日累计180分钟 · 不限可用时段</p></div></section>
+  enabled?: boolean; onToggle?: () => void; defaultEnabled?: boolean; onDefaultToggle?: () => void;
+}> = ({ groups, label, disabled, onAdd, onEdit, onDelete, enabled = true, onToggle, defaultEnabled = false, onDefaultToggle }) => <>
+  <section className="borrow-policy-section borrow-default-summary" aria-label="默认使用时长规则"><div className="flex w-full items-center justify-between gap-4"><h2 className="borrow-default-label">默认规则</h2>{onDefaultToggle && <RuleEffectSwitch label="默认使用时长规则" enabled={defaultEnabled} disabled={disabled} onToggle={onDefaultToggle} />}</div><div className="borrow-policy-content"><p>{defaultEnabled ? '各年级未设置自定义规则的星期，执行默认规则' : '默认规则已关闭，未设置自定义规则的星期不限使用时长'}</p><p>周一至周日 · 连续60分钟 · 休息15分钟 · 每日累计180分钟 · 不限可用时段</p></div></section>
   <section className="borrow-policy-section" aria-label="使用时长规则">
   <header className="borrow-policy-heading"><div className="borrow-policy-title"><h2>使用时长规则</h2></div>{onToggle && <RuleEffectSwitch label="使用时长规则" enabled={enabled} disabled={disabled} onToggle={onToggle} />}</header>
   {enabled && <div className="borrow-policy-add-row"><button className="borrow-policy-add" disabled={disabled} onClick={onAdd}>新增自定义规则</button></div>}
