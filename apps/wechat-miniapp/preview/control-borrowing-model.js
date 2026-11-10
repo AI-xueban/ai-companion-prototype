@@ -71,8 +71,8 @@
     if (['class','student'].includes(operation.type)) {
       if (role !== 'homeroom' || operation.names.length !== 1 || operation.names.some(name => !associatedClasses.includes(name))) throw Error('当前没有这个班级的管理权限');
       if(operation.type==='student' && !data[operation.names[0]].some(student=>student.id===operation.id)) throw Error('所选学生已变化');
-      if (operation.names.some(name => denied(state, name))) throw Error('学校正在临时禁止借用，暂时无法修改');
-    } else if (!['save','delete','temporary'].includes(operation.type) || role !== 'school') throw Error('只有学校管理员可以修改借用时间和临时禁借');
+      if (operation.names.some(name => denied(state, name))) throw Error('学校正在临时停止借用，暂时无法修改');
+    } else if (!['save','delete','temporary'].includes(operation.type) || role !== 'school') throw Error('只有学校管理员可以修改借用时间和临时停止借用');
     if (role === 'school' && !operation.school && ['save', 'temporary'].includes(operation.type)) {
       const grades = [...new Set(operation.names.map(gradeOf))];
       if (operation.type !== 'save' && grades.length !== 1) throw Error('请选择一个年级');
@@ -92,12 +92,12 @@
     return change(state, operation);
   }
   function result(state, name, id, now = new Date()) {
-    if (denied(state, name)) return '学校临时禁止借用';
-    if (state.studentBans?.[name]?.[id] ?? state.classBans?.[name]) return '班主任已禁止借用';
+    if (denied(state, name)) return '学校临时停止借用';
+    if (state.studentBans?.[name]?.[id] ?? state.classBans?.[name]) return '班主任已停止借用';
     const date = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai' }).format(now);
     const time = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(now);
     const rule = R.effectiveBorrow({ schedules: (state.classRules[name] || []).filter(r=>(r.mode!=='weekly'||state.weeklyRestrictionEnabled!==false)&&(r.mode!=='dates'||state.dateRestrictionEnabled!==false)) }, date);
-    return rule.deny ? '当前禁止借用' : !rule.periods.length || rule.periods.some(p => p.start <= time && time < p.end) ? '当前可借用' : '当前不在借用时段';
+    return rule.deny ? '当前停止借用' : !rule.periods.length || rule.periods.some(p => p.start <= time && time < p.end) ? '当前可借用' : '当前不在借用时段';
   }
   const api = { initial, denied, signature, groups, summary, preview, change, targets, commit, result };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.borrowingModel = api;

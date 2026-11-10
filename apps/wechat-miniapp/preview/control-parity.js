@@ -615,7 +615,7 @@ window.controlDurationStep=function(button,delta){const input=button.closest('.d
     if (controlModule === 'borrowing') {
       if (!editor.editingId && !editor.schoolRule) form += `<div class="control-form-section"><b class="control-form-title">规则类型</b><div class="control-segment">${[['weekly', '每周固定'], ['dates', '指定日期']].map(([mode, label]) => `<button aria-pressed="${rule.mode === mode}" onclick="parity.editorMode('${mode}')">${label}</button>`).join('')}</div></div>`;
       form += `<p class="control-form-note">指定日期规则优先，到期或删除后恢复每周规则。</p>`;
-      form += rule.mode === 'weekly' ? `<div class="control-form-section"><b class="control-form-title">适用星期</b>${daysFields(rule.weekdays)}</div>` : `<div class="control-form-section"><b class="control-form-title">适用日期（包含起止日期）</b><div class="control-date-row"><input id="parity-date-start" aria-label="开始日期" type="date" onchange="parity.borrowDateChanged()" min="${R.today()}" value="${rule.startDate}"><span>至</span><input id="parity-date-end" aria-label="结束日期" type="date" onchange="parity.borrowDateChanged()" min="${rule.startDate && rule.startDate > R.today() ? rule.startDate : R.today()}" value="${rule.endDate}"></div><p class="control-form-note">所选日期内全天禁止借用。</p></div>`;
+      form += rule.mode === 'weekly' ? `<div class="control-form-section"><b class="control-form-title">适用星期</b>${daysFields(rule.weekdays)}</div>` : `<div class="control-form-section"><b class="control-form-title">适用日期（包含起止日期）</b><div class="control-date-row"><input id="parity-date-start" aria-label="开始日期" type="date" onchange="parity.borrowDateChanged()" min="${R.today()}" value="${rule.startDate}"><span>至</span><input id="parity-date-end" aria-label="结束日期" type="date" onchange="parity.borrowDateChanged()" min="${rule.startDate && rule.startDate > R.today() ? rule.startDate : R.today()}" value="${rule.endDate}"></div><p class="control-form-note">所选日期内全天停止借用。</p></div>`;
       if (rule.mode !== 'dates') form += `<div class="control-form-section"><b class="control-form-title">借用时段</b>${periodFields(rule.periods)}</div>`;
     } else if (controlModule === 'duration') {
       form += `<div class="control-form-section"><b class="control-form-title">适用星期</b>${daysFields(rule.weekdays)}</div>`;
@@ -929,7 +929,7 @@ window.controlDurationStep=function(button,delta){const input=button.closest('.d
       const school = kind === 'adminNoGrades';
       const priorModule = controlModule;
       controlModule = 'borrowing';
-      shell('柜机借用管控', `<p class="parity-context">${school ? '全校' : esc(grade)}</p>${card((school ? '全校' : esc(grade)) + '柜机借用管控', '<p class="parity-note">未开启临时禁借</p>')}<div class="admin-scope-summary"><b>${school ? '年级' : '班级'}借用规则</b></div><div class="control-empty">${school ? '暂无年级，请联系学校管理员配置。' : '该年级暂无班级，添加班级后可设置管控。'}</div>`, 'controlPageDemo.restore()');
+      shell('柜机借用管控', `<p class="parity-context">${school ? '全校' : esc(grade)}</p>${card((school ? '全校' : esc(grade)) + '柜机借用管控', '<p class="parity-note">未开启临时停止借用</p>')}<div class="admin-scope-summary"><b>${school ? '年级' : '班级'}借用规则</b></div><div class="control-empty">${school ? '暂无年级，请联系学校管理员配置。' : '该年级暂无班级，添加班级后可设置管控。'}</div>`, 'controlPageDemo.restore()');
       controlModule = priorModule;
     },
     renderDemoPage(kind, closeEditor = false) {

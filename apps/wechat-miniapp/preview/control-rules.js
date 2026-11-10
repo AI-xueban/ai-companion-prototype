@@ -53,8 +53,8 @@
     }
     return parts.join('、');
   };
-  const periodText = rule => rule.mode === 'dates' || rule.deny ? '全天禁止借用' : periods(rule).length ? periods(rule).map(p => p.start + '–' + p.end).join('、') : '全天可用';
-  const borrowText = rule => rule.mode === 'dates' ? rule.startDate + ' 至 ' + rule.endDate + ' · ' + periodText(rule) : (rule.weekdays || []).map(day => dayText([day]) + ' ' + (rule.deny ? '全天禁止借用' : periodText({ periods: borrowDayPeriods(rule, day) }))).join('；');
+  const periodText = rule => rule.mode === 'dates' || rule.deny ? '全天停止借用' : periods(rule).length ? periods(rule).map(p => p.start + '–' + p.end).join('、') : '全天可用';
+  const borrowText = rule => rule.mode === 'dates' ? rule.startDate + ' 至 ' + rule.endDate + ' · ' + periodText(rule) : (rule.weekdays || []).map(day => dayText([day]) + ' ' + (rule.deny ? '全天停止借用' : periodText({ periods: borrowDayPeriods(rule, day) }))).join('；');
   const durationText = rule => `连续 ${rule.continuousMinutes} 分钟 · 休息 ${rule.restMinutes} 分钟 · 每日 ${rule.dailyMinutes} 分钟 · ${periodText(rule)}`;
   function durationGroups(student) {
     const groups = [];
@@ -94,7 +94,7 @@
         if (rule.startDate !== original.startDate) return '生效中的规则只能修改结束日期';
         if (rule.endDate < currentDate) return '结束日期不能早于今天';
       } else if (rule.startDate < currentDate) return '生效日期只能选择今天及以后';
-      return rule.deny === true && periods(rule).length === 0 ? '' : '指定日期规则仅支持全天禁止借用';
+      return rule.deny === true && periods(rule).length === 0 ? '' : '指定日期规则仅支持全天停止借用';
     }
     const error = validatePeriods(rule.periods);
     if (error) return error;

@@ -3,7 +3,7 @@ window.controlPageDemo = (() => {
   const groups = {
     '操作期间权限变化': [
       ['lockStarted', '操作时管理员开启临时锁屏', '锁屏页弹出通知，点弹窗外或“知道了”后禁止操作。'],
-      ['borrowTemporaryStarted', '操作时学校开启临时禁借', '进入班主任借用页查看通知；点“知道了”后学生借用设置变为只读。'],
+      ['borrowTemporaryStarted', '操作时学校开启临时停止借用', '进入班主任借用页查看通知；点“知道了”后学生借用设置变为只读。'],
       ['borrowTimesChanged', '查看时学校修改借用时间', '进入班主任借用页查看更新通知；可暂不查看，或点“立即查看”查看新时间。']
     ],
     '保存与数据变化': [
@@ -15,7 +15,7 @@ window.controlPageDemo = (() => {
   let active = '', savedNodes = null, emptyClassName = '';
   const screens = {
     lockStarted: ['锁屏', '临时锁屏管控中', '学校管理员已开启临时锁屏，老师暂不可修改锁屏。'],
-    borrowTemporaryStarted: ['柜机借用管控', '学校已开启临时禁借', '现在不能修改本班借用状态。'],
+    borrowTemporaryStarted: ['柜机借用管控', '学校已开启临时停止借用', '现在不能修改本班借用状态。'],
     borrowTimesChanged: ['柜机借用管控', '借用时间已更新', '是否立即查看学校最新借用时间？'],
     changed: ['保存设置', '其他老师已修改设置', '本次修改未保存，请刷新后重新操作。'],
     removed: ['保存设置', '所选学生信息有变化', '本次修改未保存，请刷新后重新选择学生。'],
