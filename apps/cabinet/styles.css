@@ -2625,3 +2625,60 @@ button {
 .admin-download-progress progress { display: block; width: 100%; height: 18px; accent-color: #1688de; }
 .page-admin-manage #adminVersionUpdate { gap: 12px; }
 .page-admin-manage #adminVersionUpdate .admin-update-version { font-size: 25px; line-height: 1.3; color: #1e3a5f; font-weight: 500; }
+.admin-demo-value { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.admin-fill-btn { padding: 4px 10px; border: 2px solid #2563eb; border-radius: 6px; color: #1d4ed8; background: #dbeafe; font: inherit; font-size: 12px; font-weight: 400; cursor: pointer; box-shadow: 0 1px 2px #2563eb26; }
+.admin-fill-btn:hover { background: #dbeafe; }
+/* Administrator borrowing follows the main device-list visual language. */
+.page-admin-batch-borrow {
+  padding: 180px 90px 100px;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 35%, rgba(147, 197, 253, 0.4), transparent 60%),
+    linear-gradient(180deg, #dbeafe 0%, #eff6ff 45%, #f8fbff 100%);
+  color: var(--light-text);
+}
+.admin-borrow-content { width: 100%; max-width: 900px; }
+.admin-borrow-content > .light-title { text-align: center; margin-bottom: 40px; }
+.batch-borrow-form {
+  padding: 44px 40px 28px;
+  border: 1px solid #dbe7f5;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 16px 48px rgba(59, 130, 246, 0.06);
+}
+.batch-borrow-group label { display: block; margin-bottom: 20px; font-size: 30px; font-weight: 600; color: var(--text); }
+.borrow-quantity-field { position: relative; }
+.batch-borrow-group input {
+  box-sizing: border-box;
+  width: 100%; height: 108px;
+  padding: 20px 310px 20px 28px;
+  border: 1px solid #dbe3f0;
+  border-radius: 20px;
+  background: #f8fbff;
+  color: var(--text);
+  font: inherit; font-size: 34px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.batch-borrow-group input::placeholder { color: #94a3b8; }
+.batch-borrow-group input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px #3b82f61a; }
+#adminInCabinetCount {
+  position: absolute; right: 24px; top: 50%; transform: translateY(-50%);
+  padding-left: 22px; border-left: 1px solid var(--line);
+  color: var(--text-dim); font-size: 26px; line-height: 1.5;
+  white-space: nowrap; pointer-events: none;
+}
+.batch-borrow-group > .primary-btn { display: block; width: 100%; margin-top: 32px; }
+#batchBorrowResult { min-height: 48px; margin-top: 24px; font-size: 26px; line-height: 1.7; color: #2563eb; overflow-wrap: anywhere; }
+.admin-borrow-content > .back-btn { margin-top: 28px; }
+.admin-demo-section { margin-top: 12px; }
+.admin-demo-section + .admin-demo-section { padding-top: 12px; border-top: 1px solid #bfdbfe; }
+.admin-demo-section .admin-demo-value { gap: 6px; }
+.admin-demo-section p { margin: 6px 0; }
+.toast-meta[hidden], .toast-admin-doors[hidden], .toast-admin-acknowledge[hidden], .toast-countdown[hidden] { display: none !important; }
+.toast-card.is-admin-borrow .toast-desc { margin-bottom: 18px; }
+.toast-card.is-admin-borrow .toast-meta { display: none !important; }
+.toast-admin-doors { color: #1d4ed8; font-size: 32px; font-weight: 700; line-height: 1.7; overflow-wrap: anywhere; margin: 28px 0 40px; }
+.toast-admin-acknowledge { display: block; width: 100%; margin-top: 28px; white-space: nowrap; }
+.toast-card.is-admin-borrow .toast-close { background: transparent; border: 0; }
