@@ -1,18 +1,25 @@
 (() => {
   const DESIGN_W = 1080;
   const DESIGN_H = 1920;
-  const PAGE_SIZE = 20;
+  const PAGE_SIZE = 10;
   const TOAST_MS = 5000;
   const TOAST_SECONDS = 5;
 
   const ALL_DEVICES = [
+    { id: "AQL00P6377400659", slot: "1" },
+    { id: "AQL00P6377400660", slot: "2" },
     { id: "AQL00P6377400661", slot: "3" },
+    { id: "AQL00P6377400663", slot: "4" },
     { id: "AQL00P6377400662", slot: "5" },
     { id: "AQL00P6377400664", slot: "6" },
+    { id: "AQL00P6377400665", slot: "7" },
     { id: "AQL00P6377400667", slot: "8" },
     { id: "AQL00P6377400671", slot: "9" },
+    { id: "AQL00P6377400672", slot: "10" },
     { id: "AQL00P6377400675", slot: "11" },
     { id: "AQL00P6377400680", slot: "12" },
+    { id: "AQL00P6377400681", slot: "13" },
+    { id: "AQL00P6377400682", slot: "14" },
     { id: "AQL00P6377400688", slot: "15" },
   ];
 
@@ -65,6 +72,9 @@
   const toastMetaLabel1 = document.getElementById("toastMetaLabel1");
   const toastMetaLabel2 = document.getElementById("toastMetaLabel2");
   const toastCountdown = document.getElementById("toastCountdown");
+  const toastAdminDoors = document.getElementById('toastAdminDoors');
+  const toastAdminAcknowledge = document.getElementById('toastAdminAcknowledge');
+  let adminBorrowToast = false;
   const simulateScanFail = document.getElementById("simulateScanFail");
   const simulateFaceFail = document.getElementById("simulateFaceFail");
   const simulateEnrollFail = document.getElementById("simulateEnrollFail");
@@ -145,9 +155,106 @@
   const adminCode = document.getElementById('adminCode');
   const adminTip = document.getElementById('adminLoginTip');
   const adminSend = document.getElementById('adminSendCode');
+  document.getElementById('fillLocalAdmin').addEventListener('click', () => {
+    showPage('pickup');
+    showPasswordLogin();
+    studentId.value = '123';
+    studentPwd.value = '123';
+    studentId.focus();
+  });
+  document.querySelectorAll('[data-admin-fill]').forEach(button => {
+    button.addEventListener('click', () => {
+      if (screenEl.dataset.page !== 'admin-login') showPage('admin-login');
+      const input = button.dataset.adminFill === 'phone' ? adminPhone : adminCode;
+      input.value = button.dataset.adminFill === 'phone' ? '13800000000' : '123456';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.focus();
+    });
+  });
   let adminSession = false, adminSentPhone = '', adminSentAt = 0, adminCountdown = null;
+  let adminAccountId = '', adminAccountType = '';
+  let adminBorrowSubmitting = false, adminSessionGeneration = 0;
+  const batchRecordsKey = 'cabinet-batch-borrow-demo-v1';
+  let batchRecords;
+  try { batchRecords = JSON.parse(localStorage.getItem(batchRecordsKey) || '[]'); } catch { batchRecords = []; }
+  if (!Array.isArray(batchRecords)) batchRecords = [];
+  function batchAvailable() { return ALL_DEVICES.filter(d => !batchRecords.some(r => r.deviceId === d.id && !r.returnAt)); }
+  function updateAdminBorrowAvailability() {
+    const devices = batchAvailable();
+    document.getElementById('adminInCabinetCount').textContent = `当前在柜设备${devices.length}台`;
+    document.getElementById('quantityAdminBorrow').disabled = adminBorrowSubmitting || devices.length === 0;
+    document.getElementById('quantityAdminBorrow').textContent = adminBorrowSubmitting ? '借取中…' : '借取';
+  }
+  function completeAdminBorrow(devices, opened, borrowerId) {
+    const successful = devices.filter((d, i) => opened[i] === true);
+    const at = new Date().toISOString();
+    const batchId = 'BATCH-' + Date.now();
+    const records = successful.map(d => ({ id: batchId + '-' + d.id, batchId, deviceId: d.id, slot: d.slot, borrowerId, borrowerType: adminAccountType, borrowAt: at, returnAt: null }));
+    const nextRecords = [...batchRecords, ...records];
+    localStorage.setItem(batchRecordsKey, JSON.stringify(nextRecords));
+    batchRecords = nextRecords;
+    const failedCount = devices.length - successful.length;
+    const message = failedCount ? `已借用${successful.length}台设备，另${failedCount}台柜门未打开，未计入借用` : `借用${successful.length}台设备，已开门，请取走设备`;
+    document.getElementById('batchBorrowResult').textContent = '';
+    if (successful.length) {
+      openSuccessToast({ title: failedCount ? '部分借取成功' : '借取成功', desc: message, isAdminBorrow: true, doorNumbers: successful.map(d => d.slot) });
+    } else {
+      upgradeMessage(message);
+    }
+    if (successful.length) document.getElementById('borrowQuantity').value = '';
+  }
+  document.getElementById('quantityAdminBorrow').addEventListener('click', async () => {
+    if (!adminSession || adminBorrowSubmitting) return;
+    document.getElementById('batchBorrowResult').textContent = '';
+    const value = document.getElementById('borrowQuantity').value.trim();
+    if (!/^[1-9]\d*$/.test(value)) return upgradeMessage('请输入正确的借取数量');
+    const devices = batchAvailable().sort((a, b) => Number(a.slot) - Number(b.slot));
+    if (Number(value) > devices.length) return upgradeMessage(`当前仅有${devices.length}台可借设备，请修改数量`);
+    const selected = devices.slice(0, Number(value));
+    const borrowerId = adminAccountId;
+    const generation = adminSessionGeneration;
+    adminBorrowSubmitting = true;
+    updateAdminBorrowAvailability();
+    try {
+      // Prototype only: simulate per-door results. Real integration must use hardware acknowledgements.
+      await new Promise(resolve => setTimeout(resolve, 500));
+      if (!adminSession || generation !== adminSessionGeneration) return;
+      const opened = selected.map(() => true);
+      completeAdminBorrow(selected, opened, borrowerId);
+    } catch {
+      upgradeMessage('借取未完成，请核实设备状态后重试');
+    } finally {
+      if (generation === adminSessionGeneration) {
+        adminBorrowSubmitting = false;
+        updateAdminBorrowAvailability();
+      }
+    }
+  });
+  document.getElementById('resetDemoAvailability').addEventListener('click', () => {
+    // Only reset browser-local prototype borrowing, never real equipment or upgrades.
+    adminSessionGeneration++;
+    adminBorrowSubmitting = false;
+    batchRecords = [];
+    localStorage.setItem(batchRecordsKey, '[]');
+    // In this prototype, in-cabinet count is exactly the available-device count.
+    updateAdminBorrowAvailability();
+    pendingBorrow = null;
+    closeBorrowConfirm();
+    closeReturnConfirm();
+    clearToastTimers();
+    successToast.hidden = true;
+    adminBorrowToast = false;
+    document.getElementById('borrowQuantity').value = '';
+    document.getElementById('batchBorrowResult').textContent = '';
+    updateAdminBorrowAvailability();
+    if (screenEl.dataset.page === 'devices') searchDevices();
+    upgradeMessage('全部模拟设备已恢复可借用');
+  });
   function adminMessage(message) { adminTip.hidden = false; adminTip.textContent = message; }
   function resetAdminLogin() {
+    adminAccountId = ''; adminAccountType = '';
+    adminSessionGeneration++;
+    adminBorrowSubmitting = false;
     adminSession = false; adminPhone.value = ''; adminCode.value = ''; adminSentPhone = ''; adminSentAt = 0;
     clearInterval(adminCountdown); adminSend.disabled = false; adminSend.textContent = '获取验证码'; adminTip.hidden = true;
 
@@ -166,6 +273,7 @@
     if (adminSentPhone !== adminPhone.value || !adminSentAt) return adminMessage('请先为当前手机号获取验证码');
     if (adminCode.value !== '123456' || Date.now()-adminSentAt>300000) return adminMessage('验证码错误或已失效，请重新获取');
     adminSession=true; adminSentAt=0;
+    adminAccountId=adminPhone.value; adminAccountType='school_admin';
     document.getElementById('adminAccount').textContent=adminPhone.value.slice(0,3)+'****'+adminPhone.value.slice(-4);
     document.getElementById('adminFeatureNote').textContent=''; showPage('admin-manage');
   });
@@ -173,13 +281,21 @@
   document.querySelector('.admin-menu').addEventListener('click', e => {
     const item=e.target.closest('[data-admin-feature]');
     if(!item || !adminSession) return;
+    if (item.dataset.adminFeature === '管理员借取') return showPage('admin-batch-borrow');
     document.getElementById('adminFeatureNote').textContent=item.dataset.adminFeature+'：登录后进入柜机现有功能页面，沿用原有操作流程。';
   });
 
   function showPage(name, options = {}) {
     if (registrationLocked) return;
-    if (name === "admin-manage" && !adminSession) name = "admin-login";
-    if (name === "admin-login" || (name !== "admin-manage" && screenEl.dataset.page === "admin-login") || (adminSession && name !== "admin-manage")) resetAdminLogin();
+    if (adminBorrowToast) { successToast.hidden = true; adminBorrowToast = false; }
+    const adminPages = ['admin-manage', 'admin-batch-borrow'];
+    if (adminPages.includes(name) && !adminSession) name = 'admin-login';
+    if (name === 'admin-login' || (adminSession && !adminPages.includes(name))) resetAdminLogin();
+    if (name === 'admin-batch-borrow') {
+      updateAdminBorrowAvailability();
+      document.getElementById('borrowQuantity').value = '';
+      document.getElementById('batchBorrowResult').textContent = '';
+    }
     clearTimeout(enrollmentTimer);
     enrollFailureAction.hidden = true;
     document.querySelectorAll(".page").forEach((page) => {
@@ -200,7 +316,7 @@
 
     if (name === "devices") {
       deviceSearchInput.value = "";
-      filteredDevices = [...ALL_DEVICES];
+      filteredDevices = batchAvailable();
       currentPage = 1;
       renderDeviceTable();
     }
@@ -330,7 +446,8 @@
   }
 
   function prepareOriginalSlotData() {
-    const device = ALL_DEVICES[Math.floor(Math.random() * ALL_DEVICES.length)];
+    const borrowed = batchRecords.find(r => !r.returnAt);
+    const device = borrowed ? ALL_DEVICES.find(d => d.id === borrowed.deviceId) || ALL_DEVICES[0] : ALL_DEVICES[Math.floor(Math.random() * ALL_DEVICES.length)];
     pendingSlot = device.slot;
     pendingDeviceId = device.id;
     if (returnSlotNum) returnSlotNum.textContent = pendingSlot;
@@ -417,6 +534,8 @@
   }
 
   function triggerReturnSuccess() {
+    const record = batchRecords.find(r => r.deviceId === pendingDeviceId && !r.returnAt);
+    if (record) { record.returnAt = new Date().toISOString(); localStorage.setItem(batchRecordsKey, JSON.stringify(batchRecords)); }
     closeReturnConfirm();
     hideReturnCheckTip();
     openSuccessToast({
@@ -482,8 +601,8 @@
   function searchDevices() {
     const keyword = deviceSearchInput.value.trim().toLowerCase();
     filteredDevices = keyword
-      ? ALL_DEVICES.filter((d) => d.id.toLowerCase().includes(keyword))
-      : [...ALL_DEVICES];
+      ? batchAvailable().filter((d) => d.id.toLowerCase().includes(keyword))
+      : batchAvailable();
     currentPage = 1;
     renderDeviceTable();
   }
@@ -499,7 +618,14 @@
     }
   }
 
-  function openSuccessToast({ title, desc, deviceLabel, slotLabel, issueLabel }) {
+  function openSuccessToast({ title, desc, deviceLabel, slotLabel, issueLabel, isAdminBorrow = false, doorNumbers = [] }) {
+    adminBorrowToast = isAdminBorrow;
+    successToast.querySelector('.toast-card').classList.toggle('is-admin-borrow', isAdminBorrow);
+    successToast.querySelector('.toast-meta').hidden = isAdminBorrow;
+    toastCountdown.hidden = isAdminBorrow;
+    toastAdminDoors.hidden = !isAdminBorrow;
+    toastAdminAcknowledge.hidden = !isAdminBorrow;
+    toastAdminDoors.textContent = isAdminBorrow ? `格口号：${doorNumbers.join('、')}` : '';
     toastTitle.textContent = title;
     toastDesc.textContent = desc;
 
@@ -518,6 +644,7 @@
     successToast.hidden = false;
 
     clearToastTimers();
+    if (isAdminBorrow) { toastAdminAcknowledge.focus(); return; }
     let left = TOAST_SECONDS;
     toastCountdown.textContent = `${left}s`;
     toastTick = setInterval(() => {
@@ -534,6 +661,11 @@
   function closeSuccessToast() {
     clearToastTimers();
     successToast.hidden = true;
+    if (adminBorrowToast) {
+      adminBorrowToast = false;
+      document.getElementById('borrowQuantity').focus();
+      return;
+    }
     showPage("home");
   }
 
@@ -727,6 +859,19 @@
       return;
     }
     loginTip.hidden = true;
+    if (id === '123') {
+      if (pwd !== '123') {
+        loginTip.textContent = '账号或密码错误'; loginTip.hidden = false; return;
+      }
+      // Prototype credential only; production local administrator authentication is external.
+      adminSession = true;
+      adminAccountId = id; adminAccountType = 'local_admin';
+      mustEnrollAfterPassword = false;
+      document.getElementById('adminAccount').textContent = '123';
+      document.getElementById('adminFeatureNote').textContent = '';
+      showPage('admin-manage');
+      return;
+    }
     if (mustEnrollAfterPassword) {
       authenticatedStudentId = id;
       faceProfiles.delete(id);
@@ -856,8 +1001,9 @@
   });
 
   toastClose.addEventListener("click", closeSuccessToast);
+  toastAdminAcknowledge.addEventListener('click', closeSuccessToast);
   successToast.addEventListener("click", (e) => {
-    if (e.target === successToast) closeSuccessToast();
+    if (e.target === successToast && !adminBorrowToast) closeSuccessToast();
   });
 
   simulateBorrowControl.addEventListener("click", (e) => {
@@ -1169,4 +1315,5 @@
     upgradeMessage('旧版APK已清除，最新版本 V' + version + ' 需重新下载');
   });
   renderUpgrade();
+  updateAdminBorrowAvailability();
 })();
