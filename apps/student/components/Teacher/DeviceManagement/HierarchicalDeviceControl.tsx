@@ -127,7 +127,7 @@ const CONTROL_STORAGE_KEY = "ai-companion-device-controls-v2";
 const HISTORY_STORAGE_KEY = "ai-companion-device-control-history-v2";
 type LockSnapshot = Record<string, boolean>;
 type StoredControls = {
-  schoolRuleModulesEnabled?: Partial<Record<'duration' | 'homework', boolean>>;
+  schoolRuleModulesEnabled?: Partial<Record<'duration' | 'durationDefault' | 'homework', boolean>>;
   schoolDurationPolicies?: SchoolDurationPolicies;
   borrow: Record<string, StudentControl>;
   duration: Record<string, StudentControl>;
@@ -456,20 +456,21 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
     return module === "duration" ? stored.duration : stored.borrow;
   };
   const demoConflictPending = useRef(demoScenario?.kind === 'conflict');
-  const toggleSchoolRuleModule = (module: 'duration' | 'homework') => {
+  const toggleSchoolRuleModule = (module: 'duration' | 'durationDefault' | 'homework') => {
     if (currentUser.role !== 'school-admin') return;
     try {
       if (exception === 'save-failed') throw new Error('save-failed');
       const stored = readStoredControls();
       const latest = stored.schoolRuleModulesEnabled ?? {};
-      if ((latest[module] !== false) !== (schoolRuleModulesEnabled[module] !== false)) {
+      const isEnabled = (value: boolean | undefined) => module === 'durationDefault' ? value === true : value !== false;
+      if (isEnabled(latest[module]) !== isEnabled(schoolRuleModulesEnabled[module])) {
         setSchoolRuleModulesEnabled(latest); setMessage({ text: '相关设置已被其他人修改，本次未保存，请重新设置。', tone: 'warning' }); return;
       }
-      const enabled = latest[module] === false;
+      const enabled = !isEnabled(latest[module]);
       const next = { ...latest, [module]: enabled };
       localStorage.setItem(CONTROL_STORAGE_KEY, JSON.stringify({ ...stored, schoolRuleModulesEnabled: next }));
       setSchoolRuleModulesEnabled(next);
-      setMessage({ text: `${module === 'duration' ? '使用时长规则' : '智阅作业规则'}已${enabled ? '生效' : '暂停'}`, tone: 'success' });
+      setMessage({ text: `${module === 'duration' ? '使用时长规则' : module === 'durationDefault' ? '默认使用时长规则' : '智阅作业规则'}已${enabled ? '生效' : '暂停'}`, tone: 'success' });
     } catch { setMessage({ text: '保存失败，请稍后重试。', tone: 'error' }); }
   };
   const worldSwitchSignatures = useRef<Record<string, string>>({});
@@ -996,7 +997,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
       >
         <div className="dc-content dc-borrowing-content mx-auto space-y-5">
           {tab === "borrowing" ? <SchoolBorrowingControl currentUser={currentUser} demoScenario={demoScenario?.module === 'borrowing' ? demoScenario : undefined} /> : <>
-          {tab === 'duration' && <div className="borrow-order-description borrow-order-strip">可按年级设置使用时长和可用时段，未设置时执行默认规则。</div>}
+          {tab === 'duration' && <div className="borrow-order-description borrow-order-strip">{schoolRuleModulesEnabled.durationDefault === true ? '可按年级设置使用时长和可用时段，未设置时执行默认规则。' : '可按年级设置使用时长和可用时段，默认规则已关闭，无有效自定义规则时不限使用时长。'}</div>}
           {tab === 'homework' && <div className="borrow-order-description borrow-order-strip">可按年级设置查看答案和详解的权限，默认均不允许。</div>}
           {(tab === 'world' || tab === 'lock') ? <SchoolSwitchControl module={tab} rows={rows} restricted={id => tab === 'world' ? !controls[id].world : temporaryLockedIds.has(id)} onOpen={() => { worldSwitchSignatures.current = Object.fromEntries(rows.flatMap(row => row.ids).map(id => [id, policySignature(controls[id], 'world')])); }} onApply={(ids, label, restore) => {
             if (tab === 'world') {
@@ -1007,7 +1008,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
               setMessage({ text: restore ? '已恢复使用万象视界' : '已停止使用万象视界', tone: 'success' });
             }
             else requestTemporaryLock([{ key: ids.length === schoolStudentIds.length ? 'school' : 'selection', label, ids }], !restore);
-          }} /> : tab === 'duration' ? <SchoolDurationRuleList enabled={schoolRuleModulesEnabled.duration !== false} onToggle={() => toggleSchoolRuleModule('duration')} defaultIds={rows.filter(row => !(schoolDurationPolicies[row.grade ?? ''] ?? []).length).flatMap(row => row.ids)} groups={[...durationListGroups.values()]} label={durationScopeLabel} disabled={!rows.some(row => row.ids.length)}
+          }} /> : tab === 'duration' ? <SchoolDurationRuleList defaultEnabled={schoolRuleModulesEnabled.durationDefault === true} onDefaultToggle={() => toggleSchoolRuleModule('durationDefault')} enabled={schoolRuleModulesEnabled.duration !== false} onToggle={() => toggleSchoolRuleModule('duration')} groups={[...durationListGroups.values()]} label={durationScopeLabel} disabled={!rows.some(row => row.ids.length)}
             onAdd={() => { const availableRows = rows.filter(row => row.ids.length); if (availableRows.length > 0 && availableRows.every(row => (schoolDurationPolicies[row.grade ?? ''] ?? []).length > 0)) { setMessage({ text: '全部年级已有规则，请编辑或删除后新增', tone: 'info' }); return; } setDurationOverview(null); setSettingsGrades([]); openDurationEditor([], '请选择年级'); }}
             onEdit={group => { setDurationOverview(null); setSettingsGrades(rows.filter(row => row.ids.some(id => group.ids.includes(id))).map(row => row.grade!)); openDurationEditor(group.ids, durationScopeLabel(group.ids), group.rule); }}
             onDelete={group => requestDurationDelete(group, durationScopeLabel(group.ids))} /> : <ControlScopeCards enabled={schoolRuleModulesEnabled.homework !== false} onToggle={() => toggleSchoolRuleModule('homework')} module={tab} rows={rows} rowType={rowType} controls={controls} durationPolicies={schoolDurationPolicies}
