@@ -112,7 +112,7 @@ export const SchoolBorrowingControl: React.FC<{ currentUser: TeacherPortalUser; 
   };
   const deleteRule = (targetScope: Scope, rule: BorrowSchedule, originals: BorrowingRuleEntry[]) => {
     const unrestricted = targetScope.classIds.filter(id => !(state.classRules[id] ?? []).some(item => !originals.some(entry => entry.classId === id && entry.ruleId === item.id)));
-    const warning = unrestricted.length === targetScope.classIds.length ? '这是所选班级的最后一条规则。删除后默认随时可借。' : unrestricted.length ? `删除后，${scopeNames(unrestricted).join('、')}将没有借用规则，默认随时可借。` : '删除后按剩余规则执行；没有当天有效的日期规则且未设置每周规则时，默认可借用。';
+    const warning = unrestricted.length === targetScope.classIds.length ? '这是所选年级的最后一条规则。删除后默认随时可借。' : unrestricted.length ? `删除后，${scopeNames(unrestricted).join('、')}将没有借用规则，默认随时可借。` : '删除后按剩余规则执行；没有当天有效的日期规则且未设置每周规则时，默认可借用。';
     setConfirm({ title: '确认删除借用规则？', scope: targetScope, revision: state.revision,
     description: `${ruleText(rule)}。${warning}`,
     change: current => deleteGroupedBorrowingRule(current, originals),
@@ -123,7 +123,7 @@ export const SchoolBorrowingControl: React.FC<{ currentUser: TeacherPortalUser; 
     if (exception === 'save-failed') { setNotice({ text: '保存失败，请检查网络或稍后重试。已填写的内容已保留。', tone: 'error' }); return; }
     if (exception === 'scope-changed' || exception === 'conflict') {
       setConfirm(null); setEditing(null); refresh();
-      setNotice({ text: exception === 'scope-changed' ? '所选范围的学生或班级已变化，请重新选择后再设置。' : '相关设置已被其他人修改，本次未保存，请重新设置。', tone: 'warning' }); return;
+      setNotice({ text: exception === 'scope-changed' ? '所选范围的学生已变化，请重新选择后再设置。' : '相关设置已被其他人修改，本次未保存，请重新设置。', tone: 'warning' }); return;
     }
     try {
       if (confirm.dateCheck && confirm.dateCheck.rule.endDate < schoolDate()) { setConfirm(null); setRuleError('结束日期不能早于今天'); refresh(); return; }
