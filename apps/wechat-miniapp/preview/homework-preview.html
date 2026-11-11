@@ -1511,30 +1511,28 @@ body.dw-ui-new #app .hp-student-browse .hp-card.hp-student-submission{padding:18
     .teacher-password-toggle:focus-visible{outline:2px solid #559ce3;outline-offset:1px}
     .teacher-demo-credential{margin:8px 2px 0;color:#71889a;font-size:12px;line-height:1.5}
     .teacher-send-code:disabled{border-color:#dce6ee;background:#f1f5f8;color:#93a5b6;cursor:default}
-    .teacher-mine{display:flex;flex-direction:column;gap:20px;padding:24px 18px 28px;background:linear-gradient(180deg,#eef7ff 0,#f7f9fc 220px)}
-    .teacher-profile-card{padding:20px 18px;border:1px solid #e2edf7;border-radius:18px;background:#fff;box-shadow:0 10px 24px rgba(65,112,160,.07)}
-    .teacher-profile-head{display:flex;align-items:center;gap:15px}
-    .teacher-profile-avatar{flex:0 0 56px;width:56px;height:56px;display:grid;place-items:center;border-radius:17px;background:linear-gradient(140deg,#72bcf2,#4b8ee7);color:#fff;font-size:25px;font-weight:700}
+    .teacher-mine{display:flex;flex-direction:column;gap:13px;padding:17px 15px 28px;background:linear-gradient(180deg,#eef7ff 0,#f7f9fc 220px)}
+    .teacher-mine>*{flex:none}
+    .teacher-profile-card{padding:14px;border:1px solid #e2edf7;border-radius:15px;background:#fff}
+    .teacher-profile-head{display:flex;align-items:center;gap:11px}
+    .teacher-profile-avatar{flex:0 0 48px;width:48px;height:48px;display:grid;place-items:center;border-radius:15px;background:linear-gradient(140deg,#72bcf2,#4b8ee7);color:#fff;font-size:21px;font-weight:700}
     .teacher-profile-name{margin:0;color:#173866;font-size:20px;font-weight:700;line-height:1.4}
     .teacher-profile-meta{margin:5px 0 0;color:#71889a;font-size:12px;line-height:1.5}
-    .teacher-profile-roles{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
-    .teacher-profile-role{padding:6px 9px;border-radius:8px;background:#eaf6ff;color:#087fc5;font-size:11px;font-weight:700}
-    .teacher-profile-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:17px;padding-top:16px;border-top:1px solid #edf2f6}
-    .teacher-profile-detail span{display:block;color:#8a9dad;font-size:11px}
-    .teacher-profile-detail strong{display:block;margin-top:5px;color:#28445f;font-size:13px;font-weight:600;line-height:1.4;overflow-wrap:anywhere}
-    .teacher-mine-heading{margin:3px 2px -10px;color:#7e91a5;font-size:13px;font-weight:600}
+    .teacher-profile-account{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid #edf2f6;color:#28445f;font-size:13px}
+    .teacher-profile-account strong{color:#2e6aa7;font-weight:600}
+    .teacher-mine-heading{margin:0 2px 6px;color:#536c88;font-size:13px;font-weight:600}
     .teacher-mine-list{overflow:hidden;border:1px solid #e5edf5;border-radius:14px;background:#fff}
-    .teacher-mine-item{display:flex;align-items:center;width:100%;min-height:58px;padding:0 17px;border:0;background:#fff;color:#28445f;text-align:left;font-size:15px;font-weight:600;cursor:pointer}
+    .teacher-mine-item{display:flex;align-items:center;width:100%;min-height:48px;padding:0 13px;border:0;background:#fff;color:#28445f;text-align:left;font-size:15px;font-weight:600;cursor:pointer}
     .teacher-mine-item .teacher-mine-icon{width:32px;height:32px;margin-right:11px;display:grid;place-items:center;border-radius:10px;background:#edf6ff;color:#4b8ee7;font-size:17px}
     .teacher-mine-item .teacher-mine-arrow{margin-left:auto;color:#a0afbf;font-size:24px;font-weight:300}
-    .teacher-identity-list .teacher-mine-item+.teacher-mine-item{border-top:1px solid #edf2f6}
-    .teacher-identity-item[aria-pressed="true"]{color:#246cba;background:#f1f8ff}
-    .teacher-identity-item[aria-pressed="true"] .teacher-mine-arrow{font-size:12px;font-weight:700;color:#246cba}
     .teacher-profile-info{min-width:0;flex:1}
-    .teacher-profile-switch{flex:0 0 auto;align-self:flex-start;padding:7px 9px;border:1px solid #cfe2f4;border-radius:9px;background:#eef6ff;color:#3979b3;font-size:12px;font-weight:600;cursor:pointer}
-    .teacher-profile-switch:hover{background:#e3f0fc}
-    .teacher-profile-switch:focus-visible{outline:2px solid #559ce3;outline-offset:3px}
-    .teacher-mine-logout{width:100%;min-height:48px;margin-top:auto;border:1px solid #e5edf5;border-radius:12px;background:#fff;color:#e06464;font-size:15px;font-weight:600;cursor:pointer}
+    .teacher-profile-switch{display:inline-flex;flex:none;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 9px;border:0;border-radius:10px;background:#e9f4ff;color:#1268c4;font-size:14px;font-weight:700;white-space:nowrap;cursor:pointer}
+    .teacher-profile-switch:focus-visible{outline:2px solid #247bd9;outline-offset:2px}
+    .teacher-profile-switch svg,.teacher-mine-icon svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .teacher-account-screen{padding:24px 15px;background:#eef5fd}
+    .teacher-account-screen>*{flex:none}
+    .teacher-security-footer{margin-top:auto;padding-top:13px}
+    .teacher-security-logout{width:100%;min-height:44px;border:0;background:transparent;color:#62748a;font-size:13px;font-weight:500;cursor:pointer}
   .screen:has(>.teacher-tabbar)>.teacher-main{padding-bottom:104px}
 .teacher-agreement-row{display:flex;align-items:center;justify-content:center;gap:1px;margin-top:12px;white-space:nowrap;font-size:10px;line-height:22px;color:#8397aa}.teacher-agreement-row label{display:flex;align-items:center;gap:4px}.teacher-agreement-row input{width:13px;height:13px;margin:0;accent-color:#4d99de}.teacher-agreement-row button{padding:0;border:0;background:none;color:#3788ca;font:inherit;cursor:pointer}.teacher-agreement-mask{position:absolute;inset:0;z-index:120;background:#f6fbff;border-radius:inherit;display:flex;align-items:stretch;padding:52px 20px 24px;box-sizing:border-box}.teacher-agreement-detail{display:flex;flex-direction:column;width:100%;min-height:0}.teacher-agreement-detail header{display:flex;justify-content:space-between;align-items:center;color:#244766;font-size:17px}.teacher-agreement-detail header button{border:0;background:none;color:#3788ca;padding:10px}.teacher-agreement-body{flex:1;overflow:auto;padding:20px 0;color:#5c7389;font-size:13px;line-height:1.8}.teacher-agreement-body h3{font-size:14px;color:#345875}.teacher-agreement-body p{margin:8px 0 22px}
 </style>
@@ -5108,25 +5106,56 @@ window.parentPrototype = (() => {
     function teacherBind(){if(!teacherReplacePending){go('teacherLogin');return}const conflict=teacherBranch==='conflict';const title=conflict?'微信绑定受限':'更换绑定微信';const copy=conflict?'当前微信已绑定其他教师账号。请先由原账号持有人解绑，或联系学校管理员。':'确认后，旧微信将不能再快捷登录此教师账号。';app.innerHTML=`<main class="screen teacher-screen">${header(title,true,true)}<section class="teacher-main"><div class="teacher-hero teacher-bind-hero"><img class="teacher-art" src="assets/teacher-login-illustration.png" alt=""><div class="teacher-mark">师</div><h1>${title}</h1><p>${conflict?'请先处理当前微信的绑定关系。':'请再次验证教师账号。'}</p></div><div class="teacher-auth-card teacher-bind-card"><div class="teacher-bind-title">教师账号</div><div class="teacher-bind-account">138****8000</div><p class="teacher-bind-copy">${copy}</p>${!conflict?'<input id="teacher-replace-password" class="teacher-field-input" type="password" placeholder="请输入登录密码完成二次验证">':''}<div id="teacher-bind-error" class="teacher-security-error">${teacherBranchMessages[teacherBranch]||''}</div></div><div class="teacher-actions">${conflict?'':`<button class="teacher-primary" onclick="confirmTeacherBind()">验证并确认换绑</button>`}<button class="teacher-wechat-entry" onclick="cancelTeacherBind()">取消，返回登录</button></div></section></main>`;syncReview()}
     function confirmTeacherBind(){if(!teacherReplacePending||teacherBranch==='conflict')return;if(teacherBranch==='bindFailed'||teacherBranch==='secondFactorFailed'){document.getElementById('teacher-bind-error').textContent=teacherBranchMessages[teacherBranch];syncReview();return}if(document.getElementById('teacher-replace-password').value!=='123456'){document.getElementById('teacher-bind-error').textContent='二次验证失败，请检查登录密码';return}localStorage.setItem('ai_companion_demo_teacher_wechat_binding','teacher-demo-001');demoTeacherWechatBound=true;teacherReplacePending=false;teacherBranch='normal';saveDemoTeacherSession();if(teacherFlow==='replace')teacherFlowStep=2;go('teacherDesk')}
     function cancelTeacherBind(){teacherBranch='normal';teacherFlowOutcome='';teacherCodeSent=false;localStorage.removeItem(teacherDemoSessionKey);go('teacherPhone')}
-    function teacherSecurity(){if(teacherAvailability==='deleted'){showTeacherAccountUnavailable();return}app.innerHTML=`<main class="screen teacher-screen">${header('账号与安全',true,true,'returnToTeacherMineHome()','returnToTeacherMineHome()','回到我的首页')}<section class="teacher-main"><h1 class="teacher-security-title">账号与安全</h1><div class="teacher-security-card"><div class="teacher-security-row"><span>登录账号</span><span>138****8000</span></div><div class="teacher-security-row"><span>微信绑定状态</span><span>${demoTeacherWechatBound?'已绑定':'未绑定'}</span></div></div>${demoTeacherWechatBound?`<div class="teacher-security-card teacher-security-section"><div class="teacher-security-heading">解绑当前微信</div><p class="teacher-security-copy">解绑后需使用教师账号登录。为确认是你本人操作，请再次输入登录密码。</p><input id="teacher-reauth" class="teacher-field-input" type="password" placeholder="请输入登录密码完成二次验证"><div id="teacher-security-error" class="teacher-security-error"></div><button class="teacher-wechat-entry" onclick="unbindTeacherWechat()">验证并解绑</button></div>`:''}${teacherSecurityNotice?`<p class="teacher-security-copy">${teacherSecurityNotice}</p>`:''}</section></main>`;syncReview()}
+    function teacherSecurity(){
+      if(teacherAvailability==='deleted'){showTeacherAccountUnavailable();return}
+      app.innerHTML=`<main class="screen teacher-screen">
+        ${header('账号与安全',true,false,'returnToTeacherMineHome()')}
+        <section class="teacher-main teacher-account-screen">
+          <div class="teacher-security-card">
+            <div class="teacher-security-row"><span>登录账号</span><span>138****8000</span></div>
+            <div class="teacher-security-row"><span>微信绑定状态</span><span>${demoTeacherWechatBound?'已绑定':'未绑定'}</span></div>
+          </div>
+          ${demoTeacherWechatBound?`<div class="teacher-security-card teacher-security-section">
+            <div class="teacher-security-heading">解绑当前微信</div>
+            <p class="teacher-security-copy">解绑后需使用教师账号登录。为确认是你本人操作，请再次输入登录密码。</p>
+            <input id="teacher-reauth" class="teacher-field-input" type="password" placeholder="请输入登录密码完成二次验证">
+            <div id="teacher-security-error" class="teacher-security-error"></div>
+            <button class="teacher-wechat-entry" onclick="unbindTeacherWechat()">验证并解绑</button>
+          </div>`:''}
+          ${teacherSecurityNotice?`<p class="teacher-security-copy">${teacherSecurityNotice}</p>`:''}
+          <footer class="teacher-security-footer">
+            <button class="teacher-security-logout" type="button" onclick="logoutTeacher()">退出登录</button>
+          </footer>
+        </section>
+      </main>`;
+      syncReview();
+    }
     function startHomeworkPublishDemo(){workbenchPrototype.demoIdentity('all');workbenchPrototype.view('subject');teacherTab='homework';go('teacherDesk');homeworkPrototype.compose()}
     function showHomeworkParentDemo(){parentPrototype.scenario('twoChildren');parentPrototype.tab('homework')}
     function showHomeworkTeacherDemo(){workbenchPrototype.demoIdentity('all');workbenchPrototype.view('subject');teacherTab='homework';homeworkPrototype.toTeacherListWithoutRefresh();go('teacherDesk')}
     function switchToParentRole(){if(!parentPrototype.hasGuardianAccess())return;enterDemoRole('parent')}
     function canSwitchToTeacherRole(){return localStorage.getItem('ai_companion_demo_teacher_wechat_binding')==='teacher-demo-001'}
     function switchToTeacherRole(){if(!canSwitchToTeacherRole())return;enterDemoRole('teacher')}
-    function teacherIdentitySelector(){const current=workbenchPrototype.getScope().view;return '<h2 class="teacher-mine-heading">切换工作身份</h2><div class="teacher-mine-list teacher-identity-list" role="group" aria-label="切换工作身份">'+[['school','学校管理员'],['homeroom','班主任'],['subject','任课老师']].filter(([role])=>workbenchPrototype.getGrantedViews().includes(role)).map(([role,label])=>'<button class="teacher-mine-item teacher-identity-item" type="button" aria-pressed="'+(current===role)+'" onclick="workbenchPrototype.view(\''+role+'\')"><span>'+label+'</span><span class="teacher-mine-arrow" aria-hidden="true">'+(current===role?'当前':'›')+'</span></button>').join('')+'</div>'}
-    function teacherMineContent(){
-      const granted=workbenchPrototype.getGrantedViews();
-      const roleNames={school:'学校管理员',homeroom:'班主任',subject:'任课老师'};
-      const duties=[];
-      if(granted.includes('homeroom'))duties.push(['班主任班级','七年级(2)班']);
-      if(granted.includes('subject'))duties.push(['任教学科与班级','数学 · 七年级(2)班、七年级(4)班']);
-      if(!duties.length)duties.push(['管理范围','全校']);
-      duties.push(['登录账号','138****8000']);
-      return `<div class="teacher-profile-card"><div class="teacher-profile-head"><span class="teacher-profile-avatar" aria-hidden="true">陈</span><div class="teacher-profile-info"><h1 class="teacher-profile-name">陈老师</h1><p class="teacher-profile-meta">罗湖实验学校</p></div>${parentPrototype.hasGuardianAccess()?'<button class="teacher-profile-switch" aria-label="切换到家长端" onclick="switchToParentRole()">切换家长端 ›</button>':''}</div><div class="teacher-profile-roles">${granted.map(role=>`<span class="teacher-profile-role">${roleNames[role]}</span>`).join('')}</div><div class="teacher-profile-details">${duties.map(([label,value])=>`<div class="teacher-profile-detail"><span>${label}</span><strong>${value}</strong></div>`).join('')}</div></div>${teacherIdentitySelector()}<h2 class="teacher-mine-heading">账号设置</h2><div class="teacher-mine-list"><button class="teacher-mine-item" onclick="go('teacherSecurity')"><span class="teacher-mine-icon" aria-hidden="true">◎</span><span>账号与安全</span><span class="teacher-mine-arrow" aria-hidden="true">›</span></button></div><button class="teacher-mine-logout" onclick="logoutTeacher()">退出登录</button>`
+    function teacherMine(){
+      const content=`<div class="teacher-profile-card">
+        <div class="teacher-profile-head">
+          <span class="teacher-profile-avatar" aria-hidden="true">陈</span>
+          <div class="teacher-profile-info"><h1 class="teacher-profile-name">陈老师</h1><p class="teacher-profile-meta">罗湖实验学校</p></div>
+          ${parentPrototype.hasGuardianAccess()?`<button class="teacher-profile-switch" type="button" aria-label="切换到家长端" onclick="switchToParentRole()">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h17m-4-4 4 4-4 4M21 17H4m4-4-4 4 4 4"/></svg><span>家长</span>
+          </button>`:''}
+        </div>
+        <div class="teacher-profile-account"><span>登录账号</span><strong>138****8000</strong></div>
+      </div>
+      <section aria-labelledby="teacher-settings-heading">
+        <h2 class="teacher-mine-heading" id="teacher-settings-heading">账号设置</h2>
+        <div class="teacher-mine-list"><button class="teacher-mine-item" type="button" onclick="go('teacherSecurity')">
+          <span class="teacher-mine-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 4-4 7-8 9-4-2-8-5-8-9V6zM9 12l2 2 4-4"/></svg></span>
+          <span>账号与安全</span><span class="teacher-mine-arrow" aria-hidden="true">›</span>
+        </button></div>
+      </section>`;
+      renderTeacherTabPage('我的',content,'teacher-desk teacher-mine');
     }
-    function teacherMine(){renderTeacherTabPage('我的',teacherMineContent(),'teacher-desk teacher-mine')}
     function unbindTeacherWechat(){
       const error=document.getElementById('teacher-security-error');
       if(document.getElementById('teacher-reauth').value!=='123456'){
@@ -5196,9 +5225,9 @@ window.parentPrototype = (() => {
     }
     function renderTeacherAvailability(){
       if(teacherAvailability==='deleted'){showTeacherAccountUnavailable();return true}
-      if(teacherAvailability==='normal')return false;
+      if(teacherAvailability==='normal'||teacherTab==='mine')return false;
       const scope=workbenchPrototype.getScope(),school=scope.view==='school';
-      if(school&&(teacherAvailability!=='noClasses'||teacherTab!=='mine'))return false;
+      if(school)return false;
       const noClasses=teacherAvailability==='noClasses',emptyClass=scope.classId==='c1'||scope.view==='homeroom';
       if(!noClasses&&!emptyClass)return false;
       const title=noClasses?'暂无已分配班级':'当前班级暂无学生';
@@ -5207,9 +5236,8 @@ window.parentPrototype = (() => {
       const roles=workbenchPrototype.getGrantedViews();
       const switches=roles.length>1?`<div class="teacher-auth-card"><span class="teacher-field-label">切换工作身份</span>${roles.map(role=>`<button class="teacher-wechat-entry" onclick="workbenchPrototype.view('${role}')">${roleNames[role]}${scope.view===role?' · 当前':''}</button>`).join('')}</div>`:'';
       const classPicker=!noClasses&&scope.view==='subject'?`<div class="teacher-auth-card"><label class="teacher-field-label">任教班级<select class="teacher-field-input" aria-label="切换空班级" onchange="teacherTab='learning';workbenchPrototype.class(this.value)"><option value="c1">七年级(2)班 · 0 名学生</option><option value="c2">七年级(4)班 · 查看学情</option></select></label></div>`:'';
-      const mine=teacherTab==='mine';
-      const content=mine?`<div class="teacher-auth-card"><h2>陈老师</h2><p>罗湖实验学校 · ${roleNames[scope.view]}</p><p>${noClasses?'暂无已分配班级':'七年级(2)班 · 0 名学生'}</p><button class="teacher-wechat-entry" onclick="go('teacherSecurity')">账号与安全 ›</button><button class="teacher-wechat-entry" onclick="logoutTeacher()">退出登录</button></div>`:`<div class="teacher-hero"><div class="teacher-mark">${noClasses?'班':'生'}</div><h1>${title}</h1><p>${copy}</p></div>${teacherTab==='homework'?'<p class="teacher-security-copy">当前暂无可选接收学生，暂不能发布作业。</p>':teacherTab==='control'?'<p class="teacher-security-copy">当前暂无可管控学生。</p>':''}<div class="teacher-actions"><button class="teacher-primary" onclick="refreshTeacherAvailability()">刷新</button><button class="teacher-wechat-entry" onclick="teacherTab='mine';teacherDesk()">查看我的账号</button><p id="teacher-empty-feedback" class="teacher-security-copy" role="status"></p></div>`;
-      app.innerHTML=`<main class="screen teacher-screen">${header(({learning:'学情',homework:'作业',control:'管控',mine:'我的'})[teacherTab],false)}<section class="teacher-main" id="teacher-tab-panel" role="tabpanel">${switches}${classPicker}${content}</section>${teacherTabBar()}</main>`;syncReview();return true;
+      const content=`<div class="teacher-hero"><div class="teacher-mark">${noClasses?'班':'生'}</div><h1>${title}</h1><p>${copy}</p></div>${teacherTab==='homework'?'<p class="teacher-security-copy">当前暂无可选接收学生，暂不能发布作业。</p>':teacherTab==='control'?'<p class="teacher-security-copy">当前暂无可管控学生。</p>':''}<div class="teacher-actions"><button class="teacher-primary" onclick="refreshTeacherAvailability()">刷新</button><button class="teacher-wechat-entry" onclick="teacherTab='mine';teacherDesk()">查看我的账号</button><p id="teacher-empty-feedback" class="teacher-security-copy" role="status"></p></div>`;
+      app.innerHTML=`<main class="screen teacher-screen">${header(({learning:'学情',homework:'作业',control:'管控'})[teacherTab],false)}<section class="teacher-main" id="teacher-tab-panel" role="tabpanel">${switches}${classPicker}${content}</section>${teacherTabBar()}</main>`;syncReview();return true;
     }
     function refreshTeacherAvailability(){teacherDesk();const feedback=document.getElementById('teacher-empty-feedback');if(feedback)feedback.textContent='已刷新，暂未发现更新。请联系学校管理员。'}
     function teacherDesk(){
