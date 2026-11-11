@@ -2641,7 +2641,7 @@ button {
 .admin-borrow-content { width: 100%; max-width: 900px; }
 .admin-borrow-content > .light-title { text-align: center; margin-bottom: 40px; }
 .batch-borrow-form {
-  padding: 44px 40px 28px;
+  padding: 44px 40px 40px;
   border: 1px solid #dbe7f5;
   border-radius: var(--radius);
   background: rgba(255, 255, 255, 0.94);
@@ -2669,9 +2669,9 @@ button {
   color: var(--text-dim); font-size: 26px; line-height: 1.5;
   white-space: nowrap; pointer-events: none;
 }
-.batch-borrow-group > .primary-btn { display: block; width: 100%; margin-top: 32px; }
+.admin-borrow-content > .primary-btn { display: block; width: 100%; margin-top: 32px; }
 #batchBorrowResult { min-height: 48px; margin-top: 24px; font-size: 26px; line-height: 1.7; color: #2563eb; overflow-wrap: anywhere; }
-.admin-borrow-content > .back-btn { margin-top: 28px; }
+.admin-borrow-content > .back-btn { margin-top: 88px; }
 .admin-demo-section { margin-top: 12px; }
 .admin-demo-section + .admin-demo-section { padding-top: 12px; border-top: 1px solid #bfdbfe; }
 .admin-demo-section .admin-demo-value { gap: 6px; }
@@ -2682,3 +2682,20 @@ button {
 .toast-admin-doors { color: #1d4ed8; font-size: 32px; font-weight: 700; line-height: 1.7; overflow-wrap: anywhere; margin: 28px 0 40px; }
 .toast-admin-acknowledge { display: block; width: 100%; margin-top: 28px; white-space: nowrap; }
 .toast-card.is-admin-borrow .toast-close { background: transparent; border: 0; }
+
+.page-admin-open-test {
+  padding: 130px 0 80px;
+  background: radial-gradient(ellipse at 70% 78%, #42c9fb 0%, transparent 55%), linear-gradient(155deg, #0066ff, #009cf0 70%, #6edbff);
+  color: #063e6b;
+}
+.cabinet-test-header { position: relative; width: 100%; padding: 22px 40px; background: #f3f5f3; text-align: center; }
+.cabinet-test-header h2 { margin: 0; color: #20b1d5; font-size: 50px; font-weight: 500; }
+.cabinet-test-header > button { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); padding: 0; background: transparent; border: 0; color: #ed4040; font-size: 52px; }
+.cabinet-test-controls { width: 100%; margin-top: 420px; padding: 0 70px; }
+.cabinet-test-group { margin-bottom: 90px; }
+.cabinet-test-group label, .cabinet-test-group p { display: block; margin: 0 0 14px; font-size: 30px; }
+.cabinet-test-group input { display: block; box-sizing: border-box; width: 100%; height: 100px; padding: 18px; background: #f7f7ed; border: 0; border-radius: 0; font: inherit; font-size: 38px; }
+.cabinet-test-group > button { display: block; width: 100%; min-height: 100px; border: 0; border-radius: 0; background: #20bdf4; color: #07517e; font: inherit; font-size: 44px; font-weight: 400; }
+.cabinet-test-group > button:disabled { opacity: 0.55; cursor: wait; }
+.cabinet-test-note { padding: 24px 28px; background: #ffffffd9; color: #124e78; font-size: 28px; line-height: 1.8; }
+.cabinet-test-result { margin-top: 22px; color: #fff; font-size: 28px; line-height: 1.7; }
