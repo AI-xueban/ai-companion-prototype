@@ -610,7 +610,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
         title: "确认保存使用时长规则？", scope: label,
         hideCount: true,
         count: changedIds.length,
-        description: `${rules.map(item => `${weekdayRangeText(item.weekdays)}：${durationRuleText(item)}`).join('；')}。${originalRule ? "替换本条原规则；移除的星期执行默认规则。" : ""}`,
+        description: `${rules.map(item => `${weekdayRangeText(item.weekdays)}：${durationRuleText(item)}`).join('；')}。${originalRule ? "替换本条原规则；移除的星期按默认规则开关执行。" : ""}`,
         action: "确认并生效",
         run: () => {
           if (hasConflict(checkedIds, "duration", baseSignatures)) { setMessage({ text: "相关设置已被其他人修改，本次未保存，请重新设置。", tone: "warning" }); return; }
@@ -780,8 +780,8 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
       scope: label,
       count: ids.length,
       description: enabled
-        ? schoolAction ? "全校进入临时锁屏管控。期间老师不能修改锁屏状态，管理员可单独解除年级或班级的临时锁屏。" : "临时锁定所选范围的学生设备，保留老师原有的锁屏设置。"
-        : schoolAction ? "结束本次全校临时锁屏管控，所有年级、班级执行当前日常锁屏设置，老师恢复锁屏操作权限。" : "解除临时锁屏后，执行当前日常锁屏设置，恢复所选班级老师的锁屏管控权限；其他班级不受影响。",
+        ? schoolAction ? "全校进入临时锁屏管控。期间老师不能修改锁屏状态，管理员可单独解除年级的临时锁屏。" : "临时锁定所选范围的学生设备，保留老师原有的锁屏设置。"
+        : schoolAction ? "结束本次全校临时锁屏管控，所选年级执行当前日常锁屏设置，老师恢复锁屏操作权限。" : "解除临时锁屏后，执行当前日常锁屏设置，恢复所选范围老师的锁屏管控权限；其他年级不受影响。",
       action: enabled ? "开启临时锁屏" : "解除临时锁屏",
       danger: enabled,
       run: () => {
@@ -905,7 +905,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
     if (!demoScenario || demoScenario.kind === 'normal') return;
     if (demoScenario.kind === 'scope-changed') {
       setSelected([]);
-      setMessage({ text: '所选范围的学生或班级已变化，请重新选择后设置。', tone: 'warning' });
+      setMessage({ text: '所选范围的学生已变化，请重新选择后设置。', tone: 'warning' });
     }
     if (demoScenario.kind === 'save-failed' || demoScenario.kind === 'conflict') {
       const ids = deviceControlStudents.filter(s => s.grade === 7).map(s => s.id);
@@ -949,7 +949,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
   const originalSettingsIds = tab === 'duration' ? durationEditor?.originalIds : tab === 'homework' ? editor?.originalIds : undefined;
   const occupiedSettingsGrade = (row: typeof rows[number]) => !row.ids.some(id => originalSettingsIds?.includes(id)) && (
     tab === 'duration' ? occupiedSchoolDurationDays(schoolDurationPolicies, deviceControlStudents, row.ids).length > 0
-    : tab === 'homework' && !!originalSettingsIds?.length && row.ids.some(id => !usesDefaultHomeworkRule(controls[id])));
+    : tab === 'homework' && row.ids.some(id => !usesDefaultHomeworkRule(controls[id])));
   const settingsGradeSelector = settingsGrades === null ? undefined : <ControlGradeSelector options={rows.map(row => ({ grade: row.grade!, label: row.label, disabled: !row.ids.length || occupiedSettingsGrade(row), hint: occupiedSettingsGrade(row) ? '已有规则' : undefined }))} selected={settingsGrades} onChange={changeSettingsGrades} />;
   const durationConflictHint = !durationEditor || durationEditor.originalRule ? undefined : rows.filter(row => row.ids.some(id => durationEditor.ids.includes(id))).flatMap(row => {
     const days = occupiedSchoolDurationDays(schoolDurationPolicies, deviceControlStudents, row.ids);
@@ -1112,6 +1112,7 @@ export const HierarchicalDeviceControl: React.FC<{ currentUser: TeacherPortalUse
         onClose={() => setDurationOverview(null)} onAdd={() => { if (durationOverview.global) { setSettingsGrades([]); openDurationEditor([], '请选择年级'); } else { setSettingsGrades(null); openDurationEditor(durationOverview.ids, durationOverview.label); } }}
         onEdit={group => { setSettingsGrades(null); openDurationEditor(group.ids, actualScope(group.ids), group.rule); }} onDelete={group => requestDurationDelete(group, actualScope(group.ids))} />}
       {durationEditor && <DurationRuleEditor
+        defaultRulesEnabled={schoolRuleModulesEnabled.durationDefault === true}
         scopeChanged={!!durationEditor.originalIds && (durationEditor.originalIds.length !== durationEditor.ids.length || durationEditor.originalIds.some(id => !durationEditor.ids.includes(id)))}
         creating={!durationEditor.originalRule && !durationEditor.isDefault}
         noAvailableGrades={!durationEditor.originalRule && settingsGrades !== null && rows.length > 0 && rows.every(row => occupiedSchoolDurationDays(schoolDurationPolicies, deviceControlStudents, row.ids).length > 0)}
