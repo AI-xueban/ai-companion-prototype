@@ -826,6 +826,7 @@ function loadData() {
       syncCabinetCreatedAt(data); syncCabinetInstalledVersions(data);
       syncTabletCreatedAt(data);
       syncDeviceAlerts(data);
+      syncLocalAdminUsageDemo(data);
       syncContentCovers(data);
       syncSectionPublishedAt(data);
       syncChannelPublishedAt(data);
@@ -839,7 +840,41 @@ function loadData() {
   syncCabinetCreatedAt(data); syncCabinetInstalledVersions(data);
   syncTabletCreatedAt(data);
   syncDeviceAlerts(data);
+  syncLocalAdminUsageDemo(data);
   return data;
+}
+
+function syncLocalAdminUsageDemo(data) {
+  const records = data.usageRecords || (data.usageRecords = []);
+  const additions = Array.from({ length: 5 }, (_, index) => {
+    const slot = index + 1;
+    return {
+      id: `UR-DEMO-LOCAL-ADMIN-20261111-${slot}`,
+      batchId: 'BATCH-LOCAL-ADMIN-20261111-0930',
+      borrowerType: 'local_admin', studentId: '123', studentName: '123', grade: '—',
+      tabletId: `TAB-${String(slot).padStart(3, '0')}`, sn: `SN20260301${String(slot).padStart(3, '0')}`,
+      cabinetBorrow: 'CAB-001', slotBorrow: slot, borrowAt: '2026-11-11 09:30:00',
+      status: index < 2 ? 'returned' : 'borrowed',
+      returnAt: index < 2 ? `2026-11-11 10:${index === 0 ? '15' : '18'}:00` : null,
+      cabinetReturn: index < 2 ? 'CAB-001' : null, slotReturn: index < 2 ? slot : null,
+    };
+  }).filter(record => !records.some(existing => existing.id === record.id));
+  records.unshift(...additions);
+  const doorExamples = [
+    ['CAB-002', 8, '123', 'open_success', '09:20:00'],
+    ['CAB-003', 12, '123', 'open_failed', '09:00:00'],
+    ['CAB-002', 9, '123', 'open_sent', '08:55:00'],
+  ].map(([cabinetBorrow, slotBorrow, studentName, status, time], index) => ({
+    id: `OP-DEMO-ADMIN-OPEN-20261111-${index + 1}`, operationType: 'admin_open',
+    borrowerType: 'local_admin', studentId: '123', studentName, cabinetBorrow, slotBorrow,
+    operatedAt: `2026-11-11 ${time}`, status, sn: null, tabletId: null, grade: null, returnAt: null,
+  })).filter(record => !records.some(existing => existing.id === record.id));
+  records.unshift(...doorExamples);
+  records.forEach(record => {
+    if (record.borrowerType === 'local_admin' && record.studentName === '本地管理员') {
+      record.studentName = record.studentId || '123';
+    }
+  });
 }
 
 function syncTabletCreatedAt(data) {
@@ -879,6 +914,29 @@ function syncDeviceAlerts(data) {
   if (!data.deviceAlerts.some(alert => alert.type === 'cabinet_offline')) {
     const sample = (DEFAULT_DATA.deviceAlerts || []).find(alert => alert.type === 'cabinet_offline');
     if (sample) data.deviceAlerts.push({ ...sample, description: sample.message || '—' });
+  }
+  // Keep monthly alert demos available in the default current-month filter.
+  // Stable IDs preserve status changes and avoid duplicating saved demo records.
+  const today = new Date();
+  const existingIds = new Set(data.deviceAlerts.map(alert => alert.id));
+  for (let month = new Date(2026, 7, 1); month <= today; month.setMonth(month.getMonth() + 1)) {
+    const monthKey = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}`;
+    [...supportedTypes].forEach((type, typeIndex) => {
+      const sample = DEFAULT_DATA.deviceAlerts.find(alert => alert.type === type);
+      if (!sample) return;
+      ['pending', 'resolved'].forEach((status, statusIndex) => {
+        const id = `ALT-DEMO-${monthKey}-${type}-${status}`;
+        if (existingIds.has(id)) return;
+        const { inspectionId, usageRecordId, workorderId, ...demo } = sample;
+        data.deviceAlerts.push({
+          ...demo, id, status,
+          description: sample.description || sample.message || '—',
+          createdAt: `${monthKey}-01 00:${String(typeIndex * 2 + statusIndex).padStart(2, '0')}:00`,
+          workorderId: null,
+        });
+        existingIds.add(id);
+      });
+    });
   }
 }
 
