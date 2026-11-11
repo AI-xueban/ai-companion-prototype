@@ -3,7 +3,6 @@
   const DESIGN_H = 1920;
   const PAGE_SIZE = 10;
   const TOAST_MS = 5000;
-  const TOAST_SECONDS = 5;
 
   const ALL_DEVICES = [
     { id: "AQL00P6377400659", slot: "1" },
@@ -49,6 +48,11 @@
   const faceStatus = document.getElementById("faceStatus");
   const faceDesc = document.getElementById("faceDesc");
   let recognitionTimer = null;
+  let faceIdleTimer = null;
+  let toastReturnPage = "home";
+  const facePreview = document.getElementById("facePreview");
+  const faceSnapshot = document.getElementById("faceSnapshot");
+  const faceSnapshotNote = document.getElementById("faceSnapshotNote");
   const faceStart = document.getElementById("faceStart");
   const faceToPassword = document.getElementById("faceToPassword");
   const faceRetry = document.getElementById("faceRetry");
@@ -162,6 +166,13 @@
     studentPwd.value = '123';
     studentId.focus();
   });
+  document.getElementById('fillTeacher').addEventListener('click', () => {
+    showPage('pickup');
+    showPasswordLogin();
+    studentId.value = '18018001800';
+    studentPwd.value = studentId.value.slice(-8);
+    studentId.focus();
+  });
   document.querySelectorAll('[data-admin-fill]').forEach(button => {
     button.addEventListener('click', () => {
       if (screenEl.dataset.page !== 'admin-login') showPage('admin-login');
@@ -174,11 +185,14 @@
   let adminSession = false, adminSentPhone = '', adminSentAt = 0, adminCountdown = null;
   let adminAccountId = '', adminAccountType = '';
   let adminBorrowSubmitting = false, adminSessionGeneration = 0;
+  let adminOpeningSubmitting = false;
+  let adminOperationSequence = 0;
+  const openingSlots = new Set();
   const batchRecordsKey = 'cabinet-batch-borrow-demo-v1';
   let batchRecords;
   try { batchRecords = JSON.parse(localStorage.getItem(batchRecordsKey) || '[]'); } catch { batchRecords = []; }
   if (!Array.isArray(batchRecords)) batchRecords = [];
-  function batchAvailable() { return ALL_DEVICES.filter(d => !batchRecords.some(r => r.deviceId === d.id && !r.returnAt)); }
+  function batchAvailable() { return ALL_DEVICES.filter(d => !openingSlots.has(d.slot) && !batchRecords.some(r => r.deviceId === d.id && !r.returnAt)); }
   function updateAdminBorrowAvailability() {
     const devices = batchAvailable();
     document.getElementById('adminInCabinetCount').textContent = `当前在柜设备${devices.length}台`;
@@ -188,7 +202,7 @@
   function completeAdminBorrow(devices, opened, borrowerId) {
     const successful = devices.filter((d, i) => opened[i] === true);
     const at = new Date().toISOString();
-    const batchId = 'BATCH-' + Date.now();
+    const batchId = 'BATCH-' + Date.now() + '-' + (++adminOperationSequence);
     const records = successful.map(d => ({ id: batchId + '-' + d.id, batchId, deviceId: d.id, slot: d.slot, borrowerId, borrowerType: adminAccountType, borrowAt: at, returnAt: null }));
     const nextRecords = [...batchRecords, ...records];
     localStorage.setItem(batchRecordsKey, JSON.stringify(nextRecords));
@@ -204,7 +218,7 @@
     if (successful.length) document.getElementById('borrowQuantity').value = '';
   }
   document.getElementById('quantityAdminBorrow').addEventListener('click', async () => {
-    if (!adminSession || adminBorrowSubmitting) return;
+    if (!adminSession || adminAccountType !== 'teacher' || adminBorrowSubmitting) return;
     document.getElementById('batchBorrowResult').textContent = '';
     const value = document.getElementById('borrowQuantity').value.trim();
     if (!/^[1-9]\d*$/.test(value)) return upgradeMessage('请输入正确的借取数量');
@@ -230,10 +244,67 @@
       }
     }
   });
+  const cabinetDoorInput = document.getElementById('cabinetDoorNumber');
+  function updateCabinetOpenButtons() {
+    document.getElementById('openSingleDoor').disabled = adminOpeningSubmitting;
+    document.getElementById('openAllDoors').disabled = adminOpeningSubmitting;
+  }
+  async function openAdminCabinetDoors(slots) {
+    if (!adminSession || adminAccountType === 'teacher' || adminOpeningSubmitting) return;
+    const generation = adminSessionGeneration;
+    const accountId = adminAccountId;
+    const accountType = adminAccountType;
+    // Lock eligible equipment before issuing the simulated door command.
+    const devices = batchAvailable().filter(device => slots.includes(device.slot));
+    devices.forEach(device => openingSlots.add(device.slot));
+    adminOpeningSubmitting = true;
+    document.getElementById('cabinetOpenResult').hidden = true;
+    updateCabinetOpenButtons();
+    updateAdminBorrowAvailability();
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      if (!adminSession || generation !== adminSessionGeneration) return;
+      const at = new Date().toISOString();
+      const batchId = 'OPEN-' + Date.now() + '-' + (++adminOperationSequence);
+      const loans = devices.map(device => ({ id: batchId + '-' + device.id, batchId, deviceId: device.id, slot: device.slot, borrowerId: accountId, borrowerType: accountType, operationType: 'admin_open', borrowAt: at, returnAt: null }));
+      const nextRecords = [...batchRecords, ...loans];
+      const logKey = 'cabinet-door-open-demo-v1';
+      let logs;
+      try { logs = JSON.parse(localStorage.getItem(logKey) || '[]'); } catch { logs = []; }
+      if (!Array.isArray(logs)) logs = [];
+      localStorage.setItem(logKey, JSON.stringify([...logs, ...slots.map(slot => ({ id: batchId + '-' + slot, batchId, slot, operatorId: accountId, openedAt: at, result: 'success', deviceId: devices.find(device => device.slot === slot)?.id || null }))]));
+      localStorage.setItem(batchRecordsKey, JSON.stringify(nextRecords));
+      batchRecords = nextRecords;
+      cabinetDoorInput.value = '';
+      const result = document.getElementById('cabinetOpenResult');
+      result.textContent = `已打开${slots.length}个格口，新增${devices.length}条设备借用记录`;
+      result.hidden = false;
+    } catch {
+      upgradeMessage('开柜未完成，请核实设备状态后重试');
+    } finally {
+      if (generation === adminSessionGeneration) {
+        openingSlots.clear();
+        adminOpeningSubmitting = false;
+        updateCabinetOpenButtons();
+        updateAdminBorrowAvailability();
+      }
+    }
+  }
+  document.getElementById('openSingleDoor').addEventListener('click', () => {
+    const slot = cabinetDoorInput.value.trim();
+    if (!/^[1-9]\d*$/.test(slot) || Number(slot) > 16) return upgradeMessage('请输入1～16的格口号');
+    return openAdminCabinetDoors([String(Number(slot))]);
+  });
+  document.getElementById('openAllDoors').addEventListener('click', () => openAdminCabinetDoors(Array.from({ length: 16 }, (_, index) => String(index + 1))));
   document.getElementById('resetDemoAvailability').addEventListener('click', () => {
     // Only reset browser-local prototype borrowing, never real equipment or upgrades.
     adminSessionGeneration++;
     adminBorrowSubmitting = false;
+    adminOpeningSubmitting = false;
+    openingSlots.clear();
+    updateCabinetOpenButtons();
+    localStorage.setItem('cabinet-door-open-demo-v1', '[]');
+    document.getElementById('cabinetOpenResult').hidden = true;
     batchRecords = [];
     localStorage.setItem(batchRecordsKey, '[]');
     // In this prototype, in-cabinet count is exactly the available-device count.
@@ -255,6 +326,9 @@
     adminAccountId = ''; adminAccountType = '';
     adminSessionGeneration++;
     adminBorrowSubmitting = false;
+    adminOpeningSubmitting = false;
+    openingSlots.clear();
+    updateCabinetOpenButtons();
     adminSession = false; adminPhone.value = ''; adminCode.value = ''; adminSentPhone = ''; adminSentAt = 0;
     clearInterval(adminCountdown); adminSend.disabled = false; adminSend.textContent = '获取验证码'; adminTip.hidden = true;
 
@@ -281,21 +355,29 @@
   document.querySelector('.admin-menu').addEventListener('click', e => {
     const item=e.target.closest('[data-admin-feature]');
     if(!item || !adminSession) return;
-    if (item.dataset.adminFeature === '管理员借取') return showPage('admin-batch-borrow');
+    if (item.dataset.adminFeature === '开柜测试') return showPage('admin-open-test');
     document.getElementById('adminFeatureNote').textContent=item.dataset.adminFeature+'：登录后进入柜机现有功能页面，沿用原有操作流程。';
   });
 
   function showPage(name, options = {}) {
     if (registrationLocked) return;
+    clearTimeout(recognitionTimer);
+    clearTimeout(faceIdleTimer);
+    faceConfirmModal.hidden = true;
+    clearToastTimers();
+    successToast.hidden = true;
     if (adminBorrowToast) { successToast.hidden = true; adminBorrowToast = false; }
-    const adminPages = ['admin-manage', 'admin-batch-borrow'];
+    const adminPages = ['admin-manage', 'admin-batch-borrow', 'admin-open-test'];
     if (adminPages.includes(name) && !adminSession) name = 'admin-login';
+    if (adminSession && adminAccountType === 'teacher' && ['admin-manage', 'admin-open-test'].includes(name)) name = 'admin-batch-borrow';
+    if (adminSession && adminAccountType !== 'teacher' && name === 'admin-batch-borrow') name = 'admin-manage';
     if (name === 'admin-login' || (adminSession && !adminPages.includes(name))) resetAdminLogin();
     if (name === 'admin-batch-borrow') {
       updateAdminBorrowAvailability();
       document.getElementById('borrowQuantity').value = '';
       document.getElementById('batchBorrowResult').textContent = '';
     }
+    if (name === 'admin-open-test') document.getElementById('cabinetOpenResult').hidden = true;
     clearTimeout(enrollmentTimer);
     enrollFailureAction.hidden = true;
     document.querySelectorAll(".page").forEach((page) => {
@@ -308,7 +390,8 @@
 
     if (name === "pickup") {
       mustEnrollAfterPassword = false;
-      resetFaceLogin();
+      resetFaceLogin({ autoRecognize: options.loginMode !== "password" });
+      if (options.loginMode === "password") showPasswordLogin();
       hideKeypad();
     } else {
       hideKeypad();
@@ -332,10 +415,10 @@
     if (name !== "devices") closeBorrowConfirm();
   }
 
-  function resetFaceLogin() {
+  function resetFaceLogin({ autoRecognize = true } = {}) {
     faceLogin.classList.remove("is-processing");
     clearTimeout(recognitionTimer);
-    faceStart.hidden = false;
+    faceStart.hidden = true;
     faceToPassword.hidden = false;
     faceConfirmModal.hidden = true;
     pickupPage.querySelector('[data-goto="home"]').hidden = false;
@@ -348,14 +431,40 @@
     faceEnroll.hidden = true;
     faceStatus.textContent = "人脸识别登录";
     faceStatus.className = "face-status is-recognizing";
-    faceDesc.textContent = "请本人站到屏幕前，点击开始人脸识别";
+    faceDesc.textContent = "请本人正对屏幕，系统将自动识别";
     faceRetry.hidden = true;
     loginTip.hidden = true;
     studentId.value = "";
     studentPwd.value = "";
+    if (autoRecognize) startRecognition();
   }
 
+  function resetFaceIdleTimer() {
+    clearTimeout(faceIdleTimer);
+    if (screenEl.dataset.page !== "pickup" || faceLogin.hidden || !successToast.hidden) return;
+    faceIdleTimer = window.setTimeout(() => showPage("home"), 60 * 1000);
+  }
+
+  ["pointerdown", "keydown"].forEach(type => screenEl.addEventListener(type, resetFaceIdleTimer));
+
+  function captureFaceSnapshot() {
+    // Static prototype detections use the same face rectangles as the animated scene.
+    const faces = [
+      { x: 193, y: 37, width: 61, height: 71, studentId: "2026002" },
+      { x: 40, y: 61, width: 126, height: 146, studentId: "2026001", snapshot: "assets/face-demo.svg" },
+    ];
+    const largest = selectLargestFace(faces);
+    recognizedStudentId.textContent = largest.studentId;
+    faceSnapshot.src = largest.snapshot;
+    faceSnapshotNote.textContent = "本次识别人脸（模拟）";
+  }
+
+  function selectLargestFace(faces) {
+    return faces.reduce((largest, face) =>
+      !largest || face.width * face.height > largest.width * largest.height ? face : largest, null);
+  }
   function showFaceSuccess() {
+    if (screenEl.dataset.page !== "pickup" || faceLogin.hidden) return;
     faceLogin.classList.remove("is-processing");
     faceLogin.hidden = false;
     passwordLogin.hidden = true;
@@ -365,6 +474,7 @@
     faceDesc.textContent = "请确认识别到的编号";
     faceRetry.hidden = true;
     recognizedStudentId.textContent = "2026001";
+    captureFaceSnapshot();
     faceConfirmModal.hidden = false;
   }
 
@@ -385,6 +495,8 @@
   }
 
   function showPasswordLogin() {
+    clearTimeout(faceIdleTimer);
+    faceConfirmModal.hidden = true;
     faceLogin.classList.remove("is-processing");
     clearTimeout(recognitionTimer);
     document.getElementById("passwordToFace").hidden = mustEnrollAfterPassword;
@@ -393,12 +505,15 @@
     faceEnroll.hidden = true;
     passwordLoginDesc.textContent = mustEnrollAfterPassword
       ? "验证后开始人脸注册；开始录入后不可退出"
-      : "请输入编号和密码后查看可用设备";
+      : "请输入编号和密码登录借用设备";
     loginTip.hidden = true;
     hideKeypad();
   }
 
   function showFaceEnrollment() {
+    clearTimeout(recognitionTimer);
+    clearTimeout(faceIdleTimer);
+    faceConfirmModal.hidden = true;
     faceEnrollBack.hidden = false;
     enrollFailureAction.hidden = true;
     hideKeypad();
@@ -543,6 +658,7 @@
       desc: "谢谢你，平板回家啦",
       deviceLabel: pendingDeviceId,
       slotLabel: pendingSlot,
+      returnPage: "store",
     });
   }
 
@@ -618,7 +734,10 @@
     }
   }
 
-  function openSuccessToast({ title, desc, deviceLabel, slotLabel, issueLabel, isAdminBorrow = false, doorNumbers = [] }) {
+  function openSuccessToast({ title, desc, deviceLabel, slotLabel, issueLabel, isAdminBorrow = false, doorNumbers = [], returnPage = "home", duration = TOAST_MS }) {
+    toastReturnPage = returnPage;
+    clearTimeout(faceIdleTimer);
+    clearTimeout(recognitionTimer);
     adminBorrowToast = isAdminBorrow;
     successToast.querySelector('.toast-card').classList.toggle('is-admin-borrow', isAdminBorrow);
     successToast.querySelector('.toast-meta').hidden = isAdminBorrow;
@@ -645,7 +764,7 @@
 
     clearToastTimers();
     if (isAdminBorrow) { toastAdminAcknowledge.focus(); return; }
-    let left = TOAST_SECONDS;
+    let left = Math.ceil(duration / 1000);
     toastCountdown.textContent = `${left}s`;
     toastTick = setInterval(() => {
       left -= 1;
@@ -655,7 +774,7 @@
       }
       toastCountdown.textContent = `${left}s`;
     }, 1000);
-    toastTimer = setTimeout(() => closeSuccessToast(), TOAST_MS);
+    toastTimer = setTimeout(() => closeSuccessToast(), duration);
   }
 
   function closeSuccessToast() {
@@ -663,20 +782,30 @@
     successToast.hidden = true;
     if (adminBorrowToast) {
       adminBorrowToast = false;
-      document.getElementById('borrowQuantity').focus();
+      document.getElementById(screenEl.dataset.page === 'admin-open-test' ? 'cabinetDoorNumber' : 'borrowQuantity').focus();
       return;
     }
-    showPage("home");
+    showPage(toastReturnPage);
+  }
+
+  function borrowForStudent(id) {
+    if (!successToast.hidden) return;
+    // Student prototype always demonstrates a successful match and opening.
+    // Failure rules remain in requirements; do not consume demo stock or persist student loans.
+    const device = ALL_DEVICES[0];
+    confirmBorrow(device.id, device.slot);
   }
 
   function confirmBorrow(deviceId, slot) {
     pendingBorrow = null;
     closeBorrowConfirm();
     openSuccessToast({
-      title: "取出来啦",
+      title: "借取成功",
       desc: "柜门开了，把平板拿走吧",
       deviceLabel: deviceId,
       slotLabel: slot,
+      returnPage: "pickup",
+      duration: 3000,
     });
   }
 
@@ -859,17 +988,18 @@
       return;
     }
     loginTip.hidden = true;
-    if (id === '123') {
-      if (pwd !== '123') {
+    if (id === '123' || id === '18018001800') {
+      const teacher = id === '18018001800';
+      if (pwd !== (teacher ? id.slice(-8) : '123')) {
         loginTip.textContent = '账号或密码错误'; loginTip.hidden = false; return;
       }
       // Prototype credential only; production local administrator authentication is external.
       adminSession = true;
-      adminAccountId = id; adminAccountType = 'local_admin';
+      adminAccountId = id; adminAccountType = teacher ? 'teacher' : 'local_admin';
       mustEnrollAfterPassword = false;
-      document.getElementById('adminAccount').textContent = '123';
+      document.getElementById('adminAccount').textContent = id;
       document.getElementById('adminFeatureNote').textContent = '';
-      showPage('admin-manage');
+      showPage(teacher ? 'admin-batch-borrow' : 'admin-manage');
       return;
     }
     if (mustEnrollAfterPassword) {
@@ -880,7 +1010,8 @@
       showFaceEnrollment();
       return;
     }
-    showPage("devices");
+    authenticatedStudentId = id;
+    borrowForStudent(id);
   });
 
   function openRegistration() {
@@ -904,14 +1035,16 @@
     resetFaceLogin();
   });
   function startRecognition() {
+    faceConfirmModal.hidden = true;
+    resetFaceIdleTimer();
     faceLogin.classList.add("is-processing");
     clearTimeout(recognitionTimer);
     faceStart.hidden = true;
-    faceToPassword.hidden = true;
+    faceToPassword.hidden = false;
     faceRetry.hidden = true;
     faceStatus.textContent = "正在识别";
-    faceDesc.textContent = "请将面部置于正方形框内，并确保框内只有本人";
-    recognitionTimer = window.setTimeout(showFaceSuccess, 1000);
+    faceDesc.textContent = "";
+    recognitionTimer = window.setTimeout(showFaceSuccess, 2600);
   }
   faceStart.addEventListener("click", startRecognition);
   faceToPassword.addEventListener("click", showPasswordLogin);
@@ -922,9 +1055,10 @@
     resetFaceLogin();
   });
   faceConfirmLogin.addEventListener("click", () => {
+    if (faceConfirmModal.hidden || screenEl.dataset.page !== "pickup") return;
     authenticatedStudentId = recognizedStudentId.textContent;
     faceConfirmModal.hidden = true;
-    showPage("devices");
+    borrowForStudent(authenticatedStudentId);
   });
   faceEnrollBack.addEventListener("click", () => {
     clearTimeout(enrollmentTimer);
@@ -1094,7 +1228,7 @@
 
     const goto = e.target.closest("[data-goto]");
     if (goto) {
-      showPage(goto.dataset.goto);
+      showPage(goto.dataset.goto, { loginMode: goto.dataset.loginMode });
       return;
     }
 
