@@ -32,7 +32,7 @@ window.controlDurationStep=function(button,delta){const input=button.closest('.d
       if (ui.pending) { ui.pending = null; return renderEditor(); }
       return parity.cancelEditor();
     }
-    ui.pending = null; ui.boolean = null; ui.teacherLockDraft = null; ui.lockPicker=null; ui.durationSelection=null; ui.worldPicker=null; ui.durationRemoval=null; legacyCloseOverlay();
+    ui.pending = null; ui.boolean = null; ui.teacherLockDraft = null; ui.lockPicker=null; ui.durationSelection=null; ui.worldPicker=null; ui.durationRemoval=null; ui.durationRoster=null; legacyCloseOverlay();
   };
   const stateLabels = () => controlModule === 'borrowing' ? ['已设置', '未设置'] : controlModule === 'duration' ? ['有单独规则', '默认规则'] : controlModule === 'homework' ? ['有开放权限', '均不允许'] : controlModule === 'world' && controlDemoRole !== 'admin' ? ['已开放', '未开放'] : controlModule === 'world' ? ['部分班级开放', '全部禁止使用'] : ['部分班级已锁屏', '全部未锁屏'];
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -121,7 +121,7 @@ window.controlDurationStep=function(button,delta){const input=button.closest('.d
     Object.entries(data.schoolSettings.durationClasses || {}).forEach(([name, rule]) => {
       (data[name] || []).forEach(student => { if (!student.durationIndividual) student.durationRules = [{...R.copy(rule),source:rule.source||'homeroom'}]; });
     });
-    schoolControlClasses.forEach(name=>{const inherited=gradeDurationWeek(data,name);(data[name]||[]).forEach(student=>{student.durationSchoolPaused=data.schoolSettings.durationRulesEnabled===false;student.durationTeacherPaused=data.schoolSettings.durationClassEnabled?.[name]===false;student.durationGradeSettings=inherited.dailySettings;});});
+    schoolControlClasses.forEach(name=>{const inherited=gradeDurationWeek(data,name);(data[name]||[]).forEach(student=>{student.durationDefaultEnabled=data.schoolSettings.durationDefaultEnabled!==false;student.durationSchoolWeekdays=(data.schoolSettings.adminPolicies?.duration||[]).filter(p=>p.grades.includes(name.match(/^[一二三四五六七八九]+年级/)?.[0])).flatMap(p=>p.groups.flatMap(g=>g.weekdays));student.durationSchoolPaused=data.schoolSettings.durationRulesEnabled===false;student.durationTeacherPaused=data.schoolSettings.durationClassEnabled?.[name]===false;student.durationGradeSettings=inherited.dailySettings;});});
     return data;
   }
   function loadLatest() {
@@ -401,7 +401,7 @@ window.controlDurationStep=function(button,delta){const input=button.closest('.d
     const durationSummary = durationGroups.length > 1 ? '<p>本班当前规则有差异，整班设置后统一生效。</p>' : students.length ? R.durationGroups(students[0]).map(text => `<p>${esc(text.replace(/单独规则 · /g, ''))}</p>`).join('') : '';
     shell(controlLabels[controlModule], `<div class="parity-context">${esc(selectedTeacherClass)}</div>${subjectHeader}<section class="control-module-panel teacher-class-control"><h3>${esc(selectedTeacherClass)}当前状态</h3>${controlModule === 'duration' ? '' : `<p class="parity-note">${esc(overview || '暂无可管控班级')}</p>`}${controlModule === 'duration' ? `<div class="teacher-class-rule-summary">${durationSummary}</div>` : ''}<div class="control-actions">${actions}${button('按学生设置', 'parity.showIndividuals()', true)}</div></section>`, 'parity.back()');
   }
-  function selectedStudentsSummary(editor){const names=R.resolve(controlData,editor.refs).map(({student})=>student.name);return '<details class="duration-selected-details" '+(editor.studentsExpanded?'open':'')+' ontoggle="parity.durationDetails(this.open)"><summary><span>已选 '+names.length+' 名学生</span><span class="duration-selected-toggle">查看详情 <i aria-hidden="true">⌄</i></span></summary><div class="duration-selected-names">'+names.map(name=>'<span>'+esc(name)+'</span>').join('')+'</div></details>';}
+  function selectedStudentsSummary(editor){return '<button type="button" class="control-student-field" onclick="parity.pickEditorStudents()"><span>选择学生 <em>*</em></span><span>'+ (editor.refs.length?'已选 '+editor.refs.length+' 名学生':'请选择学生')+' <i aria-hidden="true">›</i></span></button>';}
   function inheritedHomeworkPermission(){
     const grade=selectedTeacherClass.match(/^[一二三四五六七八九]+年级/)?.[0];
     const policy=(controlData.schoolSettings?.adminPolicies?.homework||[]).find(p=>p.grades.includes(grade));
@@ -428,23 +428,46 @@ window.controlDurationStep=function(button,delta){const input=button.closest('.d
   }
   function worldControlPage(){const stopped=controlStudents().filter(s=>!s.world);const rows=stopped.map(s=>`<div class="daily-lock-row"><b>${esc(s.name)}</b><button type="button" class="daily-unlock-icon" onclick="parity.restoreStudentWorld(${esc(JSON.stringify(s.id))})" aria-label="恢复${esc(s.name)}使用万象视界"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10V7a4 4 0 0 1 7.5-2M6 10h12v11H6zM12 14v3"/></svg><span>恢复使用</span></button></div>`).join('');shell('万象视界',`<div class="parity-context">${esc(selectedTeacherClass)}</div>${teacherInheritedRuleCard('world')}<section class="control-module-panel"><h3>已停止使用学生（${stopped.length}人）</h3>${rows||'<p class="parity-note">暂无已停止使用学生</p>'}</section>`,'parity.back()',`<footer class="control-fixed-select">${button('选择停止使用学生','parity.chooseWorldStudents()',false,!controlStudents().some(s=>s.world))}</footer>`,'school-mobile');}
   function worldPickerRows(){const p=ui.worldPicker;if(!p)return '';return controlStudents().filter(s=>s.world&&(s.name.includes(p.query)||String(s.id).includes(p.query))).map(s=>`<label class="daily-lock-row"><b>${esc(s.name)}</b><input type="checkbox" aria-label="选择${esc(s.name)}" value="${esc(s.id)}" ${p.ids.has(String(s.id))?'checked':''} onchange="parity.selectWorldStudent(this.value,this.checked)"></label>`).join('')||'<p class="parity-note">没有可选学生</p>';}
-  function selectableRuleStudents(draft){return controlStudents().filter(student=>draft.module!=='homework'||!R.modified(student,homeworkModule(draft.subject)));}
-  function durationSelectionRows(){const draft=ui.durationSelection;if(!draft)return '';return selectableRuleStudents(draft).filter(s=>s.name.includes(draft.query)||String(s.id).includes(draft.query)).map(s=>`<label class="daily-lock-row"><b>${esc(s.name)}</b><input type="checkbox" aria-label="选择${esc(s.name)}" value="${esc(s.id)}" ${draft.ids.has(String(s.id))?'checked':''} onchange="parity.selectDurationStudent(this.value,this.checked)"></label>`).join('')||'<p class="parity-note">没有匹配学生</p>';}
+  function studentHasRule(student,module,subject){return module==='duration'?[0,1,2,3,4,5,6].some(day=>!R.durationDays(student,[day],'unmodified').length):R.modified(student,homeworkModule(subject));}
+  function selectableRuleStudents(draft){return controlStudents().filter(student=>draft.originalIds?.has(String(student.id))||!studentHasRule(student,draft.module,draft.subject));}
+  function durationSelectionRows(){
+    const draft=ui.durationSelection;if(!draft)return '';
+    const allowed=new Set(selectableRuleStudents(draft).map(s=>String(s.id)));
+    return controlStudents().filter(s=>s.name.includes(draft.query)||String(s.id).includes(draft.query)).map(s=>{
+      const disabled=!allowed.has(String(s.id));
+      return `<label class="daily-lock-row${disabled?' control-student-unavailable':''}"><span><b>${esc(s.name)}</b>${disabled?'<small>已设置规则</small>':''}</span><input type="checkbox" aria-label="选择${esc(s.name)}" value="${esc(s.id)}" ${draft.ids.has(String(s.id))&&!disabled?'checked':''} ${disabled?'disabled':''} onchange="parity.selectDurationStudent(this.value,this.checked)"></label>`;
+    }).join('')||'<p class="parity-note">没有匹配学生</p>';
+  }
+  function durationRosterRows(){
+    const roster=ui.durationRoster;if(!roster)return '';
+    const query=roster.query.trim().toLocaleLowerCase();
+    const students=roster.students.filter(s=>s.name.toLocaleLowerCase().includes(query)||String(s.id).includes(query));
+    return students.map(s=>'<span role="listitem">'+esc(s.name)+'</span>').join('')||'<p class="duration-roster-empty" role="status">没有匹配学生</p>';
+  }
   function gradeDurationWeek(data=controlData,className=selectedTeacherClass){
     const week=R.durationWeek({durationRules:[]}),grade=className.match(/^[一二三四五六七八九]+年级/)?.[0];
     if(data.schoolSettings?.durationRulesEnabled!==false)(data.schoolSettings?.adminPolicies?.duration||[]).filter(p=>p.grades.includes(grade)).forEach(p=>p.groups.forEach(g=>g.weekdays.forEach(day=>week.dailySettings[day]=R.copy(g.value))));
     return week;
   }
+  function schoolEnabledDurationSummary(){
+    if(controlData.schoolSettings?.durationRulesEnabled===false)return '';
+    const grade=selectedTeacherClass.match(/^[一二三四五六七八九]+年级/)?.[0];
+    return (controlData.schoolSettings?.adminPolicies?.duration||[]).filter(p=>p.grades.includes(grade)).flatMap(p=>p.groups).map(g=>'<p>'+esc(R.dayText(g.weekdays))+'：连续'+g.value.continuousMinutes+'分钟 · 休息'+g.value.restMinutes+'分钟 · 每日'+g.value.dailyMinutes+'分钟 · '+(g.value.periods.length?g.value.periods.map(p=>esc(p.start)+'–'+esc(p.end)).join('、'):'全天可用')+'</p>').join('');
+  }
   function matchesGradeDuration(rule,data){
+    if(data.schoolSettings?.durationDefaultEnabled===false){const days=data.schoolSettings.durationRulesEnabled===false?[]:(data.schoolSettings.adminPolicies?.duration||[]).filter(p=>p.grades.includes(selectedTeacherClass.match(/^[一二三四五六七八九]+年级/)?.[0])).flatMap(p=>p.groups.flatMap(g=>g.weekdays));if(new Set(days).size<7)return false;}
     const values=week=>[0,1,2,3,4,5,6].map(day=>{const v=week.dailySettings[day];return [Number(v.continuousMinutes),Number(v.restMinutes),Number(v.dailyMinutes),(v.periods||[]).map(p=>[p.start,p.end]).sort((a,b)=>a[0].localeCompare(b[0]))];});
     return JSON.stringify(values(R.durationWeek({durationRules:[rule]})))===JSON.stringify(values(gradeDurationWeek(data)));
   }
   function durationRuleSummary(week){return R.settingGroups(week,'duration').map(g=>'<div class="duration-rule-summary"><p>'+esc(R.dayText(g.weekdays))+'</p><div class="duration-parameter-list">'+[['continuousMinutes','连续使用'],['restMinutes','休息'],['dailyMinutes','每日上限']].map(([key,title])=>'<span>'+title+'<b>'+esc(g.value[key])+'分钟</b></span>').join('')+'</div><p class="duration-period-summary">可用时段：'+(g.value.periods.length?g.value.periods.map(p=>esc(p.start)+'–'+esc(p.end)).join('、'):'全天可用')+'</p></div>').join('');}
+  function compactDurationSummary(week){
+    return R.settingGroups(week,'duration').map(g=>'<div class="duration-compact-group"><span class="duration-day-label">'+esc(R.dayText(g.weekdays))+'</span><p class="duration-compact-values">'+[['continuousMinutes','连续'],['restMinutes','休息'],['dailyMinutes','每日上限']].map(([key,label])=>'<span>'+label+' <b>'+esc(g.value[key])+'分钟</b></span>').join('<i aria-hidden="true">·</i>')+'</p><p class="duration-compact-periods">可用时段：'+(g.value.periods.length?g.value.periods.map(p=>esc(p.start)+'–'+esc(p.end)).join('、'):'全天可用')+'</p></div>').join('');
+  }
   function teacherDurationGroups(){const grouped=new Map();controlStudents().filter(s=>[0,1,2,3,4,5,6].some(day=>!R.durationDays(s,[day],'unmodified').length)).forEach(s=>{const week=R.durationWeek({...R.copy(s),durationTeacherPaused:false}),key=JSON.stringify(week.dailySettings);if(!grouped.has(key))grouped.set(key,{week,students:[]});grouped.get(key).students.push(s);});return [...grouped.values()];}
   function durationPage(){
     const students=controlStudents(),enabled=controlData.schoolSettings?.durationClassEnabled?.[selectedTeacherClass]!==false,editable=canEdit('duration');
-    const rules=teacherDurationGroups().map((g,i)=>'<article class="duration-rule-summary"><details class="duration-selected-details"><summary>适用学生 '+g.students.length+' 人 <span>查看详情⌄</span></summary><div class="duration-selected-names">'+g.students.map(s=>'<span>'+esc(s.name)+'</span>').join('')+'</div></details>'+durationRuleSummary(g.week)+'<div class="control-actions">'+button('编辑','parity.editStudentDuration('+i+')',true,!editable)+button('删除','parity.removeStudentDuration('+i+')',true,!editable).replace('control-secondary','control-secondary parity-danger')+'</div></article>').join('');
-    shell('使用时长管控',`<div class="parity-context">${esc(selectedTeacherClass)}</div><section class="control-module-panel"><h3>年级规则</h3>${durationRuleSummary(gradeDurationWeek())}</section><section class="control-module-panel school-weekly-settings"><div class="school-panel-heading"><h3>使用时长规则</h3><button type="button" class="school-weekly-switch" role="switch" aria-label="本班使用时长规则" aria-checked="${enabled}" ${!editable||!students.length?'disabled':''} onclick="parity.toggleClassDuration(${!enabled})"><span aria-hidden="true"></span></button></div>${!enabled?'<p class="parity-note">学生规则已关闭，年级规则仍生效。</p>':''}<h4 class="school-duration-list-label">规则列表</h4><fieldset class="school-weekly-rules" ${!enabled?'disabled':''}>${rules||'<p class="parity-note">暂无自定义规则</p>'}</fieldset></section>${editable?'<div class="school-weekly-add-below">'+button('新增学生规则',"parity.chooseDurationStudents('duration')",false,!enabled||!students.length)+'</div>':''}`,'parity.back()','','school-mobile');
+    const rules=teacherDurationGroups().map((g,i)=>'<article class="duration-compact-card"><div class="duration-compact-heading"><div class="duration-compact-students"><span>适用学生 '+g.students.length+' 人</span><button type="button" class="duration-view-students" onclick="parity.showDurationStudents('+i+')">查看学生 ›</button></div><div class="duration-compact-actions">'+button('编辑','parity.editStudentDuration('+i+')',true,!editable)+button('删除','parity.removeStudentDuration('+i+')',true,!editable).replace('control-secondary','control-secondary parity-danger')+'</div></div>'+compactDurationSummary(g.week)+'</article>').join('');
+    shell('使用时长管控',`<div class="parity-context">${esc(selectedTeacherClass)}</div><section class="control-module-panel"><h3>年级规则</h3>${controlData.schoolSettings?.durationDefaultEnabled===false?'<p class="parity-note">学校默认规则已关闭，未配置星期不执行学校时长限制。</p>'+schoolEnabledDurationSummary():durationRuleSummary(gradeDurationWeek())}</section><section class="control-module-panel school-weekly-settings"><div class="school-panel-heading"><h3>使用时长规则</h3><button type="button" class="school-weekly-switch" role="switch" aria-label="本班使用时长规则" aria-checked="${enabled}" ${!editable||!students.length?'disabled':''} onclick="parity.toggleClassDuration(${!enabled})"><span aria-hidden="true"></span></button></div>${!enabled?'<p class="parity-note">学生规则已关闭，年级规则仍生效。</p>':''}<fieldset class="school-weekly-rules" ${!enabled?'disabled':''}>${rules||'<p class="parity-note">暂无自定义规则</p>'}</fieldset></section>${editable?'<div class="school-weekly-add-below">'+button('新增学生规则',"parity.chooseDurationStudents('duration')",false,!enabled||!students.length)+'</div>':''}`,'parity.back()','','school-mobile');
   }
 
   function ruleCards(student) {
@@ -584,15 +607,14 @@ window.controlDurationStep=function(button,delta){const input=button.closest('.d
     const rule = editor.rule;
     rule.settingGroups ||= durationIsDefault(rule) ? [] : R.settingGroups(rule,'duration');
     const days = rule.settingGroups.map((group,day) => {
-      const setting = group.value, name = '时段' + (day+1);
+      const setting = group.value, name = '时段组' + (day+1);
       const choices=[0,1,2,3,4,5,6].map(value => '<label><input type="checkbox" data-group-day value="' + value + '" ' + (group.weekdays.includes(value)?'checked ':'') + (rule.settingGroups.some((other,index)=>index!==day && other.weekdays.includes(value))?'disabled ':'') + ' onchange="parity.durationGroupChanged()">' + ['一','二','三','四','五','六','日'][value] + '</label>').join('');
       return '<section class="control-form-section" data-duration-group="' + day + '"><div class="control-group-heading"><h3>' + name + '</h3>' + (rule.settingGroups.length>1?'<button type="button" class="control-group-delete" aria-label="删除第'+(day+1)+'组" onclick="parity.removeDurationGroup('+day+')">'+"<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 10v7M14 10v7\"/></svg>"+'</button>':'') + '</div><div class="school-weekdays school-weekdays-compact"><span class="school-weekday-caption">选择星期：</span>' + choices + '</div>' +
         [['continuousMinutes','连续使用时长'],['restMinutes','休息时长'],['dailyMinutes','每日累计总时长']].map(([key,label]) => '<div class="control-number-row duration-number-row"><label for="duration-' + day + '-' + key + '">' + label + '</label><div class="duration-number-control"><div class="duration-stepper"><button type="button" data-step-minus aria-label="减少'+label+'" onclick="controlDurationStep(this,-1)" '+(setting[key]<=1?'disabled':'')+'>−</button><input id="duration-' + day + '-' + key + '" aria-label="' + name + label + '" data-duration-field="' + key + '" type="number" inputmode="numeric" min="1" step="1" value="' + setting[key] + '" oninput="controlDurationInput(this)"><button type="button" aria-label="增加'+label+'" onclick="controlDurationStep(this,1)">＋</button></div><small>分钟</small></div></div>').join('') +
         '<div class="control-period-heading">可用时段 <small>未设置则全天可用</small></div><div class="control-period-list">' + setting.periods.map((p,j)=>'<div class="control-period-row" data-period-row><input type="hidden" value="'+p.start+'"><input type="hidden" value="'+p.end+'"><button type="button" class="school-period-value" onclick="parity.pickDurationPeriod('+day+','+j+')">'+p.start+' 至 '+p.end+' ›</button><button type="button" class="control-period-remove" aria-label="删除时段" onclick="this.closest(\'[data-period-row]\').remove()"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 10v7M14 10v7"/></svg></button></div>').join('') + '</div>' + '<button type="button" class="weekly-editor-icon" title="添加时段" aria-label="添加时段" onclick="parity.pickDurationPeriod('+day+')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>' + '<p class="control-form-note">不设时段，全天可用，仍受时长限制。</p>'   + '</section>';
     }).join('');
-    const selectedNames=R.resolve(controlData,editor.refs).map(({student})=>student.name);
-    const selectionSummary='<details class="duration-selected-details" '+(editor.studentsExpanded?'open':'')+' ontoggle="parity.durationDetails(this.open)"><summary><span>已选 '+selectedNames.length+' 名学生</span><span class="duration-selected-toggle">查看详情 <i aria-hidden="true">⌄</i></span></summary><div class="duration-selected-names">'+selectedNames.map(name=>'<span>'+esc(name)+'</span>').join('')+'</div></details>';
-    const form = '<div id="parity-rule-form">'+selectionSummary+(editor.durationMixed?'<p class="parity-note duration-mixed-note">所选学生规则有差异，保存后按本次设置统一生效。</p>':'')+days+'<div class="control-add-group">'+button('添加时段','parity.addDurationGroup()',true,rule.settingGroups.flatMap(group=>group.weekdays).length>=7)+'</div><p id="parity-error" class="control-error" role="alert"></p></div>';
+    const selectionSummary=selectedStudentsSummary(editor);
+    const form = '<div id="parity-rule-form">'+selectionSummary+(editor.durationMixed?'<p class="parity-note duration-mixed-note">所选学生规则有差异，保存后按本次设置统一生效。</p>':'')+days+'<div class="control-add-group">'+button('添加时段组','parity.addDurationGroup()',true,rule.settingGroups.flatMap(group=>group.weekdays).length>=7)+'</div><p id="parity-error" class="control-error" role="alert"></p></div>';
     app.innerHTML = '<main class="screen control-screen borrow-editor-screen school-mobile">' + pageTop('设置使用时长规则','parity.cancelEditor()') + '<section class="borrow-editor-content">' + form + '</section><footer class="borrow-editor-actions parity-editor-actions">' + button('取消','parity.cancelEditor()',true) + button('保存','parity.saveEditor()') + '</footer><div id="control-overlay"></div><div id="control-toast" role="status"></div></main>';
     const formNode = document.getElementById('parity-rule-form');
     ['input', 'change'].forEach(event => formNode?.addEventListener?.(event, updateDefaultButton));
@@ -643,7 +665,7 @@ window.controlDurationStep=function(button,delta){const input=button.closest('.d
         return [field, values.size === 1 ? String(values.values().next().value) : ''];
       }))]));
       const baseBySubject = Object.fromEntries(subjects.map(subject => [subject, baseFor(refs, 'homework', subject)]));
-      ui.editor = { refs:R.copy(refs), label, subjects:[...subjects], subjectValues, baseBySubject, classWide:wholeTeacherClass(refs), returnView:controlView==='entry'?'module':controlView };
+      ui.editor = { refs:R.copy(refs), originalStudentIds:refs.map(ref=>String(ref.id)), label, subjects:[...subjects], subjectValues, baseBySubject, classWide:wholeTeacherClass(refs), returnView:controlView==='entry'?'module':controlView };
       ui.editor.initial = JSON.stringify(ui.editor.subjectValues);
       controlView = 'ruleEditor'; renderControl(); return;
     }
@@ -653,7 +675,7 @@ window.controlDurationStep=function(button,delta){const input=button.closest('.d
       const durationMixed = new Set(weeks.map(rule => JSON.stringify(rule.dailySettings))).size > 1;
       const rule = durationMixed ? R.durationWeek({ durationRules: [] }, uid()) : { ...weeks[0], id: students[0].durationRules?.[0]?.id || uid(), ...(students[0].durationRules?.[0]?.settingGroups ? {settingGroups:R.copy(students[0].durationRules[0].settingGroups)} : {}) };
       rule.settingGroups ||= R.settingGroups(rule,'duration');
-      ui.editor = { refs: R.copy(refs), label, base: baseFor(refs), scope: 'all', rule, value: {}, durationMixed, studentRule, returnView: controlView };
+      ui.editor = { refs: R.copy(refs), originalStudentIds:refs.map(ref=>String(ref.id)), label, base: baseFor(refs), scope: 'all', rule, value: {}, durationMixed, studentRule, returnView: controlView };
       ui.editor.initial = JSON.stringify([rule, {}, 'all']);
       controlView = 'ruleEditor'; renderControl(); return;
     }
@@ -823,7 +845,7 @@ window.controlDurationStep=function(button,delta){const input=button.closest('.d
       return;
     }
     const original = JSON.parse(editor.initial), changes = editor.subjects.map(subject => {
-      const fields = Object.fromEntries(['answer','explanation'].filter(field => editor.subjectValues[subject][field] !== '' && editor.subjectValues[subject][field] !== original[subject][field]).map(field => [field, editor.subjectValues[subject][field] === 'true']));
+      const fields = Object.fromEntries(['answer','explanation'].filter(field => editor.subjectValues[subject][field] !== '' && (editor.selectionChanged || editor.subjectValues[subject][field] !== original[subject][field])).map(field => [field, editor.subjectValues[subject][field] === 'true']));
       return { subject, fields };
     }).filter(item => Object.keys(item.fields).length);
     if (!changes.length) return controlToast('没有需要修改的权限');
@@ -878,18 +900,67 @@ window.controlDurationStep=function(button,delta){const input=button.closest('.d
     },
     openHomeworkSubject(subject){if(!managedHomeworkSubjects().includes(subject))return;ui.homeworkDrill=subject;ui.homeworkSubject=subject;controlView='module';homeworkControlPage();},
     closeHomeworkSubject(){ui.homeworkDrill=null;homeworkControlPage();},
+    showDurationStudents(index){
+      if(controlModule!=='duration'||controlDemoRole==='admin')return;
+      const group=teacherDurationGroups()[index];if(!group)return;
+      ui.durationRoster={students:group.students.map(s=>({id:s.id,name:s.name})),query:''};
+      controlOverlay('适用学生（'+group.students.length+'人）','<div class="duration-roster-body"><input type="search" aria-label="搜索姓名或学号" placeholder="搜索姓名或学号" oninput="parity.searchDurationRoster(this.value)"><div id="duration-roster-list" class="duration-roster-list" role="list" aria-label="适用学生名单" tabindex="0">'+durationRosterRows()+'</div></div>','');
+      document.querySelector?.('#control-overlay .control-sheet')?.classList?.add('duration-roster-sheet');
+    },
+    searchDurationRoster(query){
+      if(!ui.durationRoster)return;ui.durationRoster.query=query;
+      const list=document.getElementById('duration-roster-list');if(list){list.innerHTML=durationRosterRows();list.scrollTop=0;}
+    },
     editStudentDuration(index){const g=teacherDurationGroups()[index];if(!g)return;openEditor(g.students.map(s=>({className:selectedTeacherClass,id:s.id})),selectedTeacherClass,null,false,true);},
     removeStudentDuration(index){const g=teacherDurationGroups()[index];if(!g)return;const refs=g.students.map(s=>({className:selectedTeacherClass,id:s.id}));ui.durationRemoval={refs,base:baseFor(refs,'duration')};controlOverlay('删除学生规则？','<p>删除后按年级规则执行。</p>',button('取消','closeControlOverlay()',true)+button('确认删除','parity.confirmRemoveStudentDuration()'));},
     confirmRemoveStudentDuration(){const draft=ui.durationRemoval;if(!draft)return;try{assertPermission(draft.refs,'duration');const d=loadLatest();R.prepare(d,draft.refs,'duration',draft.base);const week=gradeDurationWeek(d);const result=R.transaction(d,draft.refs,'duration',null,'all',student=>{student.durationRules=[R.copy(week)];student.durationTeacherWeekdays=[];student.durationIndividual=true;student.teacherModified||={};student.teacherModified.duration=false;},actor());R.resolve(result.data,draft.refs).forEach(({student})=>student.teacherModified.duration=false);if((result.data[selectedTeacherClass]||[]).every(s=>R.durationDays(s,[0,1,2,3,4,5,6],'unmodified').length===7)&&result.data.schoolSettings?.durationClasses)delete result.data.schoolSettings.durationClasses[selectedTeacherClass];persist(result.data);ui.durationRemoval=null;closeControlOverlay(true);renderControl();controlToast('已删除');}catch(error){conflict(error);}},
     chooseDurationStudents(module='duration'){
-      if(!['duration','homework'].includes(module))return;controlModule=module;if(controlDemoRole==='admin'||!canEdit(module))return controlToast('当前不能修改本班设置');controlData=loadLatest();
-      ui.durationSelection={ids:new Set(),query:'',className:selectedTeacherClass,module,subject:module==='homework'?homeworkSubject():null};
-      controlOverlay('选择'+selectedTeacherClass+'学生',`<div class="daily-lock-picker"><div class="daily-lock-picker-count"><span>${module==='homework'?'选择需要设置权限的学生':'选择需要设置时长的学生'}</span><b id="duration-selection-count">0/${selectableRuleStudents(ui.durationSelection).length} 人</b></div><input type="search" placeholder="搜索姓名或学号" aria-label="搜索姓名或学号" oninput="parity.searchDurationStudents(this.value)"><div id="duration-selection-options">${durationSelectionRows()}</div></div>`,button('取消','closeControlOverlay()',true)+button('下一步','parity.confirmDurationStudents()',false,true));
-      document.querySelector?.('#control-overlay .control-sheet')?.classList?.add('daily-lock-sheet');
+      if(!['duration','homework'].includes(module))return;controlModule=module;
+      if(controlDemoRole==='admin'||!canEdit(module))return controlToast('当前不能修改本班设置');
+      controlData=loadLatest();
+      const eligible=selectableRuleStudents({module,subject:homeworkSubject()});
+      if(!controlStudents().length)return controlToast('暂无可设置的学生');
+      openEditor([{className:selectedTeacherClass,id:(eligible[0]||controlStudents()[0]).id}],selectedTeacherClass,null,false,module==='duration');
+      if(!ui.editor)return;
+      ui.editor.refs=[];ui.editor.originalStudentIds=[];ui.editor.classWide=false;ui.editor.selectionChanged=true;
+      ui.editor.base=baseFor(classRefs());
+      if(ui.editor.subjects)ui.editor.baseBySubject=Object.fromEntries(ui.editor.subjects.map(subject=>[subject,baseFor(classRefs(),'homework',subject)]));
+      if(module==='duration'){ui.editor.rule={...R.copy(gradeDurationWeek()),id:uid()};ui.editor.rule.settingGroups=R.settingGroups(ui.editor.rule,'duration');ui.editor.durationMixed=false;ui.editor.initial=JSON.stringify([ui.editor.rule,ui.editor.value,ui.editor.scope]);}
+      renderEditor();
     },
+    pickEditorStudents(){
+      if(!ui.editor)return;collectEditor();
+      const editor=ui.editor;
+      ui.durationSelection={ids:new Set(editor.refs.map(ref=>String(ref.id))),originalIds:new Set(editor.originalStudentIds||[]),query:'',className:selectedTeacherClass,module:controlModule,subject:controlModule==='homework'?homeworkSubject():null};
+      this.renderStudentPicker();
+    },
+    renderStudentPicker(){
+      const d=ui.durationSelection;if(!d)return;
+      shell('选择'+d.className+'学生',`<div class="daily-lock-picker"><div class="daily-lock-picker-count"><span>选择需要设置${d.module==='homework'?'权限':'时长'}的学生</span><b id="duration-selection-count">${d.ids.size}/${controlStudents().length} 人</b></div><input type="search" placeholder="搜索姓名或学号" aria-label="搜索姓名或学号" oninput="parity.searchDurationStudents(this.value)"><div id="duration-selection-options">${durationSelectionRows()}</div></div>`,'parity.cancelStudentPicker()',`<footer class="borrow-editor-actions">${button('取消','parity.cancelStudentPicker()',true)}${button('确定','parity.confirmDurationStudents()',false,!d.ids.size)}</footer>`,'school-mobile control-student-picker');
+    },
+    cancelStudentPicker(){ui.durationSelection=null;renderEditor();},
     searchDurationStudents(query){if(!ui.durationSelection)return;ui.durationSelection.query=query;const rows=document.getElementById('duration-selection-options');if(rows)rows.innerHTML=durationSelectionRows();},
-    selectDurationStudent(id,checked){const d=ui.durationSelection;if(!d)return;if(checked&&!selectableRuleStudents(d).some(s=>String(s.id)===String(id)))return;checked?d.ids.add(String(id)):d.ids.delete(String(id));const count=document.getElementById('duration-selection-count');if(count)count.textContent=d.ids.size+'/'+selectableRuleStudents(d).length+' 人';const next=document.querySelector?.('#control-overlay .control-primary');if(next)next.disabled=!d.ids.size;},
-    confirmDurationStudents(){const d=ui.durationSelection;if(!d||!d.ids.size)return;if(d.className!==selectedTeacherClass||d.module==='homework'&&d.subject!==homeworkSubject())return controlToast('班级或科目已变化，请重新选择');controlData=loadLatest();if([...d.ids].some(id=>!selectableRuleStudents(d).some(s=>String(s.id)===id)))return controlToast('学生权限已变化，请重新选择');const refs=classRefs().filter(ref=>d.ids.has(String(ref.id)));if(refs.length!==d.ids.size)return controlToast('学生名单已变化，请重新选择');const module=d.module;ui.durationSelection=null;closeControlOverlay(true);controlModule=module;openEditor(refs,selectedTeacherClass,null,false,module==='duration');},
+    selectDurationStudent(id,checked){
+      const d=ui.durationSelection;if(!d)return;
+      if(checked&&!selectableRuleStudents(d).some(s=>String(s.id)===String(id)))return;
+      checked?d.ids.add(String(id)):d.ids.delete(String(id));
+      const count=document.getElementById('duration-selection-count');if(count)count.textContent=d.ids.size+'/'+controlStudents().length+' 人';
+      const next=document.querySelector?.('.control-student-picker .control-primary');if(next)next.disabled=!d.ids.size;
+    },
+    confirmDurationStudents(){
+      const d=ui.durationSelection,editor=ui.editor;if(!d||!editor||!d.ids.size)return;
+      if(d.className!==selectedTeacherClass||d.module!==controlModule||d.module==='homework'&&d.subject!==homeworkSubject())return controlToast('班级或科目已变化，请重新选择');
+      controlData=loadLatest();
+      if([...d.ids].some(id=>!selectableRuleStudents(d).some(s=>String(s.id)===id)))return controlToast(d.module==='duration'?'学生规则已变化，请重新选择':'学生权限已变化，请重新选择');
+      const refs=classRefs().filter(ref=>d.ids.has(String(ref.id)));
+      if(refs.length!==d.ids.size)return controlToast('学生名单已变化，请重新选择');
+      try{assertPermission(refs,controlModule);}catch(error){return controlToast(error.message);}
+      editor.selectionChanged ||= JSON.stringify(editor.refs.map(r=>String(r.id)).sort())!==JSON.stringify([...d.ids].sort());
+      editor.refs=refs;editor.classWide=wholeTeacherClass(refs);
+      editor.base={...baseFor(refs),...editor.base};
+      if(editor.subjects)editor.subjects.forEach(subject=>{editor.baseBySubject[subject]={...baseFor(refs,'homework',subject),...editor.baseBySubject[subject]};});
+      ui.durationSelection=null;renderEditor();
+    },
     durationDetails(open){if(ui.editor)ui.editor.studentsExpanded=open;},
     editClass() {
       if (controlDemoRole === 'admin' || !['duration', 'homework'].includes(controlModule)) return;
@@ -1215,6 +1286,14 @@ window.controlDurationStep=function(button,delta){const input=button.closest('.d
     addPeriod() { const host = document.getElementById('parity-periods'); host.insertAdjacentHTML('beforeend', periodRow({ start: '', end: '' }, host.children.length)); },
     saveEditor() {
       collectEditor(); const editor = ui.editor, rule = editor.rule, error = document.getElementById('parity-error');
+      if(controlDemoRole!=='admin'&&['duration','homework'].includes(controlModule)&&!editor.refs.length){error.textContent='请选择学生';return;}
+      if(controlDemoRole!=='admin'&&['duration','homework'].includes(controlModule)){
+        try{
+          const latest=loadLatest(),original=new Set(editor.originalStudentIds||[]);
+          const duplicate=R.resolve(latest,editor.refs).some(({ref,student})=>!original.has(String(ref.id))&&studentHasRule(student,controlModule,homeworkSubject()));
+          if(duplicate){error.textContent='所选学生已有规则，请重新选择';return;}
+        }catch(problem){error.textContent=problem.message||'学生名单或规则已变化，请重新选择';return;}
+      }
       if (editor.subjectValues) return saveHomeworkSubjects(editor);
       if (needScope(editor.refs) && !editor.scope) { error.textContent = '请选择本次修改范围'; return; }
       if (controlModule === 'borrowing') {

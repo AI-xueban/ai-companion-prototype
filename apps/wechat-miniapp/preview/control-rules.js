@@ -36,6 +36,9 @@
   }
   function effectiveDuration(student, day) {
     const schoolOwned=durationDays(student,[day],'unmodified').length>0;
+    const teacherActive=!schoolOwned&&!student.durationTeacherPaused;
+    const customActive=!student.durationSchoolPaused&&student.durationSchoolWeekdays?.includes(day);
+    if(student.durationDefaultEnabled===false&&!teacherActive&&!customActive)return {continuousMinutes:null,restMinutes:null,dailyMinutes:null,periods:[],limitsEnabled:false,unavailable:false,allDay:true,source:'学校默认规则已关闭'};
     const paused=schoolOwned?student.durationSchoolPaused:student.durationTeacherPaused;
     const own = paused?null:[...(student.durationRules || [])].reverse().find(rule => rule.weekdays.includes(day));
     const selected = !schoolOwned&&student.durationTeacherPaused&&!student.durationSchoolPaused&&student.durationGradeSettings?.[day] || own?.dailySettings?.[day] || own;
