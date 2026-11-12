@@ -788,15 +788,15 @@
     showPage(toastReturnPage);
   }
 
-  function borrowForStudent(id) {
+  function borrowForStudent(id, returnPage = "pickup") {
     if (!successToast.hidden) return;
     // Student prototype always demonstrates a successful match and opening.
     // Failure rules remain in requirements; do not consume demo stock or persist student loans.
     const device = ALL_DEVICES[0];
-    confirmBorrow(device.id, device.slot);
+    confirmBorrow(device.id, device.slot, returnPage);
   }
 
-  function confirmBorrow(deviceId, slot) {
+  function confirmBorrow(deviceId, slot, returnPage = "pickup") {
     pendingBorrow = null;
     closeBorrowConfirm();
     openSuccessToast({
@@ -804,7 +804,7 @@
       desc: "柜门开了，把平板拿走吧",
       deviceLabel: deviceId,
       slotLabel: slot,
-      returnPage: "pickup",
+      returnPage,
       duration: 3000,
     });
   }
@@ -1011,7 +1011,7 @@
       return;
     }
     authenticatedStudentId = id;
-    borrowForStudent(id);
+    borrowForStudent(id, "home");
   });
 
   function openRegistration() {
