@@ -67,7 +67,7 @@ window.controlDurationStep=function(button,delta){const input=button.closest('.d
   };
   function teacherLockAction(locked,total){
     const value=locked<total;
-    return button(value?'全班锁屏':'解除锁屏',`parity.toggleClassLock(${value})`,false,!total||classRefs().some(ref=>refLocked(ref)));
+    return button(value?'全班锁屏':'解除锁屏',`parity.toggleClassLock(${value})`,false,!total||classRefs().some(ref=>refLocked(ref))).replace('class="control-primary"','class="control-primary control-action-'+(value?'restrict':'release')+'"');
   }
   function lockToggle(module, on, action, label) {
     if ((module === 'world' || module === 'lock') && controlDemoRole === 'admin') return button(module === 'world' ? '设置' : on ? '解除临时锁屏' : '设置临时锁屏', action, true);
