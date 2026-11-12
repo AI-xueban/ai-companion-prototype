@@ -351,3 +351,40 @@ body #app main.duration-item-screen>.rule-detail-footer{flex:none;padding:12px 1
 body #app main.duration-item-screen>.rule-detail-footer>button{display:block;flex:1;width:100%;max-width:none;min-height:46px;margin:0;padding:12px 16px;border:1px solid #e7b7b2;border-radius:10px;color:#b85e56;background:#fff7f5;font-size:15px}
 body #app main.duration-item-screen .duration-settings-panel>.rule-add-group{margin:0;padding:16px 0}
 body #app main.duration-item-screen .rule-add-group>button{width:100%;min-height:44px;margin:0}
+
+/* Rule displays are read-only forms; only dedicated edit pages expose row actions. */
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen{background:#f5f6f8}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .control-content{background:#f5f6f8;padding:12px 0 20px}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .control-module-panel{border:0;border-radius:0;box-shadow:none;background:#fff;margin:0 0 12px;padding:16px}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .control-module-panel.duration-settings-panel{padding:0 16px 12px}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .school-panel-heading,body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .school-section-heading{padding:0 16px;margin:12px 0}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .control-module-panel>.school-panel-heading{padding:0;margin:0 0 12px}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .parity-context{padding:0 16px;margin:4px 0 12px}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .rule-form-card{padding:16px;background:#fff;margin:0 0 12px;border:0;border-radius:0;box-shadow:none}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .control-module-panel .rule-form-card{padding:0;margin:16px 0 24px}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .rule-form-card>h3,body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .rule-form-group>h4{margin:0;padding:8px 10px;background:#f0f3f8;border-radius:3px;color:#18354c;font-size:15px;line-height:22px;font-weight:600}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .rule-form-group>h4{margin-top:16px;background:#edf6fa;font-size:14px}
+.rule-form-row{display:grid;grid-template-columns:minmax(98px,.95fr) minmax(0,1.4fr);align-items:center;gap:12px;min-height:50px;padding:10px 0;border-bottom:1px solid #e7ebf0;color:#274054;font-size:14px;line-height:22px;box-sizing:border-box}
+.rule-form-value{display:flex;justify-content:flex-end;align-items:center;flex-wrap:wrap;gap:4px 10px;text-align:right;color:#758395;min-width:0;overflow-wrap:anywhere}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .rule-form-link{display:inline-block;width:auto;min-width:0;min-height:28px;margin:0;padding:3px 0;border:0;background:transparent;color:#087dcd;border-radius:0;font-size:13px;box-shadow:none}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .rule-form-actions{display:flex;gap:12px;justify-content:center;margin:16px 0 0;padding:0}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .rule-form-actions>button{width:110px;min-height:38px;border:1px solid #2188d3;border-radius:6px;background:#fff;color:#087dcd;margin:0;padding:8px 16px;font-size:14px;box-shadow:none}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .rule-form-actions>.rule-form-danger{border-color:#eb8282;color:#d45252;background:#fff}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .rule-form-actions>button:disabled{opacity:.4;cursor:not-allowed}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .rule-form-footer{flex:none;padding:12px 16px max(16px,env(safe-area-inset-bottom));border-top:1px solid #e5eaf0;background:#fff}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .rule-form-footer>button{display:block;width:100%;max-width:none;min-height:46px;margin:0;border-radius:6px;background:#087df2;color:#fff;font-size:15px}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .borrow-editor-actions{padding:12px 16px max(16px,env(safe-area-inset-bottom));background:#fff;border-top:1px solid #e5eaf0;gap:12px}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .borrow-editor-actions>button{min-height:46px;border-radius:6px;margin:0}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .borrow-editor-actions>.control-secondary{flex:1;background:#fff;border-color:#dce5ee}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .borrow-editor-actions>.control-primary{flex:2;background:#087df2}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .duration-setting-row{min-height:56px;padding:15px 0;font-size:14px;border-color:#e7ebf0}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .duration-setting-row>b{font-size:14px;font-weight:500}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .duration-setting-row:disabled{opacity:.55;cursor:default}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .duration-setting-row em{font-style:normal;color:#db5757}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .duration-item-group>.control-group-heading{padding-top:16px;margin-bottom:0}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .duration-item-group>.control-group-heading h3{font-size:14px;padding:7px 10px;border-radius:3px;background:#f0f3f8;color:#1b3a50}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .rule-add-group{padding:16px 0 4px;margin:0}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .rule-add-group>button{width:100%;min-height:42px;border:0;border-radius:4px;background:#edf5ff;color:#087dcd;font-size:14px;box-shadow:none}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .school-borrow-tabs{margin:0 0 16px;background:#fff;border-radius:0}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .school-weekly-rules{padding:0;border:0}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .school-default-panel .school-default-values{font-size:13px;line-height:22px}
