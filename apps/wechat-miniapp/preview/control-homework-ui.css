@@ -388,3 +388,8 @@ body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .r
 body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .school-borrow-tabs{margin:0 0 16px;background:#fff;border-radius:0}
 body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .school-weekly-rules{padding:0;border:0}
 body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .school-default-panel .school-default-values{font-size:13px;line-height:22px}
+
+/* Permission switches update the editor draft; the page Save remains the commit action. */
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .permission-switch-value{display:flex;align-items:center;justify-content:flex-end;gap:10px;overflow:visible;-webkit-line-clamp:unset}
+.permission-switch-value>small{font-size:13px;color:#7c8da0;white-space:nowrap}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .permission-switch-value>.school-weekly-switch{flex:none;margin:0;min-width:50px;width:50px;min-height:30px;height:30px;padding:0}

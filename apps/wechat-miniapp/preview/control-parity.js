@@ -848,17 +848,25 @@ window.controlDurationStep=function(button,delta){const input=button.closest('.d
       renderControl(); controlToast(result.count ? operation.module==='world'&&operation.kind==='boolean'?(operation.value?'已恢复使用':'已停止使用'):operation.module === 'lock' && operation.kind === 'boolean' ? (operation.value ? '已锁屏' : '已解锁') : operation.kind === 'save' && operation.module === 'borrowing' && operation.value.mode === 'dates' ? '已保存' : `${operation.kind === 'delete' ? '删除成功' : '已生效'}` : '没有符合修改范围的班级，原规则保留');
     } catch (error) { conflict(error); }
   }
+  function restoreTeacherDuration(editor){
+    assertPermission(editor.refs,'duration');const latest=loadLatest();R.prepare(latest,editor.refs,'duration',editor.base);const week=gradeDurationWeek(latest);
+    const result=R.transaction(latest,editor.refs,'duration',null,'all',student=>{student.durationRules=[R.copy(week)];student.durationTeacherWeekdays=[];student.durationIndividual=true;},actor());
+    R.resolve(result.data,editor.refs).forEach(({student})=>{student.teacherModified||={};student.teacherModified.duration=false;});
+    if((result.data[selectedTeacherClass]||[]).every(student=>R.durationDays(student,[0,1,2,3,4,5,6],'unmodified').length===7)&&result.data.schoolSettings?.durationClasses)delete result.data.schoolSettings.durationClasses[selectedTeacherClass];
+    try{persist(result.data);}catch{return controlToast('保存失败，请重试');}ui.editor=null;controlView=editor.returnView||'module';renderControl();controlToast('已恢复默认规则');
+  }
   function saveHomeworkSubjects(editor) {
     if(!editor.subjects.length){document.getElementById('parity-error').textContent='请选择科目';return;}
     if (editor.subjects.some(subject => ['answer','explanation'].some(field => !['true','false'].includes(editor.subjectValues[subject][field])))) {
       document.getElementById('parity-error').textContent = '请为每个科目选择答案和详解权限';
       return;
     }
+    let restoreDefault=false;
     if(controlWorkView==='homeroom'){
-      try{const baseline=inheritedHomeworkPermission(loadLatest());if(editor.subjects.every(subject=>['answer','explanation'].every(key=>(editor.subjectValues[subject][key]==='true')===baseline[key])))return controlToast('已是默认规则，无需保存');}catch(error){return controlToast(error.message);}
+      try{const baseline=inheritedHomeworkPermission(loadLatest());const same=editor.subjects.every(subject=>['answer','explanation'].every(key=>(editor.subjectValues[subject][key]==='true')===baseline[key]));if(same){if(!editor.originalStudentIds?.length)return controlToast('已是默认规则，无需保存');restoreDefault=true;}}catch(error){return controlToast(error.message);}
     }
     const original = JSON.parse(editor.initial), changes = editor.subjects.map(subject => {
-      const fields = Object.fromEntries(['answer','explanation'].filter(field => editor.subjectValues[subject][field] !== '' && (editor.selectionChanged || editor.subjectValues[subject][field] !== original[subject][field])).map(field => [field, editor.subjectValues[subject][field] === 'true']));
+      const fields = Object.fromEntries(['answer','explanation'].filter(field => editor.subjectValues[subject][field] !== '' && (restoreDefault || editor.selectionChanged || editor.subjectValues[subject][field] !== original[subject][field])).map(field => [field, editor.subjectValues[subject][field] === 'true']));
       return { subject, fields };
     }).filter(item => Object.keys(item.fields).length);
     if (!changes.length) return controlToast('没有需要修改的权限');
@@ -876,9 +884,10 @@ window.controlDurationStep=function(button,delta){const input=button.closest('.d
         const result = R.transaction(next, editor.refs, homeworkModule(subject), null, 'all', student => {
           const current = R.homeworkValue(student, subject);
           const value = { ...current, ...fields };
-          if (value.answer === current.answer && value.explanation === current.explanation) return false;
+          if (!restoreDefault && value.answer === current.answer && value.explanation === current.explanation) return false;
           student.homeworkSubjects = { ...student.homeworkSubjects, [subject]: value };
         }, actor());
+        if(restoreDefault)R.resolve(result.data,editor.refs).forEach(({student})=>{student.teacherModified||={};student.teacherModified[homeworkModule(subject)]=false;});
         next = result.data; count += result.count;
       });
       if (count) {
@@ -1323,7 +1332,7 @@ window.controlDurationStep=function(button,delta){const input=button.closest('.d
         const problem = R.validatePeriods(rule.periods, true); if (problem && !rule.useDefault) { error.textContent = problem; return; }
       } else if (!['true', 'false'].includes(String(editor.value.answer)) || !['true', 'false'].includes(String(editor.value.explanation))) { error.textContent = '请选择答案和详解权限'; return; }
       if(controlModule==='duration'&&editor.studentRule){
-        try{if(matchesGradeDuration(rule,loadLatest()))return controlToast('已是默认规则，无需保存');}catch(problem){return conflict(problem);}
+        try{if(matchesGradeDuration(rule,loadLatest())){if(!editor.originalStudentIds?.length)return controlToast('已是默认规则，无需保存');return restoreTeacherDuration(editor);}}catch(problem){return conflict(problem);}
       }
       const value = controlModule === 'homework' ? { answer: String(editor.value.answer) === 'true', explanation: String(editor.value.explanation) === 'true' } : R.copy(rule);
       const operation = makeOperation(editor.refs, editor.label, 'save', value, { subject: editor.subject, base: editor.base, scope: editor.scope, editingId: editor.editingId, schoolRule: editor.schoolRule });

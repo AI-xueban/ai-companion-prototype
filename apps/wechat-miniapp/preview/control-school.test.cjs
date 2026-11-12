@@ -60,14 +60,13 @@ test('学校编辑迁移及恢复默认保留老师班级模板与逐日时长',
  let d=roster();const teacher=R.durationWeek({durationRules:[]});teacher.dailySettings[0].continuousMinutes=45;
  d.schoolSettings.durationClasses={'四年级 1 班':R.copy(teacher)};d['四年级 1 班'][0].durationRules=[R.copy(teacher)];d['四年级 1 班'][0].durationTeacherWeekdays=[0];
  d=M.apply(d,op(d,'duration',{groups:[group([0,1])],scope:'all'}));let original=d.schoolSettings.adminPolicies.duration[0];
- assert.throws(()=>M.apply(d,op(d,'duration',{original,groups:[group([0,1],60)],scope:'all'})),{message:'已是默认规则，无需保存'});
- d=M.apply(d,op(d,'duration',{action:'delete',original,scope:'all'}));
+ d=M.apply(d,op(d,'duration',{original,groups:[group([0,1],60)],scope:'all'}));assert.equal(d.schoolSettings.adminPolicies.duration.length,0);
  assert.deepEqual(d.schoolSettings.durationClasses['四年级 1 班'],teacher);assert.equal(R.effectiveDuration(d['四年级 1 班'][0],0).continuousMinutes,45);assert.equal(R.effectiveDuration(d['四年级 1 班'][0],1).continuousMinutes,60);assert.deepEqual(d['四年级 1 班'][0].durationTeacherWeekdays,[0]);
 });
 
 
-test('默认规则新增和编辑均拦截，无范围迁移或重复策略写入',()=>{
- for(const module of ['duration','homework']){let d=roster();const value=module==='duration'?{groups:[group([0],60)]}:{answer:false,explanation:false};assert.throws(()=>M.apply(d,op(d,module,value)),{message:'已是默认规则，无需保存'});d=M.apply(d,op(d,module,module==='duration'?{groups:[group([0])]}:{answer:true,explanation:false}));const original=d.schoolSettings.adminPolicies[module][0],before=JSON.stringify(d);for(const grades of [['四年级'],['五年级']])assert.throws(()=>M.apply(d,op(d,module,{...value,original,grades})),{message:'已是默认规则，无需保存'});assert.equal(JSON.stringify(d),before);}
+test('仅新增默认规则拦截，编辑部分年级恢复默认并保留其余年级原规则',()=>{
+ for(const module of ['duration','homework']){let d=roster();const value=module==='duration'?{groups:[group([0],60)]}:{answer:false,explanation:false};assert.throws(()=>M.apply(d,op(d,module,value)),{message:'已是默认规则，无需保存'});d=M.apply(d,op(d,module,{...(module==='duration'?{groups:[group([0])]}:{answer:true,explanation:false}),grades:['四年级','五年级']}));const original=d.schoolSettings.adminPolicies[module][0],oldRule=JSON.stringify(module==='duration'?original.groups:[original.answer,original.explanation]);d=M.apply(d,op(d,module,{...value,original,grades:['四年级']}));const remaining=d.schoolSettings.adminPolicies[module];assert.equal(remaining.length,1);assert.deepEqual(remaining[0].grades,['五年级']);assert.equal(JSON.stringify(module==='duration'?remaining[0].groups:[remaining[0].answer,remaining[0].explanation]),oldRule);if(module==='homework')assert.equal(R.homeworkValue(d['四年级 1 班'][0],'英语').answer,false);else assert.equal(R.effectiveDuration(d['四年级 1 班'][0],0).continuousMinutes,60);const prior=remaining[0];d=M.apply(d,op(d,module,{...value,original:prior,grades:['五年级']}));assert.equal(d.schoolSettings.adminPolicies[module].length,0);}
 });
 
 
