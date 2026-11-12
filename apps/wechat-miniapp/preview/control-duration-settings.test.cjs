@@ -45,7 +45,7 @@ function choose(x,grades){const a=x.c.schoolRuleCreateUI;a.pickGrades();for(cons
 test('时长新增逐行设置，字段确认只回填草稿、取消不回填，最终保存保护老师与原规则',()=>{
  const x=setup(),c=x.c,a=c.schoolRuleCreateUI;c.schoolControl.module('duration');const before=x.stored;c.schoolDurationUI.create();assert.match(c.app.innerHTML,/school-create-form/);assert.doesNotMatch(c.app.innerHTML,/type="number"|type="checkbox"/);assert.match(c.app.innerHTML,/60分钟/);a.save();assert.match(c.app.innerHTML,/请选择可操作年级/);assert.equal(x.stored,before);
  a.pickGrades();assert.match(c.app.innerHTML,/value="一年级"[^>]*disabled/);a.selectGrade('一年级',true);a.selectGrade('三年级',true);a.searchGrades('三');a.cancelGrades();assert.match(c.app.innerHTML,/请选择年级/);choose(x,['三年级']);
- a.save();assert.equal(x.notices.at(-1),'已是默认规则，无需重复保存');assert.equal(x.stored,before);
+ a.save();assert.equal(x.notices.at(-1),'已是默认规则，无需保存');assert.equal(x.stored,before);
  a.edit('continuousMinutes');x.number.value='55';a.cancelItem();assert.match(c.app.innerHTML,/60分钟/);a.edit('continuousMinutes');x.number.value='55';a.confirmItem();assert.match(c.app.innerHTML,/55分钟/);assert.equal(x.stored,before);
  a.edit('dailyMinutes');x.number.value='10';a.confirmItem();assert.match(x.dialog.body,/每日|累计/);a.cancelItem();
  a.edit('weekdays');x.selection.days=[0,1,2,3,4];a.confirmItem();a.addGroup();assert.match(c.app.innerHTML,/时段组2/);a.edit('weekdays',1);assert.match(x.dialog.body,/value="0"[^>]*disabled/);x.selection.days=[0,6];a.confirmItem();assert.match(x.dialog.body,/同一星期/);a.cancelItem();
@@ -54,7 +54,7 @@ test('时长新增逐行设置，字段确认只回填草稿、取消不回填�
 });
 test('智阅新增逐行权限设置、搜索选择与取消，保存一次创建，其他年级和老师权限保留',()=>{
  const x=setup(),c=x.c,a=c.schoolRuleCreateUI;c.schoolControl.module('homework');const before=x.stored;c.schoolControl.edit(-1);assert.match(c.app.innerHTML,/新增智阅作业规则/);assert.match(c.app.innerHTML,/查看答案/);assert.match(c.app.innerHTML,/查看详解/);assert.doesNotMatch(c.app.innerHTML,/type="radio"|type="checkbox"/);
- choose(x,['三年级']);a.save();assert.equal(x.notices.at(-1),'已是默认规则，无需重复保存');assert.equal(x.stored,before);
+ choose(x,['三年级']);a.save();assert.equal(x.notices.at(-1),'已是默认规则，无需保存');assert.equal(x.stored,before);
  a.edit('answer');assert.match(x.dialog.body,/school-permission-options/);x.selection.permission='true';a.cancelItem();assert.match(c.app.innerHTML,/查看答案<\/b><span>不允许/);a.edit('explanation');a.confirmItem();assert.match(c.app.innerHTML,/查看详解<\/b><span>允许/);assert.equal(x.stored,before);a.save();assert.equal(x.data.schoolSettings.adminPolicies.homework.length,1);assert.equal(x.data.schoolSettings.adminPolicies.homework[0].answer,false);assert.equal(x.data.schoolSettings.adminPolicies.homework[0].explanation,true);assert.doesNotMatch(c.app.innerHTML,/school-create-form/);
  c.schoolControl.edit(-1);a.pickGrades();assert.match(c.app.innerHTML,/value="三年级"[^>]*disabled/);a.cancelGrades();a.cancel();assert.equal(a.busy(),false);
 });

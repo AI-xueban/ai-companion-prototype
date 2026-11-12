@@ -1,0 +1,44 @@
+/* Form summaries and draft-only row editors shared by school and homeroom views. */
+(() => {
+ const R=controlRules,copy=R.copy;
+ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const row=(label,value,extra='')=>'<div class="rule-form-row"><span>'+esc(label)+'</span><span class="rule-form-value">'+esc(value)+extra+'</span></div>';
+ const action=(text,js,danger=false,disabled=false)=>'<button type="button" class="control-secondary'+(danger?' rule-form-danger':'')+'" '+(disabled?'disabled':'')+' onclick="'+js+'">'+text+'</button>';
+ const trash=js=>'<button type="button" class="control-group-delete" aria-label="删除时段组" onclick="'+js+'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 10v7M14 10v7"/></svg></button>';
+ const actions=(edit,remove,disabled=false)=>'<div class="rule-form-actions">'+action('编辑',edit,false,disabled)+action('删除',remove,true,disabled)+'</div>';
+ function groups(list,duration=true){return list.map((g,i)=>'<section class="rule-form-group"><h4>时段组'+(i+1)+'</h4>'+row('选择星期',R.dayText(g.weekdays))+(duration?[['continuousMinutes','连续使用时长'],['restMinutes','休息时长'],['dailyMinutes','每日累计总时长']].map(([k,t])=>row(t,g.value[k]+'分钟')).join(''):'')+row(duration?'可用时段':'借用时段',g.value.periods.length?g.value.periods.map(p=>p.start+'–'+p.end).join('、'):duration?'全天可用':'全天可借')+'</section>').join('');}
+ let teacher=null,item=null;
+ function editRow(label,value,kind,index=0){return '<button type="button" class="duration-setting-row" onclick="controlRuleFormUI.editTeacherField(\''+kind+'\','+index+')"><b>'+label+'</b><span>'+esc(value)+'</span><i aria-hidden="true">›</i></button>';}
+ function teacherEditor(editor,render){
+  teacher={editor,render};editor.formRows=true;
+  const duration=controlModule==='duration',subject=editor.subjects?.[0],values=subject?editor.subjectValues[subject]:null;
+  const selection='<button type="button" class="duration-setting-row" onclick="parity.pickEditorStudents()"><b>选择学生 <em>*</em></b><span>'+(editor.refs.length?'已选 '+editor.refs.length+' 名学生':'请选择学生')+'</span><i aria-hidden="true">›</i></button>';
+  let body=selection;
+  if(duration)body+=editor.rule.settingGroups.map((g,i)=>'<section class="duration-item-group"><div class="control-group-heading"><h3>时段组'+(i+1)+'</h3>'+(editor.rule.settingGroups.length>1?trash('parity.removeDurationGroup('+i+')'):'')+'</div>'+editRow('选择星期',R.dayText(g.weekdays),'weekdays',i)+[['continuousMinutes','连续使用时长'],['restMinutes','休息时长'],['dailyMinutes','每日累计总时长']].map(([k,t])=>editRow(t,g.value[k]+'分钟',k,i)).join('')+editRow('可用时段',g.value.periods.length?g.value.periods.map(p=>p.start+'–'+p.end).join('、'):'全天可用','periods',i)+'</section>').join('')+'<div class="rule-add-group">'+action('＋ 添加时段组','parity.addDurationGroup()')+'</div>';
+  else body+=row('适用科目',subject)+[['answer','查看答案'],['explanation','查看详解']].map(([k,t])=>editRow(t,values[k]===''?'请选择':values[k]==='true'?'允许':'不允许',k)).join('');
+  const title=(editor.originalStudentIds?.length?'编辑':'新增')+(duration?'使用时长规则':'智阅作业规则'),top=header(title,false).replace('<span></span><h2','<button class="wx-back" aria-label="返回上一页" onclick="parity.cancelEditor()">‹</button><h2');
+  app.innerHTML='<main class="screen control-screen school-mobile duration-item-screen rule-form-screen">'+top+'<section class="control-content"><p class="parity-context">'+esc(selectedTeacherClass)+(subject?' · '+esc(subject):'')+'</p><section id="teacher-row-editor" class="control-module-panel duration-settings-panel">'+body+'<p id="parity-error" class="control-error" role="alert"></p></section></section><footer class="borrow-editor-actions">'+action('取消','parity.cancelEditor()')+'<button type="button" class="control-primary" onclick="parity.saveEditor()">保存</button></footer><div id="control-overlay"></div><div id="control-toast" role="status"></div></main>';syncReview();
+ }
+ function editorCurrent(){return teacher&&controlDemoRole!=='admin'&&controlWorkView==='homeroom'&&['duration','homework'].includes(controlModule)&&controlView==='ruleEditor';}
+ function showItem(error=''){
+  if(!editorCurrent()||!item)return;const {kind,index,value}=item,group=value.groups?.[index],labels={weekdays:'选择星期',periods:'可用时段',continuousMinutes:'连续使用时长',restMinutes:'休息时长',dailyMinutes:'每日累计总时长',answer:'查看答案',explanation:'查看详解'};let body='';
+  if(kind==='weekdays')body='<div class="school-weekdays">'+[0,1,2,3,4,5,6].map(day=>'<label><input type="checkbox" data-form-day value="'+day+'" '+(group.weekdays.includes(day)?'checked':'')+' '+(value.groups.some((g,i)=>i!==index&&g.weekdays.includes(day))?'disabled':'')+'>'+R.dayText([day])+'</label>').join('')+'</div>';
+  else if(['answer','explanation'].includes(kind))body='<div class="school-permission-options">'+['true','false'].map(v=>'<label><input type="radio" name="form-permission" value="'+v+'" '+(value[kind]===v?'checked':'')+'><span>'+(v==='true'?'允许':'不允许')+'</span></label>').join('')+'</div>';
+  else if(kind==='periods')body=group.value.periods.map((p,i)=>'<div class="control-date-row">'+action(esc(p.start)+'–'+esc(p.end)+' ›','controlRuleFormUI.period('+i+')')+action('删除','controlRuleFormUI.removePeriod('+i+')',true)+'</div>').join('')+action('＋ 添加时段','controlRuleFormUI.period()')+'<p class="parity-note">未设置则全天可用</p>';
+  else body='<label class="duration-modal-number"><span class="duration-stepper">'+action('−','controlRuleFormUI.step(-1)')+'<input id="form-item-number" type="number" inputmode="numeric" aria-label="时长分钟数" min="1" step="1" value="'+group.value[kind]+'">'+action('＋','controlRuleFormUI.step(1)')+'</span>分钟</label>';
+  controlOverlay(labels[kind],body+'<p class="control-error" role="alert">'+esc(error)+'</p>',action('取消','controlRuleFormUI.cancelTeacherField()')+'<button class="control-primary" onclick="controlRuleFormUI.confirmTeacherField()">确认</button>');
+  const shade=document.querySelector?.('#control-overlay .control-shade');if(shade){shade.onclick=e=>{if(e.target===shade)cancelField();};const close=shade.querySelector('.control-sheet-head button');if(close)close.onclick=cancelField;}
+ }
+ function cancelField(){item=null;closeControlOverlay(true);if(editorCurrent())teacher.render();}
+ function confirmField(){
+  if(!editorCurrent()||!item)return;const {kind,index,value}=item;
+  if(kind==='weekdays')value.groups[index].weekdays=[...document.getElementById('control-overlay').querySelectorAll('[data-form-day]:checked')].map(n=>Number(n.value));
+  else if(['answer','explanation'].includes(kind)){const input=document.querySelector('input[name="form-permission"]:checked');if(!input)return showItem('请选择权限');value[kind]=input.value;}
+  else if(kind!=='periods')value.groups[index].value[kind]=Number(document.getElementById('form-item-number').value);
+  if(value.groups){const error=R.validateSettingGroups(value.groups,'duration');if(error)return showItem(error);teacher.editor.rule=R.expandSettingGroups(teacher.editor.rule,value.groups,'duration');}
+  else teacher.editor.subjectValues[teacher.editor.subjects[0]]=copy(value);
+  cancelField();
+ }
+ window.controlRuleFormUI={esc,row,groups,actions,action,trash,teacherEditor,editTeacherField(kind,index=0){if(!editorCurrent())return;item={kind,index,value:controlModule==='duration'?{groups:copy(teacher.editor.rule.settingGroups)}:copy(teacher.editor.subjectValues[teacher.editor.subjects[0]])};showItem();},confirmTeacherField:confirmField,cancelTeacherField:cancelField,period(index){if(!editorCurrent()||item?.kind!=='periods')return;const active=item,context=teacher,cancel=schoolControl.cancelTime;schoolControl.cancelTime=()=>{schoolControl.cancelTime=cancel;cancel.call(schoolControl);if(item===active&&teacher===context)showItem();};schoolControl.pickExternalTime(item.value.groups[item.index].value.periods,index,periods=>{schoolControl.cancelTime=cancel;if(item!==active||teacher!==context)return;item.value.groups[item.index].value.periods=copy(periods);showItem();});},removePeriod(index){if(item?.kind!=='periods'||!editorCurrent())return;item.value.groups[item.index].value.periods.splice(index,1);showItem();},step(delta){const n=document.getElementById('form-item-number');if(!n)return;if(n.value===''||!Number.isFinite(n.valueAsNumber))n.value='1';else if(delta>0)n.stepUp();else if(Number(n.value)>1)n.stepDown();}};
+ addEventListener('keydown',e=>{if(!e.defaultPrevented&&e.key==='Escape'&&item&&editorCurrent()){e.preventDefault();cancelField();}},true);
+})();
