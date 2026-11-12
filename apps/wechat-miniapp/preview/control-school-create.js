@@ -14,6 +14,7 @@
   app.innerHTML='<main class="screen control-screen school-mobile duration-item-screen rule-form-screen'+(picker?' control-student-picker':'')+'">'+top+'<section class="control-content">'+body+'</section><footer class="borrow-editor-actions">'+actions+'</footer><div id="control-overlay"></div><div id="control-toast" role="status"></div></main>';syncReview();
  }
  function render(error=''){
+  if(error)return controlToast(error);
   if(!allowed())return;
   if(picker)return renderGrades(error);
   const v=draft.value;
@@ -27,25 +28,29 @@
   const d=read();if(module==='duration'&&d.schoolSettings.durationRulesEnabled===false)return controlToast('请先启用自定义规则');
   const policies=d.schoolSettings.adminPolicies[module];if(!original&&M.grades(d).every(g=>!M.rows(d,[g]).length||policies.some(p=>p.grades.includes(g))))return controlToast('全部年级已有规则，请编辑或删除后新增');
   draft={module,base:M.signature(d,module),value:{id:'school-'+crypto.randomUUID(),grades:[],...(module==='duration'?{groups:[{weekdays:[0,1,2,3,4,5,6],value:{continuousMinutes:60,restMinutes:15,dailyMinutes:180,periods:[]}}]}:{answer:false,explanation:false})}};
-  draft.original=original?copy(original):null;if(original)draft.value=copy(original);draft.initial=snapshot();item=null;picker=null;render();
+  draft.original=original?copy(original):null;if(original)draft.value=copy(original);draft.initial=snapshot();item=null;picker=null;closeControlOverlay(true);render();
  }
- function gradeRows(){const d=read();return M.grades(d).filter(g=>g.includes(picker.query.trim())).map(g=>{const disabled=unavailable(d,g);return '<label class="daily-lock-row'+(disabled?' control-student-unavailable':'')+'"><span><b>'+esc(g)+'</b>'+(disabled?'<small>'+(M.rows(d,[g]).length?'已有规则，不可选择':'暂无可操作班级')+'</small>':'')+'</span><input type="checkbox" aria-label="选择'+esc(g)+'" value="'+esc(g)+'" '+(picker.ids.has(g)?'checked':'')+' '+(disabled?'disabled':'')+' onchange="schoolRuleCreateUI.selectGrade(this.value,this.checked)"></label>';}).join('')||'<p class="parity-note">没有匹配年级</p>';}
+ function gradeRows(){const d=read();return M.grades(d).map(g=>{const disabled=unavailable(d,g);return '<label class="daily-lock-row'+(disabled?' control-student-unavailable':'')+'"><span><b>'+esc(g)+'</b>'+(disabled?'<small>'+(M.rows(d,[g]).length?'已有规则，不可选择':'暂无可操作班级')+'</small>':'')+'</span><input type="checkbox" aria-label="选择'+esc(g)+'" value="'+esc(g)+'" '+(picker.ids.has(g)?'checked':'')+' '+(disabled?'disabled':'')+' onchange="schoolRuleCreateUI.selectGrade(this.value,this.checked)"></label>';}).join('')||'<p class="parity-note">没有匹配年级</p>';}
  function renderGrades(error=''){
-  page('选择年级','<div class="daily-lock-picker"><div class="daily-lock-picker-count"><span>选择适用年级</span><b id="create-grade-count">'+picker.ids.size+'/'+M.grades(read()).length+' 个年级</b></div><input type="search" aria-label="搜索年级" placeholder="搜索年级" oninput="schoolRuleCreateUI.searchGrades(this.value)"><div id="create-grade-options">'+gradeRows()+'</div><p class="control-error" role="alert">'+esc(error)+'</p></div>',button('取消','cancelGrades()',true)+button('确定','confirmGrades()').replace('onclick=',(picker.ids.size?'':'disabled ')+'onclick='));
+  if(!picker)return;
+  controlOverlay('选择年级','<div class="control-grade-picker"><div class="daily-lock-picker-count"><span>选择适用年级</span><b id="create-grade-count">'+picker.ids.size+'/'+M.grades(read()).length+' 个年级</b></div><div id="create-grade-options" class="control-grade-options">'+gradeRows()+'</div></div>','<button type="button" class="control-select-all" onclick="schoolRuleCreateUI.toggleAllGrades()">'+(M.grades(read()).filter(g=>!unavailable(read(),g)).every(g=>picker.ids.has(g))?'取消全选':'全选')+'</button>'+button('取消','cancelGrades()',true)+button('确定','confirmGrades()').replace('onclick=',(picker.ids.size?'':'disabled ')+'onclick='));
+  const shade=document.querySelector?.('#control-overlay .control-shade');if(shade){shade.onclick=e=>{if(e.target===shade)schoolRuleCreateUI.cancelGrades();};const close=shade.querySelector('.control-sheet-head button');if(close)close.onclick=()=>schoolRuleCreateUI.cancelGrades();}
+  if(error)controlToast(error);
  }
- function pickGrades(){if(!allowed())return;picker={ids:new Set(draft.value.grades),query:''};renderGrades();}
- function cancelGrades(){picker=null;render();}
+ function pickGrades(){if(!allowed())return;picker={ids:new Set(draft.value.grades)};renderGrades();}
+ function cancelGrades(){picker=null;closeControlOverlay(true);render();}
  function confirmGrades(){
   if(!allowed()||!picker||!picker.ids.size)return;
   const d=read(),invalid=[...picker.ids].filter(g=>!M.grades(d).includes(g)||unavailable(d,g));
   if(invalid.length){invalid.forEach(g=>picker.ids.delete(g));return renderGrades('年级规则已变化，请重新选择');}
-  draft.value.grades=M.grades(d).filter(g=>picker.ids.has(g));picker=null;render();
+  draft.value.grades=M.grades(d).filter(g=>picker.ids.has(g));picker=null;closeControlOverlay(true);render();
  }
  function edit(kind,index=0){
   if(!allowed()||!['weekdays','continuousMinutes','restMinutes','dailyMinutes','periods','answer','explanation'].includes(kind))return;
   item={kind,index,value:copy(draft.value)};showItem();
  }
  function showItem(error=''){
+  if(error)return controlToast(error);
   if(!allowed()||!item)return;
   const {kind,index,value}=item,names={weekdays:'选择星期',continuousMinutes:'连续使用时长',restMinutes:'休息时长',dailyMinutes:'每日累计总时长',periods:'可用时段',answer:'查看答案',explanation:'查看详解'};
   let body='';
@@ -79,8 +84,8 @@
    const next=M.apply(d,{module:draft.module,action:'save',...v,original:draft.original,base:draft.base,scope:'unmodified'}),module=draft.module;
    localStorage.setItem(key,JSON.stringify(next));controlData=next;const id=module==='duration'?next.schoolSettings.adminPolicies.duration.find(p=>p.grades.includes(v.grades[0])&&M.durationKey(p.groups)===M.durationKey(v.groups))?.id:null;
    draft=null;item=null;picker=null;schoolControl.module(module);if(!window.controlRuleFormUI&&module==='duration'&&id)schoolDurationUI.open(id);controlToast('已生效');
-  }catch(error){render(error.message);if(error.message==='已是默认规则，无需保存')controlToast(error.message);}
+  }catch(error){controlToast(error.message);}
  }
- window.schoolRuleCreateUI={start,render,togglePermission(key){if(!allowed()||draft.module!=='homework'||item||picker||!['answer','explanation'].includes(key))return;draft.value[key]=!draft.value[key];render();},busy:()=>!!draft,reset(){draft=null;item=null;picker=null;},pickGrades,cancelGrades,confirmGrades,edit,cancelItem,confirmItem,period,save,cancel,back:cancel,discard:leave,continueEdit(){closeControlOverlay(true);render();},searchGrades(query){if(!picker)return;picker.query=query;const host=document.getElementById('create-grade-options');if(host)host.innerHTML=gradeRows();},selectGrade(g,checked){if(!allowed()||!picker)return;const d=read();if(checked&&(!M.grades(d).includes(g)||unavailable(d,g)))return;checked?picker.ids.add(g):picker.ids.delete(g);const count=document.getElementById('create-grade-count');if(count)count.textContent=picker.ids.size+'/'+M.grades(d).length+' 个年级';const confirm=document.querySelector?.('.control-student-picker .control-primary');if(confirm)confirm.disabled=!picker.ids.size;},step(delta){const n=document.getElementById('school-create-number');if(!n)return;if(n.value===''||!Number.isFinite(n.valueAsNumber))n.value='1';else if(delta>0)n.stepUp();else if(Number(n.value)>1)n.stepDown();},removePeriod(i){if(!allowed()||item?.kind!=='periods')return;item.value.groups[item.index].value.periods.splice(i,1);showItem();},addGroup(){if(!allowed()||draft.module!=='duration')return;const weekdays=[0,1,2,3,4,5,6].filter(day=>!draft.value.groups.some(g=>g.weekdays.includes(day)));if(!weekdays.length)return controlToast('请先在已有时段组中取消需要分组的星期');draft.value.groups.push({weekdays,value:{continuousMinutes:60,restMinutes:15,dailyMinutes:180,periods:[]}});render();},removeGroup(i){if(!allowed()||draft.module!=='duration'||draft.value.groups.length<=1)return;draft.value.groups.splice(i,1);render();}};
+ window.schoolRuleCreateUI={start,render,togglePermission(key){if(!allowed()||draft.module!=='homework'||item||picker||!['answer','explanation'].includes(key))return;draft.value[key]=!draft.value[key];render();},busy:()=>!!draft,reset(){draft=null;item=null;picker=null;},pickGrades,cancelGrades,confirmGrades,edit,cancelItem,confirmItem,period,save,cancel,back:cancel,discard:leave,continueEdit(){closeControlOverlay(true);render();},toggleAllGrades(){if(!picker)return;const d=read(),available=M.grades(d).filter(g=>!unavailable(d,g)),all=available.length&&available.every(g=>picker.ids.has(g));picker.ids=new Set(all?[]:available);renderGrades();},selectGrade(g,checked){if(!allowed()||!picker)return;const d=read();if(checked&&(!M.grades(d).includes(g)||unavailable(d,g)))return;checked?picker.ids.add(g):picker.ids.delete(g);const count=document.getElementById('create-grade-count');if(count)count.textContent=picker.ids.size+'/'+M.grades(d).length+' 个年级';const allButton=document.querySelector?.('#control-overlay .control-select-all');if(allButton)allButton.textContent=M.grades(d).filter(g=>!unavailable(d,g)).every(g=>picker.ids.has(g))?'取消全选':'全选';const confirm=document.querySelector?.('#control-overlay .control-primary');if(confirm)confirm.disabled=!picker.ids.size;},step(delta){const n=document.getElementById('school-create-number');if(!n)return;if(n.value===''||!Number.isFinite(n.valueAsNumber))n.value='1';else if(delta>0)n.stepUp();else if(Number(n.value)>1)n.stepDown();},removePeriod(i){if(!allowed()||item?.kind!=='periods')return;item.value.groups[item.index].value.periods.splice(i,1);showItem();},addGroup(){if(!allowed()||draft.module!=='duration')return;const weekdays=[0,1,2,3,4,5,6].filter(day=>!draft.value.groups.some(g=>g.weekdays.includes(day)));if(!weekdays.length)return controlToast('请先在已有时段组中取消需要分组的星期');draft.value.groups.push({weekdays,value:{continuousMinutes:60,restMinutes:15,dailyMinutes:180,periods:[]}});render();},removeGroup(i){if(!allowed()||draft.module!=='duration'||draft.value.groups.length<=1)return;draft.value.groups.splice(i,1);render();}};
  addEventListener('keydown',e=>{if(!e.defaultPrevented&&e.key==='Escape'&&allowed()){e.preventDefault();cancel();}});
 })();

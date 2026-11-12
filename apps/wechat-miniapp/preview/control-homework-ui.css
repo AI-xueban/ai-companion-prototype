@@ -360,10 +360,10 @@ body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .c
 body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .school-panel-heading,body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .school-section-heading{padding:0 16px;margin:12px 0}
 body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .control-module-panel>.school-panel-heading{padding:0;margin:0 0 12px}
 body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .parity-context{padding:0 16px;margin:4px 0 12px}
-body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .rule-form-card{padding:16px;background:#fff;margin:0 0 12px;border:0;border-radius:0;box-shadow:none}
-body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .control-module-panel .rule-form-card{padding:0;margin:16px 0 24px}
-body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .rule-form-card>h3,body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .rule-form-group>h4{margin:0;padding:8px 10px;background:#f0f3f8;border-radius:3px;color:#18354c;font-size:15px;line-height:22px;font-weight:600}
-body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .rule-form-group>h4{margin-top:16px;background:#edf6fa;font-size:14px}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .rule-form-card{padding:16px;background:#fff;margin:0 16px 12px;border:1px solid var(--control-border);border-radius:12px;box-shadow:none}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .control-module-panel .rule-form-card{padding:16px;margin:16px 0 24px}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .rule-form-card>h3,body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .rule-form-group>h4{margin:0;padding:8px 0;background:transparent;border-radius:0;color:#18354c;font-size:15px;line-height:22px;font-weight:600}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .rule-form-group>h4{margin-top:16px;padding:8px 0;background:transparent;color:#8b9bad;font-size:12px;font-weight:400;border-radius:0}
 .rule-form-row{display:grid;grid-template-columns:minmax(98px,.95fr) minmax(0,1.4fr);align-items:center;gap:12px;min-height:50px;padding:10px 0;border-bottom:1px solid #e7ebf0;color:#274054;font-size:14px;line-height:22px;box-sizing:border-box}
 .rule-form-value{display:flex;justify-content:flex-end;align-items:center;flex-wrap:wrap;gap:4px 10px;text-align:right;color:#758395;min-width:0;overflow-wrap:anywhere}
 body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .rule-form-link{display:inline-block;width:auto;min-width:0;min-height:28px;margin:0;padding:3px 0;border:0;background:transparent;color:var(--control-link);border-radius:0;font-size:13px;box-shadow:none}
@@ -382,7 +382,7 @@ body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .d
 body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .duration-setting-row:disabled{opacity:.55;cursor:default}
 body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .duration-setting-row em{font-style:normal;color:#db5757}
 body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .duration-item-group>.control-group-heading{padding-top:16px;margin-bottom:0}
-body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .duration-item-group>.control-group-heading h3{font-size:14px;padding:7px 10px;border-radius:3px;background:#f0f3f8;color:#1b3a50}
+body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .duration-item-group>.control-group-heading h3{font-size:12px;padding:7px 0;border-radius:0;background:transparent;color:#8b9bad;font-weight:400}
 body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .rule-add-group{padding:16px 0 4px;margin:0}
 body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .rule-add-group>button{width:100%;min-height:42px;border:0;border-radius:4px;background:#edf5ff;color:var(--control-link);font-size:14px;box-shadow:none}
 body.dw-ui-new #app main.screen.control-screen.school-mobile.rule-form-screen .school-borrow-tabs{margin:0 0 16px;background:#fff;border-radius:0}
@@ -427,3 +427,24 @@ body.dw-ui-new #app main.control-screen :is(.control-primary.control-action-rele
 body.dw-ui-new #app main.control-screen :is(.control-primary.control-action-restrict,.control-primary.control-action-release,.school-grade-action):disabled {
   color:#a0adba;border-color:#e7edf2;background:#f1f4f7;box-shadow:none;
 }
+
+/* Feedback uses toast; empty validation hosts take no form space. */
+body #app main.control-screen :is(.control-error,.parity-error):empty{display:none}
+
+/* Grade selection stays over the editor in a bottom sheet; nine grades need no search. */
+body #app main.control-screen .control-sheet:has(.control-grade-picker){display:flex;flex-direction:column;max-height:85%;overflow:hidden}
+.control-grade-picker{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.control-grade-picker .daily-lock-picker-count{flex:none;padding:4px 0 10px}
+.control-grade-options{min-height:0;overflow:auto;overscroll-behavior:contain}
+.control-grade-options .daily-lock-row{min-height:48px;padding:10px 0}
+.control-grade-options .daily-lock-row small{display:block;margin-top:2px;font-size:11px;font-weight:400}
+.control-grade-picker .control-student-unavailable{color:#a0adba}
+.control-sheet:has(.control-grade-picker) .control-sheet-actions{flex:none;margin-top:12px}
+
+/* Select-all remains at the left of the fixed picker action row. */
+body #app main.control-screen .control-sheet:has(.control-student-selection){display:flex;flex-direction:column;max-height:85%;overflow:hidden}
+.control-student-selection>input{flex:none}
+#duration-selection-options{min-height:0;overflow:auto;overscroll-behavior:contain}
+.control-sheet:has(.control-student-selection) .control-sheet-head,.control-sheet:has(.control-student-selection) .control-sheet-actions{flex:none}
+body.dw-ui-new #app main.control-screen .control-sheet-actions>.control-select-all{flex:0 0 auto;min-width:62px;min-height:44px;margin-right:auto;padding:8px 0;border:0;background:transparent;color:var(--control-link);font-size:13px;white-space:nowrap}
+body #app main.control-screen .control-sheet:has(.control-student-selection) .control-sheet-actions{margin-top:12px}

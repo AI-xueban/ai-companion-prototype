@@ -245,15 +245,15 @@ test('新增规则表单选择类型与年级，日期冲突留在编辑页供�
   const fs=require('node:fs'), vm=require('node:vm'), name='五年级 1 班', state=M.initial();
   state.classRules[name]=[dated('existing','2099-01-01','2099-01-03')];
   const values={ 'borrow-start':{value:'2099-01-03'}, 'borrow-end':{value:'2099-01-05'}, 'borrow-way':{value:'deny'}, 'borrow-error':{textContent:''} };
-  let overlay;
-  const context={controlRules:R,borrowingModel:M,schoolControlClasses:[name],schoolGrades:()=>['五年级'],controlData:{[name]:[{id:1}],schoolSettings:{borrowing:state}},controlDemoRole:'admin',controlWorkView:'school',controlView:'module',controlModule:'borrowing',adminLevel:'school',adminModuleRoot:'school',adminSelectedGrade:'',selectedTeacherClass:name,stage:'other',teacherTab:'control',app:{innerHTML:''},crypto:require('node:crypto'),header:t=>'<h2>'+t+'</h2>',syncReview(){},localStorage:{getItem:()=>null},document:{querySelector:()=>null,querySelectorAll:()=>[],getElementById:id=>values[id]||null},renderControl(){},openControlModule(){},enterAdminModule(){},controlOverlay:(title,body)=>{overlay={title,body};}};
+  let overlay,toast;
+  const context={controlRules:R,borrowingModel:M,schoolControlClasses:[name],schoolGrades:()=>['五年级'],controlData:{[name]:[{id:1}],schoolSettings:{borrowing:state}},controlDemoRole:'admin',controlWorkView:'school',controlView:'module',controlModule:'borrowing',adminLevel:'school',adminModuleRoot:'school',adminSelectedGrade:'',selectedTeacherClass:name,stage:'other',teacherTab:'control',app:{innerHTML:''},crypto:require('node:crypto'),header:t=>'<h2>'+t+'</h2>',syncReview(){},controlToast(t){toast=t;},localStorage:{getItem:()=>null},document:{querySelector:()=>null,querySelectorAll:()=>[],getElementById:id=>values[id]||null},renderControl(){},openControlModule(){},enterAdminModule(){},controlOverlay:(title,body)=>{overlay={title,body};}};
   context.window=context; vm.createContext(context); vm.runInContext(fs.readFileSync(require.resolve('./control-borrowing.js'),'utf8'),context);
   context.borrowing.manage([name]); context.borrowing.edit();
   assert.match(context.app.innerHTML,/新增规则类型/); assert.match(context.app.innerHTML,/适用年级：五年级/); assert.doesNotMatch(context.app.innerHTML,/id="borrow-grade"/);
   context.borrowing.editorType('dates'); context.borrowing.editorGrade('五年级');
   assert.match(context.app.innerHTML,/所选日期内全天停止借用/); assert.doesNotMatch(context.app.innerHTML,/borrow-way|borrow-periods|按时段借用/);
   context.borrowing.save();
-  assert.equal(values['borrow-error'].textContent,'所选日期已有规则，请重新选择');
+  assert.equal(toast,'所选日期已有规则，请重新选择');assert.equal(values['borrow-error'].textContent,'');
   assert.equal(overlay,undefined);
   assert.match(context.app.innerHTML,/新增借用规则/);
   values['borrow-start'].value='2099-01-04'; context.borrowing.save();

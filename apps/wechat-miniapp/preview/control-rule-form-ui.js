@@ -22,6 +22,7 @@
  }
  function editorCurrent(){return teacher&&controlDemoRole!=='admin'&&controlWorkView==='homeroom'&&['duration','homework'].includes(controlModule)&&controlView==='ruleEditor';}
  function showItem(error=''){
+  if(error)return controlToast(error);
   if(!editorCurrent()||!item)return;const {kind,index,value}=item,group=value.groups?.[index],labels={weekdays:'选择星期',periods:'可用时段',continuousMinutes:'连续使用时长',restMinutes:'休息时长',dailyMinutes:'每日累计总时长',answer:'查看答案',explanation:'查看详解'};let body='';
   if(kind==='weekdays')body='<div class="school-weekdays">'+[0,1,2,3,4,5,6].map(day=>'<label><input type="checkbox" data-form-day value="'+day+'" '+(group.weekdays.includes(day)?'checked':'')+' '+(value.groups.some((g,i)=>i!==index&&g.weekdays.includes(day))?'disabled':'')+'>'+R.dayText([day])+'</label>').join('')+'</div>';
   else if(['answer','explanation'].includes(kind))body='<div class="school-permission-options">'+['true','false'].map(v=>'<label><input type="radio" name="form-permission" value="'+v+'" '+(value[kind]===v?'checked':'')+'><span>'+(v==='true'?'允许':'不允许')+'</span></label>').join('')+'</div>';

@@ -142,12 +142,13 @@
       if(controlWorkView!=='homeroom'||!isHeadTeacherClass()||ui.demo)return;
       controlData=latest();if(M.denied(state(),selectedTeacherClass))return controlToast('学校正在临时停止借用，暂时无法修改');
       ui.studentPicker={ids:new Set(),query:'',className:selectedTeacherClass,revision:state().revision};
-      controlOverlay('选择'+selectedTeacherClass+'学生',`<div class="daily-lock-picker"><div class="daily-lock-picker-count"><span>选择需要停止借用的学生</span><b id="borrow-student-count">0 人</b></div><input type="search" aria-label="搜索姓名或学号" placeholder="搜索姓名或学号" oninput="borrowing.searchStudents(this.value)"><div id="borrow-student-options">${banPickerRows()}</div></div>`,button('取消','borrowing.cancelStudents()')+button('禁止所选学生借用','borrowing.saveStudents()',false,true));
+      controlOverlay('选择'+selectedTeacherClass+'学生',`<div class="daily-lock-picker"><div class="daily-lock-picker-count"><span>选择需要停止借用的学生</span><b id="borrow-student-count">0 人</b></div><input type="search" aria-label="搜索姓名或学号" placeholder="搜索姓名或学号" oninput="borrowing.searchStudents(this.value)"><div id="borrow-student-options">${banPickerRows()}</div></div>`,'<button type="button" class="control-select-all" onclick="borrowing.toggleAllStudents()">全选</button>'+button('取消','borrowing.cancelStudents()')+button('禁止所选学生借用','borrowing.saveStudents()',false,true));
       document.querySelector?.('#control-overlay .control-sheet')?.classList?.add('daily-lock-sheet');
     },
+    toggleAllStudents(){const p=ui.studentPicker;if(!p)return;const available=(controlData[selectedTeacherClass]||[]).filter(s=>!studentBanned(s)),all=available.length&&available.every(s=>p.ids.has(String(s.id)));p.ids=new Set(all?[]:available.map(s=>String(s.id)));const root=document.getElementById('borrow-student-options');if(root)root.innerHTML=banPickerRows();const count=document.getElementById('borrow-student-count');if(count)count.textContent=p.ids.size+' 人';const footer=document.querySelector?.('#control-overlay .control-select-all');if(footer)footer.textContent=all?'全选':'取消全选';const save=document.querySelector?.('#control-overlay .control-primary');if(save)save.disabled=!p.ids.size;},
     cancelStudents(){ui.studentPicker=null;closeControlOverlay();},
     searchStudents(query){if(!ui.studentPicker)return;ui.studentPicker.query=query;const root=document.getElementById('borrow-student-options');if(root)root.innerHTML=banPickerRows();},
-    pickStudent(id,checked){const p=ui.studentPicker;if(!p)return;checked?p.ids.add(String(id)):p.ids.delete(String(id));const count=document.getElementById('borrow-student-count');if(count)count.textContent=p.ids.size+' 人';const save=document.querySelector?.('#control-overlay .control-primary');if(save)save.disabled=!p.ids.size;},
+    pickStudent(id,checked){const p=ui.studentPicker;if(!p)return;checked?p.ids.add(String(id)):p.ids.delete(String(id));const count=document.getElementById('borrow-student-count');if(count)count.textContent=p.ids.size+' 人';const save=document.querySelector?.('#control-overlay .control-primary');if(save)save.disabled=!p.ids.size;const all=document.querySelector?.('#control-overlay .control-select-all');if(all)all.textContent=(controlData[selectedTeacherClass]||[]).filter(s=>!studentBanned(s)).every(s=>p.ids.has(String(s.id)))?'取消全选':'全选';},
     saveStudents(){
       const p=ui.studentPicker;if(!p||!p.ids.size)return;
       try{
@@ -290,10 +291,10 @@
     save() {
       collect(); const e = ui.editor, problem = !['weekly','dates'].includes(e.rule.mode) ? '请选择规则类型' : !e.grade || !e.names.length ? '请选择年级' : R.validateBorrow(e.rule, new Date(), e.original);
       const groupError=e.rule.mode === 'weekly' ? R.validateSettingGroups(e.rule.settingGroups || R.settingGroups(e.rule,'borrowing'),'borrowing') : '';
-      if (problem || groupError) { document.getElementById('borrow-error').textContent = groupError || problem; return; }
+      if (problem || groupError) { controlToast(groupError || problem); return; }
       const s = state(), rules = e.names.flatMap(name => (s.classRules[name] || []).filter(rule => rule.id !== e.editingIds[name]));
-      if (e.rule.mode === 'weekly' && rules.some(rule => rule.mode === 'weekly')) { document.getElementById('borrow-error').textContent = '该年级已有每周规则，请编辑现有规则'; return; }
-      if (e.rule.mode === 'dates' && rules.some(rule => rule.mode === 'dates' && R.overlap(rule, e.rule))) { document.getElementById('borrow-error').textContent = '所选日期已有规则，请重新选择'; return; }
+      if (e.rule.mode === 'weekly' && rules.some(rule => rule.mode === 'weekly')) { controlToast('该年级已有每周规则，请编辑现有规则'); return; }
+      if (e.rule.mode === 'dates' && rules.some(rule => rule.mode === 'dates' && R.overlap(rule, e.rule))) { controlToast('所选日期已有规则，请重新选择'); return; }
       confirm(R.copy(e), '确认保存借用规则？', '', false);
     },
     remove(index) {
@@ -309,7 +310,7 @@
       try { data = latest(); next = M.commit(data.schoolSettings.borrowing, ui.pending, data, controlWorkView, [controlClasses[0]]); }
       catch (error) {
         ui.pending = null;
-        if (ui.editor && /所选日期已有规则|已有每周规则/.test(error.message)) { editorPage(); document.getElementById('borrow-error').textContent = error.message; return; }
+        if (ui.editor && /所选日期已有规则|已有每周规则/.test(error.message)) { editorPage(); controlToast(error.message); return; }
         ui.editor = null; controlData = latest(); this.render(); controlToast(error.message); return;
       }
       data.schoolSettings.borrowing = next;
