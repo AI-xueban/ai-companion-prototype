@@ -827,6 +827,7 @@ function loadData() {
       syncTabletCreatedAt(data);
       syncDeviceAlerts(data);
       syncLocalAdminUsageDemo(data);
+      syncTeacherUsageDemo(data);
       syncContentCovers(data);
       syncSectionPublishedAt(data);
       syncChannelPublishedAt(data);
@@ -841,7 +842,26 @@ function loadData() {
   syncTabletCreatedAt(data);
   syncDeviceAlerts(data);
   syncLocalAdminUsageDemo(data);
+  syncTeacherUsageDemo(data);
   return data;
+}
+
+function syncTeacherUsageDemo(data) {
+  const records = data.usageRecords || (data.usageRecords = []);
+  const additions = DEFAULT_DATA.tablets.slice(10, 15).map((tablet, index) => ({
+    id: `UR-DEMO-TEACHER-20261113-${index + 1}`,
+    batchId: `TEACHER-20261113-093${index}`,
+    operationType: 'normal', borrowerType: 'teacher',
+    studentId: '18018001800', studentName: '18018001800', grade: '——',
+    tabletId: tablet.id, sn: tablet.sn,
+    cabinetBorrow: tablet.cabinetId, slotBorrow: tablet.slotNo,
+    borrowAt: `2026-11-13 09:3${index}:00`,
+    status: index < 2 ? 'returned' : 'borrowed',
+    returnAt: index < 2 ? `2026-11-13 10:${index === 0 ? '15' : '18'}:00` : null,
+    cabinetReturn: index < 2 ? tablet.cabinetId : null,
+    slotReturn: index < 2 ? tablet.slotNo : null,
+  })).filter(record => !records.some(existing => existing.id === record.id));
+  records.unshift(...additions);
 }
 
 function syncLocalAdminUsageDemo(data) {

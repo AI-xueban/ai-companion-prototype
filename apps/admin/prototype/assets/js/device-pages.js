@@ -841,6 +841,7 @@ function resetAlertFilter() {
 }
 
 function usageBorrowerTypeLabel(record) {
+  if (record.borrowerType === 'teacher') return '教师';
   return record.borrowerType === 'local_admin' ? '管理员' : '学生';
 }
 
@@ -937,7 +938,9 @@ function formatRecordTimeOffset(datetimeStr, offsetSec = 0) {
 
 function renderBorrowTimelineItems(record) {
   const localAdmin = record.borrowerType === 'local_admin';
-  const borrowDesc = localAdmin ? '管理员按数量借取，柜门打开，该设备记为借出'
+  const teacher = record.borrowerType === 'teacher';
+  const borrowDesc = teacher ? '教师点击该设备借取，柜门打开，该设备记为借出'
+    : localAdmin ? '管理员按数量借取，柜门打开，该设备记为借出'
     : record.status === 'cancelled'
     ? '确认借取，柜门打开；设备未拔充电器'
     : '确认借取，柜门打开；设备已取出';
@@ -945,7 +948,7 @@ function renderBorrowTimelineItems(record) {
         <div class="dev-timeline-item">
           <div class="dev-timeline-time">${formatRecordTimeOffset(record.borrowAt, -8)}</div>
           <div class="dev-timeline-title">编号密码验证</div>
-          <div class="dev-timeline-desc">${localAdmin ? '本地管理员提交账号与密码' : '学生提交编号与密码'}</div>
+          <div class="dev-timeline-desc">${teacher ? '教师提交编号与密码' : localAdmin ? '本地管理员提交账号与密码' : '学生提交编号与密码'}</div>
         </div>
         <div class="dev-timeline-item">
           <div class="dev-timeline-time">${record.borrowAt}</div>
@@ -1450,7 +1453,7 @@ function renderDeviceUsagePage(params) {
       <div class="page-card-title">操作记录</div>
       <div class="filter-form">
         <div class="filter-item"><label>操作类型</label><select class="select" id="usage-filter-operation-type"><option value="全部"${!f.operationType || f.operationType === '全部' ? ' selected' : ''}>全部</option><option value="normal"${f.operationType === 'normal' ? ' selected' : ''}>设备借还</option><option value="admin_open"${f.operationType === 'admin_open' ? ' selected' : ''}>管理员开柜</option></select></div>
-        <div class="filter-item"><label>借用人类型</label><select class="select" id="usage-filter-borrower-type"><option value="全部"${!f.borrowerType || f.borrowerType === '全部' ? ' selected' : ''}>全部</option><option value="student"${f.borrowerType === 'student' ? ' selected' : ''}>学生</option><option value="local_admin"${f.borrowerType === 'local_admin' ? ' selected' : ''}>管理员</option></select></div>
+        <div class="filter-item"><label>借用人类型</label><select class="select" id="usage-filter-borrower-type"><option value="全部"${!f.borrowerType || f.borrowerType === '全部' ? ' selected' : ''}>全部</option><option value="student"${f.borrowerType === 'student' ? ' selected' : ''}>学生</option><option value="teacher"${f.borrowerType === 'teacher' ? ' selected' : ''}>教师</option><option value="local_admin"${f.borrowerType === 'local_admin' ? ' selected' : ''}>管理员</option></select></div>
         <div class="filter-item"><label>编号 / 姓名</label><input class="input" id="usage-filter-student" placeholder="请输入" value="${esc(f.student)}"></div>
         <div class="filter-item"><label>设备 SN</label><input class="input" id="usage-filter-sn" placeholder="请输入" value="${esc(f.sn)}"></div>
         <div class="filter-item"><label>所属柜机ID</label><input class="input" id="usage-filter-cabinet-id" placeholder="请输入" value="${esc(f.cabinetId)}"></div>
