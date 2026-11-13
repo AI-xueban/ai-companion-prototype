@@ -144,7 +144,7 @@ test('智阅作业从科目进入，仅保存当前科目并保留其他科目',
   assert.doesNotMatch(context.app.innerHTML,/保留|aria-label="智阅作业科目"/);
   inputs=[row('语文','explanation','true'),row('数学','answer',''),row('数学','explanation','false'),row('英语','answer','false'),row('英语','explanation','false')];
   context.parity.saveEditor();
-  assert.equal(error.textContent,'请为每个科目选择答案和详解权限');
+  assert.equal(toast,'请为每个科目选择答案和详解权限');
   inputs=[row('语文','answer','false'),row('语文','explanation','true'),row('数学','answer','true'),row('数学','explanation','false'),row('英语','answer','false'),row('英语','explanation','false')];
   context.parity.saveEditor();
   const saved=JSON.parse(stored).A[0];
@@ -246,6 +246,7 @@ test('管理员智阅作业弹窗在多学生范围要求选择修改范围', ()
       return null;
     },
   };
+  let toast;
   const context = {
     controlRules: R, closeControlOverlay() {}, addEventListener() {}, setInterval() {}, crypto: { randomUUID() { return 'modal-rule-id'; } },
     schoolControlClasses: ['A'], controlClasses: ['A'], selectedTeacherClass: 'A',
@@ -257,7 +258,7 @@ test('管理员智阅作业弹窗在多学生范围要求选择修改范围', ()
     header(title) { return '<span></span><h2>' + title + '</h2>'; }, syncReview() {}, binaryToggleButton() {},
     document: { getElementById(id) { return id === 'parity-rule-form' ? form : id === 'parity-error' ? error : null; } },
     localStorage: { getItem(key) { return key === 'teacher-control-prototype-v1' ? stored || null : null; }, setItem(key, value) { if (key === 'teacher-control-prototype-v1') stored = value; } },
-    controlToast() {}, controlOverlay(title, body, actions) { dialog = { title, body, actions }; },
+    controlToast(t) {toast=t;}, controlOverlay(title, body, actions) { dialog = { title, body, actions }; },
   };
   context.window = context;
   vm.runInNewContext(fs.readFileSync(require.resolve('./control-parity.js'), 'utf8'), context);
@@ -273,7 +274,7 @@ test('管理员智阅作业弹窗在多学生范围要求选择修改范围', ()
   assert.equal(stored, beforeSave);
   context.parity.editScope('A');
   context.parity.saveEditor();
-  assert.equal(error.textContent, '请选择本次修改范围');
+  assert.equal(toast, '请选择本次修改范围');
   assert.equal(stored, beforeSave);
   scope = 'all'; context.parity.saveEditor();
   assert.equal(JSON.parse(stored).A.filter(row => row.answer).length, 2);
@@ -732,11 +733,11 @@ test('时长暂停按学校与老师来源分离，保留原配置并恢复默�
 });
 test('班主任时长先进入设置，必选学生子页保留草稿且只保存所选学生',()=>{
  const required={textContent:''};
- const fs=require('node:fs'),vm=require('node:vm');let stored,dialog;const make=id=>{const s=student(id);s.name='同学'+id;const w=R.durationWeek(s);Object.values(w.dailySettings).forEach(v=>v.continuousMinutes=45);s.durationRules=[w];return s;};
- const c={controlRules:R,closeControlOverlay(){},addEventListener(){},setInterval(){},crypto:require('crypto'),schoolControlClasses:['A'],controlClasses:['A'],selectedTeacherClass:'A',controlData:{A:[make(1),make(2)]},controlStudents(){return c.controlData.A;},controlDemoRole:'teacher',controlWorkView:'homeroom',controlModule:'duration',controlView:'module',controlLabels:{duration:'使用时长'},controlSelected:new Set(),adminSelectedScopes:new Set(),schoolBorrowingEnabled:true,stage:'other',app:{innerHTML:''},header:t=>'<span></span><h2>'+t+'</h2>',syncReview(){},isHeadTeacherClass:()=>true,document:{getElementById:id=>id==='parity-error'?required:null,querySelector:()=>null},localStorage:{getItem:()=>stored||null,setItem:(k,v)=>stored=v},controlToast(){},controlOverlay:(title,body,actions)=>dialog={title,body,actions}};c.window=c;vm.runInNewContext(fs.readFileSync(require.resolve('./control-parity.js'),'utf8'),c);
- c.parity.editClass();const beforeRequired=stored;c.parity.saveEditor();assert.equal(required.textContent,'请选择学生');assert.equal(stored,beforeRequired);assert.match(c.app.innerHTML,/parity-rule-form/);assert.match(c.app.innerHTML,/请选择学生/);assert.match(c.app.innerHTML,/<h3>时段组1<\/h3>/);assert.match(c.app.innerHTML,/>添加时段组</);c.parity.pickEditorStudents();assert.match(c.app.innerHTML,/选择A学生/);assert.match(c.app.innerHTML,/>确定</);c.parity.confirmDurationStudents();assert.match(c.app.innerHTML,/control-student-picker/);
+ const fs=require('node:fs'),vm=require('node:vm');let stored,dialog,toast;const make=id=>{const s=student(id);s.name='同学'+id;const w=R.durationWeek(s);Object.values(w.dailySettings).forEach(v=>v.continuousMinutes=45);s.durationRules=[w];return s;};
+ const c={controlRules:R,closeControlOverlay(){},addEventListener(){},setInterval(){},crypto:require('crypto'),schoolControlClasses:['A'],controlClasses:['A'],selectedTeacherClass:'A',controlData:{A:[make(1),make(2)]},controlStudents(){return c.controlData.A;},controlDemoRole:'teacher',controlWorkView:'homeroom',controlModule:'duration',controlView:'module',controlLabels:{duration:'使用时长'},controlSelected:new Set(),adminSelectedScopes:new Set(),schoolBorrowingEnabled:true,stage:'other',app:{innerHTML:''},header:t=>'<span></span><h2>'+t+'</h2>',syncReview(){},isHeadTeacherClass:()=>true,document:{getElementById:id=>id==='parity-error'?required:null,querySelector:()=>null},localStorage:{getItem:()=>stored||null,setItem:(k,v)=>stored=v},controlToast(t){toast=t;},controlOverlay:(title,body,actions)=>dialog={title,body,actions}};c.window=c;vm.runInNewContext(fs.readFileSync(require.resolve('./control-parity.js'),'utf8'),c);
+ c.parity.editClass();const beforeRequired=stored;c.parity.saveEditor();assert.equal(toast,'请选择学生');assert.equal(required.textContent,'');assert.equal(stored,beforeRequired);assert.match(c.app.innerHTML,/parity-rule-form/);assert.match(c.app.innerHTML,/请选择学生/);assert.match(c.app.innerHTML,/<h3>时段组1<\/h3>/);assert.match(c.app.innerHTML,/>添加时段组</);c.parity.pickEditorStudents();assert.match(dialog.title,/选择A学生/);assert.match(dialog.actions,/>确定</);c.parity.confirmDurationStudents();assert.match(dialog.body,/control-student-selection/);
  c.parity.selectDurationStudent('1',true);c.parity.searchDurationStudents('同学1');c.parity.confirmDurationStudents();assert.match(c.app.innerHTML,/已选 1 名学生/);assert.match(c.app.innerHTML,/parity.pickEditorStudents/);assert.doesNotMatch(c.app.innerHTML,/同学2|恢复默认规则|<h3>默认规则/);
- c.parity.pickEditorStudents();assert.match(c.app.innerHTML,/value="1" checked/);c.parity.cancelStudentPicker();assert.match(c.app.innerHTML,/已选 1 名学生/);
+ c.parity.pickEditorStudents();assert.match(dialog.body,/value="1" checked/);c.parity.cancelStudentPicker();assert.match(c.app.innerHTML,/已选 1 名学生/);
  const fields={continuousMinutes:{value:'30'},restMinutes:{value:'10'},dailyMinutes:{value:'120'}};
  const section={dataset:{durationGroup:'0'},querySelector:selector=>fields[selector.match(/"(.*?)"/)[1]],querySelectorAll:selector=>selector.includes('data-group-day')?[0,1,2,3,4,5,6].map(value=>({value:String(value)})):[]};
  c.document.getElementById=id=>id==='parity-rule-form'?{querySelectorAll:()=>[section]}:null;
@@ -747,9 +748,9 @@ test('智阅先选学生和科目且仅保存选中范围，万象新名单支�
  const form={querySelectorAll(){return fields;}};
  const c={controlRules:R,closeControlOverlay(){},addEventListener(){},setInterval(){},crypto:require('crypto'),schoolControlClasses:['A'],controlClasses:['A'],selectedTeacherClass:'A',controlData:{A:[student(1),student(2)]},controlStudents(){return c.controlData.A;},controlDemoRole:'teacher',controlWorkView:'homeroom',controlModule:'homework',controlView:'module',controlLabels:{homework:'智阅作业',world:'万象视界'},controlSelected:new Set(),adminSelectedScopes:new Set(),schoolBorrowingEnabled:true,stage:'other',app:{innerHTML:''},header:t=>'<span></span><h2>'+t+'</h2>',syncReview(){},isHeadTeacherClass:()=>true,document:{getElementById:id=>id==='parity-rule-form'?form:id==='parity-error'?error:null,querySelector:()=>null},localStorage:{getItem:()=>stored||null,setItem:(k,v)=>stored=v},controlToast(){},controlOverlay:(title,body,actions)=>dialog={title,body,actions}};c.window=c;vm.runInNewContext(fs.readFileSync(require.resolve('./control-parity.js'),'utf8'),c);
  c.renderControl();assert.doesNotMatch(c.app.innerHTML,/parity-student-rows|toggleHomeworkPermission|搜索学生姓名或编号/);
- assert.match(c.app.innerHTML,/openHomeworkSubject/);assert.doesNotMatch(c.app.innerHTML,/control-fixed-select/);c.parity.openHomeworkSubject('数学');assert.match(c.app.innerHTML,/设置学生权限/);c.parity.editClass();assert.match(c.app.innerHTML,/请选择学生/);c.parity.pickEditorStudents();assert.match(c.app.innerHTML,/选择需要设置权限的学生/);c.parity.selectDurationStudent('1',true);c.parity.confirmDurationStudents();assert.match(c.app.innerHTML,/科目：数学/);assert.doesNotMatch(c.app.innerHTML,/选择科目/);assert.match(c.app.innerHTML,/已选 1 名学生/);
+ assert.match(c.app.innerHTML,/openHomeworkSubject/);assert.doesNotMatch(c.app.innerHTML,/control-fixed-select/);c.parity.openHomeworkSubject('数学');assert.match(c.app.innerHTML,/设置学生权限/);c.parity.editClass();assert.match(c.app.innerHTML,/请选择学生/);c.parity.pickEditorStudents();assert.match(dialog.body,/选择需要设置权限的学生/);c.parity.selectDurationStudent('1',true);c.parity.confirmDurationStudents();assert.match(c.app.innerHTML,/科目：数学/);assert.doesNotMatch(c.app.innerHTML,/选择科目/);assert.match(c.app.innerHTML,/已选 1 名学生/);
  const field=(name,key,value)=>({dataset:{homeworkSubject:name,homeworkField:key},value});fields=[field('数学','answer','true'),field('数学','explanation','false')];c.parity.saveEditor();assert.equal(R.homeworkValue(c.controlData.A[0],'数学').answer,true);assert.equal(R.homeworkValue(c.controlData.A[1],'数学').answer,false);assert.equal(R.homeworkValue(c.controlData.A[0],'语文').answer,false);
- c.openControlEditor(1);c.parity.pickEditorStudents();assert.match(c.app.innerHTML,/value="1" checked/);c.parity.cancelStudentPicker();assert.match(c.app.innerHTML,/已选 1 名学生/);c.parity.cancelEditor(true);
+ c.openControlEditor(1);c.parity.pickEditorStudents();assert.match(dialog.body,/value="1" checked/);c.parity.cancelStudentPicker();assert.match(c.app.innerHTML,/已选 1 名学生/);c.parity.cancelEditor(true);
  c.controlModule='world';c.controlView='individuals';c.renderControl();assert.equal(c.controlView,'module');assert.doesNotMatch(c.app.innerHTML,/parity-student-rows|搜索学生姓名或编号/);
  c.parity.chooseWorldStudents();c.parity.selectWorldStudent('2',true);c.parity.saveWorldStudents();assert.equal(c.controlData.A[0].world,true);assert.equal(c.controlData.A[1].world,false);assert.equal(c.controlData.A[1].worldSource,'teacher');assert.match(c.app.innerHTML,/已停止使用学生（1人）/);
  c.parity.restoreStudentWorld(2);assert.ok(c.controlData.A.every(s=>s.world));c.parity.chooseWorldStudents();c.parity.selectWorldStudent('1',true);c.closeControlOverlay();assert.ok(c.controlData.A.every(s=>s.world));
@@ -783,7 +784,7 @@ test('智阅学科子页仅列偏离年级默认的学生，双开关只改本�
  c.controlModule='world';c.controlView='module';c.renderControl();assert.match(c.app.innerHTML,/学校默认规则.*万象视界：允许使用.*已停止使用学生/s);
  c.controlData.schoolSettings.adminWorldClasses={[name]:true};c.renderControl();assert.match(c.app.innerHTML,/年级规则.*万象视界：停止使用.*已停止使用学生/s);
 
- c.controlModule='homework';c.parity.openHomeworkSubject('数学');c.parity.chooseDurationStudents('homework');c.parity.pickEditorStudents();assert.match(c.app.innerHTML,/0\/2 人/);assert.match(c.app.innerHTML,/学生1/);assert.match(c.app.innerHTML,/已设置规则/);assert.match(c.app.innerHTML,/value="2"\s+disabled/);
+ c.controlModule='homework';c.parity.openHomeworkSubject('数学');c.parity.chooseDurationStudents('homework');c.parity.pickEditorStudents();assert.match(dialog.body,/0\/2 人/);assert.match(dialog.body,/学生1/);assert.match(dialog.body,/已设置规则/);assert.match(dialog.body,/value="2"\s+disabled/);
  c.parity.selectDurationStudent('2',true);c.parity.confirmDurationStudents();assert.equal(c.controlView,'ruleEditor');
  c.parity.selectDurationStudent('1',true);const latest=JSON.parse(stored);latest[name][0].teacherModified||={};latest[name][0].teacherModified['homework:数学']=true;stored=JSON.stringify(latest);c.parity.confirmDurationStudents();assert.equal(toast,'学生权限已变化，请重新选择');assert.equal(c.controlView,'ruleEditor');
 
@@ -791,17 +792,17 @@ test('智阅学科子页仅列偏离年级默认的学生，双开关只改本�
 
 
 test('紧凑时长卡保留完整分钟和文字操作，新增已有规则学生置灰，编辑只放行原对象并防止重复新增',()=>{
- const fs=require('node:fs'),vm=require('node:vm');let stored,toast;const error={textContent:''};
+ const fs=require('node:fs'),vm=require('node:vm');let stored,toast,dialog;const error={textContent:''};
  const configured=(id,daily)=>{const s=student(id);s.durationRules=[R.expandSettingGroups({...R.durationWeek(s),source:'homeroom'},[{weekdays:[0,1,2,3,4],value:{continuousMinutes:60,restMinutes:15,dailyMinutes:daily,periods:[]}},{weekdays:[5,6],value:{continuousMinutes:60,restMinutes:15,dailyMinutes:180,periods:[]}}],'duration')];s.durationTeacherWeekdays=[0,1,2,3,4,5,6];return s;};
- const c={controlRules:R,closeControlOverlay(){},addEventListener(){},setInterval(){},crypto:require('crypto'),schoolControlClasses:['A'],controlClasses:['A'],selectedTeacherClass:'A',controlData:{A:[configured(1,175),configured(2,160),student(3),student(4)]},controlStudents(){return c.controlData.A;},controlDemoRole:'teacher',controlWorkView:'homeroom',controlModule:'duration',controlView:'module',controlLabels:{duration:'使用时长'},controlSelected:new Set(),adminSelectedScopes:new Set(),schoolBorrowingEnabled:true,stage:'other',app:{innerHTML:''},header:t=>'<span></span><h2>'+t+'</h2>',syncReview(){},isHeadTeacherClass:()=>true,document:{getElementById:id=>id==='parity-error'?error:null,querySelector:()=>null},localStorage:{getItem:()=>stored||null,setItem:(k,v)=>stored=v},controlToast(t){toast=t;},controlOverlay(){}};c.window=c;vm.runInNewContext(fs.readFileSync(require.resolve('./control-parity.js'),'utf8'),c);
+ const c={controlRules:R,closeControlOverlay(){},addEventListener(){},setInterval(){},crypto:require('crypto'),schoolControlClasses:['A'],controlClasses:['A'],selectedTeacherClass:'A',controlData:{A:[configured(1,175),configured(2,160),student(3),student(4)]},controlStudents(){return c.controlData.A;},controlDemoRole:'teacher',controlWorkView:'homeroom',controlModule:'duration',controlView:'module',controlLabels:{duration:'使用时长'},controlSelected:new Set(),adminSelectedScopes:new Set(),schoolBorrowingEnabled:true,stage:'other',app:{innerHTML:''},header:t=>'<span></span><h2>'+t+'</h2>',syncReview(){},isHeadTeacherClass:()=>true,document:{getElementById:id=>id==='parity-error'?error:null,querySelector:()=>null},localStorage:{getItem:()=>stored||null,setItem:(k,v)=>stored=v},controlToast(t){toast=t;},controlOverlay:(title,body,actions)=>dialog={title,body,actions}};c.window=c;vm.runInNewContext(fs.readFileSync(require.resolve('./control-parity.js'),'utf8'),c);
  c.renderControl();const cards=c.app.innerHTML.slice(c.app.innerHTML.indexOf('<article class="duration-compact-card">'));
  assert.match(cards,/连续 <b>60分钟/);assert.match(cards,/175分钟/);assert.match(cards,/180分钟/);assert.match(cards,/查看学生/);assert.doesNotMatch(cards,/duration-parameter-list|规则列表/);assert.ok(cards.indexOf('>编辑<')<cards.indexOf('duration-compact-group'));assert.match(cards,/>删除</);
- c.parity.chooseDurationStudents('duration');c.parity.pickEditorStudents();assert.match(c.app.innerHTML,/0\/4 人/);assert.match(c.app.innerHTML,/value="1"\s+disabled/);assert.match(c.app.innerHTML,/value="2"\s+disabled/);assert.doesNotMatch(c.app.innerHTML,/value="3"\s+disabled/);
- c.parity.selectDurationStudent('1',true);c.parity.confirmDurationStudents();assert.match(c.app.innerHTML,/control-student-picker/);c.parity.selectDurationStudent('3',true);c.parity.confirmDurationStudents();assert.match(c.app.innerHTML,/已选 1 名学生/);c.parity.pickEditorStudents();assert.match(c.app.innerHTML,/value="1"\s+disabled/);c.parity.cancelStudentPicker();c.parity.cancelEditor(true);
- c.parity.editStudentDuration(0);c.parity.pickEditorStudents();assert.match(c.app.innerHTML,/value="1" checked/);assert.match(c.app.innerHTML,/value="2"\s+disabled/);c.parity.selectDurationStudent('2',true);c.parity.selectDurationStudent('4',true);c.parity.confirmDurationStudents();assert.match(c.app.innerHTML,/已选 2 名学生/);assert.match(c.app.innerHTML,/value="175"/);
- const latest=JSON.parse(stored);latest.A[3]=configured(4,150);stored=JSON.stringify(latest);const before=stored;c.parity.saveEditor();assert.equal(error.textContent,'所选学生已有规则，请重新选择');assert.equal(stored,before);const missing=JSON.parse(stored);missing.A=missing.A.filter(s=>s.id!==4);stored=JSON.stringify(missing);assert.doesNotThrow(()=>c.parity.saveEditor());assert.notEqual(error.textContent,'所选学生已有规则，请重新选择');stored=before;
+ c.parity.chooseDurationStudents('duration');c.parity.pickEditorStudents();assert.match(dialog.body,/0\/4 人/);assert.match(dialog.body,/value="1"\s+disabled/);assert.match(dialog.body,/value="2"\s+disabled/);assert.doesNotMatch(dialog.body,/value="3"\s+disabled/);
+ c.parity.selectDurationStudent('1',true);c.parity.confirmDurationStudents();assert.match(dialog.body,/control-student-selection/);c.parity.selectDurationStudent('3',true);c.parity.confirmDurationStudents();assert.match(c.app.innerHTML,/已选 1 名学生/);c.parity.pickEditorStudents();assert.match(dialog.body,/value="1"\s+disabled/);c.parity.cancelStudentPicker();c.parity.cancelEditor(true);
+ c.parity.editStudentDuration(0);c.parity.pickEditorStudents();assert.match(dialog.body,/value="1" checked/);assert.match(dialog.body,/value="2"\s+disabled/);c.parity.selectDurationStudent('2',true);c.parity.selectDurationStudent('4',true);c.parity.confirmDurationStudents();assert.match(c.app.innerHTML,/已选 2 名学生/);assert.match(c.app.innerHTML,/value="175"/);
+ const latest=JSON.parse(stored);latest.A[3]=configured(4,150);stored=JSON.stringify(latest);const before=stored;c.parity.saveEditor();assert.equal(toast,'所选学生已有规则，请重新选择');assert.equal(stored,before);const missing=JSON.parse(stored);missing.A=missing.A.filter(s=>s.id!==4);stored=JSON.stringify(missing);assert.doesNotThrow(()=>c.parity.saveEditor());assert.notEqual(toast,'所选学生已有规则，请重新选择');stored=before;
  c.parity.pickEditorStudents();c.parity.confirmDurationStudents();assert.equal(toast,'学生规则已变化，请重新选择');c.parity.cancelStudentPicker();c.parity.cancelEditor(true);
- const all=JSON.parse(stored);all.A[2]=configured(3,140);stored=JSON.stringify(all);c.parity.chooseDurationStudents('duration');c.parity.pickEditorStudents();assert.equal((c.app.innerHTML.match(/value="[1-4]"\s+disabled/g)||[]).length,4);assert.match(c.app.innerHTML,/onclick="parity.confirmDurationStudents\(\)" disabled/);
+ const all=JSON.parse(stored);all.A[2]=configured(3,140);stored=JSON.stringify(all);c.parity.chooseDurationStudents('duration');c.parity.pickEditorStudents();assert.equal((dialog.body.match(/value="[1-4]"\s+disabled/g)||[]).length,4);assert.match(dialog.actions,/onclick="parity.confirmDurationStudents\(\)" disabled/);
 });
 
 

@@ -1,17 +1,30 @@
+/* Shared teacher UI palette. Keep colors consistent across control roles and overlays. */
+:root {
+  --control-primary:#1687df;
+  --control-primary-hover:#086dbd;
+  --control-link:#086dbd;
+  --control-selected:#e9f5ff;
+  --control-selected-border:#8dc5ef;
+  --control-heading:#071a38;
+  --control-text:#142f48;
+  --control-secondary-text:#607991;
+  --control-border:#d9e9f6;
+  --control-page:#f3f9ff;
+}
 /* 管控沿用教师工作台的浅蓝底、白色内容和蓝色操作。 */
 .control-screen .control-description-fold { margin:0; }
-.control-screen .control-description-fold > summary { display:flex; align-items:center; justify-content:flex-start; gap:4px; width:100%; min-height:36px; margin:0; padding:4px 0; list-style:none; color:#6c8395; font-size:12px; cursor:pointer; border-radius:8px; }
+.control-screen .control-description-fold > summary { display:flex; align-items:center; justify-content:flex-start; gap:4px; width:100%; min-height:36px; margin:0; padding:4px 0; list-style:none; color:var(--control-secondary-text); font-size:12px; cursor:pointer; border-radius:8px; }
 .control-screen .control-description-fold > summary::-webkit-details-marker { display:none; }
 .control-screen .control-description-fold > summary::marker { content:''; }
-.control-screen .control-description-fold > summary:focus-visible { outline:2px solid #168fe0; outline-offset:2px; }
+.control-screen .control-description-fold > summary:focus-visible { outline:2px solid var(--control-primary); outline-offset:2px; }
 .control-screen .control-description-fold[open] > summary svg { transform:rotate(180deg); }
 .control-screen .control-description-body { padding:0; }
 .control-screen .control-description-body .parity-note { margin:4px 0 8px; }
 .control-screen .control-description-fold + .control-actions { margin-top:4px; }
 .control-screen {
-  --accent: #168fe0;
-  --control-ink: #193349;
-  --control-muted: #6c8395;
+  --accent: var(--control-primary);
+  --control-ink: var(--control-text);
+  --control-muted: var(--control-secondary-text);
   --control-line: #e2ebf1;
   background: #f5fbff;
   color: var(--control-ink);
@@ -43,8 +56,8 @@
 .control-screen .control-module-panel > p,
 .control-screen .admin-module-actions p { margin: 6px 0 0; color: var(--control-muted); font-size: 12px; line-height: 1.6; }
 .control-screen .control-entry-lock-head button,
-.control-screen .admin-school-toggle-top .admin-detail-link { min-height: 32px; padding: 0; color: #087fc5; font-size: 12px; white-space: nowrap; }
-.control-screen .borrowing-entry-card .borrowing-times-link { display:flex; align-items:center; justify-content:space-between; width:100%; margin-top:10px; padding:10px 0; border:0; border-top:1px solid var(--control-line); background:none; color:#087fc5; font-size:13px; text-align:left; cursor:pointer; }
+.control-screen .admin-school-toggle-top .admin-detail-link { min-height: 32px; padding: 0; color: var(--control-link); font-size: 12px; white-space: nowrap; }
+.control-screen .borrowing-entry-card .borrowing-times-link { display:flex; align-items:center; justify-content:space-between; width:100%; margin-top:10px; padding:10px 0; border:0; border-top:1px solid var(--control-line); background:none; color:var(--control-link); font-size:13px; text-align:left; cursor:pointer; }
 .control-screen .borrowing-entry-card .control-actions { margin-top:6px; }
 .control-screen .homework-subject-form { display:grid; gap:12px; padding-bottom:80px; }
 .control-screen .homework-subject-form > .parity-note { margin:0 2px; }
@@ -55,12 +68,12 @@
 .control-screen .homework-setting-options label { position:relative; cursor:pointer; }
 .control-screen .homework-setting-options input { position:absolute; opacity:0; width:1px; height:1px; }
 .control-screen .homework-setting-options span { display:block; padding:7px 10px; border:1px solid var(--control-line); border-radius:10px; background:#fff; color:var(--control-muted); font-size:12px; white-space:nowrap; }
-.control-screen .homework-setting-options input:checked + span { border-color:var(--accent); background:#e8f5ff; color:#087fc5; font-weight:700; }
+.control-screen .homework-setting-options input:checked + span { border-color:var(--accent); background:#e8f5ff; color:var(--control-link); font-weight:700; }
 .control-screen .homework-setting-options input:focus-visible + span { outline:2px solid var(--accent); outline-offset:2px; }
 .control-screen .control-entry-subtitle { margin: 20px 2px 10px; color: var(--control-ink); font-size: 16px; font-weight: 700; }
 .control-screen .control-entry-list { gap: 10px; }
 .control-screen .control-entry-card { gap: 12px; padding: 16px; border-color: var(--control-line); border-radius: 17px; box-shadow: 0 5px 16px #1933490b; }
-.control-screen .control-entry-icon { width: 38px; height: 38px; border-radius: 11px; background: #e5f5ff; color: #087fc5; }
+.control-screen .control-entry-icon { width: 38px; height: 38px; border-radius: 11px; background: #e5f5ff; color: var(--control-link); }
 .control-screen .control-entry-icon svg { width: 21px; height: 21px; }
 .control-screen .control-entry-card h3 { color: var(--control-ink); font-size: 15px; }
 .control-screen .control-entry-card p { margin-top: 5px; color: var(--control-muted); font-size: 12px; }
@@ -70,19 +83,19 @@
 .control-screen .borrow-editor-actions .control-primary {
   min-height: 44px;
   padding: 11px 13px;
-  border: 1px solid #168fe0;
+  border: 1px solid var(--control-primary);
   border-radius: 11px;
-  background: #168fe0;
+  background: var(--control-primary);
   color: #fff;
   box-shadow: none;
   font-size: 14px;
   font-weight: 700;
 }
-.control-screen .control-secondary { min-height: 44px; padding: 11px 13px; border: 1px solid #dcebf2; border-radius: 11px; background: #edf8ff; color: #087fc5; box-shadow: none; font-size: 14px; font-weight: 700; }
+.control-screen .control-secondary { min-height: 44px; padding: 11px 13px; border: 1px solid #dcebf2; border-radius: 11px; background: #edf8ff; color: var(--control-link); box-shadow: none; font-size: 14px; font-weight: 700; }
 .control-screen .control-primary:disabled,
 .control-screen .control-secondary:disabled { border-color: #e7eef4; background: #f2f6f9; color: #a4b3bf; opacity: 1; box-shadow: none; }
 .control-screen .control-actions { gap: 9px; margin-top: 15px; }
-.control-screen .teacher-tabbar button[aria-selected=true] { background: #e5f5ff; color: #087fc5; }
+.control-screen .teacher-tabbar button[aria-selected=true] { background: #e5f5ff; color: var(--control-link); }
 .control-screen .control-current-class b { color: #537891; font-size: 12px; }
 .control-screen .admin-scope-path { margin-bottom: 12px; border: 1px solid #e1edf4; border-radius: 10px; background: #edf8ff; color: var(--control-muted); }
 .control-screen .admin-scope-path b { color: var(--control-ink); font-size: 12px; }
@@ -93,7 +106,7 @@
 .control-screen .admin-scope-summary button,
 .control-screen .borrow-list-head button,
 .control-screen .flat-control-head button,
-.control-screen .control-detail-head button { min-height: 34px; padding: 7px 12px; border: 1px solid #dcebf2; border-radius: 9px; background: #e5f5ff; color: #087fc5; font-size: 12px; font-weight: 700; }
+.control-screen .control-detail-head button { min-height: 34px; padding: 7px 12px; border: 1px solid #dcebf2; border-radius: 9px; background: #e5f5ff; color: var(--control-link); font-size: 12px; font-weight: 700; }
 .control-screen .admin-level-list { border-color: var(--control-line); border-radius: 17px; }
 .control-screen .admin-level-link { min-height: 70px; padding: 15px 16px; }
 .control-screen .admin-level-copy b { color: var(--control-ink); font-size: 14px; }
@@ -106,18 +119,18 @@
 .control-screen .parity-scope-card-list { display: grid; gap: 12px; padding-bottom: 18px; }
 .control-screen .parity-scope-card { min-width: 0; padding: 16px; border: 1px solid var(--control-line); border-radius: 17px; background: #fff; box-shadow: 0 5px 16px #1933490b; }
 .control-screen .parity-scope-card[role="checkbox"] { cursor: pointer; }
-.control-screen .parity-scope-card[aria-checked="true"] { border-color: #168fe0; background: #f1f9ff; }
+.control-screen .parity-scope-card[aria-checked="true"] { border-color: var(--control-primary); background: #f1f9ff; }
 .control-screen .parity-scope-card-head { display: flex; align-items: center; gap: 9px; min-height: 24px; }
 .control-screen .parity-scope-card-head h3 { flex: 1; margin: 0; color: var(--control-ink); font-size: 15px; line-height: 1.4; }
 .control-screen .parity-scope-check { display: flex; align-items: center; }
-.control-screen .parity-scope-check input { width: 18px; height: 18px; accent-color: #168fe0; }
-.control-screen .parity-scope-navigate { border: 0; background: transparent; color: #087fc5; font-size: 12px; white-space: nowrap; }
+.control-screen .parity-scope-check input { width: 18px; height: 18px; accent-color: var(--control-primary); }
+.control-screen .parity-scope-navigate { border: 0; background: transparent; color: var(--control-link); font-size: 12px; white-space: nowrap; }
 .control-screen .parity-scope-card-rules { display: grid; gap: 8px; margin-top: 12px; }
 .control-screen .parity-scope-rule { display: grid; gap: 3px; padding: 10px 11px; border-radius: 10px; background: #f4f8fc; }
 .control-screen .parity-scope-rule b { color: var(--control-ink); font-size: 12px; }
 .control-screen .parity-scope-rule span { color: var(--control-muted); font-size: 12px; line-height: 1.5; }
 .control-screen .parity-scope-empty { margin: 0; color: var(--control-muted); font-size: 12px; }
-.control-screen .parity-scope-more { justify-self: start; border: 0; background: transparent; color: #087fc5; font-size: 12px; }
+.control-screen .parity-scope-more { justify-self: start; border: 0; background: transparent; color: var(--control-link); font-size: 12px; }
 .control-screen .parity-scope-card-footer { display: flex; justify-content: flex-end; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--control-line); }
 .control-screen .parity-scope-card-footer button { flex: none; min-height: 34px; padding: 7px 14px; font-size: 12px; }
 .control-screen .borrow-student-list,
@@ -136,14 +149,14 @@
 .control-screen .control-detail-row { min-height: 66px; border-color: #edf2f6; }
 .control-screen .control-detail-name { color: var(--control-ink); font-size: 13px; }
 .control-screen .homework-permission-toggle { color: #537891; font-size: 11px; }
-.control-screen .permission-mini-switch[aria-checked=true] { background: #168fe0; }
+.control-screen .permission-mini-switch[aria-checked=true] { background: var(--control-primary); }
 .control-screen .control-student-context { padding: 13px 17px; border-color: var(--control-line); background: #f0f9ff; color: var(--control-ink); }
 .control-screen.control-student-screen .control-content { padding: 0 17px 8px; background: #fff; }
 .control-screen .control-student-row { min-height: 70px; border-color: #edf2f6; }
 .control-screen .control-student-row.selected { background: #f0f9ff; }
 .control-screen .control-row-name { color: var(--control-ink); font-size: 14px; }
-.control-screen .control-student-row.selected .control-check { border-color: #168fe0; background: #168fe0; }
-.control-screen input[type=checkbox] { accent-color: #168fe0; }
+.control-screen .control-student-row.selected .control-check { border-color: var(--control-primary); background: var(--control-primary); }
+.control-screen input[type=checkbox] { accent-color: var(--control-primary); }
 .control-screen .control-batchbar,
 .control-screen .admin-batchbar,
 .control-screen .borrow-editor-actions { padding-left: 17px; padding-right: 17px; border-color: var(--control-line); background: #fff; box-shadow: 0 -4px 16px #19334905; }
@@ -158,38 +171,38 @@
 .control-screen .control-segment { padding: 4px; border-radius: 11px; background: #e9f6ff; }
 .control-screen .control-segment button[aria-pressed=true],
 .control-screen .control-weekdays button[aria-pressed=true],
-.control-screen .control-choice button[aria-pressed=true] { border-color: #b9dfee; background: #e5f5ff; color: #087fc5; box-shadow: none; }
+.control-screen .control-choice button[aria-pressed=true] { border-color: #b9dfee; background: #e5f5ff; color: var(--control-link); box-shadow: none; }
 .control-screen .control-period-row input,
 .control-screen .control-time-row input,
 .control-screen .control-date-row input,
-.control-screen .control-number-row input { min-height: 41px; border-color: #dce8ef; border-radius: 9px; background: #f9fcfe; color: #29455e; }
-.control-screen .control-add-period { border-color: #a4cede; background: #f5fbff; color: #087fc5; border-radius: 11px; }
+.control-screen .control-number-row input { min-height: 41px; border-color: var(--control-border); border-radius: 9px; background: #f9fcfe; color: #29455e; }
+.control-screen .control-add-period { border-color: #a4cede; background: #f5fbff; color: var(--control-link); border-radius: 11px; }
 .control-screen .control-student-detail-name h3 { color: var(--control-ink); font-size: 18px; }
 .control-screen button:focus-visible,
 .control-screen input:focus-visible,
-.control-screen select:focus-visible { outline: 2px solid #168fe0; outline-offset: 2px; }
+.control-screen select:focus-visible { outline: 2px solid var(--control-primary); outline-offset: 2px; }
 @media (hover:hover) and (pointer:fine) {
-  .control-screen .control-primary:not(:disabled):hover { border-color: #087fc5; background: #087fc5; }
+  .control-screen .control-primary:not(:disabled):hover { border-color: var(--control-link); background: var(--control-link); }
   .control-screen .control-secondary:not(:disabled):hover { border-color: #b9dfee; background: #e5f5ff; }
   .control-screen .control-entry-card:hover,
   .control-screen .admin-school-toggle:hover { border-color: #b9d9ea; background: #fbfdff; }
 }
 .parity-context { margin: 0 0 12px; color: #537891; font-size: 12px; font-weight: 600; }
-.parity-note { color: #6c8395; font-size: 12px; line-height: 1.7; }
+.parity-note { color: var(--control-secondary-text); font-size: 12px; line-height: 1.7; }
 .parity-operation { display: block; margin-top: 6px; color: #8196a8; font-size: 10px; font-weight: 400; line-height: 1.6; }
 .parity-student-list { margin: 0 -17px; padding: 0 17px; background: #fff; }
 .parity-student-row { display: flex; align-items: center; gap: 10px; min-height: 78px; padding: 13px 0; border-bottom: 1px solid #edf2f6; }
-.parity-student-main { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 4px; padding: 0; border: 0; background: transparent; color: #193349; text-align: left; cursor: pointer; }
+.parity-student-main { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 4px; padding: 0; border: 0; background: transparent; color: var(--control-text); text-align: left; cursor: pointer; }
 .parity-student-main > b { font-size: 14px; }
 .parity-student-main > small { color: #8196a8; font-size: 10px; }
-.parity-student-main > span { color: #6c8395; font-size: 12px; line-height: 1.7; }
+.parity-student-main > span { color: var(--control-secondary-text); font-size: 12px; line-height: 1.7; }
 .parity-student-row .homework-inline-permissions { flex: 0 0 auto; gap: 8px; }
 .parity-student-row:has(.homework-inline-permissions) { flex-wrap: wrap; }
 .parity-student-row:has(.homework-inline-permissions) .parity-student-main { min-width: 120px; }
 .parity-scope-actions { display: flex; align-items: flex-end; flex-direction: column; gap: 6px; padding-right: 14px; }
-.parity-scope-actions > button:not(.control-inline-toggle), .parity-rule-actions button { border: 0; background: transparent; color: #087fc5; font-size: 12px; cursor: pointer; }
-.parity-rule { margin: 12px 0; padding: 14px; border: 1px solid #e2ebf1; border-radius: 12px; background: #fff; color: #193349; font-size: 12px; line-height: 1.7; }
-.parity-rule p { color: #6c8395; overflow-wrap: anywhere; }
+.parity-scope-actions > button:not(.control-inline-toggle), .parity-rule-actions button { border: 0; background: transparent; color: var(--control-link); font-size: 12px; cursor: pointer; }
+.parity-rule { margin: 12px 0; padding: 14px; border: 1px solid #e2ebf1; border-radius: 12px; background: #fff; color: var(--control-text); font-size: 12px; line-height: 1.7; }
+.parity-rule p { color: var(--control-secondary-text); overflow-wrap: anywhere; }
 .parity-rule-actions { display: flex; justify-content: flex-end; gap: 16px; margin-top: 10px; }
 .parity-rule-actions .parity-danger { color: #c6535d; }
 .control-screen .parity-rule-icon { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border-radius: 10px; }
@@ -202,38 +215,38 @@
 .parity-borrow-type-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
 .parity-borrow-section { margin-top: 18px; padding-top: 18px; border-top: 1px solid #e2ebf1; }
 .parity-borrow-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.parity-borrow-heading h3 { margin: 0; font-size: 16px; color: #193349; }
+.parity-borrow-heading h3 { margin: 0; font-size: 16px; color: var(--control-text); }
 .control-screen .parity-borrow-heading button { width: auto; min-height: 34px; padding: 6px 12px; font-size: 12px; }
 .parity-borrow-empty { margin: 12px 0; padding: 20px 12px; text-align: center; color: #8196a8; font-size: 12px; background: #fff; border-radius: 12px; }
 .parity-radio-row { display: flex; flex-wrap: wrap; gap: 16px; margin: 18px 0; color: #537891; font-size: 12px; }
 .parity-radio-row label, .parity-permission label { display: flex; align-items: center; gap: 6px; }
 .parity-borrow-choice { min-width: 0; margin: 20px 0 0; padding: 0; border: 0; }
 .control-subject-tabs { display: inline-flex; max-width: 100%; gap: 4px; margin: 0 0 16px; padding: 3px; border: 1px solid #dcebf2; border-radius: 10px; background: #edf6fc; }
-.control-subject-label { margin: 0 0 16px; color: #087fc5; font-size: 14px; font-weight: 600; }
+.control-subject-label { margin: 0 0 16px; color: var(--control-link); font-size: 14px; font-weight: 600; }
 .control-screen .control-subject-tabs button { flex: 0 0 auto; min-width: 68px; min-height: 32px; padding: 5px 10px; border: 0; border-radius: 7px; background: transparent; color: #648099; font-size: 12px; font-weight: 600; cursor: pointer; }
-.control-screen .control-subject-tabs button[aria-selected="true"] { background: #fff; color: #087fc5; box-shadow: 0 2px 8px rgba(31,95,147,.12); }
-.control-screen .control-subject-tabs button:focus-visible { outline: 2px solid #168fe0; outline-offset: 2px; }
+.control-screen .control-subject-tabs button[aria-selected="true"] { background: #fff; color: var(--control-link); box-shadow: 0 2px 8px rgba(31,95,147,.12); }
+.control-screen .control-subject-tabs button:focus-visible { outline: 2px solid var(--control-primary); outline-offset: 2px; }
 .parity-borrow-choice legend { margin-bottom: 10px; }
 .parity-borrow-option { position: relative; display: block; margin-top: 10px; cursor: pointer; }
 .parity-borrow-option input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
 .parity-borrow-option-body { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 72px; padding: 13px 14px; border: 1px solid #e2ebf1; border-radius: 12px; background: #fff; }
-.parity-borrow-option-body b { display: block; font-size: 14px; font-weight: 600; color: #193349; }
+.parity-borrow-option-body b { display: block; font-size: 14px; font-weight: 600; color: var(--control-text); }
 .parity-borrow-option-body small { display: block; margin-top: 5px; font-size: 12px; line-height: 1.5; color: #8196a8; }
 .parity-borrow-option-body i { flex: 0 0 22px; height: 22px; border: 1px solid #cbd7e0; border-radius: 50%; color: transparent; font-size: 13px; font-style: normal; text-align: center; line-height: 20px; }
-.parity-borrow-option input:checked + .parity-borrow-option-body { background: #eff8ff; border-color: #168fe0; }
-.parity-borrow-option input:checked + .parity-borrow-option-body b { color: #087fc5; }
-.parity-borrow-option input:checked + .parity-borrow-option-body i { background: #168fe0; border-color: #168fe0; color: #fff; }
-.parity-borrow-option input:focus-visible + .parity-borrow-option-body { outline: 2px solid #168fe0; outline-offset: 3px; }
-.control-screen input[type=radio] { accent-color: #168fe0; }
+.parity-borrow-option input:checked + .parity-borrow-option-body { background: #eff8ff; border-color: var(--control-primary); }
+.parity-borrow-option input:checked + .parity-borrow-option-body b { color: var(--control-link); }
+.parity-borrow-option input:checked + .parity-borrow-option-body i { background: var(--control-primary); border-color: var(--control-primary); color: #fff; }
+.parity-borrow-option input:focus-visible + .parity-borrow-option-body { outline: 2px solid var(--control-primary); outline-offset: 3px; }
+.control-screen input[type=radio] { accent-color: var(--control-primary); }
 .parity-permission { display: flex; gap: 24px; margin: 18px 0; padding: 14px; border: 1px solid #e2ebf1; border-radius: 10px; color: #537891; font-size: 13px; }
-.parity-permission legend { color: #193349; font-size: 13px; font-weight: 700; }
+.parity-permission legend { color: var(--control-text); font-size: 13px; font-weight: 700; }
 .parity-apply-scope { margin: 20px 0 10px; padding: 14px; border: 1px solid #dcebf2; border-radius: 12px; background: #f5fbff; }
-.parity-apply-scope legend { padding: 0 4px; color: #193349; font-size: 13px; font-weight: 700; }
-.parity-apply-scope > label { display: block; margin: 10px 0; color: #193349; font-size: 12px; cursor: pointer; }
+.parity-apply-scope legend { padding: 0 4px; color: var(--control-text); font-size: 13px; font-weight: 700; }
+.parity-apply-scope > label { display: block; margin: 10px 0; color: var(--control-text); font-size: 12px; cursor: pointer; }
 .parity-apply-scope input { margin-right: 7px; }
-.parity-apply-scope small { display: block; margin: 5px 0 0 23px; color: #6c8395; font-size: 11px; line-height: 1.6; }
+.parity-apply-scope small { display: block; margin: 5px 0 0 23px; color: var(--control-secondary-text); font-size: 11px; line-height: 1.6; }
 .parity-preview { margin: 12px 0; padding: 12px; border: 1px solid #e2ebf1; border-radius: 10px; color: #537891; font-size: 12px; line-height: 1.7; }
-.parity-preview summary, .parity-rule summary { cursor: pointer; color: #193349; font-weight: 700; }
+.parity-preview summary, .parity-rule summary { cursor: pointer; color: var(--control-text); font-weight: 700; }
 .parity-batchbar { flex-wrap: wrap; }
 .parity-batchbar .admin-batch-actions { flex: 1; }
 .parity-batchbar .admin-batch-actions button { min-height: 40px; padding: 7px; font-size: 12px; white-space: nowrap; }
@@ -242,7 +255,7 @@
 .control-screen .control-period-row { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) 40px; }
 .control-screen .control-period-remove { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 44px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #df5762; cursor: pointer; }
 .control-screen .control-period-remove:active { background: #fff0f1; }
-.control-screen .control-period-remove:focus-visible { outline: 2px solid #168fe0; outline-offset: 2px; }
+.control-screen .control-period-remove:focus-visible { outline: 2px solid var(--control-primary); outline-offset: 2px; }
 .control-screen .parity-delete-confirm { background: #e34d59; color: #fff; }
 .control-screen .parity-editor-actions .control-secondary { width: 32%; }
 .control-screen .parity-editor-actions .control-primary { flex: 1; width: auto; }
@@ -257,12 +270,12 @@
 
 /* Match main's shared new UI in demo-workspace.css; keep the legacy variant intact. */
 body.dw-ui-new #app .control-screen {
-  --accent:var(--dw-accent,#287cca);
+  --accent:var(--dw-accent,var(--control-link));
   --control-ink:#234e78;
   --control-muted:#708ba7;
   --control-line:var(--dw-border,#dbeaf7);
   --control-soft:var(--dw-accent-soft,#eaf5ff);
-  color:#314b61;
+  color:var(--control-text);
 }
 body.dw-ui-new #app .control-screen :is(.control-entry,.control-content,.borrow-editor-content,.control-workbench-tools) { background:transparent; }
 body.dw-ui-new #app .control-screen :is(.control-entry-lock,.admin-school-toggle,.control-module-panel,.admin-module-actions,.control-student-detail-card,.borrow-editor-card,.admin-level-list) {
@@ -346,11 +359,11 @@ body.dw-ui-new #app .control-screen .control-sheet { border-radius:24px 24px 0 0
 
 /* Multi-weekday groups share one configuration within the weekly rule. */
 .control-screen .control-group-weekdays { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:12px 0; }
-.control-screen .control-group-weekdays label { display:flex; align-items:center; justify-content:center; gap:5px; min-height:40px; padding:4px; border:1px solid #dce8ef; border-radius:10px; font-size:13px; background:#fff; }
-.control-screen .control-group-weekdays input { width:16px; height:16px; min-height:0; margin:0; accent-color:#168ad0; }
-.control-screen .control-group-weekdays label:has(input:checked) { border-color:#168ad0; background:#edf7ff; color:#0874bd; }
+.control-screen .control-group-weekdays label { display:flex; align-items:center; justify-content:center; gap:5px; min-height:40px; padding:4px; border:1px solid var(--control-border); border-radius:10px; font-size:13px; background:#fff; }
+.control-screen .control-group-weekdays input { width:16px; height:16px; min-height:0; margin:0; accent-color:var(--control-primary); }
+.control-screen .control-group-weekdays label:has(input:checked) { border-color:var(--control-primary); background:#edf7ff; color:#0874bd; }
 .control-screen .control-group-weekdays label:has(input:disabled) { opacity:.45; }
-.control-screen [data-duration-group], .control-screen [data-borrow-group] { margin:16px 0; padding:14px; border:1px solid #dce8ef; border-radius:16px; background:#fff; }
+.control-screen [data-duration-group], .control-screen [data-borrow-group] { margin:16px 0; padding:14px; border:1px solid var(--control-border); border-radius:16px; background:#fff; }
 
 .control-screen .borrowing-day-line { display:block; margin:0 0 6px; line-height:1.6; }
 .control-screen .borrowing-day-line:last-child { margin-bottom:0; }
@@ -360,15 +373,15 @@ body.dw-ui-new #app .control-screen .control-sheet { border-radius:24px 24px 0 0
 .school-mobile .school-rule>div:first-child {flex:1;min-width:0;}.school-mobile .school-rule p {line-height:1.7;margin:8px 0;white-space:pre-line;}
 .school-mobile .school-rule>div:last-child button {margin:3px;padding:8px 12px;}.school-mobile .school-default {color:#8796a4;}
 .school-mobile .school-grade-options,.school-mobile .school-weekdays {display:flex;gap:12px;flex-wrap:wrap;margin:16px 0;}
-.school-mobile label {line-height:1.8;}.school-mobile fieldset {border:1px solid #dce8ef;border-radius:12px;margin:16px 0;padding:12px;}.school-mobile fieldset label {display:block;margin:10px 0;}
-.school-mobile input[type=checkbox],.school-mobile input[type=radio] {width:18px;height:18px;min-height:0;margin-right:6px;accent-color:#168ad0;}
-.school-mobile input[type=date],.school-mobile input[type=number],.school-mobile input[type=time] {border:1px solid #dce8ef;padding:8px;border-radius:10px;max-width:100%;}.school-mobile small {display:block;color:#8496a8;}
+.school-mobile label {line-height:1.8;}.school-mobile fieldset {border:1px solid var(--control-border);border-radius:12px;margin:16px 0;padding:12px;}.school-mobile fieldset label {display:block;margin:10px 0;}
+.school-mobile input[type=checkbox],.school-mobile input[type=radio] {width:18px;height:18px;min-height:0;margin-right:6px;accent-color:var(--control-primary);}
+.school-mobile input[type=date],.school-mobile input[type=number],.school-mobile input[type=time] {border:1px solid var(--control-border);padding:8px;border-radius:10px;max-width:100%;}.school-mobile small {display:block;color:#8496a8;}
 
 /* Mobile administrator: direct module switch and one clear primary action. */
 .school-mobile .school-help {margin:0 0 14px;color:#8494a7;font-size:13px;}.school-mobile .school-help summary {cursor:pointer;padding:8px 2px;}.school-mobile .school-help p {line-height:1.7;margin:4px 0 10px;}
 .school-mobile .control-module-panel {padding:18px;margin-bottom:14px;}.school-mobile .school-section-heading {display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}.school-mobile .school-section-heading h3 {margin:0;font-size:17px;}.school-mobile .school-section-heading .control-actions {margin:0;gap:6px;}.school-mobile .school-section-heading button {padding:10px 13px;min-height:42px;font-size:14px;}
 .school-mobile .school-rule {display:block;padding:16px 0;}.school-mobile .school-rule>div:last-child:not(:first-child) {display:flex;justify-content:flex-end;gap:8px;margin-top:12px;}.school-mobile .school-rule>div:last-child button {min-height:40px;padding:8px 16px;margin:0;}.school-mobile .school-default {background:#f6f8fb;border:0;border-radius:12px;padding:14px;margin-top:14px;font-size:13px;}.school-mobile .school-default b {font-size:14px;}
-.school-mobile #school-form {padding-bottom:12px;}.school-mobile .school-grade-options {gap:8px;}.school-mobile .school-grade-options label {display:flex;align-items:center;padding:8px 12px;min-height:42px;border:1px solid #e1eaf2;border-radius:12px;background:#fff;font-size:14px;}.school-mobile .school-grade-options label:has(input:checked) {background:#edf7ff;border-color:#168ad0;color:#0879cb;}.school-mobile .school-grade-options label:has(input:disabled) {background:#f5f7fa;color:#9daab7;}
+.school-mobile #school-form {padding-bottom:12px;}.school-mobile .school-grade-options {gap:8px;}.school-mobile .school-grade-options label {display:flex;align-items:center;padding:8px 12px;min-height:42px;border:1px solid #e1eaf2;border-radius:12px;background:#fff;font-size:14px;}.school-mobile .school-grade-options label:has(input:checked) {background:#edf7ff;border-color:var(--control-primary);color:#0879cb;}.school-mobile .school-grade-options label:has(input:disabled) {background:#f5f7fa;color:#9daab7;}
 .school-mobile .school-rule-group {padding:16px;border:1px solid #e1eaf2;border-radius:18px;background:#fff;margin:14px 0;}.school-mobile .school-rule-group h3 {margin:0 0 10px;font-size:16px;}.school-mobile .school-weekdays {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;}.school-mobile .school-weekdays label {display:flex;align-items:center;min-height:38px;font-size:13px;white-space:nowrap;}
 .school-mobile .school-duration-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0;}.school-mobile .school-duration-grid .control-number-row {display:flex;flex-direction:column;gap:6px;align-items:stretch;margin:0;font-size:13px;}.school-mobile .school-duration-grid input {width:100%;min-width:0;box-sizing:border-box;min-height:44px;text-align:center;font-size:17px;}.school-mobile .school-duration-grid small {text-align:center;font-size:12px;}
 .school-mobile .school-periods {border-top:1px solid #edf1f5;margin-top:14px;padding-top:12px;}.school-mobile .school-periods summary {cursor:pointer;font-size:14px;color:#57738b;padding:4px 0 10px;}.school-mobile .school-periods .control-date-row {gap:6px;margin:8px 0;}.school-mobile .school-periods input {min-width:0;width:100%;}.school-mobile .school-rule-group>button {margin-top:10px;min-height:38px;font-size:13px;}
