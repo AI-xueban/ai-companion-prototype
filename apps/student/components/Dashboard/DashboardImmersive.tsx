@@ -350,6 +350,7 @@ const ELEMENTARY_HOME_RAIL: HomeRailEntry[] = [
 ];
 
 interface DashboardImmersiveProps {
+  onOpenCommunity?: () => void;
   showMoreAppsEntry?: boolean;
   userName: string;
   userLevel?: number;
@@ -415,6 +416,7 @@ export const DashboardImmersive: React.FC<DashboardImmersiveProps> = ({
   worldLockNotifications = [],
   onOpenHomeTool,
   onGoStudy,
+  onOpenCommunity,
 }) => {
   const isLeagueLocked = weeklyXp === 0;
   // 状态 C：已获得 XP，但年级人数不足 19 人，本周榜单暂未开启
@@ -1418,6 +1420,10 @@ export const DashboardImmersive: React.FC<DashboardImmersiveProps> = ({
           </span>
           <span className="pr-1 text-[14px] font-bold leading-none text-slate-800">万象视界</span>
         </button>
+        {onOpenCommunity && <button type="button" aria-label="打开学习广场" onClick={() => worldLocked ? setWorldLockToast(true) : onOpenCommunity()}
+          className="group flex items-center gap-3 rounded-2xl border border-violet-200 bg-white px-3 py-2.5 font-bold text-slate-800 shadow-lg">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-500 text-white"><Sparkles size={22} /></span><span className="pr-1 text-[14px]">学习广场</span>
+        </button>}
       </div>
       )}
 

@@ -38,6 +38,7 @@ type MediaItem = {
 };
 
 interface SingleQuestionResultCardProps {
+  hideKnowledgeHealth?: boolean;
   question?: UniversalQuizQuestion;
   allowSimilarPractice?: boolean;
   subject?: SubjectType | string;
@@ -87,6 +88,7 @@ const findBankQuestion = (questionId: string) =>
   allQuestions.find((q) => q.id === resolveBankQuestionId(questionId));
 
 export const SingleQuestionResultCard: React.FC<SingleQuestionResultCardProps> = ({
+  hideKnowledgeHealth = false,
   question: sourceQuestion,
   allowSimilarPractice = true,
   subject,
@@ -242,6 +244,7 @@ export const SingleQuestionResultCard: React.FC<SingleQuestionResultCardProps> =
 
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <MistakePreviewResultCard
+            hideKnowledgeHealth={hideKnowledgeHealth}
             allowSimilarPractice={allowSimilarPractice}
             question={questionForPreview}
             practiceStats={practiceStats}

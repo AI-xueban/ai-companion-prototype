@@ -5,6 +5,7 @@ import { UniversalQuizView, UniversalQuizQuestion, normalizeQuizSubmitPayload } 
 import { UniversalQuizResult, QuizSessionResult, enrichQuizResultWithPracticeStates } from './UniversalQuizResult';
 import { getQuestionsBySubject, allQuestions } from '../../data/questionBank';
 import { pickUnseenQuestions, markQuestionsPracticed } from '../../services/practicedQuestionStore';
+import { recordCompletedCommunitySources } from '../../services/studentCommunityService';
 import { markSyncPracticeDone, markSyncPracticeStarted } from '../../services/syncProgressStore';
 import { grantQuizSessionReward, grantTaskCompleteReward, mergeRewardResults } from '../../services/rewardService';
 import { RewardGrantResult } from '../../types/reward';
@@ -14,6 +15,7 @@ import type { LearningExitReason } from '../../types/learningReturn';
 import { resolveQuestionCorrectness } from '../../utils/manualGrade';
 
 interface QuizPageProps {
+  onSessionResult?: (result: QuizSessionResult) => void;
   onExit: (reason?: LearningExitReason) => void;
   onReview?: () => void;
   task?: Task | null;
@@ -27,6 +29,7 @@ interface QuizPageProps {
 }
 
 export const QuizPage: React.FC<QuizPageProps> = ({
+  onSessionResult,
   onExit,
   onReview,
   task,
@@ -209,6 +212,11 @@ export const QuizPage: React.FC<QuizPageProps> = ({
 
       if (!grantResult.invalidLearning) {
         markQuestionsPracticed(processedQuestions.map(q => q.questionId));
+        recordCompletedCommunitySources(processedQuestions.map(q => ({
+          id: q.questionId,
+          title: q.stemSummary || '已完成题目',
+          subject: q.subject,
+        })), 'question');
         if (isSectionPractice && task?.syncPracticeMark) markSyncPracticeDone(task.syncPracticeMark.bookKey, task.syncPracticeMark.practiceKey);
       }
       if (grantResult.xp > 0 || grantResult.coins > 0 || grantResult.skippedReasons.length > 0) {
@@ -223,18 +231,18 @@ export const QuizPage: React.FC<QuizPageProps> = ({
           score,
           correctCount,
           totalCount: questions.length,
-          questions: enrichQuizResultWithPracticeStates(processedQuestions),
+          questions: task?.id.startsWith('book-knowledge-') ? processedQuestions.map(q => ({ ...q, attemptMeta: { total: 1, correct: q.isCorrect ? 1 : 0, wrong: q.isCorrect ? 0 : 1 } })) : enrichQuizResultWithPracticeStates(processedQuestions),
           rewards: {
               baseXp: grantResult.xp,
               bonusXp: 0,
               coins: grantResult.coins,
           },
           grantResult,
-          skillChanges: [
+          skillChanges: task?.id.startsWith('book-knowledge-') ? [] : [
               { skillId: 'sk1', skillName: '代数思维', oldLevel: 40, newLevel: 45 },
               { skillId: 'sk2', skillName: '逻辑推理', oldLevel: 60, newLevel: 62 }
           ],
-          aiComment: score === 100 
+          aiComment: task?.id.startsWith('book-knowledge-') ? `本次${task.title.includes('流程模拟') ? '流程模拟' : ''}练习答对 ${correctCount}/${questions.length} 题。已记录练习结果，尚未进行知识点掌握评估。` : score === 100
               ? "太棒了！你的表现无可挑剔，知识掌握得非常牢固。" 
               : score >= 60 
                   ? "整体表现不错，但在细节上还有提升空间，建议复盘错题。" 
@@ -242,6 +250,7 @@ export const QuizPage: React.FC<QuizPageProps> = ({
       };
 
       setResultData(sessionResult);
+      onSessionResult?.(sessionResult);
       setShowResult(true);
   };
 
@@ -260,6 +269,8 @@ export const QuizPage: React.FC<QuizPageProps> = ({
         ) : null}
         {showResult && resultData ? (
             <UniversalQuizResult 
+                hideKnowledgeHealth={Boolean(task?.id.startsWith('book-knowledge-'))}
+                allowSimilarPractice={!task?.id.startsWith('book-knowledge-')}
                 hideRewardDetails={Boolean(task?.id && isExpeditionNodeId(task.id))}
                 initialData={resultData}
                 userStats={userStats}

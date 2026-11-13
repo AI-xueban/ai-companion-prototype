@@ -6,6 +6,7 @@ import {
 
 const LEDGER_KEY = 'ai_friend_reward_ledger_v1';
 interface RewardLedger {
+  contributionIds?: string[];
   date: string; coinsToday: number; dailyConquerGranted: boolean; dailyFirstPerfectGranted: boolean;
   dailyTasksGrandPrizeGranted: boolean; completedTaskIds: string[]; perfectTaskIds: string[];
   videoCompleted: string[]; quizSetCounts: Record<string, number>; moodGranted: boolean;
@@ -20,7 +21,7 @@ function loadLedger(): RewardLedger {
   try {
     const saved = JSON.parse(localStorage.getItem(LEDGER_KEY) || 'null') as Partial<RewardLedger> | null;
     if (!saved) return empty;
-    const lifetime = { videoCompleted: saved.videoCompleted ?? [], quizSetCounts: saved.quizSetCounts ?? {}, firstRightIds: saved.firstRightIds ?? [], knowledgeLitIds: saved.knowledgeLitIds ?? [] };
+    const lifetime = { contributionIds: saved.contributionIds ?? [], videoCompleted: saved.videoCompleted ?? [], quizSetCounts: saved.quizSetCounts ?? {}, firstRightIds: saved.firstRightIds ?? [], knowledgeLitIds: saved.knowledgeLitIds ?? [] };
     return saved.date === empty.date ? { ...empty, ...saved, ...lifetime, coinsToday: Math.min(150, saved.coinsToday ?? 0) } : { ...empty, ...lifetime };
   } catch { return empty; }
 }
@@ -36,6 +37,15 @@ function buildResult(xp: number, xpBreakdown: RewardBreakdownItem[], coinBreakdo
   return { receiptId: crypto.randomUUID(), title, xp, xpBreakdown, coins: coinBreakdown.reduce((sum, item) => sum + item.value, 0), coinBreakdown, coinsToday: ledger.coinsToday, coinsDailyCap: COINS_DAILY_CAP, skippedReasons, ruleVersion: REWARD_RULE_VERSION };
 }
 export function getCoinsToday(): number { return loadLedger().coinsToday; }
+/** 原型投稿审核奖励；使用既有账本、日总上限和奖励回执，不单开钱包。 */
+export function grantContributionReward(workId: string): RewardGrantResult | undefined {
+  const ledger = loadLedger();
+  if ((ledger.contributionIds ?? []).includes(workId)) return;
+  ledger.contributionIds = [...(ledger.contributionIds ?? []), workId];
+  const skipped: string[] = [];
+  const coin = tryGrantCoins(ledger, 'contribution_approved', '作品通过本班老师审核（示例规则）', 10, skipped);
+  return buildResult(0, [], coin ? [coin] : [], ledger, skipped, '作品审核通过');
+}
 export function mergeRewardResults(a: RewardGrantResult, b: RewardGrantResult): RewardGrantResult {
   return { ...a, receiptId: crypto.randomUUID(), xp: a.xp + b.xp, coins: a.coins + b.coins, xpBreakdown: [...a.xpBreakdown, ...b.xpBreakdown], coinBreakdown: [...a.coinBreakdown, ...b.coinBreakdown], skippedReasons: [...a.skippedReasons, ...b.skippedReasons], coinsToday: Math.max(a.coinsToday, b.coinsToday) };
 }

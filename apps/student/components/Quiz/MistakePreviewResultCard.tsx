@@ -26,6 +26,7 @@ import {
 } from '../../utils/manualGrade';
 
 export interface MistakePreviewResultCardProps {
+  hideKnowledgeHealth?: boolean;
   allowSimilarPractice?: boolean;
   question: UniversalQuizQuestion;  // 改为接收完整对象
   practiceStats?: { correct: number; wrong: number };
@@ -48,6 +49,7 @@ export interface MistakePreviewResultCardProps {
 
 // 扁平化错题预览主体：单层容器 + 同级分块，便于维护
 export const MistakePreviewResultCard: React.FC<MistakePreviewResultCardProps> = ({
+  hideKnowledgeHealth = false,
   allowSimilarPractice = true,
   question,
   practiceStats = { correct: 0, wrong: 0 },
@@ -533,7 +535,7 @@ export const MistakePreviewResultCard: React.FC<MistakePreviewResultCardProps> =
               </div>
 
               {/* 关联知识点 */}
-              {!isImageQuestion && knowledgePoints.length > 0 && (
+              {!hideKnowledgeHealth && !isImageQuestion && knowledgePoints.length > 0 && (
                 <div className="space-y-2">
                   <div className="text-xs font-black text-slate-700">关联知识点</div>
                   <div className="flex flex-wrap gap-2">

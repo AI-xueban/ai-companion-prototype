@@ -8,7 +8,7 @@ import { SubjectMap } from './components/SubjectMap/SubjectMap';
 import {
   SubjectMap as PersonalizedLearningSubjectMap,
   type ExpeditionScreen,
-} from './components/PersonalizedLearning/SubjectMap';
+} from './components/PersonalizedLearning/BookKnowledgeLearning';
 import { isExpeditionNodeId } from './components/PersonalizedLearning/expeditionMapNodes';
 import { expeditionSession } from './components/PersonalizedLearning/expeditionSessionBridge';
 import { MistakeVault } from './components/MistakeVault/MistakeVault';
@@ -42,6 +42,8 @@ import { TeacherApp } from './components/Teacher/TeacherApp';
 import type { TeacherPortalRole } from './components/Teacher/data/teacherAccess';
 import { recordNodePracticeComplete, KG_PRACTICE_PENDING_KEY, kgReturnNodeKey } from './services/knowledgeTreeService';
 import { DashboardImmersive, type HomeRailTool } from './components/Dashboard/DashboardImmersive';
+import { StudentCommunity } from './components/Community/StudentCommunity';
+import type { CommunityPage } from './services/studentCommunityService';
 import { PracticeReturnChoice } from './components/Dashboard/PracticeReturnChoice';
 import { inferSubjectLearningEntry, type LearningEntry, type LearningExitReason, type SubjectResumeView } from './types/learningReturn';
 import { isJuniorGrade, type UiSchoolSystem } from './data/juniorDemoCatalog';
@@ -133,8 +135,10 @@ const fadeVariants = {
 };
 
 const DEMO_TOOL_RAIL_WIDTH = 96;
+const PLATFORM_EMBED = new URLSearchParams(window.location.search).get('hivemateEmbed') === '1';
 
 const App: React.FC = () => {
+  const [communityPage, setCommunityPage] = useState<CommunityPage | null>(null);
   // --- Global Mode State ---
   const [appMode, setAppMode] = useState<'student' | 'teacher'>('student');
   const [controlException, setControlException] = useState<ControlExceptionDemo | undefined>();
@@ -228,7 +232,7 @@ const App: React.FC = () => {
     tabletHostRef,
     APP_CONFIG.tablet.stageWidth,
     APP_CONFIG.tablet.stageHeight,
-    APP_CONFIG.features.demoControls ? DEMO_TOOL_RAIL_WIDTH : 0,
+    APP_CONFIG.features.demoControls && !PLATFORM_EMBED ? DEMO_TOOL_RAIL_WIDTH : 0,
   );
   const personaProgress = getDemoPersonaProgress(currentUserPersona);
 
@@ -812,7 +816,7 @@ const App: React.FC = () => {
     });
   };
 
-  const demoControls = APP_CONFIG.features.demoControls ? (
+  const demoControls = APP_CONFIG.features.demoControls && !PLATFORM_EMBED ? (
     <DemoControls
       onControlException={scenario => { setControlException(scenario); setTeacherEntryRole('school-admin'); setAppMode('teacher'); }}
       onSwitchPersona={handlePersonaSwitch}
@@ -867,10 +871,15 @@ const App: React.FC = () => {
 
   return (
     <RewardGrantContext.Provider value={handleRewardGranted}>
+    {PLATFORM_EMBED && <header style={{ height: 58, background: '#fff', color: '#34314e', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 25px', fontFamily: 'Microsoft YaHei,sans-serif' }}>
+      <span style={{ fontSize: 13 }}>学生平板 / AI学伴</span><div style={{ display: 'flex', gap: 5, padding: 4, borderRadius: 11, background: '#f1effb' }}>
+        <button onClick={() => window.location.assign('/outputs/HiveMate%E4%BA%A4%E4%BA%92%E5%8E%9F%E5%9E%8B.html')} style={{ border: 0, background: 'transparent', padding: '7px 17px', borderRadius: 8, fontSize: 12 }}>教师</button>
+        <button aria-pressed="true" style={{ border: 0, background: '#7560df', color: '#fff', padding: '7px 17px', borderRadius: 8, fontSize: 12 }}>学生</button>
+      </div></header>}
     <div
       ref={tabletHostRef}
       className="h-[100dvh] w-full flex justify-center items-center bg-gray-900 font-sans overflow-hidden"
-      style={{ paddingRight: APP_CONFIG.features.demoControls ? DEMO_TOOL_RAIL_WIDTH : 0 }}
+      style={{ height: PLATFORM_EMBED ? 'calc(100dvh - 58px)' : undefined, paddingRight: APP_CONFIG.features.demoControls && !PLATFORM_EMBED ? DEMO_TOOL_RAIL_WIDTH : 0 }}
     >
       <div
         className="relative shrink-0"
@@ -965,7 +974,7 @@ const App: React.FC = () => {
 
             {journeyPhase === 'dashboard' && (
                 <motion.div key="dashboard" variants={pushVariants} initial="initial" animate="animate" exit="exit" transition={{ type: 'spring', damping: 25, stiffness: 200 }} className="absolute inset-0 flex flex-col">
-                    {activeTab !== 'today' && activeTab !== 'me' && activeTab !== 'partner' && (
+                    {activeTab !== 'today' && activeTab !== 'me' && activeTab !== 'partner' && !(activeTab === 'subject' && mapMode === 'sync' && personalizedScreen === 'textbook-video') && (
                         <TopStatusBar 
                             key={`status-${dataVersion}`} 
                             stats={userStats} 
@@ -986,6 +995,7 @@ const App: React.FC = () => {
                     {activeTab === 'today' ? (
                         <div className="flex-1 relative overflow-hidden">
                             <DashboardImmersive 
+                                onOpenCommunity={() => setCommunityPage('gallery')}
                                 showMoreAppsEntry={!demoLockScreen && !rewardAccount && !isDailyConquerActive && !isCharityPageOpen && !isTextbooksPageOpen && !isSettingsOpen && !isStoreOpen && !isReportOpen && !isMoodModalOpen && !isEssayLabOpen && !showQuestionBankModal && !isSelfPracticeOpen && !isLessonPracticeOpen && !isSyncStudyPickerOpen && !isSyncStudySubjectOpen && !showOnboardingOverlay && !showWelcomeGift}
                                 key={`immersive-${currentUserPersona}-${newbieLeagueOpenSignal}-${dataVersion}`}
                                 userName={userName}
@@ -1032,8 +1042,8 @@ const App: React.FC = () => {
                     <div className="flex-1 min-h-0 bg-surface relative z-10 overflow-hidden flex flex-col shadow-[0_-20px_60px_rgba(0,0,0,0.2)]">
                     {activeTab === 'subject' ? (
                         mapMode === 'sync' ? (
-                        <div className="relative h-full min-h-0 w-full pl-14 bg-[#F5F7FA]">
-                            <div className="absolute left-0 top-0 bottom-0 z-30 w-14 bg-[#FAF9F6] pointer-events-none">
+                        <div className={`relative h-full min-h-0 w-full ${personalizedScreen === 'textbook-video' ? '' : 'pl-14'} bg-[#F5F7FA]`}>
+                            <div hidden={personalizedScreen === 'textbook-video'} className="absolute left-0 top-0 bottom-0 z-30 w-14 bg-[#FAF9F6] pointer-events-none">
                                 <div className="relative pt-[72px] pointer-events-auto">
                                     <ModeSwitchRail
                                         mapMode="sync"
@@ -1043,6 +1053,7 @@ const App: React.FC = () => {
                                 </div>
                             </div>
                             <PersonalizedLearningSubjectMap
+                                onKnowledgeReward={handleRewardGranted}
                                 key={`personalized-map-${activeSubject}-${dataVersion}`}
                                 activeSubject={activeSubject}
                                 isAssessed={isAssessed}
@@ -1120,6 +1131,7 @@ const App: React.FC = () => {
                         />
                     ) : activeTab === 'me' ? (
                         <GrowthProfile 
+                            onOpenCommunity={() => setCommunityPage('mine')}
                             onOpenRewardAccount={setRewardAccount}
                             onCoinSpend={handleCoinSpend}
                             key={`growth-${dataVersion}`}
@@ -1148,7 +1160,7 @@ const App: React.FC = () => {
                     </div>
                     )}
                     <AnimatePresence initial={false}>
-                        {!demoLockScreen && !rewardAccount && !isDailyConquerActive && !isMistakeVaultDetailOpen && !isSyncSectionPageOpen && !(activeTab === 'subject' && mapMode === 'sync' && personalizedScreen !== 'main') && !isCharityPageOpen && !isTextbooksPageOpen && !isCameraFlowOpen && !isTutorLayerOpen && !isNotificationLayerOpen && !isDiscoveryFullPageOpen && !isSettingsOpen && !isStoreOpen && !isReportOpen && !isMoodModalOpen && !isEssayLabOpen && !showQuestionBankModal && !isSelfPracticeOpen && !isLessonPracticeOpen && !isSyncStudyPickerOpen && !isSyncStudySubjectOpen && !isLumiChromeHidden && (
+                        {!communityPage && !demoLockScreen && !rewardAccount && !isDailyConquerActive && !isMistakeVaultDetailOpen && !isSyncSectionPageOpen && !(activeTab === 'subject' && mapMode === 'sync' && personalizedScreen !== 'main') && !isCharityPageOpen && !isTextbooksPageOpen && !isCameraFlowOpen && !isTutorLayerOpen && !isNotificationLayerOpen && !isDiscoveryFullPageOpen && !isSettingsOpen && !isStoreOpen && !isReportOpen && !isMoodModalOpen && !isEssayLabOpen && !showQuestionBankModal && !isSelfPracticeOpen && !isLessonPracticeOpen && !isSyncStudyPickerOpen && !isSyncStudySubjectOpen && !isLumiChromeHidden && (
                             <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
                         )}
                     </AnimatePresence>
@@ -1426,6 +1438,8 @@ const App: React.FC = () => {
             />
           </div>
         )}
+
+        {communityPage && <StudentCommunity initialPage={communityPage} onClose={() => setCommunityPage(null)} userName={userName} userGrade={userGrade} contentLocked={worldLocked} onRewardGranted={handleRewardGranted} />}
 
         <RewardGainOverlay
           result={rewardOverlay}

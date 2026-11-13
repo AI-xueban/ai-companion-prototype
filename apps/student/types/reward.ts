@@ -8,6 +8,7 @@ export const COIN_PER_CORRECT = 2;
 export const COIN_DAILY_CONQUER = 20;
 
 export type RewardSceneId =
+  | 'contribution_approved'
   | 'wrong_first_right'
   | 'variant_correction'
   | 'path_clear'

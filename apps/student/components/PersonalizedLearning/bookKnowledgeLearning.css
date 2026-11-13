@@ -1,0 +1,82 @@
+.bkl-shell{height:100%;min-height:0;display:flex;flex-direction:column;padding-bottom:62px;background:linear-gradient(135deg,#f5f7ff,#edf2ff 60%,#f4f7ff);color:#303650}
+.bkl-shell [hidden]{display:none!important}
+.bkl-shell button:focus-visible,.bkl-shell select:focus-visible{outline:2px solid #a38be9;outline-offset:3px}
+.bkl-mode-bar{padding:68px 22px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0}
+.bkl-mode-switch{display:flex;padding:4px;border:1px solid #fff;border-radius:28px;background:#ffffffc9;box-shadow:0 4px 16px #7267bb0b}
+.bkl-mode-switch button{padding:8px 20px;border-radius:23px;color:#797d98;font-size:13px;font-weight:700}
+.bkl-mode-switch button[aria-pressed=true]{background:linear-gradient(110deg,#a083fa,#5a45ec);color:#fff;box-shadow:0 3px 10px #8060ce24}
+.bkl-book-meta{color:#9196ac;font-size:11px}
+.bkl-workspace{position:relative;flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:16px;padding:0 22px 14px}
+.bkl-sidebar{grid-column:2;grid-row:1;display:flex;flex-direction:column;gap:12px;min-height:0}
+.bkl-mastery,.bkl-recommend{background:#ffffffed;border:1px solid #fff;border-radius:18px;box-shadow:0 5px 18px #7060a806}
+.bkl-mastery{padding:12px;flex-shrink:0}
+.bkl-mastery h3,.bkl-recommend h3{font-size:13px;font-weight:800;margin:0 0 10px}
+.bkl-mastery h3>span{float:right;font-size:9px;font-weight:500;background:#f0eaff;color:#8966dc;padding:3px 6px;border-radius:10px}
+.bkl-mastery-body{display:flex;align-items:center;gap:12px}
+.bkl-ring{width:58px;height:58px;border-radius:50%;padding:5px;flex-shrink:0}
+.bkl-ring>div{height:100%;border-radius:50%;background:#fbfaff;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.bkl-ring strong{font-size:17px;color:#554491}
+.bkl-ring small{font-size:8px;color:#a09ab1}
+.bkl-mastery-numbers{flex:1;min-width:0}
+.bkl-mastery-numbers>b{font-size:11px;font-weight:600}
+.bkl-mastery-numbers>div{display:flex;justify-content:space-between;gap:6px;margin-top:8px}
+.bkl-mastery-numbers span{display:flex;flex-direction:column;align-items:center;font-size:9px;color:#9896aa;gap:2px}
+.bkl-mastery-numbers strong{font-size:16px;color:#42b7ad;line-height:1.1}
+.bkl-mastery-numbers span:nth-child(2) strong{color:#ea8a83}
+.bkl-mastery-numbers span:nth-child(3) strong{color:#9aa6bd}
+.bkl-recommend{flex:1;min-height:100px;padding:12px;display:flex;flex-direction:column;align-items:stretch}
+.bkl-recommend>strong{font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.bkl-recommend p{font-size:10px;color:#a0a0b3;margin:5px 0 12px}
+.bkl-recommend>button{margin-top:auto;width:100%;border-radius:22px;padding:9px;color:#fff;background:linear-gradient(110deg,#ac89fa,#5b46eb);font-size:13px;font-weight:700}
+.bkl-canvas{grid-column:1;grid-row:1;position:relative;display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden;border:1px solid #fff;border-radius:20px;padding:16px 16px 12px;background:radial-gradient(ellipse at 90% 80%,#e3e7ff88,transparent 65%),radial-gradient(#d4daf655 1px,transparent 1px);background-size:auto,24px 24px}
+.bkl-breadcrumb{flex-shrink:0;color:#9ca1b5;font-size:10px;overflow-wrap:anywhere}
+.bkl-canvas-heading{flex-shrink:0;margin-top:13px;padding-left:12px;border-left:3px solid #9270f0}
+.bkl-canvas-heading h2{font-size:19px;font-weight:800;margin:0;color:#34364f}
+.bkl-canvas-heading p{font-size:11px;color:#989eb2;margin-top:4px}
+.bkl-branch-viewport{flex:1;min-height:0;min-width:0;position:relative;overflow:hidden;touch-action:none;user-select:none;cursor:grab;margin-top:12px}
+.bkl-branch-viewport:active{cursor:grabbing}
+.bkl-branch-world{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+.bkl-branch-lines{position:absolute;inset:0;overflow:visible;pointer-events:none}
+.bkl-branch-hub{position:absolute;transform:translate(-50%,-50%);max-width:155px;padding:5px 10px;border:1px solid #fff;border-radius:18px;background:#f1edff;color:#796699;font-size:11px;text-align:center;box-shadow:0 3px 8px #a19ac115}
+.bkl-branch-point{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:9px;width:120px;min-height:85px;border-radius:10px}
+.bkl-gem{position:relative;display:block;width:45px;height:45px;border-radius:50%;background:conic-gradient(from 20deg,#dfe6f5,#bac5df,#edf1fa,#b3c2dc,#dfe6f5);box-shadow:inset -6px -8px 13px #8c9db635,inset 5px 5px 10px #fff9}
+.bkl-gem>span{position:absolute;inset:3px;clip-path:polygon(22% 4%,76% 8%,99% 43%,83% 84%,42% 98%,4% 62%,4% 28%);background:conic-gradient(from 60deg,#ffffff20,#627f9a33,#ffffff66,#879ab633,#ffffff20)}
+.bkl-branch-point.mastered .bkl-gem{background:conic-gradient(#9af0df,#31bfb2,#b5fff1,#5dcbba,#9af0df)}
+.bkl-branch-point.weak .bkl-gem{background:conic-gradient(#ffcdc9,#f67c74,#ffd9d2,#fa9b8e,#ffcdc9)}
+.bkl-branch-point.is-selected .bkl-gem{box-shadow:0 0 0 4px #fff,0 0 0 10px #ad95ea24}
+.bkl-branch-name{font-size:11px;font-weight:600;text-align:center;max-width:115px;padding:0 4px;color:#53516c}
+.bkl-recommend-badge{position:absolute;top:-24px;background:#fff;color:#e68c82;font-size:10px;border-radius:16px;padding:3px 8px;white-space:nowrap;box-shadow:0 3px 10px #de92841f}
+.bkl-canvas-footer{flex-shrink:0;font-size:10px;color:#a2a7b7;display:flex;padding-top:8px}
+.bkl-canvas-footer>span{background:#ffffffb8;padding:6px 10px;border-radius:18px}
+.bkl-graph-empty{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;color:#969eb4;font-size:13px;padding:14px}
+.bkl-graph-empty h3{font-size:15px}.bkl-graph-empty button{padding:8px 15px;border-radius:20px;background:#ede7ff;color:#8066c5}
+.bkl-empty{padding:16px 12px;color:#969eb4;font-size:12px}.bkl-empty button{display:block;margin-top:8px;color:#8066c5}
+.bkl-learning-notice{position:absolute;inset:20% 10%;z-index:4;background:#fff;border-radius:18px;box-shadow:0 8px 40px #61567a25;padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;font-size:13px}
+.bkl-learning-notice button{padding:8px 20px;border-radius:20px;background:#eee8ff;color:#8065c2}
+.bkl-theme{flex:1;min-height:0;position:relative}
+@media(max-width:650px){.bkl-workspace{grid-template-columns:minmax(0,1fr) 190px;gap:12px;padding-right:12px;padding-left:12px}.bkl-mode-bar{padding-right:12px;padding-left:12px}.bkl-mode-switch button{padding:7px 12px}.bkl-recommend p{display:none}.bkl-recommend>strong{font-size:12px}.bkl-book-meta{font-size:10px}}
+@media(max-height:580px){.bkl-mastery,.bkl-recommend{padding:10px}.bkl-recommend p{display:none}.bkl-mastery h3,.bkl-recommend h3{margin-bottom:7px}}
+.bkl-mastery,.bkl-recommend{padding:10px}.bkl-mastery h3,.bkl-recommend h3{font-size:12px;margin-bottom:7px}.bkl-recommend{min-height:0;overflow:hidden}.bkl-recommend>strong{font-size:12px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;flex-shrink:0}.bkl-recommend p{display:none}.bkl-recommend>button{flex-shrink:0;padding:7px;margin-top:auto;font-size:12px}.bkl-ring{width:52px;height:52px}.bkl-ring strong{font-size:16px}
+
+/* Chapter selection lives in the graph breadcrumb; the sidebar is reserved for learning context. */
+.bkl-sidebar{display:grid;grid-template-rows:minmax(0,1fr) minmax(0,1.05fr);gap:14px}
+.bkl-mastery,.bkl-recommend{padding:14px;min-height:0}
+.bkl-mastery{display:flex;flex-direction:column;justify-content:center}
+.bkl-mastery h3,.bkl-recommend h3{font-size:13px;margin-bottom:14px}
+.bkl-mastery-body{gap:14px}
+.bkl-ring{width:66px;height:66px;padding:6px}
+.bkl-ring strong{font-size:18px}
+.bkl-recommend>strong{font-size:13px;line-height:1.5}
+.bkl-recommend p{display:block;margin:7px 0 10px;font-size:10px}
+.bkl-recommend>button{padding:8px}
+.bkl-path-selector{position:relative;display:inline-flex;align-items:center;justify-content:space-between;gap:12px;max-width:100%;min-height:40px;padding:9px 12px;border:1.5px solid #c7b8f0;border-radius:12px;background:#ffffffdf;box-shadow:0 3px 10px #8064c50d;color:#6e5b9d;cursor:pointer}
+.bkl-path-selector:hover,.bkl-path-selector:focus-within{background:#fff;border-color:#9473e4;box-shadow:0 0 0 3px #a58ae51a;color:#6145a8}
+.bkl-path-selector>span{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:11px}
+.bkl-path-selector>svg{flex-shrink:0;color:#927bd5}
+.bkl-path-selector select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font:inherit}
+.bkl-path-selector select option,.bkl-path-selector select optgroup{background:#fff;color:#44445f}
+.bkl-canvas{padding:18px 16px 12px}
+.bkl-canvas-heading{margin-top:12px}
+@media(max-width:650px){.bkl-mastery,.bkl-recommend{padding:11px}.bkl-ring{width:54px;height:54px}.bkl-mastery-body{gap:9px}.bkl-mastery h3,.bkl-recommend h3{font-size:12px;margin-bottom:10px}.bkl-recommend p{font-size:9px}}
+
+.bkl-session{position:absolute;inset:0;z-index:70;background:#fff;overflow:hidden}.bkl-branch-point.practiced .bkl-gem{background:conic-gradient(#9af0df,#31bfb2,#b5fff1,#5dcbba,#9af0df)}.bkl-branch-point.learning .bkl-gem{background:conic-gradient(#ddc8ff,#9b78e6,#eee3ff,#b49be9,#ddc8ff)}.bkl-mastery-numbers span:first-child strong{color:#9aa6bd}.bkl-mastery-numbers span:nth-child(2) strong{color:#9b7cdc}.bkl-mastery-numbers span:nth-child(3) strong{color:#42b7ad}

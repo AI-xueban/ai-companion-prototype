@@ -340,9 +340,10 @@ export const UniversalQuizResult: React.FC<{
   onOpenAITutor?: (question?: QuizResultItem) => void;
   reviewMode?: boolean;
   hideRewardDetails?: boolean;
+  hideKnowledgeHealth?: boolean;
   allowSimilarPractice?: boolean;
   onContinue?: () => void;
-}> = ({ onClose, onRestart, hideRewardDetails = false, allowSimilarPractice = true, onContinue, initialData = MOCK_SESSION_RESULT, userStats, onStartRemedial, onOpenAITutor }) => {
+}> = ({ onClose, onRestart, hideRewardDetails = false, hideKnowledgeHealth = false, allowSimilarPractice = true, onContinue, initialData = MOCK_SESSION_RESULT, userStats, onStartRemedial, onOpenAITutor }) => {
   const [resultData, setResultData] = useState<QuizSessionResult>(initialData);
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(() => initialData.questions.length === 1 ? initialData.questions[0].questionId : null);
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -778,6 +779,7 @@ export const UniversalQuizResult: React.FC<{
           {currentSelectedQuestion && (
             <div className="mt-4">
               <SingleQuestionResultCard
+                hideKnowledgeHealth={hideKnowledgeHealth}
                 question={currentSelectedQuestion.question && {
                   ...currentSelectedQuestion.question,
                   userAnswer: currentSelectedQuestion.rawUserAnswer ?? currentSelectedQuestion.userAnswer,
@@ -941,7 +943,7 @@ export const UniversalQuizResult: React.FC<{
                   </div>
                 </div>
 
-                <div className="rounded-[30px] bg-white/45 border border-white/70 shadow-sm p-5 md:p-6">
+                {!hideKnowledgeHealth && <div className="rounded-[30px] bg-white/45 border border-white/70 shadow-sm p-5 md:p-6">
                   <div className="flex items-start justify-between gap-3 mb-5">
                     <div>
                       <div className="flex items-center gap-2">
@@ -1025,7 +1027,7 @@ export const UniversalQuizResult: React.FC<{
                     })()}
                   </div>
                 )}
-                </div>
+                </div>}
               </div>
             </motion.div>
           )}

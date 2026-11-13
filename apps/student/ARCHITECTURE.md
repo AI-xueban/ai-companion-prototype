@@ -52,6 +52,7 @@ index.tsx
 | 错题 | `components/MistakeVault/MistakeVault.tsx` | `activeTab === 'mistake'` | `services/mistakeReasonService.ts`、`services/questionFeedbackService.ts`；若涉及订正奖励再读 `rewardService.ts` |
 | 伙伴（小晤） | `components/LumiSpace/LumiSpace.tsx` | `activeTab === 'partner'` | `lumiHubData.ts`、`lumiWebSearch.ts`、`lumiChatSpeech.ts`；深度会话通过回调隐藏底栏 |
 | 我的 / 成长 | `components/Growth/GrowthProfile.tsx` | `activeTab === 'me'` | `Growth/MyTextbooksPage.tsx`、`services/academicContextStore.ts`、`services/textbookVersionStore.ts` |
+| 学习广场 / 作品 | `components/Community/StudentCommunity.tsx` | 首页学习广场、我的星迹→我的作品；`communityPage`覆盖层 | `services/studentCommunityService.ts`、`rewardService.ts`；需求见`docs/v2.0/05-产品地图与流程/学习广场与作品创作.md` |
 | 学习任务流 | `components/Learning/LearningFlow.tsx` | `journeyPhase === 'learning'` | 任务来源、`types/learningReturn.ts`、奖励服务 |
 | 测评 | `components/Assessment/AssessmentFlow.tsx`、`AssessmentResult.tsx` | `journeyPhase === 'assessment'` / 报告弹层 | `data/juniorSyncAssessment.ts`、用户档案数据 |
 | 答题 | `components/Quiz/QuizPage.tsx`、`SteppingQuizPage.tsx`、`UniversalQuiz*.tsx` | 由首页、学科、错题等流程打开 | `data/questionBank/`、`services/questionSteppingService.ts`、`services/practicedQuestionStore.ts` |

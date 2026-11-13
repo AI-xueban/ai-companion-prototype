@@ -75,6 +75,7 @@ const AchievementBadgeCard: React.FC<{
 };
 
 interface GrowthProfileProps {
+  onOpenCommunity?: () => void;
   onStartAssessment?: () => void;
   onOpenStore?: () => void;
   onViewReport?: () => void; // New Prop
@@ -101,6 +102,7 @@ interface GrowthProfileProps {
 }
 
 export const GrowthProfile: React.FC<GrowthProfileProps> = ({
+  onOpenCommunity,
   onStartAssessment,
   onOpenStore,
   onViewReport,
@@ -406,6 +408,7 @@ export const GrowthProfile: React.FC<GrowthProfileProps> = ({
        {/* 身份 + 爱心公益 + 金币商店：紫色铺满顶部，三块同一行 */}
        <div className="relative shrink-0 bg-[#6C5DD3] pt-3 pb-4 px-5 rounded-b-[28px]">
             <div className="flex items-center justify-end gap-2 mb-2">
+                {onOpenCommunity && <button type="button" onClick={onOpenCommunity} className="flex h-8 items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-2.5 text-[11px] font-black text-white">我的作品</button>}
                 <button
                     type="button"
                     onClick={() => setIsTextbooksOpen(true)}
