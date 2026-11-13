@@ -565,6 +565,12 @@
   }
 
   function openReturnConfirm() {
+    const notCharging = returnCheckState === "not_charging";
+    document.getElementById('returnConfirmTitle').textContent = notCharging ? '未检测到充电' : '确认归还';
+    returnConfirmModal.querySelector('p').hidden = notCharging;
+    returnCancel.textContent = notCharging ? '重新打开' : '取消';
+    returnConfirm.textContent = notCharging ? '确认归还' : '确认';
+    returnCheckTip.style.cssText = notCharging ? 'margin:24px 0 0;padding:0;border:0;background:transparent;color:inherit;font-weight:400' : '';
     returnConfirmModal.hidden = false;
   }
 
@@ -592,8 +598,8 @@
 
   function applyReturnCheck() {
     if (returnCheckState === "not_charging") {
-      showReturnCheckTip("设备没充电");
-      returnReopenTip.hidden = false;
+      showReturnCheckTip("未检测到平板充电，请确保平板正确放置后点击「确认归还」");
+      returnReopenTip.hidden = true;
       openReturnConfirm();
       return;
     }
@@ -1068,7 +1074,13 @@
     }
   });
 
-  returnCancel.addEventListener("click", cancelReturn);
+  returnCancel.addEventListener("click", () => {
+    if (returnCheckState === 'not_charging') {
+      returnReopenTip.hidden = false;
+      return;
+    }
+    cancelReturn();
+  });
   returnConfirm.addEventListener("click", applyReturnCheck);
   returnConfirmModal.addEventListener("click", (e) => {
     if (e.target === returnConfirmModal) return;
