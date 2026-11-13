@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20261110-admin-slot-32-final" />
+  <link rel="stylesheet" href="styles.css?v=20261113-teacher-device-list" />
 </head>
 <body>
   <aside class="studio-bar">
@@ -40,7 +40,7 @@
       <button type="button" class="nav-btn nav-demo" id="simulateNewerCabinetUpgrade">模拟已下载后收到新版</button>
     </nav>
     <button type="button" class="nav-btn nav-demo" id="resetDemoAvailability">模拟设备全部可借用</button>
-    <button type="button" class="nav-btn nav-demo" id="upgradeNetwork">模拟下载断网</button><div class="admin-demo-note"><strong>管理员登录模拟</strong><div class="admin-demo-section"><small>管理员 · 手机号验证码</small><p><span class="admin-demo-value"><b>13800000000</b><button type="button" class="admin-fill-btn" data-admin-fill="phone">填入号码</button></span></p><p><span class="admin-demo-value"><b>123456</b><button type="button" class="admin-fill-btn" data-admin-fill="code">填入验证码</button></span></p></div><div class="admin-demo-section"><small>本地管理员 · 编号密码</small><p>账号 <b>123</b> / 密码 <b>123</b></p><button type="button" class="admin-fill-btn" id="fillLocalAdmin">填入本地账号密码</button></div></div>
+    <button type="button" class="nav-btn nav-demo" id="upgradeNetwork">模拟下载断网</button><div class="admin-demo-note"><strong>管理员登录模拟</strong><div class="admin-demo-section"><small>管理员 · 手机号验证码</small><p><span class="admin-demo-value"><b>13800000000</b><button type="button" class="admin-fill-btn" data-admin-fill="phone">填入号码</button></span></p><p><span class="admin-demo-value"><b>123456</b><button type="button" class="admin-fill-btn" data-admin-fill="code">填入验证码</button></span></p></div><div class="admin-demo-section"><small>本地管理员 · 编号密码</small><p>账号 <b>123</b> / 密码 <b>123</b></p><button type="button" class="admin-fill-btn" id="fillLocalAdmin">填入本地账号密码</button></div><div class="admin-demo-section"><small>老师 · 编号密码</small><p>账号 <b>18018001800</b></p><p>密码 <b>18001800</b>（账号后八位）</p><button type="button" class="admin-fill-btn" id="fillTeacher">填入老师账号密码</button></div></div>
     <p class="studio-hint">画布会按窗口自动等比缩小，完整显示在当前屏幕内；设计稿仍为 1080×1920。</p>
   </aside>
 
@@ -147,26 +147,18 @@
         </section>
         <section class="page page-admin-manage" data-page="admin-manage">
           <button type="button" class="text-btn admin-top-back" id="adminLogout">返回</button><span id="adminAccount" hidden></span>
-          <div class="admin-menu"><button type="button" class="admin-menu-item" id="adminVersionUpdate"><span aria-hidden="true">↓</span><strong id="adminUpdateLabel">版本更新</strong><span class="admin-update-version" id="adminUpdateVersion">当前版本 V1.3.0</span><i class="version-update-dot" id="adminUpdateDot" hidden></i></button><button type="button" class="admin-menu-item" data-admin-feature="管理员借取"><span aria-hidden="true">▦</span><strong>管理员借取</strong></button><button type="button" class="admin-menu-item" data-admin-feature="激活设备"><span aria-hidden="true">▱</span><strong>激活设备</strong></button><button type="button" class="admin-menu-item" data-admin-feature="开柜测试"><span aria-hidden="true">▣</span><strong>开柜测试</strong></button><button type="button" class="admin-menu-item" data-admin-feature="格口详情"><span aria-hidden="true">▤</span><strong>格口详情</strong></button><button type="button" class="admin-menu-item" data-admin-feature="用户管理"><span aria-hidden="true">♙</span><strong>用户管理</strong></button><button type="button" class="admin-menu-item" data-admin-feature="人脸底库"><span aria-hidden="true">◉</span><strong>人脸底库</strong></button><button type="button" class="admin-menu-item" data-admin-feature="摄像头配置"><span aria-hidden="true">◎</span><strong>摄像头配置</strong></button><button type="button" class="admin-menu-item" data-admin-feature="退出软件"><span aria-hidden="true">⏻</span><strong>退出软件</strong></button><button type="button" class="admin-menu-item" data-admin-feature="设备管理"><span aria-hidden="true">▥</span><strong>设备管理</strong></button></div>
+          <div class="admin-menu"><button type="button" class="admin-menu-item" id="adminVersionUpdate"><span aria-hidden="true">↓</span><strong id="adminUpdateLabel">版本更新</strong><span class="admin-update-version" id="adminUpdateVersion">当前版本 V1.3.0</span><i class="version-update-dot" id="adminUpdateDot" hidden></i></button><button type="button" class="admin-menu-item" data-admin-feature="开柜测试"><span aria-hidden="true">▣</span><strong>开柜测试</strong></button><button type="button" class="admin-menu-item" data-admin-feature="激活设备"><span aria-hidden="true">▱</span><strong>激活设备</strong></button><button type="button" class="admin-menu-item" data-admin-feature="用户管理"><span aria-hidden="true">♙</span><strong>用户管理</strong></button><button type="button" class="admin-menu-item" data-admin-feature="格口详情"><span aria-hidden="true">▤</span><strong>格口详情</strong></button><button type="button" class="admin-menu-item" data-admin-feature="摄像头配置"><span aria-hidden="true">◎</span><strong>摄像头配置</strong></button><button type="button" class="admin-menu-item" data-admin-feature="人脸底库"><span aria-hidden="true">◉</span><strong>人脸底库</strong></button><button type="button" class="admin-menu-item" data-admin-feature="设备管理"><span aria-hidden="true">▥</span><strong>设备管理</strong></button><button type="button" class="admin-menu-item" data-admin-feature="退出软件"><span aria-hidden="true">⏻</span><strong>退出软件</strong></button></div>
           <section class="admin-download-progress" id="adminDownloadProgress" role="status" hidden><div><span id="adminDownloadName"></span><strong id="adminDownloadPercent">0%</strong></div><progress id="adminDownloadBar" max="100" value="0">0%</progress></section>
           <p class="admin-feature-note" id="adminFeatureNote" role="status"></p>
         </section>
 
-        <section class="page page-admin-batch-borrow" data-page="admin-batch-borrow">
-          <div class="admin-borrow-content">
-            <h2 class="light-title">管理员借取</h2>
-            <div class="batch-borrow-form">
-              <div class="batch-borrow-group">
-                <label for="borrowQuantity">借取数量</label>
-                <div class="borrow-quantity-field">
-                  <input id="borrowQuantity" type="text" inputmode="numeric" maxlength="3" placeholder="输入借取数量" autocomplete="off" aria-describedby="adminInCabinetCount" />
-                  <span id="adminInCabinetCount" role="status">当前在柜设备—台</span>
-                </div>
-                <button type="button" class="primary-btn" id="quantityAdminBorrow">借取</button>
-              </div>
-              <p id="batchBorrowResult" role="status" hidden></p>
-            </div>
-            <button type="button" class="back-btn" data-goto="admin-manage">返回</button>
+<section class="page page-admin-open-test" data-page="admin-open-test">
+          <div class="cabinet-test-header"><button type="button" data-goto="admin-manage">返回</button><h2>开柜测试</h2></div>
+          <div class="cabinet-test-controls">
+            <div class="cabinet-test-group"><label for="cabinetDoorNumber">开柜功能测试</label><input id="cabinetDoorNumber" inputmode="numeric" maxlength="2" placeholder="输入门号：" autocomplete="off" /><button type="button" id="openSingleDoor">单 个 开 门</button></div>
+            <div class="cabinet-test-group"><p>全部开柜功能测试</p><button type="button" id="openAllDoors">全 部 开 门</button></div>
+            <p class="cabinet-test-note">说明：有在柜设备的格口开门后，设备将记为本人借用，需逐台扫码归还。空格口或设备已借出的格口，只记录开门，不新增借用记录。</p>
+            <p class="cabinet-test-result" id="cabinetOpenResult" role="status" hidden></p>
           </div>
         </section>
         <!-- 存设备：扫码提示（整屏垂直居中） -->
@@ -271,7 +263,7 @@
         <!-- 设备可用列表（整屏垂直居中） -->
         <section class="page page-devices" data-page="devices">
           <div class="page-center page-center-devices">
-            <h2 class="light-title">设备管理</h2>
+            <h2 class="light-title" id="deviceListTitle">设备管理</h2>
             <div class="device-search">
               <div class="search-field">
                 <span class="search-icon" aria-hidden="true">⌕</span>
@@ -431,6 +423,6 @@
     </div>
   </main>
 
-  <script src="app.js?v=20261110-device-page-size-10"></script>
+  <script src="app.js?v=20261113-teacher-slot-toast"></script>
 </body>
 </html>
