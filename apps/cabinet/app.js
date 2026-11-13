@@ -190,47 +190,29 @@
   if (!Array.isArray(batchRecords)) batchRecords = [];
   function batchAvailable() { return ALL_DEVICES.filter(d => !openingSlots.has(d.slot) && !batchRecords.some(r => r.deviceId === d.id && !r.returnAt)); }
   function updateAdminBorrowAvailability() {
-    const devices = batchAvailable();
-    document.getElementById('adminInCabinetCount').textContent = `当前在柜设备${devices.length}台`;
-    document.getElementById('quantityAdminBorrow').disabled = adminBorrowSubmitting || devices.length === 0;
-    document.getElementById('quantityAdminBorrow').textContent = adminBorrowSubmitting ? '借取中…' : '借取';
+    if (screenEl.dataset.page !== 'devices' || adminAccountType !== 'teacher') return;
+    const keyword = deviceSearchInput.value.trim().toLowerCase();
+    filteredDevices = batchAvailable().filter(device => !keyword || device.id.toLowerCase().includes(keyword));
+    renderDeviceTable();
   }
-  function completeAdminBorrow(devices, opened, borrowerId) {
-    const successful = devices.filter((d, i) => opened[i] === true);
-    const at = new Date().toISOString();
-    const batchId = 'BATCH-' + Date.now() + '-' + (++adminOperationSequence);
-    const records = successful.map(d => ({ id: batchId + '-' + d.id, batchId, deviceId: d.id, slot: d.slot, borrowerId, borrowerType: adminAccountType, borrowAt: at, returnAt: null }));
-    const nextRecords = [...batchRecords, ...records];
-    localStorage.setItem(batchRecordsKey, JSON.stringify(nextRecords));
-    batchRecords = nextRecords;
-    const failedCount = devices.length - successful.length;
-    const message = failedCount ? `已借用${successful.length}台设备，另${failedCount}台柜门未打开，未计入借用` : `借用${successful.length}台设备，已开门，请取走设备`;
-    document.getElementById('batchBorrowResult').textContent = '';
-    if (successful.length) {
-      openSuccessToast({ title: failedCount ? '部分借取成功' : '借取成功', desc: message, isAdminBorrow: true, doorNumbers: successful.map(d => d.slot) });
-    } else {
-      upgradeMessage(message);
-    }
-    if (successful.length) document.getElementById('borrowQuantity').value = '';
-  }
-  document.getElementById('quantityAdminBorrow').addEventListener('click', async () => {
+  async function borrowTeacherDevice(deviceId) {
     if (!adminSession || adminAccountType !== 'teacher' || adminBorrowSubmitting) return;
-    document.getElementById('batchBorrowResult').textContent = '';
-    const value = document.getElementById('borrowQuantity').value.trim();
-    if (!/^[1-9]\d*$/.test(value)) return upgradeMessage('请输入正确的借取数量');
-    const devices = batchAvailable().sort((a, b) => Number(a.slot) - Number(b.slot));
-    if (Number(value) > devices.length) return upgradeMessage(`当前仅有${devices.length}台可借设备，请修改数量`);
-    const selected = devices.slice(0, Number(value));
-    const borrowerId = adminAccountId;
+    const device = batchAvailable().find(item => item.id === deviceId);
+    if (!device) return upgradeMessage('该设备已不可借用');
     const generation = adminSessionGeneration;
+    const borrowerId = adminAccountId;
     adminBorrowSubmitting = true;
     updateAdminBorrowAvailability();
     try {
-      // Prototype only: simulate per-door results. Real integration must use hardware acknowledgements.
       await new Promise(resolve => setTimeout(resolve, 500));
-      if (!adminSession || generation !== adminSessionGeneration) return;
-      const opened = selected.map(() => true);
-      completeAdminBorrow(selected, opened, borrowerId);
+      if (!adminSession || adminAccountType !== 'teacher' || generation !== adminSessionGeneration) return;
+      const at = new Date().toISOString();
+      const batchId = 'TEACHER-' + Date.now() + '-' + (++adminOperationSequence);
+      const record = { id: batchId + '-' + device.id, batchId, deviceId: device.id, slot: device.slot, borrowerId, borrowerType: 'teacher', borrowAt: at, returnAt: null };
+      const nextRecords = [...batchRecords, record];
+      localStorage.setItem(batchRecordsKey, JSON.stringify(nextRecords));
+      batchRecords = nextRecords;
+      upgradeMessage(`借取成功，格口${device.slot}已打开`);
     } catch {
       upgradeMessage('借取未完成，请核实设备状态后重试');
     } finally {
@@ -239,7 +221,7 @@
         updateAdminBorrowAvailability();
       }
     }
-  });
+  }
   const cabinetDoorInput = document.getElementById('cabinetDoorNumber');
   function updateCabinetOpenButtons() {
     document.getElementById('openSingleDoor').disabled = adminOpeningSubmitting;
@@ -311,8 +293,6 @@
     clearToastTimers();
     successToast.hidden = true;
     adminBorrowToast = false;
-    document.getElementById('borrowQuantity').value = '';
-    document.getElementById('batchBorrowResult').textContent = '';
     updateAdminBorrowAvailability();
     if (screenEl.dataset.page === 'devices') searchDevices();
     upgradeMessage('全部模拟设备已恢复可借用');
@@ -360,14 +340,10 @@
     if (adminBorrowToast) { successToast.hidden = true; adminBorrowToast = false; }
     const adminPages = ['admin-manage', 'admin-batch-borrow', 'admin-open-test'];
     if (adminPages.includes(name) && !adminSession) name = 'admin-login';
-    if (adminSession && adminAccountType === 'teacher' && ['admin-manage', 'admin-open-test'].includes(name)) name = 'admin-batch-borrow';
+    if (adminSession && adminAccountType === 'teacher' && ['admin-manage', 'admin-open-test'].includes(name)) name = 'devices';
     if (adminSession && adminAccountType !== 'teacher' && name === 'admin-batch-borrow') name = 'admin-manage';
-    if (name === 'admin-login' || (adminSession && !adminPages.includes(name))) resetAdminLogin();
-    if (name === 'admin-batch-borrow') {
-      updateAdminBorrowAvailability();
-      document.getElementById('borrowQuantity').value = '';
-      document.getElementById('batchBorrowResult').textContent = '';
-    }
+    if (adminSession && adminAccountType === 'teacher' && name === 'admin-batch-borrow') name = 'devices';
+    if (name === 'admin-login' || (adminSession && !adminPages.includes(name) && !(adminAccountType === 'teacher' && name === 'devices'))) resetAdminLogin();
     if (name === 'admin-open-test') document.getElementById('cabinetOpenResult').hidden = true;
     clearTimeout(enrollmentTimer);
     enrollFailureAction.hidden = true;
@@ -388,6 +364,7 @@
     }
 
     if (name === "devices") {
+      document.getElementById('deviceListTitle').textContent = adminAccountType === 'teacher' ? '教师借取' : '设备管理';
       deviceSearchInput.value = "";
       filteredDevices = batchAvailable();
       currentPage = 1;
@@ -660,7 +637,8 @@
                 class="take-btn"
                 data-take-id="${device.id}"
                 data-take-slot="${device.slot}"
-              >取用</button>
+                ${adminAccountType === 'teacher' && adminBorrowSubmitting ? 'disabled' : ''}
+              >${adminAccountType === 'teacher' ? '借取' : '取用'}</button>
             </td>
           </tr>
         `;
@@ -742,7 +720,6 @@
     successToast.hidden = true;
     if (adminBorrowToast) {
       adminBorrowToast = false;
-      document.getElementById('borrowQuantity').focus();
       return;
     }
     showPage("home");
@@ -949,7 +926,7 @@
       mustEnrollAfterPassword = false;
       document.getElementById('adminAccount').textContent = id;
       document.getElementById('adminFeatureNote').textContent = '';
-      showPage(teacher ? 'admin-batch-borrow' : 'admin-manage');
+      showPage(teacher ? 'devices' : 'admin-manage');
       return;
     }
     if (mustEnrollAfterPassword) {
@@ -1046,7 +1023,8 @@
 
   deviceTableBody.addEventListener("click", (e) => {
     const takeBtn = e.target.closest("[data-take-id]");
-    if (!takeBtn) return;
+    if (!takeBtn || takeBtn.disabled) return;
+    if (adminSession && adminAccountType === 'teacher') return borrowTeacherDevice(takeBtn.dataset.takeId);
     pendingBorrow = {
       id: takeBtn.dataset.takeId,
       slot: takeBtn.dataset.takeSlot,

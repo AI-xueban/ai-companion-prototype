@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20261111-teacher-open-original-home" />
+  <link rel="stylesheet" href="styles.css?v=20261113-teacher-device-list" />
 </head>
 <body>
   <aside class="studio-bar">
@@ -152,24 +152,7 @@
           <p class="admin-feature-note" id="adminFeatureNote" role="status"></p>
         </section>
 
-        <section class="page page-admin-batch-borrow" data-page="admin-batch-borrow">
-          <div class="admin-borrow-content">
-            <h2 class="light-title">教师借取</h2>
-            <div class="batch-borrow-form">
-              <div class="batch-borrow-group">
-                <label for="borrowQuantity">借取数量</label>
-                <div class="borrow-quantity-field">
-                  <input id="borrowQuantity" type="text" inputmode="numeric" maxlength="3" placeholder="输入借取数量" autocomplete="off" aria-describedby="adminInCabinetCount" />
-                  <span id="adminInCabinetCount" role="status">当前在柜设备—台</span>
-                </div>
-              </div>
-            </div>
-            <button type="button" class="primary-btn" id="quantityAdminBorrow">借取</button>
-            <p id="batchBorrowResult" role="status" hidden></p>
-            <button type="button" class="back-btn" data-goto="home">返回</button>
-          </div>
-        </section>
-        <section class="page page-admin-open-test" data-page="admin-open-test">
+<section class="page page-admin-open-test" data-page="admin-open-test">
           <div class="cabinet-test-header"><button type="button" data-goto="admin-manage">返回</button><h2>开柜测试</h2></div>
           <div class="cabinet-test-controls">
             <div class="cabinet-test-group"><label for="cabinetDoorNumber">开柜功能测试</label><input id="cabinetDoorNumber" inputmode="numeric" maxlength="2" placeholder="输入门号：" autocomplete="off" /><button type="button" id="openSingleDoor">单 个 开 门</button></div>
@@ -280,7 +263,7 @@
         <!-- 设备可用列表（整屏垂直居中） -->
         <section class="page page-devices" data-page="devices">
           <div class="page-center page-center-devices">
-            <h2 class="light-title">设备管理</h2>
+            <h2 class="light-title" id="deviceListTitle">设备管理</h2>
             <div class="device-search">
               <div class="search-field">
                 <span class="search-icon" aria-hidden="true">⌕</span>
@@ -440,6 +423,6 @@
     </div>
   </main>
 
-  <script src="app.js?v=20261113-return-charging-copy"></script>
+  <script src="app.js?v=20261113-teacher-slot-toast"></script>
 </body>
 </html>
