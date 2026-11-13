@@ -1316,3 +1316,14 @@
 .cv-record-table th:nth-child(6) { width:23%; }
 .cv-record-table th:nth-child(7) { width:10%; }
 .cv-record-table th:nth-child(8) { width:13%; }
+/* Usage records: keep borrower identities in the shared device ledger. */
+.usage-records-page .filter-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; padding: 16px 0 24px; border-bottom: 0; }
+.usage-records-page .filter-item { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.usage-records-page .filter-item label { flex-shrink: 0; margin-bottom: 0; white-space: nowrap; }
+.usage-records-page .filter-item > .input, .usage-records-page .filter-item > .select { min-width: 0; width: 100%; }
+.usage-records-page .date-range { min-width: 0; flex: 1; }
+.usage-records-page .date-range .input { min-width: 0; width: 100%; padding: 4px 6px; }
+.usage-records-page .filter-actions { align-self: center; }
+.usage-records-page .data-table { min-width: 1280px; }
+.usage-borrower-tag { display: inline-block; padding: 0 8px; border: 1px solid #91caff; border-radius: 4px; color: #1677ff; background: #f0f7ff; font-size: 12px; white-space: nowrap; }
+@media (max-width: 1300px) { .usage-records-page .filter-form { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
