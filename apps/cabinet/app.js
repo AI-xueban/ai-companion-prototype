@@ -3,7 +3,6 @@
   const DESIGN_H = 1920;
   const PAGE_SIZE = 10;
   const TOAST_MS = 5000;
-  const TOAST_SECONDS = 5;
 
   const ALL_DEVICES = [
     { id: "AQL00P6377400659", slot: "1" },
@@ -49,6 +48,11 @@
   const faceStatus = document.getElementById("faceStatus");
   const faceDesc = document.getElementById("faceDesc");
   let recognitionTimer = null;
+  let faceIdleTimer = null;
+  let toastReturnPage = "home";
+  const facePreview = document.getElementById("facePreview");
+  const faceSnapshot = document.getElementById("faceSnapshot");
+  const faceSnapshotNote = document.getElementById("faceSnapshotNote");
   const faceStart = document.getElementById("faceStart");
   const faceToPassword = document.getElementById("faceToPassword");
   const faceRetry = document.getElementById("faceRetry");
@@ -337,6 +341,11 @@
 
   function showPage(name, options = {}) {
     if (registrationLocked) return;
+    clearTimeout(recognitionTimer);
+    clearTimeout(faceIdleTimer);
+    faceConfirmModal.hidden = true;
+    clearToastTimers();
+    successToast.hidden = true;
     if (adminBorrowToast) { successToast.hidden = true; adminBorrowToast = false; }
     const adminPages = ['admin-manage', 'admin-batch-borrow', 'admin-open-test'];
     if (adminPages.includes(name) && !adminSession) name = 'admin-login';
@@ -357,7 +366,8 @@
 
     if (name === "pickup") {
       mustEnrollAfterPassword = false;
-      resetFaceLogin();
+      resetFaceLogin({ autoRecognize: options.loginMode !== "password" });
+      if (options.loginMode === "password") showPasswordLogin();
       hideKeypad();
     } else {
       hideKeypad();
@@ -382,10 +392,10 @@
     if (name !== "devices") closeBorrowConfirm();
   }
 
-  function resetFaceLogin() {
+  function resetFaceLogin({ autoRecognize = true } = {}) {
     faceLogin.classList.remove("is-processing");
     clearTimeout(recognitionTimer);
-    faceStart.hidden = false;
+    faceStart.hidden = true;
     faceToPassword.hidden = false;
     faceConfirmModal.hidden = true;
     pickupPage.querySelector('[data-goto="home"]').hidden = false;
@@ -398,14 +408,40 @@
     faceEnroll.hidden = true;
     faceStatus.textContent = "人脸识别登录";
     faceStatus.className = "face-status is-recognizing";
-    faceDesc.textContent = "请本人站到屏幕前，点击开始人脸识别";
+    faceDesc.textContent = "请本人正对屏幕，系统将自动识别";
     faceRetry.hidden = true;
     loginTip.hidden = true;
     studentId.value = "";
     studentPwd.value = "";
+    if (autoRecognize) startRecognition();
   }
 
+  function resetFaceIdleTimer() {
+    clearTimeout(faceIdleTimer);
+    if (screenEl.dataset.page !== "pickup" || faceLogin.hidden || !successToast.hidden) return;
+    faceIdleTimer = window.setTimeout(() => showPage("home"), 60 * 1000);
+  }
+
+  ["pointerdown", "keydown"].forEach(type => screenEl.addEventListener(type, resetFaceIdleTimer));
+
+  function captureFaceSnapshot() {
+    // Static prototype detections use the same face rectangles as the animated scene.
+    const faces = [
+      { x: 193, y: 37, width: 61, height: 71, studentId: "2026002" },
+      { x: 40, y: 61, width: 126, height: 146, studentId: "2026001", snapshot: "assets/face-demo.svg" },
+    ];
+    const largest = selectLargestFace(faces);
+    recognizedStudentId.textContent = largest.studentId;
+    faceSnapshot.src = largest.snapshot;
+    faceSnapshotNote.textContent = "本次识别人脸（模拟）";
+  }
+
+  function selectLargestFace(faces) {
+    return faces.reduce((largest, face) =>
+      !largest || face.width * face.height > largest.width * largest.height ? face : largest, null);
+  }
   function showFaceSuccess() {
+    if (screenEl.dataset.page !== "pickup" || faceLogin.hidden) return;
     faceLogin.classList.remove("is-processing");
     faceLogin.hidden = false;
     passwordLogin.hidden = true;
@@ -415,6 +451,7 @@
     faceDesc.textContent = "请确认识别到的编号";
     faceRetry.hidden = true;
     recognizedStudentId.textContent = "2026001";
+    captureFaceSnapshot();
     faceConfirmModal.hidden = false;
   }
 
@@ -435,6 +472,8 @@
   }
 
   function showPasswordLogin() {
+    clearTimeout(faceIdleTimer);
+    faceConfirmModal.hidden = true;
     faceLogin.classList.remove("is-processing");
     clearTimeout(recognitionTimer);
     document.getElementById("passwordToFace").hidden = mustEnrollAfterPassword;
@@ -443,12 +482,15 @@
     faceEnroll.hidden = true;
     passwordLoginDesc.textContent = mustEnrollAfterPassword
       ? "验证后开始人脸注册；开始录入后不可退出"
-      : "请输入编号和密码后查看可用设备";
+      : "请输入编号和密码登录借用设备";
     loginTip.hidden = true;
     hideKeypad();
   }
 
   function showFaceEnrollment() {
+    clearTimeout(recognitionTimer);
+    clearTimeout(faceIdleTimer);
+    faceConfirmModal.hidden = true;
     faceEnrollBack.hidden = false;
     enrollFailureAction.hidden = true;
     hideKeypad();
@@ -599,6 +641,7 @@
       desc: "谢谢你，平板回家啦",
       deviceLabel: pendingDeviceId,
       slotLabel: pendingSlot,
+      returnPage: "store",
     });
   }
 
@@ -675,7 +718,10 @@
     }
   }
 
-  function openSuccessToast({ title, desc, deviceLabel, slotLabel, issueLabel, isAdminBorrow = false, doorNumbers = [] }) {
+  function openSuccessToast({ title, desc, deviceLabel, slotLabel, issueLabel, isAdminBorrow = false, doorNumbers = [], returnPage = "home", duration = TOAST_MS }) {
+    toastReturnPage = returnPage;
+    clearTimeout(faceIdleTimer);
+    clearTimeout(recognitionTimer);
     adminBorrowToast = isAdminBorrow;
     successToast.querySelector('.toast-card').classList.toggle('is-admin-borrow', isAdminBorrow);
     successToast.querySelector('.toast-meta').hidden = isAdminBorrow;
@@ -702,7 +748,7 @@
 
     clearToastTimers();
     if (isAdminBorrow) { toastAdminAcknowledge.focus(); return; }
-    let left = TOAST_SECONDS;
+    let left = Math.ceil(duration / 1000);
     toastCountdown.textContent = `${left}s`;
     toastTick = setInterval(() => {
       left -= 1;
@@ -712,7 +758,7 @@
       }
       toastCountdown.textContent = `${left}s`;
     }, 1000);
-    toastTimer = setTimeout(() => closeSuccessToast(), TOAST_MS);
+    toastTimer = setTimeout(() => closeSuccessToast(), duration);
   }
 
   function closeSuccessToast() {
@@ -722,17 +768,27 @@
       adminBorrowToast = false;
       return;
     }
-    showPage("home");
+    showPage(toastReturnPage);
   }
 
-  function confirmBorrow(deviceId, slot) {
+  function borrowForStudent(id, returnPage = "pickup") {
+    if (!successToast.hidden) return;
+    // Student prototype always demonstrates a successful match and opening.
+    // Failure rules remain in requirements; do not consume demo stock or persist student loans.
+    const device = ALL_DEVICES[0];
+    confirmBorrow(device.id, device.slot, returnPage);
+  }
+
+  function confirmBorrow(deviceId, slot, returnPage = "pickup") {
     pendingBorrow = null;
     closeBorrowConfirm();
     openSuccessToast({
-      title: "取出来啦",
+      title: "借取成功",
       desc: "柜门开了，把平板拿走吧",
       deviceLabel: deviceId,
       slotLabel: slot,
+      returnPage,
+      duration: 3000,
     });
   }
 
@@ -937,7 +993,8 @@
       showFaceEnrollment();
       return;
     }
-    showPage("devices");
+    authenticatedStudentId = id;
+    borrowForStudent(id, "home");
   });
 
   function openRegistration() {
@@ -961,14 +1018,16 @@
     resetFaceLogin();
   });
   function startRecognition() {
+    faceConfirmModal.hidden = true;
+    resetFaceIdleTimer();
     faceLogin.classList.add("is-processing");
     clearTimeout(recognitionTimer);
     faceStart.hidden = true;
-    faceToPassword.hidden = true;
+    faceToPassword.hidden = false;
     faceRetry.hidden = true;
     faceStatus.textContent = "正在识别";
-    faceDesc.textContent = "请将面部置于正方形框内，并确保框内只有本人";
-    recognitionTimer = window.setTimeout(showFaceSuccess, 1000);
+    faceDesc.textContent = "";
+    recognitionTimer = window.setTimeout(showFaceSuccess, 2600);
   }
   faceStart.addEventListener("click", startRecognition);
   faceToPassword.addEventListener("click", showPasswordLogin);
@@ -979,9 +1038,10 @@
     resetFaceLogin();
   });
   faceConfirmLogin.addEventListener("click", () => {
+    if (faceConfirmModal.hidden || screenEl.dataset.page !== "pickup") return;
     authenticatedStudentId = recognizedStudentId.textContent;
     faceConfirmModal.hidden = true;
-    showPage("devices");
+    borrowForStudent(authenticatedStudentId);
   });
   faceEnrollBack.addEventListener("click", () => {
     clearTimeout(enrollmentTimer);
@@ -1158,7 +1218,7 @@
 
     const goto = e.target.closest("[data-goto]");
     if (goto) {
-      showPage(goto.dataset.goto);
+      showPage(goto.dataset.goto, { loginMode: goto.dataset.loginMode });
       return;
     }
 

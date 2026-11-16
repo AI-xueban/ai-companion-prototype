@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20261113-teacher-device-list" />
+  <link rel="stylesheet" href="styles.css?v=20261116-merged-student-teacher" />
 </head>
 <body>
   <aside class="studio-bar">
@@ -100,16 +100,15 @@
             <header class="guide-header">
               <p class="brand">通晤纪</p>
               <h1>AI学伴共享柜机</h1>
-              <p class="guide-lead">借取和归还设备请按照以下流程操作</p>
             </header>
             <div class="guide-columns">
-              <button type="button" class="guide-col guide-pickup" data-goto="pickup">
-                <h3><span class="guide-char">借</span></h3>
-                <ol class="guide-steps">
-                  <li><span>1</span>编号密码登录，也可切换人脸识别</li>
-                  <li><span>2</span>在可用列表中选择设备并取用</li>
-                  <li><span>3</span>在确认弹窗中点击「确认」，柜门开启，取出平板使用</li>
-                </ol>
+              <button type="button" class="guide-col guide-pickup guide-borrow-entry" data-goto="pickup" data-login-mode="face">
+                <svg class="guide-entry-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 5H10a5 5 0 0 0-5 5v10m39-15h10a5 5 0 0 1 5 5v10M5 44v10a5 5 0 0 0 5 5h10m39-15v10a5 5 0 0 1-5 5H44"/><circle cx="32" cy="25" r="8"/><path d="M19 47v-3c0-12 26-12 26 0v3"/></svg>
+                <h3>人脸识别借</h3>
+              </button>
+              <button type="button" class="guide-col guide-pickup guide-borrow-entry" data-goto="pickup" data-login-mode="password">
+                <svg class="guide-entry-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" aria-hidden="true"><rect x="9" y="4" width="46" height="56" rx="7"/><g fill="currentColor" stroke="none"><circle cx="22" cy="18" r="3"/><circle cx="32" cy="18" r="3"/><circle cx="42" cy="18" r="3"/><circle cx="22" cy="32" r="3"/><circle cx="32" cy="32" r="3"/><circle cx="42" cy="32" r="3"/><circle cx="22" cy="46" r="3"/><circle cx="32" cy="46" r="3"/><circle cx="42" cy="46" r="3"/></g></svg>
+                <h3>编号密码借</h3>
               </button>
               <button type="button" class="guide-col guide-store" data-goto="store">
                 <h3><span class="guide-char">还</span></h3>
@@ -176,14 +175,18 @@
           </div>
         </section>
 
-        <!-- 取设备：默认编号密码登录，可切换人脸识别 -->
+        <!-- 取设备：进入即自动扫脸，保留编号密码备用入口 -->
         <section class="page page-pickup" data-page="pickup">
           <div class="page-center">
             <div class="face-login" id="faceLogin">
-              <div class="face-smile" aria-hidden="true"><span></span></div>
+              <div class="face-camera" aria-label="人脸识别取景框">
+                <img id="facePreview" src="assets/face-scan-demo.svg" alt="双人脸扫描并选择最大人脸的动图" />
+
+                <span class="face-camera-note">请将面部置于框内</span>
+              </div>
               <p class="face-status" id="faceStatus">正在识别</p>
               <p class="face-desc" id="faceDesc">请正对屏幕，保持面部处于识别框内</p>
-              <div class="face-login-actions"><button type="button" class="primary-btn" id="faceStart">开始人脸识别</button><button type="button" class="primary-btn face-retry" id="faceRetry" hidden>重新识别</button><button type="button" class="text-btn" id="faceToPassword">使用编号密码登录</button><button type="button" class="text-btn face-login-back" id="backToLoginChoice" aria-label="返回首页">← 返回首页</button></div>
+              <div class="face-login-actions"><button type="button" class="primary-btn" id="faceStart" hidden>开始人脸识别</button><button type="button" class="primary-btn face-retry" id="faceRetry" hidden>重新识别</button><button type="button" class="text-btn" id="faceToPassword">使用编号密码登录</button><button type="button" class="text-btn face-login-back" id="backToLoginChoice" aria-label="返回首页">← 返回首页</button></div>
 
             </div>
 
@@ -191,7 +194,7 @@
               <h2 class="page-title" id="loginPageTitle">学生登录</h2>
 
               <div id="studentLoginPanel">
-                <p class="page-desc" id="passwordLoginDesc">请输入编号和密码后查看可用设备</p>
+                <p class="page-desc" id="passwordLoginDesc">请输入编号和密码登录借用设备</p>
                 <form class="login-form" id="loginForm">
                   <label class="field">
                     <span class="field-label">编号</span>
@@ -342,8 +345,10 @@
         </div>
         <!-- 人脸识别成功后确认身份 -->
         <div class="confirm-mask" id="faceConfirmModal" hidden>
-          <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="faceConfirmTitle">
+          <div class="confirm-card face-confirm-card" role="dialog" aria-modal="true" aria-labelledby="faceConfirmTitle">
             <h3 id="faceConfirmTitle">确认登录身份</h3>
+            <img id="faceSnapshot" class="face-snapshot" alt="本次识别的人脸截图" />
+            <p class="face-snapshot-note" id="faceSnapshotNote"></p>
             <p class="face-confirm-message"><strong>学生编号：<span id="recognizedStudentId">2026001</span></strong><br />是否确认登录？</p>
             <div class="confirm-actions">
               <button type="button" class="confirm-cancel" id="faceConfirmRetry">取消</button>
@@ -423,6 +428,6 @@
     </div>
   </main>
 
-  <script src="app.js?v=20261113-teacher-slot-toast"></script>
+  <script src="app.js?v=20261116-merged-student-teacher"></script>
 </body>
 </html>

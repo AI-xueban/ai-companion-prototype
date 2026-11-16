@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 280">
+  <title>两名学生人脸扫描，选择画面中最大的人脸</title>
+  <rect width="280" height="280" fill="#e9f1fa"/>
+  <g transform="translate(165 25) scale(.42)">
+  <path d="M40 280v-25c0-43 44-70 100-70s100 27 100 70v25" fill="#8cbaa8"/>
+  <path d="M116 177h48v43l-24 22-24-22" fill="#e6bba0"/>
+  <ellipse cx="140" cy="119" rx="62" ry="78" fill="#f4d3bc"/>
+  <path d="M77 125C57 40 104 20 144 25c54-4 77 45 59 100l-13-51c-37 20-63 8-80-3l-22 54" fill="#63514d"/>
+  <path d="M104 117h14m44 0h14" stroke="#63514d" stroke-width="6" stroke-linecap="round"/>
+  <path d="M126 154q14 12 28 0" fill="none" stroke="#b97767" stroke-width="4" stroke-linecap="round"/>
+  <path d="m111 207 29 35 29-35 15 73H96" fill="#f8fbff"/>
+  </g>
+  <rect x="193" y="37" width="61" height="71" rx="14" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <g transform="translate(-18 35) scale(.86)">
+  <path d="M40 280v-25c0-43 44-70 100-70s100 27 100 70v25" fill="#7fa8d4"/>
+  <path d="M116 177h48v43l-24 22-24-22" fill="#e6bba0"/>
+  <ellipse cx="140" cy="119" rx="62" ry="78" fill="#f4d3bc"/>
+  <path d="M77 125C57 40 104 20 144 25c54-4 77 45 59 100l-13-51c-37 20-63 8-80-3l-22 54" fill="#344860"/>
+  <path d="M104 117h14m44 0h14" stroke="#344860" stroke-width="6" stroke-linecap="round"/>
+  <path d="M126 154q14 12 28 0" fill="none" stroke="#b97767" stroke-width="4" stroke-linecap="round"/>
+  <path d="m111 207 29 35 29-35 15 73H96" fill="#f8fbff"/>
+  </g>
+  <rect x="40" y="61" width="126" height="146" rx="30" fill="none" stroke="#0ea5e9" stroke-width="3" stroke-dasharray="22 7">
+    <animate attributeName="opacity" values=".5;1;.5" dur="1.2s" repeatCount="indefinite"/>
+  </rect>
+  <g>
+    <rect x="34" y="62" width="138" height="16" rx="8" fill="#38bdf8" opacity=".2"/>
+    <path d="M34 70h138" stroke="#0ea5e9" stroke-width="2.5"/>
+    <animateTransform attributeName="transform" type="translate" values="0 0;0 125;0 0" dur="2.4s" repeatCount="indefinite"/>
+  </g>
+</svg>
