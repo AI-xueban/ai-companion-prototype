@@ -18,10 +18,10 @@ function setup(future=false){
 function choose(x,grades){const api=x.c.schoolBorrowRulesUI,form=x.c.app.innerHTML;if(form.includes('新增日期规则')){api.pickDate('startDate');x.date.done(R.today());api.pickDate('endDate');x.date.done(R.today());}if(form.includes('新增每周规则')){const days=x.selection.days;x.selection.days=[0,1,2,3,4];api.editCreateSetting('weekdays',0);api.confirmCreateSetting();x.selection.days=days;}api.pickGrades();for(const grade of M.grades(x.data))api.selectGrade(grade,grades.includes(grade));api.confirmGrades();}
 
 test('借用日期/每周独立Tab及总开关，单行列表合并年级、停用保留配置和临时限制',()=>{
- const x=setup(),c=x.c;c.schoolControl.rules('dates');assert.match(c.app.innerHTML,/duration-rule-lines/);assert.match(c.app.innerHTML,/>规则1</);assert.match(c.app.innerHTML,/一年级、二年级/);assert.doesNotMatch(c.app.innerHTML,/开始日期|借用时段|school-rule/);
+ const x=setup(),c=x.c;c.schoolControl.rules('dates');assert.match(c.app.innerHTML,/<details class="school-help"><summary>规则说明/);assert.doesNotMatch(c.app.innerHTML,/<details[^>]* open/);assert.match(c.app.innerHTML,/duration-rule-lines/);assert.match(c.app.innerHTML,/>规则1</);assert.match(c.app.innerHTML,/一年级、二年级/);assert.doesNotMatch(c.app.innerHTML,/开始日期|借用时段|school-rule/);
  const rules=JSON.stringify(x.data.schoolSettings.borrowing.classRules);c.schoolBorrowRulesUI.toggle(false);assert.equal(x.data.schoolSettings.borrowing.dateRestrictionEnabled,false);assert.equal(JSON.stringify(x.data.schoolSettings.borrowing.classRules),rules);
- c.schoolBorrowRulesUI.open(0);assert.match(c.app.innerHTML,/disabled/);assert.match(c.app.innerHTML,/全天停止借用/);c.schoolBorrowRulesUI.editField('grades');assert.equal(x.notices.at(-1),'请先启用该类规则');c.schoolBorrowRulesUI.back();
- c.schoolBorrowRulesUI.tab('weekly');assert.match(c.app.innerHTML,/每周固定规则/);assert.match(c.app.innerHTML,/aria-checked="true"/);c.schoolBorrowRulesUI.toggle(false);assert.equal(x.data.schoolSettings.borrowing.weeklyRestrictionEnabled,false);assert.equal(x.data.schoolSettings.borrowing.temporaryClasses['一年级 1 班'],true);assert.equal(x.data.schoolSettings.borrowing.classBans['二年级 1 班'],true);
+ c.schoolBorrowRulesUI.open(0);assert.doesNotMatch(c.app.innerHTML,/<button[^>]*disabled/);assert.match(c.app.innerHTML,/指定日期内全天停止借用/);assert.doesNotMatch(c.app.innerHTML,/借用状态/);c.schoolBorrowRulesUI.editField('grades');assert.equal(x.dialog.title,'选择年级');c.schoolBorrowRulesUI.cancelField();c.schoolBorrowRulesUI.back();
+ c.schoolBorrowRulesUI.tab('weekly');assert.match(c.app.innerHTML,/<details class="school-help"><summary>规则说明/);assert.doesNotMatch(c.app.innerHTML,/<details[^>]* open/);assert.match(c.app.innerHTML,/每周固定规则/);assert.match(c.app.innerHTML,/aria-checked="true"/);c.schoolBorrowRulesUI.toggle(false);assert.equal(x.data.schoolSettings.borrowing.weeklyRestrictionEnabled,false);assert.equal(x.data.schoolSettings.borrowing.temporaryClasses['一年级 1 班'],true);assert.equal(x.data.schoolSettings.borrowing.classBans['二年级 1 班'],true);
  c.schoolBorrowRulesUI.tab('dates');c.schoolBorrowRulesUI.toggle(true);assert.equal(x.data.schoolSettings.borrowing.dateRestrictionEnabled,true);assert.equal(x.data.schoolSettings.borrowing.weeklyRestrictionEnabled,false);
 });
 test('日期点击滚轮确定一次即提交，取消不写入，范围冲突和外部修改不能覆盖',()=>{
@@ -72,3 +72,16 @@ test('新增日期和星期真实未选：占位、取消不填值、可先选�
 });
 
  test('日期和每周默认开启，关闭后可新增保存且不自动开启',()=>{assert.equal(M.init({'一年级 1 班':[{id:1}]}).schoolSettings.borrowing.dateRestrictionEnabled,true);for(const mode of ['dates','weekly']){const x=setup(),c=x.c,a=c.schoolBorrowRulesUI;c.schoolControl.rules(mode);a.toggle(false);assert.match(c.app.innerHTML,/create\(\)/);a.create();assert.match(c.app.innerHTML,/新增/);choose(x,['三年级']);a.confirmField();const state=x.data.schoolSettings.borrowing;assert.equal(state[mode==='dates'?'dateRestrictionEnabled':'weeklyRestrictionEnabled'],false);assert.equal(state.classRules['三年级 1 班'].filter(r=>r.mode===mode).length,1);a.toggle(true);assert.equal(x.data.schoolSettings.borrowing.classRules['三年级 1 班'].filter(r=>r.mode===mode).length,1);}});
+
+test('日期规则说明在列表及新增编辑表单上方只展示一次',()=>{
+ const x=setup(true),c=x.c;let d=x.data;d=M.apply(d,{module:'borrowing',action:'save',grades:['三年级'],rule:{id:'date-b',mode:'dates',startDate:x.offset(4),endDate:x.offset(5),deny:true,periods:[]},base:M.signature(d,'borrowing')});x.data=d;
+ const check=()=>{const html=c.app.innerHTML;assert.equal((html.match(/指定日期内全天停止借用/g)||[]).length,1);assert.ok(html.indexOf('borrow-date-note')<html.indexOf('<section class="control-module-panel'));assert.doesNotMatch(html,/借用状态/);};
+ c.schoolControl.rules('dates');check();assert.ok(c.app.innerHTML.indexOf('borrow-date-note')>c.app.innerHTML.indexOf('duration-list-heading'));c.schoolBorrowRulesUI.create();check();c.schoolBorrowRulesUI.cancelCreate();c.schoolBorrowRulesUI.open(0);check();
+});
+
+test('日期和每周规则关闭后仍可修改删除，操作后开关保持关闭',()=>{
+ for(const mode of ['dates','weekly']){const x=setup(true),c=x.c,a=c.schoolBorrowRulesUI;c.schoolControl.rules(mode);a.toggle(false);a.open(0);assert.doesNotMatch(c.app.innerHTML,/<button[^>]*disabled/);
+ if(mode==='dates'){a.editField('endDate');x.date.done(x.offset(5));assert.equal(x.data.schoolSettings.borrowing.classRules['一年级 1 班'].find(r=>r.mode===mode).endDate,x.offset(5));}
+ else{a.editField('weekdays',0);x.selection.days=[0,1];a.confirmField();assert.deepEqual(x.data.schoolSettings.borrowing.classRules['一年级 1 班'].find(r=>r.mode===mode).weekdays,[0,1]);}
+ const flag=mode==='dates'?'dateRestrictionEnabled':'weeklyRestrictionEnabled';assert.equal(x.data.schoolSettings.borrowing[flag],false);a.deleteRule(0);a.confirmField();assert.equal(x.data.schoolSettings.borrowing[flag],false);assert.equal(x.data.schoolSettings.borrowing.classRules['一年级 1 班'].some(r=>r.mode===mode),false);}
+});

@@ -142,7 +142,7 @@
       if(controlWorkView!=='homeroom'||!isHeadTeacherClass()||ui.demo)return;
       controlData=latest();
       ui.studentPicker={ids:new Set(),query:'',className:selectedTeacherClass,revision:state().revision};
-      controlOverlay('选择'+selectedTeacherClass+'学生',`<div class="daily-lock-picker"><div class="daily-lock-picker-count"><span>选择需要停止借用的学生</span><b id="borrow-student-count">0 人</b></div><input type="search" aria-label="搜索姓名或学号" placeholder="搜索姓名或学号" oninput="borrowing.searchStudents(this.value)"><div id="borrow-student-options">${banPickerRows()}</div></div>`,'<button type="button" class="control-select-all" onclick="borrowing.toggleAllStudents()">全选</button>'+button('取消','borrowing.cancelStudents()')+button('禁止所选学生借用','borrowing.saveStudents()',false,true));
+      controlOverlay('选择'+selectedTeacherClass+'学生',`<div class="daily-lock-picker"><div class="daily-lock-picker-count"><span>选择需要停止借用的学生</span><b id="borrow-student-count">0 人</b></div><input type="search" aria-label="搜索姓名或学号" placeholder="搜索姓名或学号" oninput="borrowing.searchStudents(this.value)"><div id="borrow-student-options">${banPickerRows()}</div></div>`,'<button type="button" class="control-select-all" onclick="borrowing.toggleAllStudents()">全选</button>'+button('取消','borrowing.cancelStudents()')+button('停止所选学生借用','borrowing.saveStudents()',false,true));
       document.querySelector?.('#control-overlay .control-sheet')?.classList?.add('daily-lock-sheet');
     },
     toggleAllStudents(){const p=ui.studentPicker;if(!p)return;const available=(controlData[selectedTeacherClass]||[]).filter(s=>!studentBanned(s)),all=available.length&&available.every(s=>p.ids.has(String(s.id)));p.ids=new Set(all?[]:available.map(s=>String(s.id)));const root=document.getElementById('borrow-student-options');if(root)root.innerHTML=banPickerRows();const count=document.getElementById('borrow-student-count');if(count)count.textContent=p.ids.size+' 人';const footer=document.querySelector?.('#control-overlay .control-select-all');if(footer)footer.textContent=all?'全选':'取消全选';const save=document.querySelector?.('#control-overlay .control-primary');if(save)save.disabled=!p.ids.size;},
@@ -163,10 +163,10 @@
       const students = controlData[selectedTeacherClass] || [], s = state();
       const blocked = M.denied(s, selectedTeacherClass), denied = students.length>0&&students.every(student=>studentBanned(student,s));
       const canManage = controlWorkView === 'homeroom' && isHeadTeacherClass();
-      const action = (blocked ? '<p class="parity-note">学校已临时停止该年级借用，老师设置暂不生效</p>' : '') + (canManage && students.length ? button(denied ? '恢复借用' : '全班停止借用', `borrowing.toggleClass(${!denied})`, denied)
-        : '<p class="parity-note">借用状态由班主任设置，当前仅可查看。</p>');
+      const action = canManage && students.length ? button(denied ? '恢复借用' : '全班停止借用', `borrowing.toggleClass(${!denied})`, denied)
+        : '';
       const stopped=blocked?students.length:students.filter(student=>studentBanned(student,s)).length;
-      return `<section class="control-entry-lock borrowing-entry-card"><div class="control-entry-lock-head"><div><h3>柜机借用管控</h3>${stopped?'<p>已停止借用 '+stopped+'/'+students.length+' 人</p>':''}</div>${canManage?'<button onclick="borrowing.openStudents()">设置学生借用 ›</button>':''}</div><button type="button" class="borrowing-times-link" onclick="borrowing.showTimes()">查看借用时间 <span aria-hidden="true">›</span></button><div class="control-actions">${action}</div></section>`;
+      return `<section class="control-entry-lock borrowing-entry-card"><div class="control-entry-lock-head"><div><h3>柜机借用管控</h3>${stopped?'<p>已停止借用 '+stopped+'/'+students.length+' 人</p>':''}</div>${canManage?'<button onclick="borrowing.openStudents()">设置学生借用 ›</button>':''}</div><button type="button" class="borrowing-times-link" onclick="borrowing.showTimes()">查看借用时间 <span aria-hidden="true">›</span></button>${blocked&&canManage?'<p class="parity-note borrowing-school-notice">学校已临时停止该年级借用，老师设置暂不生效</p>':''}${action?'<div class="control-actions">'+action+'</div>':''}</section>`;
     },
     entryCard() {
       const s = state(), total = schoolControlClasses.length, blocked = schoolControlClasses.filter(n => M.denied(s, n)).length;
@@ -211,7 +211,7 @@
       ui.demo = kind === 'temporary' ? 'temporary-notice' : 'times-notice';
       this.render();
       if (kind === 'temporary') {
-        controlOverlay('学校已开启临时停止借用', `<p>${esc(selectedTeacherClass)}</p><p>学校管理员已临时禁止该班借用，现在不能修改本班借用状态。</p>`, button('知道了', 'controlPageDemo.dismiss()', false));
+        controlOverlay('学校已开启临时停止借用', `<p>${esc(selectedTeacherClass)}</p><p>学校已临时停止该年级借用，老师仍可保存设置但暂不生效。</p>`, button('知道了', 'controlPageDemo.dismiss()', false));
       } else {
         controlOverlay('借用时间已更新', `<p>${esc(selectedTeacherClass)}</p><p>学校管理员刚修改了本班借用时间，是否立即查看？</p>`, button('暂不查看', 'controlPageDemo.defer()') + button('立即查看', 'controlPageDemo.dismiss()', false));
       }

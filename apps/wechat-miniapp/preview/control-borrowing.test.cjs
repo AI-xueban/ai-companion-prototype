@@ -183,7 +183,8 @@ test('班主任只设置全班借用状态，学校临时停止借用时可保�
   context.borrowing.toggleClass(false);assert.equal(context.controlData.schoolSettings.borrowing.classBans['五年级 2 班'],false);
   context.controlData.schoolSettings.borrowing.temporaryClasses['五年级 2 班'] = true;
   context.borrowing.render();
-  assert.match(context.borrowing.teacherEntryCard(),/学校已临时停止该年级借用，老师设置暂不生效/);
+  assert.ok(context.borrowing.teacherEntryCard().includes('学校已临时停止该年级借用，老师设置暂不生效</p><div class="control-actions"><button'));
+  context.controlWorkView='subject';const subjectCard=context.borrowing.teacherEntryCard();assert.doesNotMatch(subjectCard,/老师设置暂不生效|借用状态由班主任设置|当前仅可查看|control-actions/);context.controlWorkView='homeroom';
   assert.match(context.borrowing.teacherEntryCard(),/borrowing.toggleClass\(/);
   assert.match(context.app.innerHTML,/学校已临时停止该年级借用/);
   assert.doesNotMatch(context.app.innerHTML,/borrowing.student\(|borrowing.toggleClass\(|borrowing.batch\(/);

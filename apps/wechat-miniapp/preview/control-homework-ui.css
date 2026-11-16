@@ -448,3 +448,12 @@ body #app main.control-screen .control-sheet:has(.control-student-selection){dis
 .control-sheet:has(.control-student-selection) .control-sheet-head,.control-sheet:has(.control-student-selection) .control-sheet-actions{flex:none}
 body.dw-ui-new #app main.control-screen .control-sheet-actions>.control-select-all{flex:0 0 auto;min-width:62px;min-height:44px;margin-right:auto;padding:8px 0;border:0;background:transparent;color:var(--control-link);font-size:13px;white-space:nowrap}
 body #app main.control-screen .control-sheet:has(.control-student-selection) .control-sheet-actions{margin-top:12px}
+
+/* Keep borrowing notices separate from the full-width class action. */
+.control-screen .borrowing-entry-card .control-actions{display:flex;flex-direction:column;align-items:stretch;width:100%}
+.control-screen .borrowing-entry-card .control-actions>button{width:100%;flex:none;white-space:nowrap}
+.control-screen .borrowing-school-notice{margin:14px 0 0;line-height:1.7}
+.control-screen .school-borrow-priority{margin:16px 4px;line-height:1.8}
+.control-screen .borrow-date-note{padding:0;margin:0 4px 16px;line-height:1.7}
+
+.control-screen .school-subject-note{margin:0 4px 16px;line-height:1.7}
