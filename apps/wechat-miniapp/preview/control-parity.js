@@ -47,7 +47,7 @@ window.controlDurationStep=function(button,delta){const input=button.closest('.d
   const activeRefs = () => controlDemoRole === 'admin' ? adminLevel === 'school' ? allRefs() : adminLevel === 'grade' ? schoolControlClasses.filter(name => name.startsWith(adminSelectedGrade)).flatMap(className => controlData[className].map(s => ({ className, id: s.id }))) : classRefs() : classRefs();
   const scopeLabel = () => controlDemoRole !== 'admin' || adminLevel === 'class' ? selectedTeacherClass : adminLevel === 'grade' ? adminSelectedGrade : '全校';
   const needScope = (refs, module = controlModule) => controlDemoRole === 'admin' && refs.length > 1 && ['homework'].includes(module);
-  const canEdit = (module = controlModule) => controlDemoRole === 'admin' || module !== 'borrowing' && (module!=='world'||controlWorkView==='homeroom') && (module!=='homework'||controlWorkView==='subject') && (module !== 'duration' || controlWorkView === 'homeroom');
+  const canEdit = (module = controlModule) => controlDemoRole === 'admin' || module !== 'borrowing' && (module!=='world'||controlWorkView==='homeroom') && (module!=='homework'||controlWorkView==='subject') && (module !== 'duration' || controlWorkView === 'homeroom') && (module !== 'lock' || !refLocked({className:selectedTeacherClass}));
   const schoolDateRule = item => controlDemoRole === 'admin' && (item.module || controlModule) === 'borrowing' && (item.rule?.mode || item.value?.mode) === 'dates';
   const temporaryLockActive = (data = controlData) => Boolean(data.schoolSettings?.temporaryLock?.active);
   const scopedLocks = (data = controlData) => data.schoolSettings?.temporaryLocks || {};
@@ -63,16 +63,16 @@ window.controlDurationStep=function(button,delta){const input=button.closest('.d
   const selectionLockEntries = () => controlDemoRole === 'admin' ? [...adminSelectedScopes].map(key => ({ key: scopeLockKey(key), refs: scopeRefs(key) })) : currentSelectedRefs().map(ref => ({ key: studentLockKey(ref), refs: [ref] }));
   const lockNotice = () => {
     const refs = activeRefs();
-    return refs.some(ref => refLocked(ref)) ? `<p class="parity-note school-restriction-notice" role="status">学校已临时启用年级锁屏，老师设置暂不生效</p>` : '';
+    return refs.some(ref => refLocked(ref)) ? `<p class="parity-note school-restriction-notice" role="status">学校已临时启用年级锁屏，暂不能调整锁屏</p>` : '';
   };
   function teacherLockAction(locked,total){
     const value=locked<total;
-    return button(value?'全班锁屏':'解除锁屏',`parity.toggleClassLock(${value})`,false,!total).replace('class="control-primary"','class="control-primary control-action-'+(value?'restrict':'release')+'"');
+    return button(value?'全班锁屏':'解除锁屏',`parity.toggleClassLock(${value})`,false,!total||!canEdit('lock')).replace('class="control-primary"','class="control-primary control-action-'+(value?'restrict':'release')+'"');
   }
   function lockToggle(module, on, action, label) {
     if ((module === 'world' || module === 'lock') && controlDemoRole === 'admin') return button(module === 'world' ? '设置' : on ? '解除临时锁屏' : '设置临时锁屏', action, true);
     const html = binaryToggleButton(module, on, action, label);
-    return html;
+    return module==='lock'&&!canEdit('lock')?html.replace('<button ','<button disabled aria-disabled="true" '):html;
   }
   function assertPermission(refs, module, subject = homeworkSubject()) {
     if (controlDemoRole === 'admin') {
@@ -88,6 +88,7 @@ window.controlDurationStep=function(button,delta){const input=button.closest('.d
       return;
     }
     const latest = loadLatest();
+    if(module==='lock'&&refs.some(ref=>refLocked(ref,latest)))throw Error('学校已临时启用年级锁屏，暂不能调整锁屏');
     if(module==='world'&&controlWorkView!=='homeroom')throw Error('任课老师没有万象视界管控权限');
     if (module === 'borrowing') throw Error('借用规则由学校管理员统一设置，老师仅可查看');
     if (!refs.length || refs.some(ref => ref.className !== selectedTeacherClass || !classRefs().some(item=>item.id===ref.id))) throw Error('当前身份没有该学生的管控权限');
@@ -213,7 +214,7 @@ window.controlDurationStep=function(button,delta){const input=button.closest('.d
     if (controlModule === 'lock' && controlDemoRole === 'admin') return temporaryLockScopeCard();
     return card(scopeLabel() + '当前状态', `<p>${scopeOverview(activeRefs(), controlModule).join(' · ')}</p>`);
   }
-  const temporaryLockDescription = () => '<details class="control-description-fold"><summary aria-label="临时锁屏说明"><span>管控说明</span><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary><div class="control-description-body"><p class="parity-note">临时锁屏期间，老师仍可设置学生锁屏，设置暂不生效；学校解除后执行老师当前保存的设置。</p></div></details>';
+  const temporaryLockDescription = () => '<details class="control-description-fold"><summary aria-label="临时锁屏说明"><span>管控说明</span><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary><div class="control-description-body"><p class="parity-note">临时锁屏期间，相关班级的班主任和任课老师不能调整锁屏；学校解除后恢复操作，原有日常锁屏设置保留。</p></div></details>';
   function temporaryLockScopeCard() {
     const classes = adminLevel === 'school' ? schoolControlClasses : adminLevel === 'grade' ? schoolControlClasses.filter(name => name.startsWith(adminSelectedGrade)) : [selectedTeacherClass];
     const locked = classes.filter(className => refLocked({ className })).length;
@@ -856,7 +857,7 @@ window.controlDurationStep=function(button,delta){const input=button.closest('.d
       ui.pending = null; ui.editor = null; ui.boolean = null;
       if (controlView === 'ruleEditor') controlView = returnView === 'studentDetail' ? 'studentDetail' : 'module';
       adminBatchMode = false; controlSelected.clear(); adminSelectedScopes.clear();
-      renderControl(); controlToast(result.count ? operation.module==='world'&&operation.kind==='boolean'?(operation.value?'已恢复使用':'已停止使用'):operation.module === 'lock' && operation.kind === 'boolean' ? (controlDemoRole!=='admin' && refs.some(ref=>refLocked(ref,result.data)) ? '已保存，学校临时锁屏期间暂不生效' : operation.value ? '已锁屏' : '已解锁') : operation.kind === 'save' && operation.module === 'duration' && (controlDemoRole==='admin'?result.data.schoolSettings?.durationRulesEnabled===false:result.data.schoolSettings?.durationClassEnabled?.[selectedTeacherClass]===false) ? '已保存，规则暂未生效' : operation.kind === 'save' && operation.module === 'borrowing' && operation.value.mode === 'dates' ? '已保存' : `${operation.kind === 'delete' ? '删除成功' : '已生效'}` : '没有符合修改范围的班级，原规则保留');
+      renderControl(); controlToast(result.count ? operation.module==='world'&&operation.kind==='boolean'?(operation.value?'已恢复使用':'已停止使用'):operation.module === 'lock' && operation.kind === 'boolean' ? (operation.value ? '已锁屏' : '已解锁') : operation.kind === 'save' && operation.module === 'duration' && (controlDemoRole==='admin'?result.data.schoolSettings?.durationRulesEnabled===false:result.data.schoolSettings?.durationClassEnabled?.[selectedTeacherClass]===false) ? '已保存，规则暂未生效' : operation.kind === 'save' && operation.module === 'borrowing' && operation.value.mode === 'dates' ? '已保存' : `${operation.kind === 'delete' ? '删除成功' : '已生效'}` : '没有符合修改范围的班级，原规则保留');
     } catch (error) { conflict(error); }
   }
   function restoreTeacherDuration(editor){
@@ -1100,7 +1101,7 @@ window.controlDurationStep=function(button,delta){const input=button.closest('.d
     saveWorldStudents(){const p=ui.worldPicker;if(!p||!p.ids.size)return;if(p.className!==selectedTeacherClass)return controlToast('班级已变化，请重新选择');const refs=classRefs().filter(ref=>p.ids.has(String(ref.id)));if(refs.length!==p.ids.size)return controlToast('学生名单已变化，请重新选择');this.applyWorldStudents(refs,false);},
     restoreStudentWorld(id){this.applyWorldStudents(classRefs().filter(ref=>String(ref.id)===String(id)),true);},
     applyWorldStudents(refs,value){if(controlDemoRole==='admin')return;controlModule='world';try{assertPermission(refs,'world');if(!refs.length)return;ui.pending=makeOperation(refs,selectedTeacherClass,'boolean',value,{scope:'all'});ui.worldPicker=null;apply();}catch(error){conflict(error);}},
-    openStudentLocks(){controlModule='lock';controlView='studentLocks';renderControl();},
+    openStudentLocks(){if(controlDemoRole!=='admin'&&refLocked({className:selectedTeacherClass},loadLatest()))return controlToast('学校恢复锁屏后可设置');controlModule='lock';controlView='studentLocks';renderControl();},
     chooseLockStudents(){
       controlModule='lock';if(!canEdit('lock'))return controlToast('当前身份没有锁屏管控权限');
       controlData=loadLatest();ui.lockPicker={ids:new Set(),query:'',className:selectedTeacherClass};
