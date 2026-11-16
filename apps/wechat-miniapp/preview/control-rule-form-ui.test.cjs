@@ -11,9 +11,9 @@ function setup(){
  c.schoolControl.pickExternalTime=(periods,index,done)=>time={periods,index,done};c.schoolControl.cancelTime=()=>{};c.schoolControl.pickExternalDate=(value,done,cancel,validate)=>date={value,done,cancel,validate};
  return {c,name,error,number,inputs,offset,get notice(){return notice;},get data(){return JSON.parse(stored);},set data(v){stored=JSON.stringify(v);},get stored(){return stored;},get dialog(){return dialog;},get time(){return time;},get date(){return date;}};
 }
-test('管理员四类展示为只读表单，编辑/删除明确，关闭规则保留只读表单',()=>{
- const x=setup(),c=x.c;c.schoolControl.module('duration');assert.match(c.app.innerHTML,/rule-form-card/);assert.match(c.app.innerHTML,/连续使用时长/);assert.match(c.app.innerHTML,/55分钟/);assert.match(c.app.innerHTML,/schoolDurationUI.editRule/);assert.doesNotMatch(c.app.innerHTML,/duration-rule-lines|duration-setting-row/);c.schoolDurationUI.toggle('custom',false);assert.match(c.app.innerHTML,/rule-form-actions[\s\S]*disabled/);c.schoolDurationUI.toggle('custom',true);
- c.schoolControl.module('homework');assert.match(c.app.innerHTML,/rule-form-row/);assert.match(c.app.innerHTML,/适用科目/);assert.doesNotMatch(c.app.innerHTML,/修改权限/);
+test('管理员四类展示为只读表单，编辑/删除明确，关闭规则保留可编辑表单',()=>{
+ const x=setup(),c=x.c;c.schoolControl.module('duration');assert.match(c.app.innerHTML,/rule-form-card/);assert.match(c.app.innerHTML,/连续使用时长/);assert.match(c.app.innerHTML,/55分钟/);assert.match(c.app.innerHTML,/schoolDurationUI.editRule/);assert.doesNotMatch(c.app.innerHTML,/duration-rule-lines|duration-setting-row/);c.schoolDurationUI.toggle('custom',false);assert.doesNotMatch(c.app.innerHTML,/rule-form-actions[^>]*>[\s\S]*?<button[^>]*disabled/);c.schoolDurationUI.toggle('custom',true);
+ c.schoolControl.module('homework');assert.match(c.app.innerHTML,/rule-form-row/);assert.doesNotMatch(c.app.innerHTML,/适用科目/);assert.equal((c.app.innerHTML.match(/默认全科/g)||[]).length,1);assert.doesNotMatch(c.app.innerHTML,/修改权限/);
  c.schoolControl.module('borrowing');for(const mode of ['dates','weekly']){c.schoolControl.rules(mode);assert.match(c.app.innerHTML,/rule-form-card/);assert.match(c.app.innerHTML,/schoolBorrowRulesUI.editRule/);assert.doesNotMatch(c.app.innerHTML,/duration-rule-lines/);}
 });
 test('管理员时长和智阅编辑回显与范围迁移，字段取消不写入，保存一次提交',()=>{
@@ -88,3 +88,7 @@ test('时长生效规则数排除暂停配置，智阅统计当前任教科目',
 
 
 test('学校首页年级计数去重，借用只计开启且生效的合并规则',()=>{const x=setup(),c=x.c;let d=x.data;const weekly=d.schoolSettings.borrowing.classRules['六年级 1 班'].find(r=>r.mode==='weekly');d['六年级 2 班']=[{id:8,name:'新增班学生',world:true}];d.schoolSettings.temporaryClassStates={'六年级 1 班':true,'六年级 2 班':false};const active={id:'active',mode:'dates',deny:true,startDate:R.today(),endDate:R.today(),periods:[]},expired={...active,id:'expired',startDate:x.offset(-2),endDate:x.offset(-1)};d.schoolSettings.borrowing.classRules['六年级 1 班'].push(active,expired);d.schoolSettings.borrowing.classRules['七年级 1 班']=[R.copy(weekly),{...active,id:'same-content'}];x.data=d;c.controlData=d;assert.match(c.schoolControl.entryCard('lock'),/已锁屏 1\/3 年级/);assert.doesNotMatch(c.schoolControl.entryCard('lock'),/ 人</);assert.match(c.schoolControl.entryCard('borrowing'),/1条生效日期规则，1条生效每周规则/);d=x.data;d.schoolSettings.borrowing.dateRestrictionEnabled=false;x.data=d;assert.match(c.schoolControl.entryCard('borrowing'),/0条生效日期规则，1条生效每周规则/);d=x.data;d.schoolSettings.borrowing.weeklyRestrictionEnabled=false;x.data=d;assert.match(c.schoolControl.entryCard('borrowing'),/0条生效日期规则，0条生效每周规则/);assert.equal(x.data.schoolSettings.borrowing.classRules['六年级 1 班'].some(r=>r.id==='d'),true);});
+
+test('学校智阅默认全科为页面说明，新增编辑都不展示适用科目设置行',()=>{
+ const x=setup(),c=x.c;c.schoolControl.module('homework');assert.ok(c.app.innerHTML.indexOf('默认全科')>c.app.innerHTML.indexOf('规则列表'));for(const original of [null,x.data.schoolSettings.adminPolicies.homework[0]]){c.schoolRuleCreateUI.start('homework',original);assert.equal((c.app.innerHTML.match(/默认全科/g)||[]).length,1);assert.doesNotMatch(c.app.innerHTML,/适用科目/);assert.ok(c.app.innerHTML.indexOf('默认全科')<c.app.innerHTML.indexOf('id="school-create-form"'));c.schoolRuleCreateUI.discard();}
+});
