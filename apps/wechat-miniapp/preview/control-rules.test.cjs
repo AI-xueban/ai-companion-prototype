@@ -598,7 +598,7 @@ test('老师日常锁屏整班直接生效，万象保留原班级规则', () =>
   for(const role of ['homeroom','subject']){
     context.controlWorkView=role;
     context.parity.applyStudentLocks([{className:'A',id:1}],true);
-    assert.equal(context.controlData.A[0].locked,true);assert.equal(context.controlData.A[1].locked,false);
+    assert.equal(context.controlData.A[0].locked,true,toast);assert.equal(context.controlData.A[1].locked,false);
     assert.equal(context.controlData.schoolSettings.temporaryClassStates.A,true);
     assert.match(toast,/已保存.*暂不生效/);
     context.controlView='entry';context.renderControl();

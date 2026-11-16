@@ -909,7 +909,7 @@ window.controlDurationStep=function(button,delta){const input=button.closest('.d
   function makeOperation(refs, label, kind, value, extra = {}) { return { refs, label, kind, value, classWide: controlDemoRole === 'admin' || wholeTeacherClass(refs), studentRule: !!ui.editor?.studentRule, module: controlModule, subject: controlModule === 'homework' && controlDemoRole !== 'admin' ? homeworkSubject() : null, base: baseFor(refs), ...extra }; }
   function operationRows(data, operation) {
     if (operation.module === 'duration' && operation.kind === 'save') return R.prepare(data, operation.refs, operation.module, operation.base, 'all').filter(({student}) => R.durationDays(student, operation.value.weekdays, operation.scope).length);
-    if (operation.module === 'lock' && operation.kind === 'boolean') return R.prepare(data, operation.refs, operationModule(operation), operation.base, operation.scope || 'all').filter(({student}) => isLocked(student) !== operation.value);
+    if (operation.module === 'lock' && operation.kind === 'boolean') return R.prepare(data, operation.refs, operationModule(operation), operation.base, operation.scope || 'all').filter(({student}) => Boolean(student.locked) !== operation.value);
     return R.prepare(data, operation.refs, operationModule(operation), operation.base, operation.scope || 'all');
   }
   function currentSelectedRefs() { return controlDemoRole === 'admin' ? adminSelectionRefs() : targetRefs('selected'); }
