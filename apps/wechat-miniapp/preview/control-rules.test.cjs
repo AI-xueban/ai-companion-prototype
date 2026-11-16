@@ -596,18 +596,14 @@ test('老师日常锁屏整班直接生效，万象保留原班级规则', () =>
   context.parity.toggleClassLock(false);assert.ok(context.controlData.A.every(s=>!s.locked));
   assert.equal(context.controlData.schoolSettings.temporaryClassStates.A,true);
   for(const role of ['homeroom','subject']){
-    context.controlWorkView=role;
-    context.parity.applyStudentLocks([{className:'A',id:1}],true);
-    assert.equal(context.controlData.A[0].locked,true,toast);assert.equal(context.controlData.A[1].locked,false);
-    assert.equal(context.controlData.schoolSettings.temporaryClassStates.A,true);
-    assert.match(toast,/已保存.*暂不生效/);
-    context.controlView='entry';context.renderControl();
-    assert.match(context.app.innerHTML,/学校已临时启用年级锁屏，老师设置暂不生效/);
-    context.parity.unlockStudent(1);assert.equal(context.controlData.A[0].locked,false);
+    context.controlWorkView=role;const before=JSON.stringify(context.controlData.A);
+    context.parity.applyStudentLocks([{className:'A',id:1}],true);assert.equal(JSON.stringify(context.controlData.A),before);assert.match(toast,/暂不能调整锁屏/);
+    context.parity.toggleClassLock(true);assert.equal(JSON.stringify(context.controlData.A),before);
+    context.parity.unlockStudent(2);assert.equal(JSON.stringify(context.controlData.A),before);
+    const previousView=context.controlView;context.parity.openStudentLocks();assert.equal(context.controlView,previousView);assert.equal(toast,'学校恢复锁屏后可设置');
+    context.controlData.schoolSettings.temporaryClassStates.A=false;context.parity.applyStudentLocks([{className:'A',id:2}],true);assert.equal(context.controlData.A[1].locked,true);context.parity.unlockStudent(2);assert.equal(context.controlData.A[1].locked,false);context.controlData.schoolSettings.temporaryClassStates.A=true;
   }
-  context.controlWorkView='homeroom';context.parity.applyStudentLocks([{className:'A',id:2}],true);
-  context.controlData.schoolSettings.temporaryClassStates.A=false;context.controlView='entry';context.renderControl();
-  assert.equal(context.controlData.A[1].locked,true);assert.doesNotMatch(context.app.innerHTML,/老师设置暂不生效/);
+  context.controlWorkView='homeroom';
   delete context.controlData.schoolSettings.temporaryClassStates;
   const world = renderActions('world', [2]);
   assert.equal(context.controlView, 'module');

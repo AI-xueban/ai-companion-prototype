@@ -70,6 +70,7 @@
     if (targets(data, operation.names) !== operation.targets) throw Error('所选班级信息有变化，请重新选择');
     if (['class','student'].includes(operation.type)) {
       if (role !== 'homeroom' || operation.names.length !== 1 || operation.names.some(name => !associatedClasses.includes(name))) throw Error('当前没有这个班级的管理权限');
+      if(operation.names.some(name=>denied(state,name)))throw Error('学校已临时停止该年级借用，暂不能调整借用状态');
       if(operation.type==='student' && !data[operation.names[0]].some(student=>student.id===operation.id)) throw Error('所选学生已变化');
     } else if (!['save','delete','temporary'].includes(operation.type) || role !== 'school') throw Error('只有学校管理员可以修改借用时间和临时停止借用');
     if (role === 'school' && !operation.school && ['save', 'temporary'].includes(operation.type)) {
