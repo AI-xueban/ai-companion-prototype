@@ -20,7 +20,7 @@
   const title=(editor.originalStudentIds?.length?'编辑':'新增')+(duration?'使用时长规则':'智阅作业规则'),top=header(title,false).replace('<span></span><h2','<button class="wx-back" aria-label="返回上一页" onclick="parity.cancelEditor()">‹</button><h2');
   app.innerHTML='<main class="screen control-screen school-mobile duration-item-screen rule-form-screen">'+top+'<section class="control-content"><p class="parity-context">'+esc(selectedTeacherClass)+(subject?' · '+esc(subject):'')+'</p><section id="teacher-row-editor" class="control-module-panel duration-settings-panel">'+body+'<p id="parity-error" class="control-error" role="alert"></p></section></section><footer class="borrow-editor-actions">'+action('取消','parity.cancelEditor()')+'<button type="button" class="control-primary" onclick="parity.saveEditor()">保存</button></footer><div id="control-overlay"></div><div id="control-toast" role="status"></div></main>';syncReview();
  }
- function editorCurrent(){return teacher&&controlDemoRole!=='admin'&&controlWorkView==='homeroom'&&['duration','homework'].includes(controlModule)&&controlView==='ruleEditor';}
+ function editorCurrent(){return teacher&&controlDemoRole!=='admin'&&(controlWorkView==='homeroom'&&controlModule==='duration'||controlWorkView==='subject'&&controlModule==='homework')&&controlView==='ruleEditor';}
  function showItem(error=''){
   if(error)return controlToast(error);
   if(!editorCurrent()||!item)return;const {kind,index,value}=item,group=value.groups?.[index],labels={weekdays:'选择星期',periods:'可用时段',continuousMinutes:'连续使用时长',restMinutes:'休息时长',dailyMinutes:'每日累计总时长',answer:'查看答案',explanation:'查看详解'};let body='';

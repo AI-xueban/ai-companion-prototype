@@ -14,7 +14,7 @@ window.controlPageDemo = (() => {
   const choices = Object.entries(groups).flatMap(([group, rows]) => rows.map(([id, label, hint]) => ({id, label, hint, group})));
   let active = '', savedNodes = null, emptyClassName = '';
   const screens = {
-    lockStarted: ['锁屏', '临时锁屏管控中', '学校管理员已开启临时锁屏，老师暂不可修改锁屏。'],
+    lockStarted: ['锁屏', '临时锁屏管控中', '学校已临时启用年级锁屏，老师设置暂不生效'],
     borrowTemporaryStarted: ['柜机借用管控', '学校已开启临时停止借用', '现在不能修改本班借用状态。'],
     borrowTimesChanged: ['柜机借用管控', '借用时间已更新', '是否立即查看学校最新借用时间？'],
     changed: ['保存设置', '其他老师已修改设置', '本次修改未保存，请刷新后重新操作。'],
@@ -40,7 +40,7 @@ window.controlPageDemo = (() => {
       window.parity.renderDemoPage(active);
       app.querySelector('.screen')?.setAttribute('data-control-demo', active);
       if (active === 'lockStarted') {
-        document.getElementById('control-overlay').innerHTML = `<div class="logout-confirm-shade" onclick="if(event.target===this)controlPageDemo.dismiss()"><section class="logout-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="control-demo-lock-title"><h2 id="control-demo-lock-title">学校管理员已开启临时锁屏</h2><p>暂时不能修改锁屏状态。</p><button class="teacher-primary" onclick="controlPageDemo.dismiss()">知道了</button></section></div>`;
+        document.getElementById('control-overlay').innerHTML = `<div class="logout-confirm-shade" onclick="if(event.target===this)controlPageDemo.dismiss()"><section class="logout-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="control-demo-lock-title"><h2 id="control-demo-lock-title">学校管理员已开启临时锁屏</h2><p>学校已临时启用年级锁屏，老师设置暂不生效</p><button class="teacher-primary" onclick="controlPageDemo.dismiss()">知道了</button></section></div>`;
         return;
       }
       if (['classRevoked', 'accountRemoved'].includes(active)) {
