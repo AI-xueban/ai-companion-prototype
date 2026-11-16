@@ -94,8 +94,8 @@ test('全部年级已有规则时新增直接提示且保留列表，已有规�
 test('学校首页直接全校操作且保留老师日常设置，规则入口及返回独立',()=>{
  const fs=require('node:fs'),vm=require('node:vm');let d=M.init(roster()),stored=JSON.stringify(d),dialogs=0;d['四年级 1 班'][0].locked=true;stored=JSON.stringify(d);
  const c={controlRules:R,schoolControlModel:M,controlData:d,controlDemoRole:'admin',controlView:'entry',controlModule:'lock',controlLabels:{},app:{innerHTML:''},header:t=>'<span></span><h2>'+t+'</h2>',syncReview(){},renderControl(){},enterAdminModule(){},parity:{toggleTemporaryLock(){}},borrowing:{temporary(){}},crypto:require('crypto'),localStorage:{getItem:()=>stored,setItem:(k,v)=>stored=v},controlOverlay(){dialogs++;},closeControlOverlay(){},controlToast(){},document:{getElementById:()=>null},addEventListener(){},setInterval(){}};c.window=c;vm.runInNewContext(fs.readFileSync(require.resolve('./control-school.js'),'utf8'),c);
- assert.doesNotMatch(c.schoolControl.entryCard('lock'),/已锁屏 /);
- c.schoolControl.allAction('lock','stop');assert.equal(dialogs,0);assert.equal(c.controlView,'entry');assert.match(c.schoolControl.entryCard('lock'),/已锁屏 2\/2 人/);
+ assert.match(c.schoolControl.entryCard('lock'),/已锁屏 0\/2 年级/);
+ c.schoolControl.allAction('lock','stop');assert.equal(dialogs,0);assert.equal(c.controlView,'entry');assert.match(c.schoolControl.entryCard('lock'),/已锁屏 2\/2 年级/);
  c.schoolControl.module('lock');assert.doesNotMatch(c.app.innerHTML,/全校解除临时锁屏/);c.schoolControl.releaseGrade('四年级');assert.equal(JSON.parse(stored).schoolSettings.temporaryClassStates['四年级 1 班'],false);assert.equal(JSON.parse(stored)['四年级 1 班'][0].locked,true);
  c.schoolControl.allAction('borrowing','stop');assert.match(c.schoolControl.entryCard('borrowing'),/已停止借用 2\/2 人/);
  c.schoolControl.module('borrowing');assert.doesNotMatch(c.app.innerHTML,/新增日期规则|新增每周规则|data-rule-mode/);

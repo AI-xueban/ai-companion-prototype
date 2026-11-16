@@ -23,7 +23,7 @@ test('借用异常预览从可操作页通知，确认后只读或刷新时间�
   assert.equal(overlay.title,'学校已开启临时停止借用');
   assert.match(context.app.innerHTML,/选择停止借用学生/);
   context.borrowing.demoAcknowledge();
-  assert.match(context.app.innerHTML,/学校临时停止借用/);
+  assert.match(context.app.innerHTML,/学校已临时停止该年级借用/);
   assert.doesNotMatch(context.app.innerHTML,/全班停止借用<\/button>/);
   context.borrowing.toggleClass(true);assert.match(notices.at(-1),/异常场景预览/);
   context.borrowing.demoRestore();assert.equal(context.controlDemoRole,'admin');assert.equal(context.controlView,'entry');
@@ -151,7 +151,7 @@ test('混合临时停止借用统一入口，未选状态不保存，取消不�
   }
 });
 
-test('班主任只设置全班借用状态，学校临时停止借用时只读', () => {
+test('班主任只设置全班借用状态，学校临时停止借用时可保存但不生效', () => {
   const fs = require('node:fs'), vm = require('node:vm'), s = M.initial();
   s.studentBans = {2:true}; // Historical per-student data must not create a mixed class state.
   const rowHost = { innerHTML:'' }, footer = { outerHTML:'' }, notices = [];
@@ -183,9 +183,9 @@ test('班主任只设置全班借用状态，学校临时停止借用时只读',
   context.borrowing.toggleClass(false);assert.equal(context.controlData.schoolSettings.borrowing.classBans['五年级 2 班'],false);
   context.controlData.schoolSettings.borrowing.temporaryClasses['五年级 2 班'] = true;
   context.borrowing.render();
-  assert.match(context.borrowing.teacherEntryCard(),/学校已临时停止该班借用/);
-  assert.doesNotMatch(context.borrowing.teacherEntryCard(),/borrowing.toggleClass\(/);
-  assert.match(context.app.innerHTML,/学校临时停止借用/);
+  assert.match(context.borrowing.teacherEntryCard(),/学校已临时停止该年级借用，老师设置暂不生效/);
+  assert.match(context.borrowing.teacherEntryCard(),/borrowing.toggleClass\(/);
+  assert.match(context.app.innerHTML,/学校已临时停止该年级借用/);
   assert.doesNotMatch(context.app.innerHTML,/borrowing.student\(|borrowing.toggleClass\(|borrowing.batch\(/);
 });
 
@@ -268,14 +268,14 @@ test('新增规则表单选择类型与年级，日期冲突留在编辑页供�
   context.borrowing.editorGrade('五年级');assert.match(context.app.innerHTML,/四年级、五年级/); assert.doesNotMatch(context.app.innerHTML,/名学生|影响.*人/);
   context.borrowing.editorGrade('四年级',false);assert.match(context.app.innerHTML,/五年级/);
 });
-test('班主任支持单人和整班停止借用，任课老师跨班及临时停止借用期间拒绝', () => {
+test('班主任支持单人和整班停止借用，拒绝任课老师跨班但允许学校限制期间保存', () => {
   let s = M.initial(), operation = op(s,{type:'class',value:true});
   assert.throws(()=>M.commit(s,operation,data(),'subject',['A']),/权限/);
   assert.throws(()=>M.commit(s,operation,data(),'homeroom',['B']),/权限/);
   assert.equal(M.commit(s,op(s,{type:'student',id:1,value:true}),data(),'homeroom',['A']).studentBans.A[1],true);
   s = M.commit(s,operation,data(),'homeroom',['A']); assert.equal(s.classBans.A,true);
   s.temporaryClasses.A = true;
-  assert.throws(()=>M.commit(s,op(s,{type:'class',value:false}),data(),'homeroom',['A']),/临时停止借用/);
+  s=M.commit(s,op(s,{type:'class',value:false}),data(),'homeroom',['A']); assert.equal(s.classBans.A,false);assert.equal(M.result(s,'A',1),'学校临时停止借用');
   s.temporaryClasses.A = false;
   s = M.commit(s,op(s,{type:'class',value:false}),data(),'homeroom',['A']); assert.equal(s.classBans.A,false);
 });
@@ -336,7 +336,7 @@ test('一次保存多个完整年级，任一年级范围不完整或规则冲�
   assert.equal(state.classRules[names[0]],undefined);
 });
 
-test('学生停止借用只作用本人，整班操作清除例外，临时停止借用优先',()=>{let s=M.initial();const roster={A:[{id:1},{id:2}]};const save=fields=>s=M.commit(s,{...fields,names:['A'],revision:s.revision,targets:M.targets(roster,['A'])},roster,'homeroom',['A']);save({type:'student',id:1,value:true});assert.equal(M.result(s,'A',1),'班主任已停止借用');assert.equal(M.result(s,'A',2),'当前可借用');save({type:'class',value:true});save({type:'student',id:1,value:false});assert.equal(M.result(s,'A',1),'当前可借用');assert.equal(M.result(s,'A',2),'班主任已停止借用');s.temporaryClasses.A=true;assert.throws(()=>save({type:'student',id:1,value:false}),/学校正在/);});
+test('学生停止借用只作用本人，整班操作清除例外，临时停止借用优先',()=>{let s=M.initial();const roster={A:[{id:1},{id:2}]};const save=fields=>s=M.commit(s,{...fields,names:['A'],revision:s.revision,targets:M.targets(roster,['A'])},roster,'homeroom',['A']);save({type:'student',id:1,value:true});assert.equal(M.result(s,'A',1),'班主任已停止借用');assert.equal(M.result(s,'A',2),'当前可借用');save({type:'class',value:true});save({type:'student',id:1,value:false});assert.equal(M.result(s,'A',1),'当前可借用');assert.equal(M.result(s,'A',2),'班主任已停止借用');s.temporaryClasses.A=true;save({type:'student',id:1,value:true});assert.equal(M.result(s,'A',1),'学校临时停止借用');s.temporaryClasses.A=false;assert.equal(M.result(s,'A',1),'班主任已停止借用');});
 test('每周限制开关保留配置并独立于日期、学校临时停止借用',()=>{
  const s=M.initial();s.classRules.A=[weekly('w',[0])];s.classRules.A[0].periods=[{start:'08:00',end:'10:00'}];const now=new Date('2026-11-09T04:00:00Z');
  assert.equal(M.result(s,'A',1,now),'当前不在借用时段');s.weeklyRestrictionEnabled=false;assert.equal(M.result(s,'A',1,now),'当前可借用');assert.equal(s.classRules.A.length,1);
