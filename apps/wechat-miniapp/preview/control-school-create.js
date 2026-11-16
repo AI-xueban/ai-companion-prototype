@@ -25,7 +25,7 @@
  }
  function start(module,original=null){
   if(controlDemoRole!=='admin'||controlModule!==module||!['duration','homework'].includes(module))return;
-  const d=read();if(module==='duration'&&d.schoolSettings.durationRulesEnabled===false)return controlToast('请先启用自定义规则');
+  const d=read();if(original&&module==='duration'&&d.schoolSettings.durationRulesEnabled===false)return controlToast('请先启用自定义规则');
   const policies=d.schoolSettings.adminPolicies[module];if(!original&&M.grades(d).every(g=>!M.rows(d,[g]).length||policies.some(p=>p.grades.includes(g))))return controlToast('全部年级已有规则，请编辑或删除后新增');
   draft={module,base:M.signature(d,module),value:{id:'school-'+crypto.randomUUID(),grades:[],...(module==='duration'?{groups:[{weekdays:[0,1,2,3,4,5,6],value:{continuousMinutes:60,restMinutes:15,dailyMinutes:180,periods:[]}}]}:{answer:false,explanation:false})}};
   draft.original=original?copy(original):null;if(original)draft.value=copy(original);draft.initial=snapshot();item=null;picker=null;closeControlOverlay(true);render();
