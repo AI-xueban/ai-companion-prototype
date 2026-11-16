@@ -21,7 +21,7 @@
       const F=controlRuleFormUI,enabled=d.schoolSettings.durationRulesEnabled!==false,defaultOn=d.schoolSettings.durationDefaultEnabled!==false;
       const defaults=M.grades(d).filter(g=>!enabled||new Set(list.filter(p=>p.grades.includes(g)).flatMap(p=>p.groups.flatMap(g=>g.weekdays))).size<7);
       const body='<section class="control-module-panel school-default-panel">'+ '<div class="school-panel-heading"><h3>默认规则</h3>'+toggle('默认规则',defaultOn,'default')+'</div><p class="school-default-values">全周 · 连续60分钟 · 休息15分钟 · 每日180分钟 · 全天可用</p><p class="school-default-scope">'+(defaultOn?'适用年级：'+esc(defaults.join('、')||'暂无'):'已关闭，未配置星期不执行学校默认时长限制')+'</p></section><div class="school-panel-heading duration-list-heading"><h3>自定义规则</h3>'+toggle('全部自定义规则',enabled,'custom')+'</div>'+list.map((p,i)=>'<section class="control-module-panel rule-form-card"><h3>规则'+(i+1)+'</h3>'+F.row('适用年级',p.grades.join('、'))+F.groups(p.groups)+F.actions("schoolDurationUI.editRule('"+esc(p.id)+"')","schoolDurationUI.deleteRule('"+esc(p.id)+"')",!enabled)+'</section>').join('')+(!list.length?'<p class="control-empty">暂无自定义规则</p>':'');
-      page('使用时长管控',body,enabled?'<footer class="control-fixed-select rule-form-footer">'+button('新增规则','create()')+'</footer>':'');document.querySelector?.('main.school-mobile')?.classList?.add('rule-form-screen');return;
+      page('使用时长管控',body,'<footer class="control-fixed-select rule-form-footer">'+button('新增规则','create()')+'</footer>');document.querySelector?.('main.school-mobile')?.classList?.add('rule-form-screen');return;
     }
     if(selected&&!current)selected=null;
     if(current){
@@ -31,7 +31,7 @@
     }
     const enabled=d.schoolSettings.durationRulesEnabled!==false,defaultOn=d.schoolSettings.durationDefaultEnabled!==false;
     const defaults=M.grades(d).filter(g=>!enabled||new Set(list.filter(p=>p.grades.includes(g)).flatMap(p=>p.groups.flatMap(group=>group.weekdays))).size<7);
-    page('使用时长管控',`<section class="control-module-panel school-default-panel"><div class="school-panel-heading"><h3>默认规则</h3>${toggle('默认规则',defaultOn,'default')}</div><p class="school-default-values">全周 · 连续60分钟 · 休息15分钟 · 每日180分钟 · 全天可用</p><p class="school-default-scope">${defaultOn?'适用年级：'+esc(defaults.join('、')||'暂无'):'已关闭，未配置星期不执行学校默认时长限制'}</p></section><div class="school-panel-heading duration-list-heading"><h3>自定义规则</h3>${toggle('全部自定义规则',enabled,'custom')}</div><section class="control-module-panel duration-rule-lines">${list.map((p,i)=>row('规则'+(i+1),p.grades.join('、'),`open('${esc(p.id)}')`)).join('')||'<p class="parity-note">暂无自定义规则</p>'}</section>${enabled?'<div class="control-add-group">'+button('＋ 新增规则','create()',true)+'</div>':''}`);
+    page('使用时长管控',`<section class="control-module-panel school-default-panel"><div class="school-panel-heading"><h3>默认规则</h3>${toggle('默认规则',defaultOn,'default')}</div><p class="school-default-values">全周 · 连续60分钟 · 休息15分钟 · 每日180分钟 · 全天可用</p><p class="school-default-scope">${defaultOn?'适用年级：'+esc(defaults.join('、')||'暂无'):'已关闭，未配置星期不执行学校默认时长限制'}</p></section><div class="school-panel-heading duration-list-heading"><h3>自定义规则</h3>${toggle('全部自定义规则',enabled,'custom')}</div><section class="control-module-panel duration-rule-lines">${list.map((p,i)=>row('规则'+(i+1),p.grades.join('、'),`open('${esc(p.id)}')`)).join('')||'<p class="parity-note">暂无自定义规则</p>'}</section>${'<div class="control-add-group">'+button('＋ 新增规则','create()',true)+'</div>'}`);
   }
   function openField(kind,index){
     if(!allowed())return;

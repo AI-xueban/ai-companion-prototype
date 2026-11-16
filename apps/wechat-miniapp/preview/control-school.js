@@ -17,7 +17,7 @@ const note={borrowing:'生效优先级：全校停止借用 ＞ 指定日期规�
 const help=()=>'<details class="school-help"><summary>规则说明</summary><p>'+esc(note[controlModule])+'</p></details>';
 const panelHeading=(title,withHelp=true)=>'<div class="school-panel-heading"><h3>'+title+'</h3>'+(withHelp?help():'')+'</div>';
 function weeklyEditorIcon(action,remove=false){const label=remove?'删除时段':'添加时段',path=remove?'M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 10v7M14 10v7':'M12 5v14M5 12h14';return '<button type="button" class="weekly-editor-icon'+(remove?' weekly-editor-remove':'')+'" title="'+label+'" aria-label="'+label+'" onclick="schoolControl.'+action+'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+path+'"/></svg></button>';}
-const ruleTypeEnabled=(d,mode)=>d.schoolSettings.borrowing[mode==='weekly'?'weeklyRestrictionEnabled':'dateRestrictionEnabled']??Object.values(d.schoolSettings.borrowing.classRules).some(list=>list.some(r=>r.mode===mode));
+const ruleTypeEnabled=(d,mode)=>d.schoolSettings.borrowing[mode==='weekly'?'weeklyRestrictionEnabled':'dateRestrictionEnabled']??true;
 function wheelColumn(key,title,max,value){return '<div class="school-wheel-column"><span>'+title+'</span><div class="school-time-wheel" role="listbox" aria-label="'+title+'" data-wheel="'+key+'" onscroll="schoolControl.scrollTime(this,\''+key+'\')">'+Array.from({length:max},(_,v)=>'<button type="button" role="option" aria-selected="'+(v===value)+'" onclick="schoolControl.setTimePart(\''+key+'\','+v+')">'+String(v).padStart(2,'0')+'</button>').join('')+'</div></div>';}
 function showTimePicker(){const {sh,sm,eh,em}=timeDraft;
  controlOverlay(timeDraft.title||'选择可用时段','<div class="school-time-labels"><b>开始时间</b><b>结束时间</b></div><div class="school-time-wheels">'+wheelColumn('sh','时',24,sh)+wheelColumn('sm','分',60,sm)+wheelColumn('eh','时',24,eh)+wheelColumn('em','分',60,em)+'</div><p id="school-time-error" class="control-error" role="alert"></p>',btn('取消','cancelTime()',true)+btn('确定','confirmTime()'));
@@ -46,12 +46,12 @@ function render(){
     const items=list.filter(p=>p.rule.mode===mode);if(mode==='dates')items.sort((a,b)=>a.rule.startDate.localeCompare(b.rule.startDate));
     const enabled=ruleTypeEnabled(d,mode),sectionTitle=mode==='weekly'?'每周固定规则':'日期规则';
     body+='<section class="control-module-panel school-weekly-settings" data-rule-mode="'+mode+'"><div class="school-panel-heading"><h3>'+sectionTitle+'</h3><button type="button" class="school-weekly-switch" role="switch" aria-label="'+sectionTitle+'" aria-checked="'+enabled+'" onclick="schoolControl.toggleRuleType(\''+mode+'\','+!enabled+')"><span aria-hidden="true"></span></button></div>'+(!enabled?'<p class="parity-note">'+sectionTitle+'已关闭，以下规则暂不生效</p>':'')+'<fieldset class="school-weekly-rules" '+(!enabled?'disabled aria-disabled="true"':'')+'>'+(items.length?ruleRows(items):'<p class="parity-note">暂无'+title+'</p>')+'</fieldset></section>';
-    if(enabled)body+='<div class="school-weekly-add-below">'+btn(mode==='weekly'?'新增每周规则':'新增日期规则',"edit(-1,'"+mode+"')",false)+'</div>';
+    body+='<div class="school-weekly-add-below">'+btn(mode==='weekly'?'新增每周规则':'新增日期规则',"edit(-1,'"+mode+"')",false)+'</div>';
    }
   }else if(controlModule==='duration'){
    const enabled=d.schoolSettings.durationRulesEnabled!==false;
    body+='<section class="control-module-panel school-weekly-settings"><div class="school-panel-heading"><h3>使用时长规则</h3><button type="button" class="school-weekly-switch" role="switch" aria-label="使用时长规则" aria-checked="'+enabled+'" onclick="schoolControl.toggleDuration('+!enabled+')"><span aria-hidden="true"></span></button></div>'+(!enabled?'<p class="parity-note">学校自定义规则已关闭，执行默认规则，老师设置保留。</p>':'')+'<fieldset class="school-weekly-rules" '+(!enabled?'disabled':'')+'>'+(list.length?ruleRows(list):'<p class="parity-note">暂无自定义规则</p>')+'</fieldset></section>';
-   if(enabled)body+='<div class="school-weekly-add-below">'+btn('新增年级规则','edit(-1)',false)+'</div>';
+   body+='<div class="school-weekly-add-below">'+btn('新增年级规则','edit(-1)',false)+'</div>';
   }else{
    body+='<div class="school-section-heading school-list-toolbar"><h3>规则列表</h3>'+(window.controlRuleFormUI?'':btn(controlModule==='duration'?'新增规则':'设置权限',"edit(-1)",false))+'</div><section class="control-module-panel school-policy-list">'+(list.length?ruleRows(list):'<p class="control-empty">暂无自定义规则</p>')+'</section>';
   }

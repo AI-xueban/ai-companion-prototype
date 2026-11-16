@@ -7,7 +7,7 @@
  const read=()=>{const r=M.clean(JSON.parse(localStorage.getItem(key)||'null')||controlData);if(r.changed){localStorage.setItem(key,JSON.stringify(r.data));controlData=r.data;}return r.data;};
  const write=d=>{localStorage.setItem(key,JSON.stringify(d));controlData=d;};
  const button=(label,action,secondary=false)=>`<button type="button" class="control-${secondary?'secondary':'primary'}" onclick="schoolBorrowRulesUI.${action}">${label}</button>`;
- const enabled=d=>d.schoolSettings.borrowing[mode==='weekly'?'weeklyRestrictionEnabled':'dateRestrictionEnabled']??Object.values(d.schoolSettings.borrowing.classRules).some(rules=>rules.some(r=>r.mode===mode));
+ const enabled=d=>d.schoolSettings.borrowing[mode==='weekly'?'weeklyRestrictionEnabled':'dateRestrictionEnabled']??true;
  function groups(d){
   const list=[];
   for(const grade of M.grades(d)){
@@ -31,7 +31,7 @@
   if(window.controlRuleFormUI){
    const F=controlRuleFormUI,title=mode==='dates'?'日期规则':'每周规则';
    const body='<div class="school-panel-heading duration-list-heading"><h3>'+title+'</h3><button type="button" class="school-weekly-switch" role="switch" aria-label="'+title+'" aria-checked="'+on+'" onclick="schoolBorrowRulesUI.toggle('+!on+')"><span aria-hidden="true"></span></button></div>'+list.map((p,i)=>'<section class="control-module-panel rule-form-card"><h3>'+title+(i+1)+'</h3>'+F.row('适用年级',p.grades.join('、'))+(mode==='dates'?F.row('开始日期',p.rule.startDate.replaceAll('-','/'))+F.row('结束日期',p.rule.endDate.replaceAll('-','/'))+F.row('借用状态','全天停止借用'):F.groups(R.settingGroups(p.rule,'borrowing'),false))+F.actions('schoolBorrowRulesUI.editRule('+i+')','schoolBorrowRulesUI.deleteRule('+i+')',!on)+'</section>').join('')+(!list.length?'<p class="control-empty">暂无'+title+'</p>':'');
-   page(title,body,on?'<footer class="control-fixed-select rule-form-footer">'+button(mode==='dates'?'新增日期规则':'新增每周规则','create()')+'</footer>':'');document.querySelector?.('main.school-mobile')?.classList?.add('rule-form-screen');return;
+   page(title,body,'<footer class="control-fixed-select rule-form-footer">'+button(mode==='dates'?'新增日期规则':'新增每周规则','create()')+'</footer>');document.querySelector?.('main.school-mobile')?.classList?.add('rule-form-screen');return;
   }
   if(selected&&!current)selected=null;
   if(current){
@@ -40,7 +40,7 @@
    page(title,`<section class="control-module-panel duration-settings-panel">${row('适用年级',current.grades.join('、'),"editField('grades')",!on)}${settings}${on&&mode==='weekly'?'<div class="control-add-group rule-add-group">'+button('＋ 添加时段组',"editField('addGroup')",true)+'</div>':''}</section>${!on?'<p class="parity-note">该类规则已关闭，配置保留。</p>':''}`,on?'<footer class="control-fixed-select rule-detail-footer">'+button('删除规则',"editField('delete')",true)+'</footer>':'');return;
   }
   const title=mode==='dates'?'日期规则':'每周固定规则';
-  page(mode==='dates'?'日期规则':'每周规则',`<div class="school-panel-heading duration-list-heading"><h3>${title}</h3><button type="button" class="school-weekly-switch" role="switch" aria-label="${title}" aria-checked="${on}" onclick="schoolBorrowRulesUI.toggle(${!on})"><span aria-hidden="true"></span></button></div><section class="control-module-panel duration-rule-lines">${list.map((p,i)=>row('规则'+(i+1),p.grades.join('、'),`open(${i})`)).join('')||'<p class="parity-note">暂无'+title+'</p>'}</section>${on?'<div class="control-add-group">'+button(mode==='dates'?'＋ 新增日期规则':'＋ 新增每周规则','create()',true)+'</div>':''}`);
+  page(mode==='dates'?'日期规则':'每周规则',`<div class="school-panel-heading duration-list-heading"><h3>${title}</h3><button type="button" class="school-weekly-switch" role="switch" aria-label="${title}" aria-checked="${on}" onclick="schoolBorrowRulesUI.toggle(${!on})"><span aria-hidden="true"></span></button></div><section class="control-module-panel duration-rule-lines">${list.map((p,i)=>row('规则'+(i+1),p.grades.join('、'),`open(${i})`)).join('')||'<p class="parity-note">暂无'+title+'</p>'}</section>${'<div class="control-add-group">'+button(mode==='dates'?'＋ 新增日期规则':'＋ 新增每周规则','create()',true)+'</div>'}`);
  }
  function gradeDisabled(d,g,f){
   if(!M.rows(d,[g]).length)return true;
@@ -49,7 +49,7 @@
  function openField(kind,index=0){
   if(!allowed())return;
   const d=read(),original=groups(d).find(p=>p.sig===selected);
-  if(!enabled(d))return controlToast('请先启用该类规则');
+  if(kind!=='create'&&!enabled(d))return controlToast('请先启用该类规则');
   if(kind!=='create'&&!original)return;
   const value=original?copy(original):{grades:[],rule:{id:'school-'+crypto.randomUUID(),mode,deny:mode==='dates',startDate:'',endDate:'',weekdays:[],periods:[]}};
   const settingGroups=mode==='weekly'?(original?R.settingGroups(value.rule,'borrowing'):[{weekdays:[],value:{periods:[]}}]):null;
