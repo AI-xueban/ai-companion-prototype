@@ -93,11 +93,11 @@ test('学校智阅默认全科为页面说明，新增编辑都不展示适用�
  const x=setup(),c=x.c;c.schoolControl.module('homework');assert.ok(c.app.innerHTML.indexOf('默认全科')>c.app.innerHTML.indexOf('规则列表'));for(const original of [null,x.data.schoolSettings.adminPolicies.homework[0]]){c.schoolRuleCreateUI.start('homework',original);assert.equal((c.app.innerHTML.match(/默认全科/g)||[]).length,1);assert.doesNotMatch(c.app.innerHTML,/适用科目/);assert.ok(c.app.innerHTML.indexOf('默认全科')<c.app.innerHTML.indexOf('id="school-create-form"'));c.schoolRuleCreateUI.discard();}
 });
 
-test('班主任万象首页无学校提示，子页按当前学校停止记录展示高亮说明',()=>{
+test('班主任万象首页与子页均无学校提示，保留班级与学生名单',()=>{
  const x=setup(),c=x.c;c.controlDemoRole='teacher';c.controlWorkView='homeroom';let d=x.data;d[x.name][0].world=false;d[x.name][0].worldIndividual=true;d[x.name][0].teacherModified.world=true;d.schoolSettings.adminWorldClasses[x.name]=false;d.schoolSettings.adminWorldClasses['六年级 1 班']=true;x.data=d;
  c.borrowing.teacherEntryCard=()=>'';c.controlRoleSwitcher=()=>'';c.teacherTabBar=()=>'';c.controlCardIcon=()=>'';const note='学校已停止该年级使用万象视界，可单独为学生开启';const show=view=>{c.controlData=x.data;c.controlModule='world';c.controlView=view;c.renderControl();};
  for(const view of ['entry','module']){show(view);assert.doesNotMatch(c.app.innerHTML,/学校已停止该年级使用万象视界，可单独为学生开启/);}
- d=x.data;d.schoolSettings.adminWorldClasses[x.name]=true;x.data=d;const before=x.stored;for(const view of ['entry','module']){show(view);assert.equal(c.app.innerHTML.split(note).length-1,view==='module'?1:0);if(view==='module')assert.match(c.app.innerHTML,/school-restriction-notice world-school-notice/);}assert.equal(x.stored,before);
+ d=x.data;d.schoolSettings.adminWorldClasses[x.name]=true;x.data=d;const before=x.stored;for(const view of ['entry','module']){show(view);assert.equal(c.app.innerHTML.split(note).length-1,0);if(view==='module'){assert.match(c.app.innerHTML,/已停止使用学生/);assert.ok(c.app.innerHTML.includes(x.name));}}assert.equal(x.stored,before);
  d=x.data;d.schoolSettings.adminWorldClasses[x.name]=false;x.data=d;for(const view of ['entry','module']){show(view);assert.doesNotMatch(c.app.innerHTML,/学校已停止该年级使用万象视界，可单独为学生开启/);}
 });
 
