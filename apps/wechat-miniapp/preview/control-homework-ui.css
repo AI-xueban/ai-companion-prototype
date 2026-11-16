@@ -460,5 +460,3 @@ body #app main.control-screen .control-sheet:has(.control-student-selection) .co
 
 /* Highlight school restrictions while teacher changes are pending. */
 body.dw-ui-new #app main.control-screen .school-restriction-notice{box-sizing:border-box;margin:14px 0 0;padding:10px 12px;border:1px solid #FFD59B;border-radius:8px;background:#FFF4E5;color:#9A4D00;font-size:14px;font-weight:600;line-height:1.65}
-
-body.dw-ui-new #app main.control-screen .control-content>.world-school-notice{margin-bottom:14px}
