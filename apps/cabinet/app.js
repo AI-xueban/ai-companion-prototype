@@ -462,10 +462,11 @@
   }
 
   function closeFaceConfirmation() {
+    if (faceConfirmModal.hidden || screenEl.dataset.page !== "pickup") return;
     stopFaceConfirmCountdown();
     faceConfirmModal.hidden = true;
     authenticatedStudentId = "";
-    resetFaceIdleTimer();
+    resetFaceLogin();
   }
 
   function startFaceConfirmCountdown() {
