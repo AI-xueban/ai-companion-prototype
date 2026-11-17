@@ -211,14 +211,10 @@
       ui.demo = kind === 'temporary' ? 'temporary-notice' : 'times-notice';
       this.render();
       if (kind === 'temporary') {
-        controlOverlay('学校已开启临时停止借用', `<p>${esc(selectedTeacherClass)}</p><p>学校已临时停止该年级借用，暂不能调整借用状态。</p>`, button('知道了', 'controlPageDemo.dismiss()', false));
+        document.getElementById('control-overlay').innerHTML = `<div class="logout-confirm-shade" onclick="if(event.target===this)controlPageDemo.dismiss()"><section class="logout-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="control-demo-borrow-title"><h2 id="control-demo-borrow-title">学校管理员已开启临时停止借用</h2><p>学校已临时停止该年级借用，暂不能调整借用状态</p><button class="teacher-primary" onclick="controlPageDemo.dismiss()">知道了</button></section></div>`;
       } else {
-        controlOverlay('借用时间已更新', `<p>${esc(selectedTeacherClass)}</p><p>学校管理员刚修改了本班借用时间，是否立即查看？</p>`, button('暂不查看', 'controlPageDemo.defer()') + button('立即查看', 'controlPageDemo.dismiss()', false));
+        document.getElementById('control-overlay').innerHTML = `<div class="logout-confirm-shade" onclick="if(event.target===this)controlPageDemo.defer()"><section class="logout-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="control-demo-times-title"><h2 id="control-demo-times-title">借用时间已更新</h2><p>${esc(selectedTeacherClass)}</p><p>学校管理员刚修改了本班借用时间，是否立即查看？</p><div class="control-actions">${button('暂不查看', 'controlPageDemo.defer()')}${button('立即查看', 'controlPageDemo.dismiss()', false)}</div></section></div>`;
       }
-      const shade = document.querySelector?.('#control-overlay .control-shade');
-      const closeAction = kind === 'temporary' ? 'controlPageDemo.dismiss()' : 'controlPageDemo.defer()';
-      shade?.setAttribute('onclick',`if(event.target===this)${closeAction}`);
-      shade?.querySelector('.control-sheet-head button')?.setAttribute('onclick',closeAction);
     },
     demoAcknowledge() {
       if (ui.demo === 'temporary-notice') { ui.demo = 'temporary-blocked'; this.render(); }
