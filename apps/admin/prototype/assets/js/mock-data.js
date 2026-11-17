@@ -826,7 +826,7 @@ function loadData() {
       syncCabinetCreatedAt(data); syncCabinetInstalledVersions(data);
       syncTabletCreatedAt(data);
       syncDeviceAlerts(data);
-      syncLocalAdminUsageDemo(data);
+      syncAdminOpeningDemo(data);
       syncTeacherUsageDemo(data);
       syncContentCovers(data);
       syncSectionPublishedAt(data);
@@ -841,7 +841,7 @@ function loadData() {
   syncCabinetCreatedAt(data); syncCabinetInstalledVersions(data);
   syncTabletCreatedAt(data);
   syncDeviceAlerts(data);
-  syncLocalAdminUsageDemo(data);
+  syncAdminOpeningDemo(data);
   syncTeacherUsageDemo(data);
   return data;
 }
@@ -864,37 +864,32 @@ function syncTeacherUsageDemo(data) {
   records.unshift(...additions);
 }
 
-function syncLocalAdminUsageDemo(data) {
-  const records = data.usageRecords || (data.usageRecords = []);
-  const additions = Array.from({ length: 5 }, (_, index) => {
-    const slot = index + 1;
-    return {
-      id: `UR-DEMO-LOCAL-ADMIN-20261111-${slot}`,
-      batchId: 'BATCH-LOCAL-ADMIN-20261111-0930',
-      borrowerType: 'local_admin', studentId: '123', studentName: '123', grade: '—',
-      tabletId: `TAB-${String(slot).padStart(3, '0')}`, sn: `SN20260301${String(slot).padStart(3, '0')}`,
-      cabinetBorrow: 'CAB-001', slotBorrow: slot, borrowAt: '2026-11-11 09:30:00',
-      status: index < 2 ? 'returned' : 'borrowed',
-      returnAt: index < 2 ? `2026-11-11 10:${index === 0 ? '15' : '18'}:00` : null,
-      cabinetReturn: index < 2 ? 'CAB-001' : null, slotReturn: index < 2 ? slot : null,
-    };
-  }).filter(record => !records.some(existing => existing.id === record.id));
-  records.unshift(...additions);
-  const doorExamples = [
-    ['CAB-002', 8, '123', 'open_success', '09:20:00'],
-    ['CAB-003', 12, '123', 'open_failed', '09:00:00'],
-    ['CAB-002', 9, '123', 'open_sent', '08:55:00'],
-  ].map(([cabinetBorrow, slotBorrow, studentName, status, time], index) => ({
+function syncAdminOpeningDemo(data) {
+  // Administrator openings are operation logs, never administrator equipment loans.
+  data.usageRecords = (data.usageRecords || []).filter(record =>
+    !(record.borrowerType === 'local_admin' && record.operationType !== 'admin_open') &&
+    !String(record.id).startsWith('UR-DEMO-LOCAL-ADMIN-') &&
+    record.status !== 'open_sent');
+  const records = data.usageRecords;
+  const examples = [
+    ['CAB-002', 8, 'open_success', '09:20:00'],
+    ['CAB-003', 12, 'open_failed', '09:00:00'],
+  ].map(([cabinetBorrow, slotBorrow, status, time], index) => ({
     id: `OP-DEMO-ADMIN-OPEN-20261111-${index + 1}`, operationType: 'admin_open',
-    borrowerType: 'local_admin', studentId: '123', studentName, cabinetBorrow, slotBorrow,
+    borrowerType: 'local_admin', studentId: '123', studentName: '123', cabinetBorrow, slotBorrow,
     operatedAt: `2026-11-11 ${time}`, status, sn: null, tabletId: null, grade: null, returnAt: null,
-  })).filter(record => !records.some(existing => existing.id === record.id));
-  records.unshift(...doorExamples);
-  records.forEach(record => {
-    if (record.borrowerType === 'local_admin' && record.studentName === '本地管理员') {
-      record.studentName = record.studentId || '123';
-    }
-  });
+  }));
+  // These records follow cabinet inventory recovery, not an administrator loan.
+  const equipmentExamples = DEFAULT_DATA.tablets.slice(2, 4).map((tablet, index) => ({
+    id: `OP-DEMO-ADMIN-EQUIPMENT-20261117-${index + 1}`, operationType: 'admin_open',
+    borrowerType: 'local_admin', studentId: '123', studentName: '123',
+    cabinetBorrow: tablet.cabinetId, slotBorrow: tablet.slotNo, tabletId: tablet.id, sn: tablet.sn,
+    hadInCabinetDevice: true, openResult: 'open_success', status: 'open_success',
+    operatedAt: `2026-11-17 09:${index ? '20' : '30'}:00`, grade: null,
+    returnAt: index ? '2026-11-17 10:15:00' : null,
+    cabinetReturn: index ? tablet.cabinetId : null, slotReturn: index ? tablet.slotNo : null,
+  }));
+  records.unshift(...[...equipmentExamples, ...examples].filter(record => !records.some(existing => existing.id === record.id)));
 }
 
 function syncTabletCreatedAt(data) {
