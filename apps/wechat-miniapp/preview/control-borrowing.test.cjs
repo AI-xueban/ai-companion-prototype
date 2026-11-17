@@ -10,26 +10,26 @@ test('借用异常预览从可操作页通知，确认后只读或刷新时间�
   const fs = require('node:fs'), vm = require('node:vm'), className = '五年级 2 班';
   const state = M.initial(); state.classRules[className] = [weekly('w',[0,1,2,3,4])];
   const controlData = {[className]:[{id:1,name:'林小满'}],schoolSettings:{borrowing:state}};
-  let overlay, writes=0; const notices=[];
+  let overlay, writes=0; const notices=[],noticeElement={innerHTML:''};
   const context = {controlRules:R,borrowingModel:M,schoolControlClasses:[className],controlClasses:[className],schoolGrades:()=>['五年级'],
     controlData,controlDemoRole:'admin',controlWorkView:'school',controlView:'entry',controlModule:'duration',adminLevel:'school',adminSelectedGrade:'',selectedTeacherClass:className,
     stage:'other',teacherTab:'control',app:{innerHTML:''},header:t=>'<span></span><h2>'+t+'</h2>',syncReview(){},isHeadTeacherClass:()=>true,
     localStorage:{getItem:()=>null,setItem(){writes++;}},controlToast:message=>notices.push(message),
     controlOverlay:(title,body,footer)=>{overlay={title,body,footer};},closeControlOverlay(){},renderControl(){},openControlModule(){},enterAdminModule(){},
-    document:{querySelector:()=>null}};
+    document:{querySelector:()=>null,getElementById:id=>id==='control-overlay'?noticeElement:null}};
   context.window=context;vm.createContext(context);
   vm.runInContext(fs.readFileSync(require.resolve('./control-borrowing.js'),'utf8'),context);
   context.borrowing.demoStart('temporary');
-  assert.equal(overlay.title,'学校已开启临时停止借用');
+  assert.match(noticeElement.innerHTML,/logout-confirm-shade/);assert.match(noticeElement.innerHTML,/logout-confirm-dialog/);assert.match(noticeElement.innerHTML,/role="alertdialog"/);assert.match(noticeElement.innerHTML,/学校管理员已开启临时停止借用/);assert.match(noticeElement.innerHTML,/if\(event.target===this\)controlPageDemo.dismiss\(\)/);assert.match(noticeElement.innerHTML,/>知道了<\/button>/);assert.doesNotMatch(noticeElement.innerHTML,/control-sheet|五年级 2 班/);
   assert.match(context.app.innerHTML,/选择停止借用学生/);
   context.borrowing.demoAcknowledge();
   assert.match(context.app.innerHTML,/学校已临时停止该年级借用/);
   assert.doesNotMatch(context.app.innerHTML,/全班停止借用<\/button>/);
   context.borrowing.toggleClass(true);assert.match(notices.at(-1),/异常场景预览/);
   context.borrowing.demoRestore();assert.equal(context.controlDemoRole,'admin');assert.equal(context.controlView,'entry');
-  context.borrowing.demoStart('times');assert.equal(overlay.title,'借用时间已更新');
-  assert.match(overlay.body,/是否立即查看？/);assert.match(overlay.footer,/暂不查看/);assert.match(overlay.footer,/立即查看/);
-  context.borrowing.demoDefer();assert.doesNotMatch(overlay.title,/学校借用时间/);
+  context.borrowing.demoStart('times');assert.match(noticeElement.innerHTML,/logout-confirm-dialog/);assert.match(noticeElement.innerHTML,/借用时间已更新/);
+  assert.match(noticeElement.innerHTML,/是否立即查看？/);assert.match(noticeElement.innerHTML,/controlPageDemo.defer\(\)/);assert.match(noticeElement.innerHTML,/controlPageDemo.dismiss\(\)/);assert.match(noticeElement.innerHTML,/暂不查看/);assert.match(noticeElement.innerHTML,/立即查看/);assert.doesNotMatch(noticeElement.innerHTML,/control-sheet/);
+  context.borrowing.demoDefer();assert.equal(overlay,undefined);
   context.borrowing.demoRestore();context.borrowing.demoStart('times');
   context.borrowing.demoAcknowledge();assert.equal(overlay.title,'学校借用时间');assert.match(overlay.body,/全天停止借用/);
   context.borrowing.demoRestore();assert.equal(writes,0);assert.deepEqual(state.classRules[className],[weekly('w',[0,1,2,3,4])]);
