@@ -839,6 +839,12 @@ function usageBorrowerTypeLabel(record) {
 }
 
 
+function usageClassLabel(record) {
+  const value = String(record.grade ?? '').trim();
+  if (record.borrowerType === 'teacher' && (!value || /^[—–-]+$/.test(value))) return '';
+  return value || '——';
+}
+
 function renderUsageTableRows(records, startIndex = 0) {
   if (!records.length) {
     return '<tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:32px">暂无符合条件的使用记录</td></tr>';
@@ -852,7 +858,7 @@ function renderUsageTableRows(records, startIndex = 0) {
       <td><span class="usage-borrower-tag">${usageBorrowerTypeLabel(r)}</span></td>
       <td>${esc(r.studentName)}</td>
       <td>${esc(r.studentId || '—')}</td>
-      <td>${esc(r.grade || '——')}</td>
+      <td>${esc(usageClassLabel(r))}</td>
       <td>${usageRecordStateTag(r)}</td>
       <td>${esc(r.operatedAt || r.borrowAt || '——')}</td>
       <td>${r.returnAt || '——'}</td>
@@ -1473,7 +1479,8 @@ function renderDeviceUsageDetailPage(params) {
         <div class="detail-item"><label>记录ID</label><span>${esc(r.id)}</span></div>
         <div class="detail-item"><label>设备</label><span>${esc(formatTabletIdDisplay(r.tabletId))} / ${esc(r.sn)}</span></div>
         <div class="detail-item"><label>借用人类型</label><span>${usageBorrowerTypeLabel(r)}</span></div>${r.batchId ? `<div class="detail-item"><label>借取批次号</label><span>${esc(r.batchId)}</span></div>` : ''}
-        <div class="detail-item"><label>借用人</label><span>${esc(r.studentName)}（${esc(r.studentId)}）${esc(r.grade)}</span></div>
+        <div class="detail-item"><label>借用人</label><span>${esc(r.studentName)}（${esc(r.studentId)}）</span></div>
+        <div class="detail-item"><label>班级</label><span>${esc(usageClassLabel(r))}</span></div>
         <div class="detail-item"><label>借出</label><span>${esc(r.cabinetBorrow)} 仓位 #${r.slotBorrow} · ${r.borrowAt}</span></div>
         <div class="detail-item"><label>${r.status === 'cancelled' ? '取消' : '归还'}</label><span>${
           r.status === 'cancelled'

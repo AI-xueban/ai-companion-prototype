@@ -852,7 +852,7 @@ function syncTeacherUsageDemo(data) {
     id: `UR-DEMO-TEACHER-20261113-${index + 1}`,
     batchId: `TEACHER-20261113-093${index}`,
     operationType: 'normal', borrowerType: 'teacher',
-    studentId: '18018001800', studentName: '18018001800', grade: '——',
+    studentId: '18018001800', studentName: '18018001800', grade: '',
     tabletId: tablet.id, sn: tablet.sn,
     cabinetBorrow: tablet.cabinetId, slotBorrow: tablet.slotNo,
     borrowAt: `2026-11-13 09:3${index}:00`,
@@ -862,6 +862,21 @@ function syncTeacherUsageDemo(data) {
     slotReturn: index < 2 ? tablet.slotNo : null,
   })).filter(record => !records.some(existing => existing.id === record.id));
   records.unshift(...additions);
+  // Preserve actual teacher class values; retire only the old empty-value marker.
+  records.filter(record => record.borrowerType === 'teacher').forEach(record => {
+    if (/^[—–-]+$/.test(String(record.grade || '').trim())) record.grade = '';
+  });
+  const classDemoId = 'UR-DEMO-TEACHER-WITH-CLASS-20261117';
+  if (!records.some(record => record.id === classDemoId)) {
+    const tablet = DEFAULT_DATA.tablets[9];
+    records.unshift({
+      id: classDemoId, operationType: 'normal', borrowerType: 'teacher',
+      studentId: '18018001801', studentName: '陈老师', grade: '五年级1班',
+      tabletId: tablet.id, sn: tablet.sn, cabinetBorrow: tablet.cabinetId, slotBorrow: tablet.slotNo,
+      borrowAt: '2026-11-14 09:30:00', status: 'returned', returnAt: '2026-11-14 10:00:00',
+      cabinetReturn: tablet.cabinetId, slotReturn: tablet.slotNo,
+    });
+  }
 }
 
 function removeAdminOpeningDemo(data) {
