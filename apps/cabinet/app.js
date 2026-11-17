@@ -49,6 +49,7 @@
   const faceDesc = document.getElementById("faceDesc");
   let recognitionTimer = null;
   let faceIdleTimer = null;
+  let storeIdleTimer = null;
   let toastReturnPage = "home";
   const facePreview = document.getElementById("facePreview");
   const faceSnapshot = document.getElementById("faceSnapshot");
@@ -192,7 +193,24 @@
   let batchRecords;
   try { batchRecords = JSON.parse(localStorage.getItem(batchRecordsKey) || '[]'); } catch { batchRecords = []; }
   if (!Array.isArray(batchRecords)) batchRecords = [];
-  function batchAvailable() { return ALL_DEVICES.filter(d => !openingSlots.has(d.slot) && !batchRecords.some(r => r.deviceId === d.id && !r.returnAt)); }
+  // Cabinet inventory overrides are device states, not borrower/loan records.
+  const adminOutKey = 'cabinet-admin-out-demo-v1';
+  let adminOutDevices;
+  try { adminOutDevices = JSON.parse(localStorage.getItem(adminOutKey) || '[]'); } catch { adminOutDevices = []; }
+  if (!Array.isArray(adminOutDevices)) adminOutDevices = [];
+  // Migrate older prototype admin-opening loans without making their devices available.
+  const legacyAdminRecords = batchRecords.filter(record => record.operationType === 'admin_open');
+  if (legacyAdminRecords.length) {
+    for (const record of legacyAdminRecords) {
+      if (!record.returnAt && !adminOutDevices.some(device => device.deviceId === record.deviceId)) {
+        adminOutDevices.push({ deviceId: record.deviceId, slot: record.slot, openedAt: record.borrowAt });
+      }
+    }
+    localStorage.setItem(adminOutKey, JSON.stringify(adminOutDevices));
+    batchRecords = batchRecords.filter(record => record.operationType !== 'admin_open');
+    localStorage.setItem(batchRecordsKey, JSON.stringify(batchRecords));
+  }
+  function batchAvailable() { return ALL_DEVICES.filter(d => !openingSlots.has(d.slot) && !adminOutDevices.some(state => state.deviceId === d.id) && !batchRecords.some(r => r.deviceId === d.id && !r.returnAt)); }
   function updateAdminBorrowAvailability() {
     if (screenEl.dataset.page !== 'devices' || adminAccountType !== 'teacher') return;
     const keyword = deviceSearchInput.value.trim().toLowerCase();
@@ -232,10 +250,9 @@
     document.getElementById('openAllDoors').disabled = adminOpeningSubmitting;
   }
   async function openAdminCabinetDoors(slots) {
-    if (!adminSession || adminAccountType === 'teacher' || adminOpeningSubmitting) return;
+    if (!adminSession || adminAccountType !== 'local_admin' || adminOpeningSubmitting) return;
     const generation = adminSessionGeneration;
     const accountId = adminAccountId;
-    const accountType = adminAccountType;
     // Lock eligible equipment before issuing the simulated door command.
     const devices = batchAvailable().filter(device => slots.includes(device.slot));
     devices.forEach(device => openingSlots.add(device.slot));
@@ -248,18 +265,17 @@
       if (!adminSession || generation !== adminSessionGeneration) return;
       const at = new Date().toISOString();
       const batchId = 'OPEN-' + Date.now() + '-' + (++adminOperationSequence);
-      const loans = devices.map(device => ({ id: batchId + '-' + device.id, batchId, deviceId: device.id, slot: device.slot, borrowerId: accountId, borrowerType: accountType, operationType: 'admin_open', borrowAt: at, returnAt: null }));
-      const nextRecords = [...batchRecords, ...loans];
+      const nextStates = [...adminOutDevices, ...devices.map(device => ({ deviceId: device.id, slot: device.slot, openedAt: at }))];
       const logKey = 'cabinet-door-open-demo-v1';
       let logs;
       try { logs = JSON.parse(localStorage.getItem(logKey) || '[]'); } catch { logs = []; }
       if (!Array.isArray(logs)) logs = [];
       localStorage.setItem(logKey, JSON.stringify([...logs, ...slots.map(slot => ({ id: batchId + '-' + slot, batchId, slot, operatorId: accountId, openedAt: at, result: 'success', deviceId: devices.find(device => device.slot === slot)?.id || null }))]));
-      localStorage.setItem(batchRecordsKey, JSON.stringify(nextRecords));
-      batchRecords = nextRecords;
+      localStorage.setItem(adminOutKey, JSON.stringify(nextStates));
+      adminOutDevices = nextStates;
       cabinetDoorInput.value = '';
       const result = document.getElementById('cabinetOpenResult');
-      result.textContent = `已打开${slots.length}个格口，新增${devices.length}条设备借用记录`;
+      result.textContent = `已打开${slots.length}个格口，${devices.length}台设备已标记为借出`;
       result.hidden = false;
     } catch {
       upgradeMessage('开柜未完成，请核实设备状态后重试');
@@ -289,6 +305,8 @@
     document.getElementById('cabinetOpenResult').hidden = true;
     batchRecords = [];
     localStorage.setItem(batchRecordsKey, '[]');
+    adminOutDevices = [];
+    localStorage.setItem(adminOutKey, '[]');
     // In this prototype, in-cabinet count is exactly the available-device count.
     updateAdminBorrowAvailability();
     pendingBorrow = null;
@@ -335,12 +353,14 @@
   document.querySelector('.admin-menu').addEventListener('click', e => {
     const item=e.target.closest('[data-admin-feature]');
     if(!item || !adminSession) return;
+    if (adminAccountType === 'school_admin' && ['开柜测试', '设备管理'].includes(item.dataset.adminFeature)) return;
     if (item.dataset.adminFeature === '开柜测试') return showPage('admin-open-test');
     document.getElementById('adminFeatureNote').textContent=item.dataset.adminFeature+'：登录后进入柜机现有功能页面，沿用原有操作流程。';
   });
 
   function showPage(name, options = {}) {
     if (registrationLocked) return;
+    clearTimeout(storeIdleTimer);
     clearTimeout(recognitionTimer);
     clearTimeout(faceIdleTimer);
     faceConfirmModal.hidden = true;
@@ -349,11 +369,17 @@
     if (adminBorrowToast) { successToast.hidden = true; adminBorrowToast = false; }
     const adminPages = ['admin-manage', 'admin-batch-borrow', 'admin-open-test'];
     if (adminPages.includes(name) && !adminSession) name = 'admin-login';
+    if (adminSession && adminAccountType === 'school_admin' && name === 'admin-open-test') name = 'admin-manage';
     if (adminSession && adminAccountType === 'teacher' && ['admin-manage', 'admin-open-test'].includes(name)) name = 'devices';
     if (adminSession && adminAccountType !== 'teacher' && name === 'admin-batch-borrow') name = 'admin-manage';
     if (adminSession && adminAccountType === 'teacher' && name === 'admin-batch-borrow') name = 'devices';
     if (name === 'admin-login' || (adminSession && !adminPages.includes(name) && !(adminAccountType === 'teacher' && name === 'devices'))) resetAdminLogin();
     if (name === 'admin-open-test') document.getElementById('cabinetOpenResult').hidden = true;
+    if (name === 'admin-manage') {
+      document.querySelectorAll('[data-admin-feature]').forEach(item => {
+        item.hidden = adminAccountType === 'school_admin' && ['开柜测试', '设备管理'].includes(item.dataset.adminFeature);
+      });
+    }
     clearTimeout(enrollmentTimer);
     enrollFailureAction.hidden = true;
     document.querySelectorAll(".page").forEach((page) => {
@@ -390,7 +416,17 @@
     if (!options.keepReturnModal) closeReturnConfirm();
 
     if (name !== "devices") closeBorrowConfirm();
+    resetStoreIdleTimer();
   }
+
+  function resetStoreIdleTimer() {
+    clearTimeout(storeIdleTimer);
+    storeIdleTimer = null;
+    if (screenEl.dataset.page !== "store" || !returnConfirmModal.hidden || !successToast.hidden) return;
+    storeIdleTimer = window.setTimeout(() => showPage("home"), 30000);
+  }
+
+  ["pointerdown", "keydown"].forEach(type => screenEl.addEventListener(type, resetStoreIdleTimer));
 
   function resetFaceLogin({ autoRecognize = true } = {}) {
     faceLogin.classList.remove("is-processing");
@@ -539,7 +575,8 @@
 
   function prepareOriginalSlotData() {
     const borrowed = batchRecords.find(r => !r.returnAt);
-    const device = borrowed ? ALL_DEVICES.find(d => d.id === borrowed.deviceId) || ALL_DEVICES[0] : ALL_DEVICES[Math.floor(Math.random() * ALL_DEVICES.length)];
+    const returningDeviceId = borrowed?.deviceId || adminOutDevices[0]?.deviceId;
+    const device = ALL_DEVICES.find(d => d.id === returningDeviceId) || ALL_DEVICES[Math.floor(Math.random() * ALL_DEVICES.length)];
     pendingSlot = device.slot;
     pendingDeviceId = device.id;
     if (returnSlotNum) returnSlotNum.textContent = pendingSlot;
@@ -584,6 +621,7 @@
   }
 
   function openReturnConfirm() {
+    clearTimeout(storeIdleTimer);
     const notCharging = returnCheckState === "not_charging";
     document.getElementById('returnConfirmTitle').textContent = notCharging ? '未检测到充电' : '确认归还';
     returnConfirmModal.querySelector('p').hidden = notCharging;
@@ -595,6 +633,7 @@
 
   function closeReturnConfirm() {
     returnConfirmModal.hidden = true;
+    resetStoreIdleTimer();
   }
 
   function openReturnFlow() {
@@ -634,6 +673,8 @@
   function triggerReturnSuccess() {
     const record = batchRecords.find(r => r.deviceId === pendingDeviceId && !r.returnAt);
     if (record) { record.returnAt = new Date().toISOString(); localStorage.setItem(batchRecordsKey, JSON.stringify(batchRecords)); }
+    adminOutDevices = adminOutDevices.filter(state => state.deviceId !== pendingDeviceId);
+    localStorage.setItem(adminOutKey, JSON.stringify(adminOutDevices));
     closeReturnConfirm();
     hideReturnCheckTip();
     openSuccessToast({
@@ -642,6 +683,7 @@
       deviceLabel: pendingDeviceId,
       slotLabel: pendingSlot,
       returnPage: "store",
+      duration: 3000,
     });
   }
 
@@ -718,7 +760,11 @@
     }
   }
 
-  function openSuccessToast({ title, desc, deviceLabel, slotLabel, issueLabel, isAdminBorrow = false, doorNumbers = [], returnPage = "home", duration = TOAST_MS }) {
+  function openSuccessToast({ title, desc, deviceLabel, slotLabel, issueLabel, isAdminBorrow = false, doorNumbers = [], returnPage = "home", duration = TOAST_MS, borrowerLabel = "" }) {
+    clearTimeout(storeIdleTimer);
+    const account = document.getElementById("toastStudentAccount");
+    account.hidden = !borrowerLabel || isAdminBorrow;
+    account.textContent = borrowerLabel ? `平板登录账号：${borrowerLabel}` : "";
     toastReturnPage = returnPage;
     clearTimeout(faceIdleTimer);
     clearTimeout(recognitionTimer);
@@ -773,13 +819,14 @@
 
   function borrowForStudent(id, returnPage = "pickup") {
     if (!successToast.hidden) return;
-    // Student prototype always demonstrates a successful match and opening.
-    // Failure rules remain in requirements; do not consume demo stock or persist student loans.
-    const device = ALL_DEVICES[0];
-    confirmBorrow(device.id, device.slot, returnPage);
+    // Respect cabinet inventory, while keeping student demo loans non-persistent.
+    const device = batchAvailable()[0];
+    if (!device) return upgradeMessage("当前暂无可借设备");
+    // Display the intended tablet account in this prototype; real device sign-in requires integration.
+    confirmBorrow(device.id, device.slot, returnPage, id);
   }
 
-  function confirmBorrow(deviceId, slot, returnPage = "pickup") {
+  function confirmBorrow(deviceId, slot, returnPage = "pickup", borrowerLabel = "") {
     pendingBorrow = null;
     closeBorrowConfirm();
     openSuccessToast({
@@ -789,6 +836,7 @@
       slotLabel: slot,
       returnPage,
       duration: 3000,
+      borrowerLabel,
     });
   }
 

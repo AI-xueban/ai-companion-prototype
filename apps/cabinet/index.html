@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20261116-merged-student-teacher" />
+  <link rel="stylesheet" href="styles.css?v=20261117-face-actions-raised" />
 </head>
 <body>
   <aside class="studio-bar">
@@ -40,7 +40,7 @@
       <button type="button" class="nav-btn nav-demo" id="simulateNewerCabinetUpgrade">模拟已下载后收到新版</button>
     </nav>
     <button type="button" class="nav-btn nav-demo" id="resetDemoAvailability">模拟设备全部可借用</button>
-    <button type="button" class="nav-btn nav-demo" id="upgradeNetwork">模拟下载断网</button><div class="admin-demo-note"><strong>管理员登录模拟</strong><div class="admin-demo-section"><small>管理员 · 手机号验证码</small><p><span class="admin-demo-value"><b>13800000000</b><button type="button" class="admin-fill-btn" data-admin-fill="phone">填入号码</button></span></p><p><span class="admin-demo-value"><b>123456</b><button type="button" class="admin-fill-btn" data-admin-fill="code">填入验证码</button></span></p></div><div class="admin-demo-section"><small>本地管理员 · 编号密码</small><p>账号 <b>123</b> / 密码 <b>123</b></p><button type="button" class="admin-fill-btn" id="fillLocalAdmin">填入本地账号密码</button></div><div class="admin-demo-section"><small>老师 · 编号密码</small><p>账号 <b>18018001800</b></p><p>密码 <b>18001800</b>（账号后八位）</p><button type="button" class="admin-fill-btn" id="fillTeacher">填入老师账号密码</button></div></div>
+    <button type="button" class="nav-btn nav-demo" id="upgradeNetwork">模拟下载断网</button><div class="admin-demo-note"><strong>管理员登录模拟</strong><div class="admin-demo-section"><small>学校管理员 · 手机号验证码</small><p><span class="admin-demo-value"><b>13800000000</b><button type="button" class="admin-fill-btn" data-admin-fill="phone">填入号码</button></span></p><p><span class="admin-demo-value"><b>123456</b><button type="button" class="admin-fill-btn" data-admin-fill="code">填入验证码</button></span></p></div><div class="admin-demo-section"><small>本地管理员 · 编号密码</small><p>账号 <b>123</b> / 密码 <b>123</b></p><button type="button" class="admin-fill-btn" id="fillLocalAdmin">填入本地账号密码</button></div><div class="admin-demo-section"><small>老师 · 编号密码</small><p>账号 <b>18018001800</b></p><p>密码 <b>18001800</b>（账号后八位）</p><button type="button" class="admin-fill-btn" id="fillTeacher">填入老师账号密码</button></div></div>
     <p class="studio-hint">画布会按窗口自动等比缩小，完整显示在当前屏幕内；设计稿仍为 1080×1920。</p>
   </aside>
 
@@ -102,13 +102,13 @@
               <h1>AI学伴共享柜机</h1>
             </header>
             <div class="guide-columns">
-              <button type="button" class="guide-col guide-pickup guide-borrow-entry" data-goto="pickup" data-login-mode="face">
-                <svg class="guide-entry-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 5H10a5 5 0 0 0-5 5v10m39-15h10a5 5 0 0 1 5 5v10M5 44v10a5 5 0 0 0 5 5h10m39-15v10a5 5 0 0 1-5 5H44"/><circle cx="32" cy="25" r="8"/><path d="M19 47v-3c0-12 26-12 26 0v3"/></svg>
-                <h3>人脸识别借</h3>
-              </button>
-              <button type="button" class="guide-col guide-pickup guide-borrow-entry" data-goto="pickup" data-login-mode="password">
-                <svg class="guide-entry-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" aria-hidden="true"><rect x="9" y="4" width="46" height="56" rx="7"/><g fill="currentColor" stroke="none"><circle cx="22" cy="18" r="3"/><circle cx="32" cy="18" r="3"/><circle cx="42" cy="18" r="3"/><circle cx="22" cy="32" r="3"/><circle cx="32" cy="32" r="3"/><circle cx="42" cy="32" r="3"/><circle cx="22" cy="46" r="3"/><circle cx="32" cy="46" r="3"/><circle cx="42" cy="46" r="3"/></g></svg>
-                <h3>编号密码借</h3>
+              <button type="button" class="guide-col guide-pickup" data-goto="pickup" data-login-mode="face">
+                <h3><span class="guide-char">借</span></h3>
+                <ol class="guide-steps">
+                  <li><span>1</span>人脸识别登录，也可使用编号密码登录</li>
+                  <li><span>2</span>登录成功后自动分配设备并打开柜门</li>
+                  <li><span>3</span>按提示取走平板，平板自动登录对应账号</li>
+                </ol>
               </button>
               <button type="button" class="guide-col guide-store" data-goto="store">
                 <h3><span class="guide-char">还</span></h3>
@@ -156,7 +156,6 @@
           <div class="cabinet-test-controls">
             <div class="cabinet-test-group"><label for="cabinetDoorNumber">开柜功能测试</label><input id="cabinetDoorNumber" inputmode="numeric" maxlength="2" placeholder="输入门号：" autocomplete="off" /><button type="button" id="openSingleDoor">单 个 开 门</button></div>
             <div class="cabinet-test-group"><p>全部开柜功能测试</p><button type="button" id="openAllDoors">全 部 开 门</button></div>
-            <p class="cabinet-test-note">说明：有在柜设备的格口开门后，设备将记为本人借用，需逐台扫码归还。空格口或设备已借出的格口，只记录开门，不新增借用记录。</p>
             <p class="cabinet-test-result" id="cabinetOpenResult" role="status" hidden></p>
           </div>
         </section>
@@ -409,6 +408,7 @@
             </div>
             <h3 id="toastTitle">取出来啦</h3>
             <p class="toast-desc">柜门开了，把平板拿走吧</p>
+            <p id="toastStudentAccount" class="toast-student-account" hidden></p>
             <p id="toastAdminDoors" class="toast-admin-doors" hidden></p>
             <div class="toast-meta">
               <div>
@@ -428,6 +428,6 @@
     </div>
   </main>
 
-  <script src="app.js?v=20261116-merged-student-teacher"></script>
+  <script src="app.js?v=20261117-return-3s-scan-30s"></script>
 </body>
 </html>
