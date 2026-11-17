@@ -817,6 +817,22 @@ function syncCabinetInstalledVersions(data) {
   });
 }
 
+// 原型演示凭据；仅为已存在的样例柜机补充字段，不覆盖已有值。
+function syncCabinetLocalAdmin(data) {
+  const sampleCounts = { 'CAB-001': 3, 'CAB-002': 2, 'CAB-003': 1 };
+  (data.cabinets || []).forEach(cabinet => {
+    if (Array.isArray(cabinet.localAdmins)) return;
+    const legacy = cabinet.localAdminAccount !== undefined || cabinet.localAdminPassword !== undefined;
+    const count = sampleCounts[cabinet.id] || 0;
+    if (!count && !legacy) return;
+    cabinet.localAdmins = [{ account: legacy ? cabinet.localAdminAccount : '123', password: legacy ? cabinet.localAdminPassword : '123' }];
+    for (let i = 1; i < count; i++) {
+      cabinet.localAdmins.push({ account: `admin00${i + 1}`, password: `demo00${i + 1}` });
+    }
+  });
+  return data;
+}
+
 function loadData() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -834,6 +850,7 @@ function loadData() {
       syncHotRecommend(data);
       syncCabinetCarousels(data);
       syncLovePoolData(data);
+      syncCabinetLocalAdmin(data);
       return data;
     }
   } catch (e) { /* ignore */ }
@@ -843,7 +860,7 @@ function loadData() {
   syncDeviceAlerts(data);
   removeAdminOpeningDemo(data);
   syncTeacherUsageDemo(data);
-  return data;
+  return syncCabinetLocalAdmin(data);
 }
 
 function syncTeacherUsageDemo(data) {

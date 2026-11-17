@@ -1237,10 +1237,57 @@ function deleteCabinet(cabinetId) {
   });
 }
 
+function getCabinetLocalAdmins(cabinet) {
+  if (Array.isArray(cabinet.localAdmins)) return cabinet.localAdmins;
+  return cabinet.localAdminAccount !== undefined || cabinet.localAdminPassword !== undefined
+    ? [{ account: cabinet.localAdminAccount, password: cabinet.localAdminPassword }] : [];
+}
+
+function toggleCabinetAdminPassword(button, cabinetId, accountIndex) {
+  const cabinet = data.cabinets.find(c => c.id === cabinetId);
+  const admin = cabinet && getCabinetLocalAdmins(cabinet)[Number(accountIndex)];
+  if (!admin?.password) return;
+  const visible = button.getAttribute('aria-pressed') !== 'true';
+  button.previousElementSibling.textContent = visible ? admin.password : '••••••';
+  button.setAttribute('aria-pressed', String(visible));
+  button.setAttribute('aria-label', visible ? '隐藏本地管理员密码' : '查看本地管理员密码');
+  button.title = visible ? '隐藏密码' : '查看密码';
+}
+
+function getCabinetDetailPagination(rows, requestedPage) {
+  const totalPages = Math.max(1, Math.ceil(rows.length / 10));
+  const page = Math.min(totalPages, Math.max(1, Math.floor(Number(requestedPage) || 1)));
+  const start = (page - 1) * 10;
+  return { page, start, totalPages, rows: rows.slice(start, start + 10) };
+}
+
+function goToCabinetDetailPage(button, requestedPage) {
+  const { cabinetId, pageKey } = button.dataset;
+  if (!['tabletPage', 'alertPage'].includes(pageKey)) return;
+  navigate('cabinet-detail', { ...currentParams, id: cabinetId, [pageKey]: Number(requestedPage) });
+}
+
+function renderCabinetDetailPagination(cabinetId, pageKey, total, pagination) {
+  const { page, totalPages } = pagination;
+  const attrs = `data-cabinet-id="${esc(cabinetId)}" data-page-key="${pageKey}"`;
+  const pages = Array.from({ length: totalPages }, (_, i) => i + 1)
+    .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 2);
+  return `<div class="pagination pagination--with-size" aria-label="${pageKey === 'tabletPage' ? '绑定设备' : '最近告警'}分页">
+    <span class="page-size-picker">共 ${total} 条 · 每页 10 条</span>
+    <button type="button" class="page-btn${page === 1 ? ' disabled' : ''}" ${attrs} ${page === 1 ? 'disabled' : ''} aria-label="上一页" onclick="goToCabinetDetailPage(this, ${page - 1})">‹</button>
+    ${pages.map((p, i) => `${i > 0 && p > pages[i - 1] + 1 ? '<span>…</span>' : ''}<button type="button" class="page-btn${p === page ? ' active' : ''}" ${attrs} ${p === page ? 'aria-current="page"' : ''} onclick="goToCabinetDetailPage(this, ${p})">${p}</button>`).join('')}
+    <button type="button" class="page-btn${page === totalPages ? ' disabled' : ''}" ${attrs} ${page === totalPages ? 'disabled' : ''} aria-label="下一页" onclick="goToCabinetDetailPage(this, ${page + 1})">›</button>
+    <label class="page-size-picker">跳至 <select class="select" style="width:auto;min-width:64px" ${attrs} aria-label="选择页码" onchange="goToCabinetDetailPage(this, this.value)">${Array.from({ length: totalPages }, (_, i) => `<option value="${i + 1}"${i + 1 === page ? ' selected' : ''}>${i + 1}</option>`).join('')}</select> 页</label>
+  </div>`;
+}
+
 function renderCabinetDetailPage(params) {
   const cab = data.cabinets.find(c => c.id === params?.id) || data.cabinets[0];
+  const localAdmins = getCabinetLocalAdmins(cab);
   const tablets = data.tablets.filter(t => t.cabinetId === cab.id);
-  const alerts = getCabinetAlerts(cab.id).slice(0, 5);
+  const alerts = getCabinetAlerts(cab.id);
+  const tabletPagination = getCabinetDetailPagination(tablets, params?.tabletPage);
+  const alertPagination = getCabinetDetailPagination(alerts, params?.alertPage);
   return `
     <div class="page-card">
       <div class="page-card-title">柜机详情 · ${esc(cab.name)}</div>
@@ -1258,6 +1305,17 @@ function renderCabinetDetailPage(params) {
         <div class="detail-item"><label>联系方式</label><span>${esc(cab.managerContact || '—')}</span></div>
         <div class="detail-item"><label>创建时间</label><span>${esc(cab.createdAt || '—')}</span></div>
       </div>
+      <details class="cabinet-admin-disclosure">
+        <summary>本地管理员账号（${localAdmins.length}）</summary>
+        <div class="table-wrap">
+        <table class="data-table" style="max-width:720px">
+          <thead><tr><th style="width:50%">账号</th><th>密码</th></tr></thead>
+          <tbody>${localAdmins.length ? localAdmins.map((admin, index) => `
+            <tr><td>${esc(admin.account || '—')}</td><td><div class="cabinet-admin-password"><span>${admin.password ? '••••••' : '—'}</span>${admin.password ? `<button type="button" class="cabinet-password-toggle" data-cabinet-id="${esc(cab.id)}" data-account-index="${index}" onclick="toggleCabinetAdminPassword(this, this.dataset.cabinetId, this.dataset.accountIndex)" aria-label="查看本地管理员密码" aria-pressed="false" title="查看密码"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>` : ''}</div></td></tr>
+          `).join('') : '<tr><td colspan="2" style="text-align:center;color:var(--text-muted)">暂无本地管理员账号</td></tr>'}</tbody>
+        </table>
+        </div>
+      </details>
       <div class="form-section-title">格口概览</div>
       <div class="toolbar" style="margin-bottom:12px">
         <div class="toolbar-left">
@@ -1273,9 +1331,9 @@ function renderCabinetDetailPage(params) {
             <th>序号</th><th>设备ID</th><th>SN</th><th>仓位</th><th>柜门</th><th>格口状态</th><th>设备状态</th><th>说明</th><th>操作</th>
           </tr></thead>
           <tbody>
-            ${tablets.length ? tablets.map((t, i) => `
+            ${tablets.length ? tabletPagination.rows.map((t, i) => `
               <tr>
-                <td>${i + 1}</td>
+                <td>${tabletPagination.start + i + 1}</td>
                 <td>${esc(formatTabletIdDisplay(t.id))}</td>
                 <td>${esc(t.sn)}</td>
                 <td>#${t.slotNo}</td>
@@ -1289,12 +1347,13 @@ function renderCabinetDetailPage(params) {
           </tbody>
         </table>
       </div>
+      ${renderCabinetDetailPagination(cab.id, 'tabletPage', tablets.length, tabletPagination)}
       <div class="form-section-title">最近告警</div>
       <div class="table-wrap">
         <table class="data-table">
           <thead><tr><th>告警ID</th><th>类型</th><th>告警内容</th><th>状态</th><th>产生时间</th></tr></thead>
           <tbody>
-            ${alerts.length ? alerts.map(a => `
+            ${alerts.length ? alertPagination.rows.map(a => `
               <tr>
                 <td>${esc(a.id)}</td>
                 <td>${alertTypeLabel(a.type)}</td>
@@ -1306,6 +1365,7 @@ function renderCabinetDetailPage(params) {
           </tbody>
         </table>
       </div>
+      ${renderCabinetDetailPagination(cab.id, 'alertPage', alerts.length, alertPagination)}
       <div class="form-footer"><button class="btn" onclick="openTab('cabinet')">返回列表</button></div>
     </div>`;
 }
