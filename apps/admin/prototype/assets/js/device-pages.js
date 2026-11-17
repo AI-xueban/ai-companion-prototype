@@ -69,7 +69,7 @@ function tabletDeviceStatusNote(tablet) {
     });
     return notes.length ? notes.join('；') : '—';
   }
-  // 列表说明只反映当前设备状态；已借出设备的历史归还尝试仅在操作记录或告警中展示。
+  // 列表说明只反映当前设备状态；已借出设备的历史归还尝试仅在使用记录或告警中展示。
   return '—';
 }
 
@@ -104,11 +104,6 @@ function isUsageRecordDoorOpen(r) {
 }
 
 function resolveUsageRecordState(r) {
-  if (r?.operationType === 'admin_open') {
-    if (r.openResult === 'open_failed' || r.status === 'open_failed') return 'open_failed';
-    if (r.hadInCabinetDevice) return r.returnAt ? 'returned' : 'return_pending';
-    return r.status;
-  }
   if (r?.status === 'cancelled') return 'cancelled';
   if (r.returnAt || r.status === 'returned') {
     return isUsageRecordReturnAbnormal(r) ? 'return_abnormal' : 'returned';
@@ -121,9 +116,6 @@ function resolveUsageRecordState(r) {
 
 function usageRecordStateTag(r) {
   const map = {
-    return_pending: '<span class="tag tag-alert-pending">待归还</span>',
-    open_success: '<span class="tag tag-green">开门成功</span>',
-    open_failed: '<span class="tag tag-red">开门失败</span>',
     door_open: '<span class="tag tag-alert-pending">开门中</span>',
     returned: '<span class="tag tag-device-in">已归还</span>',
     borrowed: '<span class="tag tag-device-out">借出中</span>',
@@ -634,7 +626,6 @@ function renderAlertMonthSelect(selectedYm) {
 
 function getDefaultUsageFilter() {
   return {
-    operationType: '全部',
     borrowerType: '全部',
     student: '',
     sn: '',
@@ -707,7 +698,7 @@ function resetTabletFilter() {
 }
 
 function getUsageRecordStatusLabel(r) {
-  const labels = { return_pending: '待归还', door_open: '开门中', returned: '已归还', borrowed: '借出中', return_abnormal: '归还异常', overdue: '已逾期', cancelled: '取消借用', open_success: '开门成功', open_failed: '开门失败' };
+  const labels = { door_open: '开门中', returned: '已归还', borrowed: '借出中', return_abnormal: '归还异常', overdue: '已逾期', cancelled: '取消借用' };
   return labels[resolveUsageRecordState(r)] || '借出中';
 }
 
@@ -716,7 +707,6 @@ function filterUsageRecords(records, filter) {
   const snKey = (filter.sn || '').trim().toLowerCase();
   const cabinetKey = (filter.cabinetId || '').trim().toLowerCase();
   return records.filter(r => {
-    if (filter.operationType && filter.operationType !== '全部' && (r.operationType || 'normal') !== filter.operationType) return false;
     if (filter.borrowerType && filter.borrowerType !== '全部' && (r.borrowerType || 'student') !== filter.borrowerType) return false;
     if (studentKey) {
       const hay = `${r.studentId || ''} ${r.studentName || ''}`.toLowerCase();
@@ -769,7 +759,6 @@ function filterDeviceAlerts(alerts, filter) {
 
 function readUsageFilterFromForm() {
   return {
-    operationType: document.getElementById('usage-filter-operation-type')?.value || '全部',
     borrowerType: document.getElementById('usage-filter-borrower-type')?.value || '全部',
     student: document.getElementById('usage-filter-student')?.value || '',
     sn: document.getElementById('usage-filter-sn')?.value || '',
@@ -849,18 +838,14 @@ function usageBorrowerTypeLabel(record) {
   return record.borrowerType === 'local_admin' ? '管理员' : '学生';
 }
 
-function usageOperationTypeLabel(record) {
-  return record.operationType === 'admin_open' ? '管理员开柜' : '设备借还';
-}
 
 function renderUsageTableRows(records, startIndex = 0) {
   if (!records.length) {
-    return '<tr><td colspan="13" style="text-align:center;color:var(--text-muted);padding:32px">暂无符合条件的操作记录</td></tr>';
+    return '<tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:32px">暂无符合条件的使用记录</td></tr>';
   }
   return records.map((r, index) => `
     <tr>
       <td>${startIndex + index + 1}</td>
-      <td>${usageOperationTypeLabel(r)}</td>
       <td>${esc(r.sn || '——')}</td>
       <td>${r.slotBorrow != null ? `#${esc(String(r.slotBorrow))}` : '—'}</td>
       <td>${esc(r.cabinetBorrow || '—')}</td>
@@ -871,7 +856,7 @@ function renderUsageTableRows(records, startIndex = 0) {
       <td>${usageRecordStateTag(r)}</td>
       <td>${esc(r.operatedAt || r.borrowAt || '——')}</td>
       <td>${r.returnAt || '——'}</td>
-      <td><button class="btn-link" onclick="openTab('device-usage-detail','操作记录详情',{id:'${r.id}'})">详情</button></td>
+      <td><button class="btn-link" onclick="openTab('device-usage-detail','使用记录详情',{id:'${r.id}'})">详情</button></td>
     </tr>
   `).join('');
 }
@@ -1089,7 +1074,7 @@ function renderDeviceOverviewPage() {
       </div>
       ${renderAppearanceGuide()}
       ${renderPlacementScenariosGuide()}
-      <div class="form-section-title">最近操作记录</div>
+      <div class="form-section-title">最近使用记录</div>
       <div class="table-wrap">
         <table class="data-table">
           <thead><tr>
@@ -1106,7 +1091,7 @@ function renderDeviceOverviewPage() {
                 <td>${esc(r.operatedAt || r.borrowAt || '——')}</td>
                 <td>${usageRecordStateTag(r)}</td>
                 <td class="status-ref-note">${esc(usageRecordStateNote(r))}</td>
-                <td><button class="btn-link" onclick="openTab('device-usage-detail','操作记录详情',{id:'${r.id}'})">详情</button></td>
+                <td><button class="btn-link" onclick="openTab('device-usage-detail','使用记录详情',{id:'${r.id}'})">详情</button></td>
               </tr>
             `).join('')}
           </tbody>
@@ -1415,7 +1400,7 @@ function renderTabletDetailPage(params) {
         <div class="form-section-title">初始入柜屏幕照</div>
         <div class="photo-grid" style="margin-bottom:24px">${renderPhotoCard(tab.initialScreenPhoto, 'device')}</div>
       ` : ''}
-      <div class="form-section-title">操作记录</div>
+      <div class="form-section-title">使用记录</div>
       <div class="table-wrap">
         <table class="data-table">
           <thead><tr><th>记录ID</th><th>编号</th><th>学生</th><th>班级</th><th>借出</th><th>归还</th><th>状态</th><th>说明</th><th>操作</th></tr></thead>
@@ -1430,9 +1415,9 @@ function renderTabletDetailPage(params) {
                 <td>${u.returnAt || '—'}</td>
                 <td>${usageRecordStateTag(u)}</td>
                 <td class="status-ref-note">${esc(usageRecordStateNote(u))}</td>
-                <td><button class="btn-link" onclick="openTab('device-usage-detail','操作记录详情',{id:'${u.id}'})">详情</button></td>
+                <td><button class="btn-link" onclick="openTab('device-usage-detail','使用记录详情',{id:'${u.id}'})">详情</button></td>
               </tr>
-            `).join('') : '<tr><td colspan="9" style="text-align:center;color:var(--text-muted)">暂无操作记录</td></tr>'}
+            `).join('') : '<tr><td colspan="9" style="text-align:center;color:var(--text-muted)">暂无使用记录</td></tr>'}
           </tbody>
         </table>
       </div>
@@ -1454,22 +1439,21 @@ function renderDeviceUsagePage(params) {
   const pageRows = filtered.slice(start, start + pageSize);
   return `
     <div class="page-card usage-records-page">
-      <div class="page-card-title">操作记录</div>
+      <div class="page-card-title">使用记录</div>
       <div class="filter-form">
-        <div class="filter-item"><label>操作类型</label><select class="select" id="usage-filter-operation-type"><option value="全部"${!f.operationType || f.operationType === '全部' ? ' selected' : ''}>全部</option><option value="normal"${f.operationType === 'normal' ? ' selected' : ''}>设备借还</option><option value="admin_open"${f.operationType === 'admin_open' ? ' selected' : ''}>管理员开柜</option></select></div>
-        <div class="filter-item"><label>借用人类型</label><select class="select" id="usage-filter-borrower-type"><option value="全部"${!f.borrowerType || f.borrowerType === '全部' ? ' selected' : ''}>全部</option><option value="student"${f.borrowerType === 'student' ? ' selected' : ''}>学生</option><option value="teacher"${f.borrowerType === 'teacher' ? ' selected' : ''}>教师</option><option value="local_admin"${f.borrowerType === 'local_admin' ? ' selected' : ''}>管理员</option></select></div>
+        <div class="filter-item"><label>借用人类型</label><select class="select" id="usage-filter-borrower-type"><option value="全部"${!f.borrowerType || f.borrowerType === '全部' ? ' selected' : ''}>全部</option><option value="student"${f.borrowerType === 'student' ? ' selected' : ''}>学生</option><option value="teacher"${f.borrowerType === 'teacher' ? ' selected' : ''}>教师</option></select></div>
         <div class="filter-item"><label>编号 / 姓名</label><input class="input" id="usage-filter-student" placeholder="请输入" value="${esc(f.student)}"></div>
         <div class="filter-item"><label>设备 SN</label><input class="input" id="usage-filter-sn" placeholder="请输入" value="${esc(f.sn)}"></div>
         <div class="filter-item"><label>所属柜机ID</label><input class="input" id="usage-filter-cabinet-id" placeholder="请输入" value="${esc(f.cabinetId)}"></div>
-        <div class="filter-item"><label>记录状态</label><select class="select" id="usage-filter-status"><option${f.status === '全部' ? ' selected' : ''}>全部</option><option${f.status === '开门中' ? ' selected' : ''}>开门中</option><option${f.status === '已归还' ? ' selected' : ''}>已归还</option><option${f.status === '借出中' ? ' selected' : ''}>借出中</option><option${f.status === '归还异常' ? ' selected' : ''}>归还异常</option><option${f.status === '已逾期' ? ' selected' : ''}>已逾期</option><option${f.status === '取消借用' ? ' selected' : ''}>取消借用</option><option${f.status === '待归还' ? ' selected' : ''}>待归还</option><option${f.status === '开门成功' ? ' selected' : ''}>开门成功</option><option${f.status === '开门失败' ? ' selected' : ''}>开门失败</option></select></div>
-        <div class="filter-item"><label>借出／操作时间</label><div class="date-range"><input class="input" type="date" id="usage-filter-borrow-start" value="${esc(f.borrowStart)}"><span>至</span><input class="input" type="date" id="usage-filter-borrow-end" value="${esc(f.borrowEnd)}"></div></div>
+        <div class="filter-item"><label>记录状态</label><select class="select" id="usage-filter-status"><option${f.status === '全部' ? ' selected' : ''}>全部</option><option${f.status === '开门中' ? ' selected' : ''}>开门中</option><option${f.status === '已归还' ? ' selected' : ''}>已归还</option><option${f.status === '借出中' ? ' selected' : ''}>借出中</option><option${f.status === '归还异常' ? ' selected' : ''}>归还异常</option><option${f.status === '已逾期' ? ' selected' : ''}>已逾期</option><option${f.status === '取消借用' ? ' selected' : ''}>取消借用</option></select></div>
+        <div class="filter-item"><label>借出时间</label><div class="date-range"><input class="input" type="date" id="usage-filter-borrow-start" value="${esc(f.borrowStart)}"><span>至</span><input class="input" type="date" id="usage-filter-borrow-end" value="${esc(f.borrowEnd)}"></div></div>
         <div class="filter-item"><label>归还时间</label><div class="date-range"><input class="input" type="date" id="usage-filter-return-start" value="${esc(f.returnStart)}"><span>至</span><input class="input" type="date" id="usage-filter-return-end" value="${esc(f.returnEnd)}"></div></div>
         <div class="filter-actions"><button type="button" class="btn" onclick="resetUsageFilter()">重置</button><button type="button" class="btn btn-primary" onclick="applyUsageFilter()">搜索</button></div>
       </div>
       <div class="table-wrap">
         <table class="data-table">
           <thead><tr>
-            <th>序号</th><th>操作类型</th><th>设备SN</th><th>格口编号</th><th>柜机编号</th><th class="usage-borrower-heading">借用人类型</th><th>用户</th><th>用户编号</th><th>班级</th><th>记录状态</th><th>借出／操作时间</th><th>归还时间</th><th>操作</th>
+            <th>序号</th><th>设备SN</th><th>格口编号</th><th>柜机编号</th><th class="usage-borrower-heading">借用人类型</th><th>用户</th><th>用户编号</th><th>班级</th><th>记录状态</th><th>借出时间</th><th>归还时间</th><th>操作</th>
           </tr></thead>
           <tbody>${renderUsageTableRows(pageRows, start)}</tbody>
         </table>
@@ -1480,26 +1464,12 @@ function renderDeviceUsagePage(params) {
 
 function renderDeviceUsageDetailPage(params) {
   const r = data.usageRecords.find(u => u.id === params?.id) || data.usageRecords[0];
-  if (!r) return '<div class="page-card">暂无操作记录</div>';
-  if (r.operationType === 'admin_open') {
-    return `<div class="page-card"><div class="page-card-title">操作记录详情</div><div class="detail-grid">
-      <div class="detail-item"><label>记录ID</label><span>${esc(r.id)}</span></div>
-      <div class="detail-item"><label>操作类型</label><span>管理员开柜</span></div>
-      <div class="detail-item"><label>操作人</label><span>${esc(r.studentName || '——')}（${esc(r.studentId || '——')}）</span></div>
-      <div class="detail-item"><label>操作时间</label><span>${esc(r.operatedAt || '——')}</span></div>
-      <div class="detail-item"><label>柜机编号</label><span>${esc(r.cabinetBorrow || '——')}</span></div>
-      <div class="detail-item"><label>格口号</label><span>${esc(String(r.slotBorrow ?? '——'))}</span></div>
-      <div class="detail-item"><label>设备SN</label><span>${esc(r.sn || '——')}</span></div>
-      <div class="detail-item"><label>开门结果</label><span>${r.openResult === 'open_failed' || r.status === 'open_failed' ? '开门失败' : '开门成功'}</span></div>
-      <div class="detail-item"><label>归还时间</label><span>${esc(r.returnAt || '——')}</span></div>
-      <div class="detail-item"><label>记录状态</label><span>${usageRecordStateTag(r)}</span></div>
-    </div><div class="form-footer"><button class="btn" onclick="openTab('device-usage','操作记录',{keepFilter:true})">返回列表</button></div></div>`;
-  }
+  if (!r) return '<div class="page-card">暂无使用记录</div>';
+
   return `
     <div class="page-card">
-      <div class="page-card-title">操作记录详情</div>
+      <div class="page-card-title">使用记录详情</div>
       <div class="detail-grid">
-        <div class="detail-item"><label>操作类型</label><span>${usageOperationTypeLabel(r)}</span></div>
         <div class="detail-item"><label>记录ID</label><span>${esc(r.id)}</span></div>
         <div class="detail-item"><label>设备</label><span>${esc(formatTabletIdDisplay(r.tabletId))} / ${esc(r.sn)}</span></div>
         <div class="detail-item"><label>借用人类型</label><span>${usageBorrowerTypeLabel(r)}</span></div>${r.batchId ? `<div class="detail-item"><label>借取批次号</label><span>${esc(r.batchId)}</span></div>` : ''}
