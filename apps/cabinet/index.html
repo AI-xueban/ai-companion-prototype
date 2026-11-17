@@ -222,9 +222,9 @@
                     />
                   </label>
                   <p class="login-tip" id="loginTip" hidden>请填写编号和密码</p>
-                  <button type="submit" class="primary-btn login-submit">登录</button>
+                  <button type="submit" class="primary-btn login-submit">登录并借取</button>
                 </form>
-                <button type="button" class="back-btn" id="passwordToFace">人脸识别</button>
+                <button type="button" class="back-btn" id="passwordToFace">人脸识别借取</button>
               </div>
 
               <button type="button" class="text-btn face-back" id="faceBack">← 返回首页</button>
@@ -348,10 +348,10 @@
             <h3 id="faceConfirmTitle">确认登录身份</h3>
             <img id="faceSnapshot" class="face-snapshot" alt="本次识别的人脸截图" />
             <p class="face-snapshot-note" id="faceSnapshotNote"></p>
-            <p class="face-confirm-message"><strong>学生编号：<span id="recognizedStudentId">2026001</span></strong><br />是否确认登录？</p>
+            <p class="face-confirm-message"><strong>学生编号：<span id="recognizedStudentId">2026001</span></strong><br />是否确认登录并借取平板？</p>
             <div class="confirm-actions">
               <button type="button" class="confirm-cancel" id="faceConfirmRetry">取消</button>
-              <button type="button" class="confirm-ok" id="faceConfirmLogin">确认登录</button>
+              <button type="button" class="confirm-ok" id="faceConfirmLogin">登录并借取</button>
             </div>
           </div>
         </div>
@@ -428,6 +428,6 @@
     </div>
   </main>
 
-  <script src="app.js?v=20261117-return-3s-scan-30s"></script>
+  <script src="app.js?v=20261117-door-open-copy"></script>
 </body>
 </html>

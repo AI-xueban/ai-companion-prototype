@@ -623,11 +623,13 @@
   function openReturnConfirm() {
     clearTimeout(storeIdleTimer);
     const notCharging = returnCheckState === "not_charging";
-    document.getElementById('returnConfirmTitle').textContent = notCharging ? '未检测到充电' : '确认归还';
-    returnConfirmModal.querySelector('p').hidden = notCharging;
-    returnCancel.textContent = notCharging ? '重新打开' : '取消';
-    returnConfirm.textContent = notCharging ? '确认归还' : '确认';
-    returnCheckTip.style.cssText = notCharging ? 'margin:24px 0 0;padding:0;border:0;background:transparent;color:inherit;font-weight:400' : '';
+    const doorOpen = returnCheckState === "door_open";
+    const needsReturnCheck = notCharging || doorOpen;
+    document.getElementById('returnConfirmTitle').textContent = doorOpen ? '门未关闭' : notCharging ? '未检测到充电' : '确认归还';
+    returnConfirmModal.querySelector('p').hidden = needsReturnCheck;
+    returnCancel.textContent = needsReturnCheck ? '重新打开' : '取消';
+    returnConfirm.textContent = needsReturnCheck ? '确认归还' : '确认';
+    returnCheckTip.style.cssText = needsReturnCheck ? 'margin:24px 0 0;padding:0;border:0;background:transparent;color:inherit;font-weight:400' : '';
     returnConfirmModal.hidden = false;
   }
 
@@ -662,7 +664,7 @@
       return;
     }
     if (returnCheckState === "door_open") {
-      showReturnCheckTip("门没关");
+      showReturnCheckTip("检测到柜门未关闭，请关好门后点击「确认归还」");
       returnReopenTip.hidden = true;
       openReturnConfirm();
       return;
@@ -1161,7 +1163,7 @@
   });
 
   returnCancel.addEventListener("click", () => {
-    if (returnCheckState === 'not_charging') {
+    if (returnCheckState === 'not_charging' || returnCheckState === 'door_open') {
       returnReopenTip.hidden = false;
       return;
     }
