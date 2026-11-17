@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20261113-teacher-device-list" />
+  <link rel="stylesheet" href="styles.css?v=20261117-face-actions-raised" />
 </head>
 <body>
   <aside class="studio-bar">
@@ -40,7 +40,7 @@
       <button type="button" class="nav-btn nav-demo" id="simulateNewerCabinetUpgrade">模拟已下载后收到新版</button>
     </nav>
     <button type="button" class="nav-btn nav-demo" id="resetDemoAvailability">模拟设备全部可借用</button>
-    <button type="button" class="nav-btn nav-demo" id="upgradeNetwork">模拟下载断网</button><div class="admin-demo-note"><strong>管理员登录模拟</strong><div class="admin-demo-section"><small>管理员 · 手机号验证码</small><p><span class="admin-demo-value"><b>13800000000</b><button type="button" class="admin-fill-btn" data-admin-fill="phone">填入号码</button></span></p><p><span class="admin-demo-value"><b>123456</b><button type="button" class="admin-fill-btn" data-admin-fill="code">填入验证码</button></span></p></div><div class="admin-demo-section"><small>本地管理员 · 编号密码</small><p>账号 <b>123</b> / 密码 <b>123</b></p><button type="button" class="admin-fill-btn" id="fillLocalAdmin">填入本地账号密码</button></div><div class="admin-demo-section"><small>老师 · 编号密码</small><p>账号 <b>18018001800</b></p><p>密码 <b>18001800</b>（账号后八位）</p><button type="button" class="admin-fill-btn" id="fillTeacher">填入老师账号密码</button></div></div>
+    <button type="button" class="nav-btn nav-demo" id="upgradeNetwork">模拟下载断网</button><div class="admin-demo-note"><strong>管理员登录模拟</strong><div class="admin-demo-section"><small>学校管理员 · 手机号验证码</small><p><span class="admin-demo-value"><b>13800000000</b><button type="button" class="admin-fill-btn" data-admin-fill="phone">填入号码</button></span></p><p><span class="admin-demo-value"><b>123456</b><button type="button" class="admin-fill-btn" data-admin-fill="code">填入验证码</button></span></p></div><div class="admin-demo-section"><small>本地管理员 · 编号密码</small><p>账号 <b>123</b> / 密码 <b>123</b></p><button type="button" class="admin-fill-btn" id="fillLocalAdmin">填入本地账号密码</button></div><div class="admin-demo-section"><small>老师 · 编号密码</small><p>账号 <b>18018001800</b></p><p>密码 <b>18001800</b>（账号后八位）</p><button type="button" class="admin-fill-btn" id="fillTeacher">填入老师账号密码</button></div></div>
     <p class="studio-hint">画布会按窗口自动等比缩小，完整显示在当前屏幕内；设计稿仍为 1080×1920。</p>
   </aside>
 
@@ -100,15 +100,14 @@
             <header class="guide-header">
               <p class="brand">通晤纪</p>
               <h1>AI学伴共享柜机</h1>
-              <p class="guide-lead">借取和归还设备请按照以下流程操作</p>
             </header>
             <div class="guide-columns">
-              <button type="button" class="guide-col guide-pickup" data-goto="pickup">
+              <button type="button" class="guide-col guide-pickup" data-goto="pickup" data-login-mode="face">
                 <h3><span class="guide-char">借</span></h3>
                 <ol class="guide-steps">
-                  <li><span>1</span>编号密码登录，也可切换人脸识别</li>
-                  <li><span>2</span>在可用列表中选择设备并取用</li>
-                  <li><span>3</span>在确认弹窗中点击「确认」，柜门开启，取出平板使用</li>
+                  <li><span>1</span>人脸识别登录，也可使用编号密码登录</li>
+                  <li><span>2</span>登录成功后自动分配设备并打开柜门</li>
+                  <li><span>3</span>按提示取走平板，平板自动登录对应账号</li>
                 </ol>
               </button>
               <button type="button" class="guide-col guide-store" data-goto="store">
@@ -157,7 +156,6 @@
           <div class="cabinet-test-controls">
             <div class="cabinet-test-group"><label for="cabinetDoorNumber">开柜功能测试</label><input id="cabinetDoorNumber" inputmode="numeric" maxlength="2" placeholder="输入门号：" autocomplete="off" /><button type="button" id="openSingleDoor">单 个 开 门</button></div>
             <div class="cabinet-test-group"><p>全部开柜功能测试</p><button type="button" id="openAllDoors">全 部 开 门</button></div>
-            <p class="cabinet-test-note">说明：有在柜设备的格口开门后，设备将记为本人借用，需逐台扫码归还。空格口或设备已借出的格口，只记录开门，不新增借用记录。</p>
             <p class="cabinet-test-result" id="cabinetOpenResult" role="status" hidden></p>
           </div>
         </section>
@@ -176,14 +174,18 @@
           </div>
         </section>
 
-        <!-- 取设备：默认编号密码登录，可切换人脸识别 -->
+        <!-- 取设备：进入即自动扫脸，保留编号密码备用入口 -->
         <section class="page page-pickup" data-page="pickup">
           <div class="page-center">
             <div class="face-login" id="faceLogin">
-              <div class="face-smile" aria-hidden="true"><span></span></div>
+              <div class="face-camera" aria-label="人脸识别取景框">
+                <img id="facePreview" src="assets/face-scan-demo.svg" alt="双人脸扫描并选择最大人脸的动图" />
+
+                <span class="face-camera-note">请将面部置于框内</span>
+              </div>
               <p class="face-status" id="faceStatus">正在识别</p>
               <p class="face-desc" id="faceDesc">请正对屏幕，保持面部处于识别框内</p>
-              <div class="face-login-actions"><button type="button" class="primary-btn" id="faceStart">开始人脸识别</button><button type="button" class="primary-btn face-retry" id="faceRetry" hidden>重新识别</button><button type="button" class="text-btn" id="faceToPassword">使用编号密码登录</button><button type="button" class="text-btn face-login-back" id="backToLoginChoice" aria-label="返回首页">← 返回首页</button></div>
+              <div class="face-login-actions"><button type="button" class="primary-btn" id="faceStart" hidden>开始人脸识别</button><button type="button" class="primary-btn face-retry" id="faceRetry" hidden>重新识别</button><button type="button" class="text-btn" id="faceToPassword">使用编号密码登录</button><button type="button" class="text-btn face-login-back" id="backToLoginChoice" aria-label="返回首页">← 返回首页</button></div>
 
             </div>
 
@@ -191,7 +193,7 @@
               <h2 class="page-title" id="loginPageTitle">学生登录</h2>
 
               <div id="studentLoginPanel">
-                <p class="page-desc" id="passwordLoginDesc">请输入编号和密码后查看可用设备</p>
+                <p class="page-desc" id="passwordLoginDesc">请输入编号和密码登录借用设备</p>
                 <form class="login-form" id="loginForm">
                   <label class="field">
                     <span class="field-label">编号</span>
@@ -342,8 +344,10 @@
         </div>
         <!-- 人脸识别成功后确认身份 -->
         <div class="confirm-mask" id="faceConfirmModal" hidden>
-          <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="faceConfirmTitle">
+          <div class="confirm-card face-confirm-card" role="dialog" aria-modal="true" aria-labelledby="faceConfirmTitle">
             <h3 id="faceConfirmTitle">确认登录身份</h3>
+            <img id="faceSnapshot" class="face-snapshot" alt="本次识别的人脸截图" />
+            <p class="face-snapshot-note" id="faceSnapshotNote"></p>
             <p class="face-confirm-message"><strong>学生编号：<span id="recognizedStudentId">2026001</span></strong><br />是否确认登录？</p>
             <div class="confirm-actions">
               <button type="button" class="confirm-cancel" id="faceConfirmRetry">取消</button>
@@ -404,6 +408,7 @@
             </div>
             <h3 id="toastTitle">取出来啦</h3>
             <p class="toast-desc">柜门开了，把平板拿走吧</p>
+            <p id="toastStudentAccount" class="toast-student-account" hidden></p>
             <p id="toastAdminDoors" class="toast-admin-doors" hidden></p>
             <div class="toast-meta">
               <div>
@@ -423,6 +428,6 @@
     </div>
   </main>
 
-  <script src="app.js?v=20261113-teacher-slot-toast"></script>
+  <script src="app.js?v=20261117-return-3s-scan-30s"></script>
 </body>
 </html>

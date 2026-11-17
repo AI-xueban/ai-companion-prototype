@@ -647,8 +647,16 @@ button {
 .guide-columns {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 28px;
+  grid-template-rows: 236px 236px;
+  gap: 24px 28px;
 }
+
+.guide-col.guide-borrow-entry { flex-direction: row; align-items: center; justify-content: center; gap: 24px; color: #d97706; }
+.guide-entry-icon { width: 64px; height: 64px; flex: 0 0 64px; }
+.guide-col.guide-borrow-entry h3 { font-size: 40px; font-weight: 900; line-height: 1.3; margin: 0; white-space: nowrap; }
+.guide-borrow-entry[data-login-mode="face"] { grid-column: 1; grid-row: 1; }
+.guide-borrow-entry[data-login-mode="password"] { grid-column: 1; grid-row: 2; }
+.guide-columns > .guide-store { grid-column: 2; grid-row: 1 / 3; }
 
 .guide-col {
   display: flex;
@@ -2383,7 +2391,7 @@ button {
 }
 .face-login .face-status { bottom: 528px; }
 .face-login .face-desc { bottom: 468px; }
-.face-login-actions { bottom: 222px; }
+.face-login-actions { bottom: 382px; }
 .face-login-actions .face-login-back {
   height: 64px;
   min-height: 64px;
@@ -2412,8 +2420,8 @@ button {
   background: #dce5ef;
   color: #1e293b;
 }
-.face-login .face-status { bottom: 632px; }
-.face-login .face-desc { bottom: 572px; }
+.face-login .face-status { bottom: 792px; }
+.face-login .face-desc { bottom: 732px; }
 /* 编号密码页返回入口与扫脸页保持一致 */
 .page-pickup #faceBack {
   box-sizing: border-box;
@@ -2538,6 +2546,30 @@ button {
 }
 .face-login.is-processing .face-status,
 .face-login.is-processing .face-desc { visibility: hidden; }
+
+/* 自动扫脸：同一取景画面的中心区域用于身份确认截图。 */
+.face-login { border: 0; background: transparent; }
+.face-camera {
+  position: absolute;
+  top: 280px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 580px;
+  height: 620px;
+  overflow: hidden;
+  border: 3px solid #93c5fd;
+  border-radius: 36px;
+  background: #e9f1fa;
+  box-shadow: 0 18px 54px rgba(37,99,235,.1);
+}
+.face-camera img { width: 100%; height: 100%; object-fit: cover; }
+
+.face-camera [hidden] { display: none; }
+.face-camera-guide { position: absolute; inset: 75px 65px 100px; border: 3px solid rgba(255,255,255,.9); border-radius: 45%; }
+.face-camera-note { position: absolute; bottom: 22px; left: 0; right: 0; text-align: center; color: #1e3a5f; font-size: 26px; font-weight: 500; }
+.face-login.is-processing .face-status, .face-login.is-processing .face-desc { visibility: visible; }
+.face-confirm-card .face-snapshot { display: block; width: 240px; height: 240px; margin: 28px auto 12px; border: 3px solid #dbeafe; border-radius: 24px; object-fit: cover; }
+.confirm-card .face-snapshot-note { color: #64748b; font-size: 22px; margin: 0 0 22px; }
 
 /* Administrator screens */
 .page-admin-login { justify-content: center; align-items: center; }
@@ -2697,6 +2729,21 @@ button {
 .cabinet-test-group input { display: block; box-sizing: border-box; width: 100%; height: 100px; padding: 18px; background: #f7f7ed; border: 0; border-radius: 0; font: inherit; font-size: 38px; }
 .cabinet-test-group > button { display: block; width: 100%; min-height: 100px; border: 0; border-radius: 0; background: #20bdf4; color: #07517e; font: inherit; font-size: 44px; font-weight: 400; }
 .cabinet-test-group > button:disabled { opacity: 0.55; cursor: wait; }
-.cabinet-test-note { padding: 24px 28px; background: #ffffffd9; color: #124e78; font-size: 28px; line-height: 1.8; }
 .cabinet-test-result { margin-top: 22px; color: #fff; font-size: 28px; line-height: 1.7; }
 #screen[data-page="devices"] .upgrade-toast { pointer-events: none; }
+.admin-menu-item[hidden] { display: none !important; }
+
+/* 首页借还入口及扫脸页明显的辅助操作。 */
+.guide-columns { grid-template-rows: 440px; }
+.guide-columns > .guide-store { grid-column: 2; grid-row: 1; }
+.face-login-actions #faceToPassword,
+.face-login-actions #backToLoginChoice {
+  height: 100px; min-height: 100px; width: 100%; margin: 0 !important;
+  border: 2px solid #60a5fa; border-radius: 18px;
+  background: #fff; color: #2563eb; font-size: 32px; font-weight: 700;
+  box-shadow: 0 6px 18px rgba(37, 99, 235, .08);
+}
+.face-login-actions #faceToPassword:hover,
+.face-login-actions #backToLoginChoice:hover { background: #eff6ff; border-color: #2563eb; }
+.toast-student-account { margin: 20px 0; font-size: 28px; color: #2563eb; font-weight: 700; }
+.toast-student-account[hidden] { display: none; }
