@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20261117-face-actions-raised" />
+  <link rel="stylesheet" href="styles.css?v=20261117-face-close-black" />
 </head>
 <body>
   <aside class="studio-bar">
@@ -146,7 +146,7 @@
         </section>
         <section class="page page-admin-manage" data-page="admin-manage">
           <button type="button" class="text-btn admin-top-back" id="adminLogout">返回</button><span id="adminAccount" hidden></span>
-          <div class="admin-menu"><button type="button" class="admin-menu-item" id="adminVersionUpdate"><span aria-hidden="true">↓</span><strong id="adminUpdateLabel">版本更新</strong><span class="admin-update-version" id="adminUpdateVersion">当前版本 V1.3.0</span><i class="version-update-dot" id="adminUpdateDot" hidden></i></button><button type="button" class="admin-menu-item" data-admin-feature="开柜测试"><span aria-hidden="true">▣</span><strong>开柜测试</strong></button><button type="button" class="admin-menu-item" data-admin-feature="激活设备"><span aria-hidden="true">▱</span><strong>激活设备</strong></button><button type="button" class="admin-menu-item" data-admin-feature="用户管理"><span aria-hidden="true">♙</span><strong>用户管理</strong></button><button type="button" class="admin-menu-item" data-admin-feature="格口详情"><span aria-hidden="true">▤</span><strong>格口详情</strong></button><button type="button" class="admin-menu-item" data-admin-feature="摄像头配置"><span aria-hidden="true">◎</span><strong>摄像头配置</strong></button><button type="button" class="admin-menu-item" data-admin-feature="人脸底库"><span aria-hidden="true">◉</span><strong>人脸底库</strong></button><button type="button" class="admin-menu-item" data-admin-feature="设备管理"><span aria-hidden="true">▥</span><strong>设备管理</strong></button><button type="button" class="admin-menu-item" data-admin-feature="退出软件"><span aria-hidden="true">⏻</span><strong>退出软件</strong></button></div>
+          <div class="admin-menu"><button type="button" class="admin-menu-item" id="adminVersionUpdate"><span aria-hidden="true">↓</span><strong id="adminUpdateLabel">版本更新</strong><span class="admin-update-version" id="adminUpdateVersion">当前版本 V1.3.0</span><i class="version-update-dot" id="adminUpdateDot" hidden></i></button><button type="button" class="admin-menu-item" data-admin-feature="开柜测试"><span aria-hidden="true">▣</span><strong>开柜测试</strong></button><button type="button" class="admin-menu-item" data-admin-feature="激活设备"><span aria-hidden="true">▱</span><strong>激活设备</strong></button><button type="button" class="admin-menu-item" data-admin-feature="用户管理"><span aria-hidden="true">♙</span><strong>用户管理</strong></button><button type="button" class="admin-menu-item" data-admin-feature="格口管理"><span aria-hidden="true">▤</span><strong>格口管理</strong></button><button type="button" class="admin-menu-item" data-admin-feature="摄像头配置"><span aria-hidden="true">◎</span><strong>摄像头配置</strong></button><button type="button" class="admin-menu-item" data-admin-feature="人脸底库"><span aria-hidden="true">◉</span><strong>人脸底库</strong></button><button type="button" class="admin-menu-item" data-admin-feature="设备管理"><span aria-hidden="true">▥</span><strong>设备管理</strong></button><button type="button" class="admin-menu-item" data-admin-feature="退出软件"><span aria-hidden="true">⏻</span><strong>退出软件</strong></button></div>
           <section class="admin-download-progress" id="adminDownloadProgress" role="status" hidden><div><span id="adminDownloadName"></span><strong id="adminDownloadPercent">0%</strong></div><progress id="adminDownloadBar" max="100" value="0">0%</progress></section>
           <p class="admin-feature-note" id="adminFeatureNote" role="status"></p>
         </section>
@@ -346,12 +346,14 @@
         <div class="confirm-mask" id="faceConfirmModal" hidden>
           <div class="confirm-card face-confirm-card" role="dialog" aria-modal="true" aria-labelledby="faceConfirmTitle">
             <h3 id="faceConfirmTitle">确认登录身份</h3>
-            <img id="faceSnapshot" class="face-snapshot" alt="本次识别的人脸截图" />
-            <p class="face-snapshot-note" id="faceSnapshotNote"></p>
+            <img id="faceSnapshot" class="face-snapshot" alt="匹配学生的后台录入人脸照片" />
+            <p class="face-snapshot-note" id="faceSnapshotNote" hidden></p>
+            <p class="face-confirm-name">姓名：<strong id="recognizedStudentName">张晨</strong></p>
             <p class="face-confirm-message"><strong>学生编号：<span id="recognizedStudentId">2026001</span></strong><br />是否确认登录并借取平板？</p>
             <div class="confirm-actions">
-              <button type="button" class="confirm-cancel" id="faceConfirmRetry">取消</button>
               <button type="button" class="confirm-ok" id="faceConfirmLogin">登录并借取</button>
+              <button type="button" class="confirm-cancel" id="faceConfirmPassword">这不是我，使用编号登录</button>
+              <button type="button" class="confirm-cancel" id="faceConfirmRetry"><span>关闭</span><span class="face-confirm-countdown" id="faceConfirmSeconds">（30s）</span></button>
             </div>
           </div>
         </div>
@@ -408,7 +410,6 @@
             </div>
             <h3 id="toastTitle">取出来啦</h3>
             <p class="toast-desc">柜门开了，把平板拿走吧</p>
-            <p id="toastStudentAccount" class="toast-student-account" hidden></p>
             <p id="toastAdminDoors" class="toast-admin-doors" hidden></p>
             <div class="toast-meta">
               <div>
@@ -428,6 +429,6 @@
     </div>
   </main>
 
-  <script src="app.js?v=20261117-door-open-copy"></script>
+  <script src="app.js?v=20261117-face-close-style"></script>
 </body>
 </html>
