@@ -1,22 +1,93 @@
-<view class="learning-page">
-  <view class="learning-hero">
-    <view class="learning-child-line"><view class="learning-child-identity"><view>{{studentName}}</view><view class="learning-child-class">· {{className}}</view></view><view wx:if="{{children.length > 1}}" class="learning-child-trigger" bindtap="toggleChildPicker">切换孩子 ⌄</view></view>
-
-    <view class="learning-inline-periods"><button class="{{period === 'day' ? 'active' : ''}}" data-period="day" bindtap="changePeriod">今日</button><button class="{{period === '7d' ? 'active' : ''}}" data-period="7d" bindtap="changePeriod">近 7 天</button><button class="{{period === '30d' ? 'active' : ''}}" data-period="30d" bindtap="changePeriod">近 30 天</button></view>
+<template name="records">
+  <view wx:if="{{records.length}}" class="lr-card">
+    <view wx:for="{{records}}" wx:key="id" class="lr-row" data-id="{{item.id}}" bindtap="openActivity">
+      <view><view class="lr-strong">{{item.title}}</view><view class="lr-muted">{{item.date}} {{item.start}} · {{item.feature}} · {{item.status}}</view></view>
+      <text class="lr-action">›</text>
+    </view>
   </view>
-  <view class="learning-brief"><view class="learning-brief-label">{{summaryTitle}}</view><view>{{summaryLine}}</view></view>
-  <view class="learning-section"><view class="learning-section-title">最近学习记录</view><view class="learning-section-note">{{timeline.length ? '点开查看内容与结果' : ''}}</view></view>
-  <view wx:if="{{visibleTimeline.length}}" class="learning-card learning-timeline-card"><view wx:for="{{visibleTimeline}}" wx:key="id" class="learning-event" data-id="{{item.id}}" bindtap="openActivity"><view class="learning-event-top"><view class="learning-strong">{{item.subject}} · {{item.feature}}</view><view class="learning-time">{{item.minutes}} 分钟 ›</view></view><view class="learning-muted">{{item.date}} {{item.start}} · {{item.title}}</view><view class="learning-muted">{{item.status}}{{item.answers ? ' · 首次作答 ' + item.answers + ' 题' : ''}}</view></view></view>
-  <view wx:else class="learning-empty">本期暂无学习活动记录。</view>
-  <button wx:if="{{timeline.length > 3}}" class="learning-expand" bindtap="toggleTimeline">{{showAllTimeline ? '收起记录' : '查看最近 ' + timeline.length + ' 条记录'}} ›</button>
-  <view class="learning-section"><view class="learning-section-title">学科情况</view></view>
-  <view wx:if="{{subjects.length}}" class="learning-card"><view wx:for="{{subjects}}" wx:key="subject" class="learning-subject"><view><view class="learning-strong">{{item.subject}}</view><view class="learning-muted">{{item.count}} 条学习活动</view></view><view class="learning-subject-value">{{item.minutes}} 分钟</view></view></view>
-  <view wx:else class="learning-empty">本期暂无可计入学习的活动。</view>
-  <button class="learning-expand learning-feature-toggle" bindtap="toggleFeatures">{{featureOpen ? '收起功能使用' : '查看功能使用'}} ›</button>
-  <view wx:if="{{featureOpen}}" class="learning-card"><view class="learning-subject"><view><view class="learning-strong">小晤问答</view><view class="learning-muted">仅计应用使用</view></view><view class="learning-subject-value">{{chatCount}} 次</view></view><view class="learning-subject"><view><view class="learning-strong">AI 解题</view><view class="learning-muted">{{solveProblems}} 道题 · {{solveCount}} 次解题</view></view><view class="learning-subject-value">{{solveQuestions}} 次问答</view></view></view>
-  <view class="learning-business-nav"><view class="active">学习报告</view><view bindtap="openHomework">作业</view></view>
-  <view class="learning-footnote">学习分钟仅按学伴学习活动统计，不含小晤问答和设备亮屏时间；一次订正答对不代表稳定掌握。</view>
-  <view wx:if="{{selectedActivity}}" class="learning-detail-mask" bindtap="closeActivity"><view class="learning-detail" catchtap="noop"><view class="learning-detail-head"><view class="learning-strong">{{selectedActivity.activity.feature}} · 活动详情</view><view bindtap="closeActivity">关闭 ×</view></view><view class="learning-muted">{{selectedActivity.activity.subject}} · {{selectedActivity.activity.title}}</view><view class="learning-muted">{{selectedActivity.date}} {{selectedActivity.activity.start}} · {{selectedActivity.activity.minutes}} 分钟 · {{selectedActivity.activity.status}}</view><view class="learning-section-title learning-detail-title">原题与作答</view><view wx:if="{{selectedActivity.questions.length}}"><view wx:for="{{selectedActivity.questions}}" wx:key="id" class="learning-question"><view class="learning-strong">{{item.stem}}</view><view class="learning-muted">{{item.kind}}作答：{{item.answer}} · {{item.result}}</view><view class="learning-muted">参考答案：{{item.reference}} · {{item.scoring}}</view><view class="learning-muted">{{item.version}}</view></view></view><view wx:else class="learning-muted">本次活动没有关联逐题作答；仅展示实际发生的内容与时长。</view></view></view>
+  <view wx:else class="lr-card lr-muted">暂无学习活动记录。</view>
+</template>
 
-  <view wx:if="{{childPickerOpen}}" class="learning-child-modal-mask" bindtap="closeChildPicker"><view class="learning-child-modal" catchtap="stopChildDialogTap"><view class="learning-child-modal-head"><text>切换孩子</text><view bindtap="closeChildPicker">×</view></view><view class="learning-child-menu"><view wx:for="{{children}}" wx:key="id" class="learning-child-option {{item.selected ? 'active' : ''}}" data-id="{{item.id}}" bindtap="changeChild"><text class="learning-option-name">{{item.name}}</text><view class="learning-option-meta"><text>{{item.className}}</text><text class="learning-option-check">{{item.selected ? '✓' : ''}}</text></view></view></view><view class="learning-child-modal-cancel" bindtap="closeChildPicker">取消</view></view></view>
+<view class="learning-page lr-parent">
+  <view wx:if="{{detail !== 'home'}}" class="lr-back" bindtap="closeDetail">‹ 返回学情</view>
+  <view class="lr-identity">
+    <view class="lr-avatar">学</view><view><view class="lr-title">{{studentName}}</view><view class="lr-muted">{{className}} · 演示数据</view></view>
+    <button wx:if="{{children.length > 1}}" class="lr-button" bindtap="toggleChildPicker">切换孩子 ⌄</button>
+  </view>
+  <view wx:if="{{detail === 'home'}}" class="lr-tabs">
+    <button class="{{tab === 'overview' ? 'active' : ''}}" data-tab="overview" bindtap="changeTab">总览</button>
+    <button class="{{tab === 'week' ? 'active' : ''}}" data-tab="week" bindtap="changeTab">周报</button>
+  </view>
+
+  <block wx:if="{{detail === 'home' && tab === 'week'}}">
+    <view class="lr-muted lr-date">{{dates[6]}} 至 {{dates[0]}} · 近 7 天</view>
+    <view wx:if="{{week}}" class="lr-card lr-hero">
+      <view class="lr-label">这周的变化</view>
+      <view class="lr-title">{{week.label}}：{{week.pairs[0].beforeCorrect ? '正确' : '有误'}} → {{week.pairs[0].afterCorrect ? '正确' : '有误'}}</view>
+      <view class="lr-muted">两次同类练习中的表现。</view>
+    </view>
+    <view wx:if="{{week}}" class="lr-card">
+      <view class="lr-strong">两次作答</view>
+      <view class="lr-row">{{week.beforeDate}} · {{week.pairs[0].before.step}} · {{week.pairs[0].before.result}}</view>
+      <view class="lr-row">{{week.afterDate}} · {{week.pairs[0].after.step}} · {{week.pairs[0].after.result}}</view>
+      <button class="lr-link" bindtap="toggleWeekDetails">{{weekDetails ? '收起两次作答' : '对照这两次作答'}} ›</button>
+      <view wx:if="{{weekDetails}}" class="lr-muted">
+        <view class="lr-evidence">{{week.beforeDate}} · {{week.pairs[0].before.stem}}<view>孩子作答：{{week.pairs[0].before.answer}}</view><view>{{week.pairs[0].before.step}} · {{week.pairs[0].before.result}}</view></view>
+        <view class="lr-evidence">{{week.afterDate}} · {{week.pairs[0].after.stem}}<view>孩子作答：{{week.pairs[0].after.answer}}</view><view>{{week.pairs[0].after.step}} · {{week.pairs[0].after.result}}</view></view>
+      </view>
+    </view>
+    <view wx:else class="lr-card"><view class="lr-strong">本周学习记录</view><view class="lr-muted">本周有 {{weekActivities}} 项学习活动，暂无两次可比较的作答。</view></view>
+    <view wx:if="{{week && week.label === '找整体'}}" class="lr-card"><view class="lr-strong">接下来可以这样陪</view><view class="lr-muted">请孩子挑一道做过的题，说说题里哪个量是整体，为什么这样列式。</view></view>
+    <view class="lr-card"><view class="lr-strong">孩子的整体学情</view><button class="lr-link" data-detail="child" bindtap="openDetail">查看各科学习与作答 ›</button></view>
+  </block>
+
+  <block wx:elif="{{detail === 'child'}}">
+    <view class="lr-tabs lr-filter">
+      <button class="{{period === '7d' ? 'active' : ''}}" data-period="7d" bindtap="changePeriod">近 7 天</button>
+      <button class="{{period === '30d' ? 'active' : ''}}" data-period="30d" bindtap="changePeriod">近 30 天</button>
+    </view>
+    <view class="lr-card lr-hero"><view class="lr-title">孩子整体学情</view><view class="lr-metrics"><view><text>{{childDays}} 天</text>有学习记录</view><view><text>{{activities}} 项</text>学习活动</view><view><text>{{subjectCount}} 科</text>有记录</view></view></view>
+    <scroll-view scroll-x class="lr-subject-scroll"><view class="lr-subjects">
+      <button class="lr-button {{subject === 'all' ? 'active' : ''}}" data-subject="all" bindtap="changeSubject">全部学科</button>
+      <button wx:for="{{subjects}}" wx:key="subject" class="lr-button {{subject === item.subject ? 'active' : ''}}" data-subject="{{item.subject}}" bindtap="changeSubject">{{item.subject}}</button>
+    </view></scroll-view>
+    <block wx:for="{{subjects}}" wx:key="subject"><view wx:if="{{subject === 'all' || subject === item.subject}}" class="lr-card">
+      <view class="lr-strong">{{item.subject}} · {{item.count}} 项活动</view><view class="lr-muted">{{item.contents}}</view>
+      <view wx:if="{{item.first}}" class="lr-muted">首次答对 {{item.firstCorrect}} / {{item.first}} 题次</view>
+      <view wx:if="{{item.corrections}}" class="lr-muted">订正答对 {{item.correctionCorrect}} / {{item.corrections}} 次</view>
+    </view></block>
+    <view class="lr-section">学习记录</view><template is="records" data="{{records: timeline}}" />
+  </block>
+
+  <block wx:else>
+    <view class="lr-date lr-row"><text>{{date}}</text><picker mode="selector" range="{{dates}}" value="{{day}}" bindchange="changeDay"><view class="lr-action">{{day === 0 ? '今天' : '回看日期'}} ⌄</view></picker></view>
+    <block wx:if="{{detail === 'mistakes'}}">
+      <view class="lr-card lr-hero"><view class="lr-label">错题与订正</view><view class="lr-title">{{mistakes.length}} 道首次答错</view><view class="lr-muted">{{corrected}} 道有订正记录 · {{mistakes.length - corrected}} 道暂无订正记录</view></view>
+      <view wx:for="{{mistakes}}" wx:key="id" class="lr-card">
+        <view class="lr-row" data-id="{{item.id}}" bindtap="toggleMistake"><view><view class="lr-strong">{{item.knowledge}}</view><view class="lr-muted">{{item.time}} · {{item.title}}</view></view><text class="lr-action">{{item.correction ? '有订正记录' : '暂无订正记录'}} ›</text></view>
+        <view wx:if="{{expandedMistake === item.id}}" class="lr-evidence"><view>{{item.stem}}</view><view>孩子作答：{{item.answer}}</view><view>{{item.step}} {{item.result}}</view><view>参考答案：{{item.reference}}</view><view wx:if="{{item.correction}}">订正：{{item.correction.answer}} · {{item.correction.result}}</view></view>
+      </view>
+    </block>
+    <block wx:elif="{{detail === 'today'}}"><view class="lr-section">学习记录</view><template is="records" data="{{records: today}}" /></block>
+    <block wx:else>
+      <view class="lr-card lr-hero"><view class="lr-label">{{day === 0 ? '今日学习' : '当天学习'}}</view>
+        <block wx:for="{{today}}" wx:key="id"><view wx:if="{{index < 2}}" class="lr-row" data-id="{{item.id}}" bindtap="openActivity"><view><view class="lr-strong">{{item.title}}</view><view class="lr-muted">{{item.date}} {{item.start}} · {{item.feature}}</view></view><text class="lr-action">›</text></view></block>
+        <view wx:if="{{!today.length}}" class="lr-muted">暂无学习活动记录。</view>
+        <button class="lr-link" data-detail="today" bindtap="openDetail">查看学习记录 · {{today.length}} 项 ›</button>
+      </view>
+      <view class="lr-card"><view class="lr-strong">{{day === 0 ? '今日错题' : '当天错题'}}</view><view class="lr-title">{{mistakes.length}} 道首次答错</view><view class="lr-muted">{{corrected}} 道有订正记录 · {{mistakes.length - corrected}} 道暂无订正记录</view><button class="lr-link" data-detail="mistakes" bindtap="openDetail">查看错题与订正 ›</button></view>
+      <view class="lr-card"><view class="lr-strong">孩子的整体学情</view><view class="lr-metrics"><view><text>{{childDays}} 天</text>有学习记录</view><view><text>{{activities}} 项</text>学习活动</view><view><text>{{subjectCount}} 科</text>有记录</view></view><button class="lr-link" data-detail="child" bindtap="openDetail">查看各科学习与作答 ›</button></view>
+    </block>
+  </block>
+  <view wx:if="{{detail === 'home'}}" class="learning-business-nav"><view bindtap="openHomework">作业</view><view class="active">学情</view></view>
+  <view wx:if="{{selectedActivity}}" class="learning-detail-mask" bindtap="closeActivity"><view class="learning-detail" catchtap="noop">
+    <view class="learning-detail-head"><view class="learning-strong">{{selectedActivity.activity.title}}</view><view bindtap="closeActivity">关闭 ×</view></view>
+    <view class="learning-muted">{{selectedActivity.date}} {{selectedActivity.activity.start}} · {{selectedActivity.activity.feature}} · {{selectedActivity.activity.status}}</view>
+    <view wx:for="{{selectedActivity.questions}}" wx:key="id" class="learning-question"><view class="learning-strong">{{item.stem}}</view><view class="learning-muted">{{item.kind}}作答：{{item.answer}} · {{item.result}}</view><view class="learning-muted">参考答案：{{item.reference}}</view></view>
+    <view wx:if="{{!selectedActivity.questions.length}}" class="learning-muted">本次活动暂无逐题作答记录。</view>
+  </view></view>
+  <view wx:if="{{childPickerOpen}}" class="learning-child-modal-mask" bindtap="closeChildPicker"><view class="learning-child-modal" catchtap="noop">
+    <view class="learning-child-modal-head"><text>切换孩子</text><view bindtap="closeChildPicker">×</view></view>
+    <view class="learning-child-menu"><view wx:for="{{children}}" wx:key="id" class="learning-child-option {{item.selected ? 'active' : ''}}" data-id="{{item.id}}" bindtap="changeChild"><text>{{item.name}}</text><text>{{item.className}}</text></view></view>
+  </view></view>
 </view>

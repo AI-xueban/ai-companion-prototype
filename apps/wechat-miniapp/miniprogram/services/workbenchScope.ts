@@ -69,10 +69,17 @@ export function scopeTitle(scope: WorkScope): string {
 }
 export function scopeSubtitle(scope: WorkScope): string { return `${scopeTitle(scope)} · ${scope.view === 'subject' ? '数学' : '全科'} · ${scope.period === '7d' ? '近 7 天' : '近 30 天'}`; }
 export function homeworkScopeSubtitle(scope: WorkScope): string { return `${scopeTitle(scope)} · ${scope.view === 'subject' ? '任教学科' : '全科'}`; }
-export function queryWorkLearning(scope: WorkScope, studentId = 'all') {
-  const classes = scopeClassIds(scope);
-  const subject = scope.view === 'subject' ? '数学' : 'all';
-  const full = queryLearning(scope.period, 'all', subject, studentId);
+export function workLearningSubject(scope: WorkScope & { learningSubject?: string }, profile?: SessionProfile): string {
+  if (scope.view !== 'subject') return 'all';
+  if (!profile) return '数学';
+  const subjects = teacherAssignments(profile).filter(row => row.classIds.includes(scope.classId)).map(row => row.subject);
+  if (scope.learningSubject) return subjects.includes(scope.learningSubject) ? scope.learningSubject : '';
+  return subjects.includes('数学') ? '数学' : subjects[0] || '';
+}
+export function queryWorkLearning(scope: WorkScope & { learningSubject?: string }, studentId = 'all', profile?: SessionProfile, includeReportExamples = false) {
+  const subject = workLearningSubject(scope, profile);
+  const classes = scope.view === 'subject' ? (subject ? [scope.classId] : []) : scopeClassIds(scope);
+  const full = queryLearning(scope.period, 'all', subject, studentId, includeReportExamples);
   const roster = full.roster.filter(row => classes.includes(row.classId));
   const activities = full.activities.filter(row => classes.includes(row.classId));
   const operations = full.operations.filter(row => classes.includes(row.classId));
