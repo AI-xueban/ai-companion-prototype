@@ -260,7 +260,6 @@ window.workbenchPrototype = (() => {
       body+=mlCard('<button class="ml-entry" onclick="workbenchPrototype.openStageRoster()"><span>查看本阶段学生学情</span><b>'+v.enrolled+'人 ›</b></button>');
     } else if(r.kind==='list') {
       if(r.sourceId){const s=v.matches[0]?.source,t=v.selectionStats;body+=mlCard('<h2>'+esc(s?.name||'作业与练习')+'</h2><p class="ml-sub">'+esc(s?.kind||'')+' · '+esc(s?.date||'')+'</p><div class="ml-mini-line">'+t.questions+'道题有判定 · '+t.wrongQuestions+'道有误 · '+t.bad+'人答错</div>');}
-      else if(r.unknown)body+='<div class="ml-banner"><strong>不影响查看题目与学生作答</strong><br>以下题目的知识点暂未明确，判定与待复核结果分开显示。</div>';
       body+='<div class="ml-result-tabs ml-question-tabs">'+[[false,'全部 '+v.matches.length],[true,'有学生答错 '+v.selectionStats.wrongQuestions]].map(([w,t])=>'<button class="'+(!!r.onlyWrong===w?'ml-on':'')+'" onclick="workbenchPrototype.materialOnlyWrong('+w+')">'+t+'</button>').join('')+'</div>';
       body+=v.sources.map(s=>(r.sourceId?'':'<div class="ml-list-heading"><b>'+esc(s.name)+'</b><span>'+esc(s.date.slice(5))+' · '+s.questions.length+'道</span></div>')+s.questions.map(mlQuestionCard).join('')).join('')||mlEmpty('当前范围暂无题目');
     } else {
@@ -524,7 +523,7 @@ window.workbenchPrototype = (() => {
   }
   return { renderLearning, renderHomework, getScope: () => ({ ...state, classIds: classIds() }), getGrantedViews: () => [...granted],
     getLearningNavigation() {
-      if(state.view==='subject'&&issueBrowse?.materialRoute&&!state.studentId){const r=issueBrowse.materialRoute;return{title:r.kind==='stage'?'阶段回顾':r.kind==='question'?'题目与学生作答':r.unknown?'知识点暂未明确':r.knowledge|| (r.onlyWrong&&!r.sourceId?'班级错题':'作业题目'),back:true};}
+      if(state.view==='subject'&&issueBrowse?.materialRoute&&!state.studentId){const r=issueBrowse.materialRoute;return{title:r.kind==='stage'?'阶段回顾':r.kind==='question'?'题目与学生作答':r.unknown?(r.unknownFromMistakes?'其他错题':'其他题目'):r.knowledge|| (r.onlyWrong&&!r.sourceId?'班级错题':'作业题目'),back:true};}
       if (state.view === 'school') {
         return state.classId === 'all' ? { title: '学情', back: false } : { title: '班级学习覆盖', back: true };
       }
@@ -748,7 +747,7 @@ window.workbenchPrototype = (() => {
     materialGo(route) { if(state.view!=='subject'||!['stage','list','question'].includes(route.kind))return;
       if(!issueBrowse)issueBrowse=subjectBrowse(subjectPeriod==='1d'?1:7,route.kind!=='stage');
       else issueBrowse.materialTrail.push({...issueBrowse,materialTrail:undefined,scroll:document.getElementById('teacher-tab-panel')?.scrollTop||0});
-      issueBrowse.materialRoute={mode:'source',...route};Object.assign(issueBrowse,{search:'',correction:'all',expanded:[],result:'wrong',selected:null});
+      issueBrowse.materialRoute={mode:'source',...route,unknownFromMistakes:route.unknown && !!route.onlyWrong};Object.assign(issueBrowse,{search:'',correction:'all',expanded:[],result:'wrong',selected:null});
       if(route.kind==='question'){const q=mlModel(issueBrowse.reviewDays).questions.find(q=>q.id===route.qid);if(q)issueBrowse.result=q.wrongPeople?'wrong':q.people?'correct':'pending';}
       mlRefresh();
     },
@@ -857,7 +856,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (screen && query.get('page') === 'teacherDesk' && query.get('tab') === 'learning' && api.getScope().view === 'subject') {
     api.openKnowledgeReview(); api.setReviewDays([1,7,14,30].includes(Number(query.get('days'))) ? Number(query.get('days')) : 30);
     if (screen === 'knowledge') api.materialMode('knowledge');
-    else if (screen === 'unknown') api.materialGo({kind:'list',unknown:true});
+    else if (screen === 'unknown' || screen === 'unknown-wrong') api.materialGo({kind:'list',unknown:true,onlyWrong:screen==='unknown-wrong'});
     else if (screen === 'source') api.materialGo({kind:'list',sourceId:query.get('source') || 'w1'});
     else if (screen === 'question' || screen === 'expanded') {
       api.materialGo({kind:'list',unknown:true});api.materialGo({kind:'question',qid:query.get('question') || 'material:u1'});

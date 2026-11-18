@@ -7,7 +7,7 @@ type Evidence = Issue['students'][number];
 export type SubjectRoute =
   | { kind: 'history'; days: number }
   | { kind: 'review'; days: number; mode?: 'source' | 'knowledge' }
-  | { kind: 'material-list'; days: number; sourceId?: string; unknown?: boolean; knowledge?: string; onlyWrong?: boolean }
+  | { kind: 'material-list'; days: number; sourceId?: string; unknown?: boolean; unknownFromMistakes?: boolean; knowledge?: string; onlyWrong?: boolean }
   | { kind: 'recent'; days: number }
   | { kind: 'review-followup' }
   | { kind: 'review-student'; studentId: string }
@@ -66,7 +66,7 @@ export function subjectLearningHome(report: LearningReport, days: 1 | 7) {
   const issues = Array.from({ length: days }, (_, day) => reportDayIssues(report, day)).flat();
   const first = report.answers.filter(row => row.kind === '首次');
   return {
-    material, unknownWrong, unknownRoute: { kind:'material-list',days,unknown:true,onlyWrong:true } as SubjectRoute,
+    material, unknownWrong, unknownRoute: { kind:'material-list',days,unknown:true,unknownFromMistakes:true,onlyWrong:true } as SubjectRoute,
     known: known.map(g=>{const n=subjectMaterialStats(g.questions.filter(q=>q.wrongPeople));return {name:g.name,stats:n,route:{kind:'material-list',days,knowledge:g.name,onlyWrong:true} as SubjectRoute};}),
     date: range(days),
     participation: reportParticipation(report),
@@ -192,5 +192,5 @@ function materialPage(report: LearningReport, route: SubjectRoute) {
     allRoute: listRoute({ ...selection, onlyWrong: false }), wrongRoute: listRoute({ ...selection, onlyWrong: true }),
     resultOptions: question ? [{ key:'wrong',label:'答错',count:question.wrongPeople },{ key:'correct',label:'答对',count:question.correctPeople },{ key:'pending',label:'待复核',count:question.pendingPeople },{ key:'all',label:'全部',count:question.allStudents.length }] : [],
   };
-  return { material, title: route.kind === 'review' ? '阶段回顾' : route.kind === 'problem' ? '题目与学生作答' : material.unknown ? '知识点暂未明确' : 'knowledge' in selection && selection.knowledge ? selection.knowledge : route.kind === 'recent' ? '班级错题' : '作业题目', date: range(days) };
+  return { material, title: route.kind === 'review' ? '阶段回顾' : route.kind === 'problem' ? '题目与学生作答' : material.unknown ? ('unknownFromMistakes' in selection && selection.unknownFromMistakes ? '其他错题' : '其他题目') : 'knowledge' in selection && selection.knowledge ? selection.knowledge : route.kind === 'recent' ? '班级错题' : '作业题目', date: range(days) };
 }
