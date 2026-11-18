@@ -570,6 +570,7 @@ export const UniversalQuizResult: React.FC<{
     () =>
       resultData.questions.map((q) => ({
         id: q.questionId,
+        practiceRequest: q.question?.practiceRequest,
         type: q.questionType || 'single_choice',
         content: {
           ...(q.question?.content ?? allQuestions.find(item => item.id === q.questionId.replace(/^mist-/, ''))?.content),

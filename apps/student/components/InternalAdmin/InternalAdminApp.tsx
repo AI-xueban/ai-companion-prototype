@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Coins,
   Heart,
+  MessageSquareWarning,
   Menu,
   Plus,
   RefreshCw,
@@ -55,12 +56,13 @@ import {
   updateActiveStageCap,
   useDonationStage,
 } from '../../data/charityStage';
+import { QuestionFeedbackPage } from './QuestionFeedbackPage';
 
 interface InternalAdminAppProps {
   onSwitchBack: () => void;
 }
 
-type AdminMenu = '总览与风控' | '金币入账' | '商店兑换' | '捐赠与爱心池' | '捐赠规则';
+type AdminMenu = '总览与风控' | '金币入账' | '商店兑换' | '捐赠与爱心池' | '捐赠规则' | '题目反馈';
 type BusinessTab = '捐赠记录' | '爱心池台账' | '月报与公示';
 type AccountTab = '获取规则' | '金币流水';
 type RedeemSubTab = '许愿池兑换' | '装扮商城';
@@ -110,6 +112,7 @@ const MENUS: { key: AdminMenu; icon: React.ReactNode }[] = [
   { key: '商店兑换', icon: <ShoppingBag size={14} /> },
   { key: '捐赠与爱心池', icon: <Heart size={14} /> },
   { key: '捐赠规则', icon: <Award size={14} /> },
+  { key: '题目反馈', icon: <MessageSquareWarning size={14} /> },
 ];
 
 /** 折算比为系统常量，不对学生端开放变更 */
@@ -186,6 +189,7 @@ const INIT_FILTERS: Record<FilterKey, ListFilters> = {
   '捐池-台账': { ...DEFAULT_FILTERS },
   '金币-流水': { ...DEFAULT_FILTERS },
   捐赠规则: { ...DEFAULT_FILTERS },
+  题目反馈: { ...DEFAULT_FILTERS },
 };
 
 const Field = ({ label, children, wide = false }: { label: string; children: React.ReactNode; wide?: boolean }) => (
@@ -1476,6 +1480,7 @@ export const InternalAdminApp: React.FC<InternalAdminAppProps> = ({ onSwitchBack
               {activeMenu === '商店兑换' && renderRedeem()}
               {activeMenu === '捐赠与爱心池' && renderBusiness()}
               {activeMenu === '捐赠规则' && renderRules()}
+              {activeMenu === '题目反馈' && <QuestionFeedbackPage />}
             </section>
           </div>
         </main>

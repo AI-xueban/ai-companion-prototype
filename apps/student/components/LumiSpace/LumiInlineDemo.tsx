@@ -8,7 +8,7 @@ import { PaperPdfViewer } from './PaperPdfViewer';
 import moonCat from '../../assets/lumi-demo-moon-cat.png';
 import starCat from '../../assets/lumi-demo-star-cat.png';
 
-type Turn = { id: number; prompt: string; state: 'generating' | 'ready' | 'cancelled'; variant: number; answerTo?: number; title?: string };
+type Turn = { id: number; prompt: string; state: 'generating' | 'ready' | 'cancelled' | 'failed'; variant: number; answerTo?: number; title?: string };
 type Output = { pdf: Blob; previewPages: Blob[]; fileId: string; title?: string };
 type SaveKind = 'paper' | 'answers';
 type GroupOutputs = { paper?: Output; answers?: Output };
@@ -83,28 +83,37 @@ export const LumiInlineDemo: React.FC<Props> = ({ kind, initial, onSnapshot, reg
     if (!turnsRef.current.length) callbacks.current.onPrefill(INLINE_DEMO_PROMPTS[kind]);
   }, [kind]);
 
-  const send = (prompt: string, answerTo?: number) => {
-    if (!prompt.trim()) return;
+  const startGeneration = (turn: Turn, simulateFailure = false) => {
     // One active generation per demo conversation; preserve completed versions.
     if (turnsRef.current.some(t => t.state === 'generating')) {
       setNotice('正在生成，请稍等，或先停止本次生成。');
       return;
     }
+    const next: Turn = { ...turn, state: 'generating' };
+    turnsRef.current = turnsRef.current.some(t => t.id === turn.id)
+      ? turnsRef.current.map(t => t.id === turn.id ? next : t)
+      : [...turnsRef.current, next];
+    setTurns(turnsRef.current);
+    setNotice('');
+    const timer = setTimeout(() => {
+      timers.current.delete(turn.id);
+      setTurns(current => current.map(t => t.id === turn.id ? {
+        ...t,
+        state: simulateFailure ? 'failed' : 'ready',
+        title: kind === 'print' && !t.answerTo ? title : undefined,
+      } : t));
+    }, kind === 'image' ? 3000 : 1600);
+    timers.current.set(turn.id, timer);
+  };
+
+  const send = (prompt: string, answerTo?: number, simulateFailure = false) => {
+    if (!prompt.trim()) return;
     const id = ++sequence.current;
     const variant = /星空|流星|晚上|夜空/.test(prompt) ? 1 : turnsRef.current.at(-1)?.variant ?? 0;
     const questionTurn = kind === 'print' && /答案|解析/.test(prompt)
       ? [...turnsRef.current].reverse().find(t => t.state === 'ready' && !t.answerTo)
       : undefined;
-    const next: Turn = { id, prompt, state: 'generating', variant, answerTo: answerTo ?? questionTurn?.id };
-    turnsRef.current = [...turnsRef.current, next];
-    setTurns(turnsRef.current);
-    setNotice('');
-    const timer = setTimeout(() => {
-      timers.current.delete(id);
-      // The demo returns the title alongside the simulated Agent's fixed questions.
-      setTurns(current => current.map(t => t.id === id ? { ...t, state: 'ready', title: kind === 'print' && !t.answerTo ? title : undefined } : t));
-    }, kind === 'image' ? 3000 : 1600);
-    timers.current.set(id, timer);
+    startGeneration({ id, prompt, state: 'generating', variant, answerTo: answerTo ?? questionTurn?.id }, simulateFailure);
   };
   useEffect(() => { registerSend(send); return () => registerSend(null); });
   useEffect(() => {
@@ -184,12 +193,21 @@ export const LumiInlineDemo: React.FC<Props> = ({ kind, initial, onSnapshot, reg
   const suggestionIndex = Math.max(0, turns.filter(t => t.state === 'ready' && !t.answerTo).length - 1) + (latestTurn && groups[latestTurn.id]?.paper ? 1 : 0);
   return <div className="w-full space-y-3 text-slate-700" data-testid={`inline-${kind}-demo`}>
     <p className="text-center text-[10px] text-slate-500">演示会话 · {kind === 'image' ? '使用本地样图模拟生成与修改' : '示例题目，可保存 PDF 并演示打印'}</p>
+    {kind === 'image' && <div className="flex justify-center">
+      <button type="button" className={smallButton} disabled={turns.some(turn => turn.state === 'generating')}
+        onClick={() => send(latestTurn?.prompt ?? INLINE_DEMO_PROMPTS.image, undefined, true)}>演示生成失败</button>
+    </div>}
     {!turns.length && <div className="space-y-3">
       <p className="w-fit rounded-2xl rounded-tl-sm bg-white px-4 py-3 text-sm shadow-sm">{kind === 'print' ? '想练什么题？可以修改输入框里的示例，点击发送就好。' : '想画什么？可以修改输入框里的示例，点击发送就好。'}</p>
     </div>}
     {turns.map(turn => <div key={turn.id} className="space-y-3">
       <div className="flex justify-end"><p className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-tr-sm bg-brand px-4 py-3 text-sm text-white shadow-sm">{turn.prompt}</p></div>
       {turn.state === 'generating' ? kind === 'image' ? <ImageGenerationProgress /> : <DemoProgressLine text={turn.answerTo ? '正在整理答案和解析…' : '正在生成试题…'} /> : turn.state === 'cancelled' ? <div className="flex items-center gap-2 text-xs text-slate-500">已停止生成<button className={smallButton} onClick={() => send(turn.prompt, turn.answerTo)}>重新生成</button></div>
+        : turn.state === 'failed' ? <div className="flex w-fit items-center gap-3 rounded-xl bg-white px-3 py-2 text-xs text-slate-600">
+          <span role="status">图片生成失败</span>
+          <button type="button" className={smallButton} disabled={turns.some(item => item.state === 'generating')}
+            onClick={() => startGeneration(turn)}>重试</button>
+        </div>
         : kind === 'print' && turn.answerTo ? <section className="w-full max-w-[420px] rounded-2xl rounded-tl-sm border border-white/60 bg-white/95 p-4 shadow-sm">
           <p className="mb-3 text-xs">好，下面是这 3 道题的答案和解析。</p>
           <h3 className="text-sm font-bold">答案与解析</h3>

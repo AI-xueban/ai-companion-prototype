@@ -1,21 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BatteryLow, Settings, User, Baby, X, ChevronRight, LayoutDashboard, RotateCcw, CheckCircle2, Trophy, Users, Sparkles, LockKeyhole } from 'lucide-react';
+import { BatteryLow, Settings, User, Baby, X, ChevronRight, LayoutDashboard, RotateCcw, CheckCircle2, Trophy, Users, Sparkles, LockKeyhole, Printer } from 'lucide-react';
 import { UserPersona } from '../../types';
 import type { DonationStageStatus } from '../../data/charityStage';
 import type { TeacherPortalRole } from '../Teacher/data/teacherAccess';
 import type { DemoLockType } from './DeviceLockDemo';
+import { PrinterConnectionScenario } from './PrinterConnectionScenario';
+import { printerDemoScenarios, type PrinterDemoScenarioId } from './printerDemoScenarios';
 
 import { controlExceptionScenarios, type ControlExceptionDemo } from '../Teacher/data/controlExceptionDemo';
 
 interface DemoControlsProps {
     onControlException?: (scenario: ControlExceptionDemo) => void;
     onSwitchPersona: (type: UserPersona, calibrated?: boolean, grade?: string) => void;
-    onSwitchMode: (mode: 'student' | 'teacher') => void;
+    onSwitchMode: (mode: 'student' | 'teacher' | 'internal') => void;
     onSwitchTeacherRole: (role: TeacherPortalRole) => void;
     onJumpToMap: () => void;
-    currentMode: 'student' | 'teacher';
+    currentMode: 'student' | 'teacher' | 'internal';
     onJumpToSubject?: (subject: 'math' | 'chinese' | 'english') => void;
     onJumpToQuizResult?: () => void;
     onJumpToSteppingQuiz?: (subject?: 'math' | 'chinese' | 'english') => void;
@@ -54,22 +56,26 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
 }) => {
     const [exceptionModule, setExceptionModule] = useState<ControlExceptionDemo['module']>('duration');
     const [isOpen, setIsOpen] = useState(false);
+    const [showPrinterDemo, setShowPrinterDemo] = useState(false);
+    const [printerDemoScenario, setPrinterDemoScenario] = useState<PrinterDemoScenarioId>('same-wifi');
     const [resetComplete, setResetComplete] = useState(false);
     const [selectedMode, setSelectedMode] = useState(currentMode);
 
     useEffect(() => setSelectedMode(currentMode), [currentMode]);
+
+    useEffect(() => {
+        if (new URLSearchParams(window.location.search).get('demo') === 'wifi-printer') setShowPrinterDemo(true);
+    }, []);
 
     const handlePersonaClick = (p: UserPersona, calibrated = false, grade?: string) => {
         onSwitchPersona(p, calibrated, grade);
         setIsOpen(false);
     };
 
-    const handleModeSwitch = (mode: 'student' | 'teacher') => {
+    const handleModeSwitch = (mode: 'student' | 'teacher' | 'internal') => {
         setSelectedMode(mode);
-        if (mode === 'student') {
-            onSwitchMode('student');
-            setIsOpen(false);
-        }
+        onSwitchMode(mode);
+        setIsOpen(false);
     };
 
     const handleResetDemoData = () => {
@@ -98,7 +104,7 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
                             <button type="button" onClick={() => setIsOpen(false)} aria-label="关闭演示控制台" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white transition-colors"><X size={16} /></button>
                         </div>
 
-                        <div className="p-1 bg-white/10 rounded-xl grid grid-cols-2 gap-1">
+                        <div className="p-1 bg-white/10 rounded-xl grid grid-cols-3 gap-1">
                             <button 
                                 type="button"
                                 onClick={() => handleModeSwitch('student')}
@@ -122,6 +128,14 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
                                 }`}
                             >
                                 <LayoutDashboard size={12} /> 教师端
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleModeSwitch('internal')}
+                                disabled={selectedMode === 'internal'}
+                                className={`py-2 text-[11px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1 ${selectedMode === 'internal' ? 'bg-brand text-white shadow-sm cursor-default' : 'text-gray-400 hover:bg-white/10 hover:text-white'}`}
+                            >
+                                <Settings size={12} /> 内部管理
                             </button>
                         </div>
 
@@ -151,6 +165,26 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
                           <>
                         {/* Scenario Switcher */}
                         <div className="space-y-3 pt-2 border-t border-white/10">
+                            <label className="block text-[10px] font-medium text-gray-300">
+                                打印机演示场景
+                                <select value={printerDemoScenario} onChange={(event) => setPrinterDemoScenario(event.target.value as PrinterDemoScenarioId)} className="mt-1 block w-full rounded-lg bg-gray-800 p-2 text-xs text-white">
+                                    {printerDemoScenarios.map(({ id, label }) => <option key={id} value={id}>{label}</option>)}
+                                </select>
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => { setShowPrinterDemo(true); setIsOpen(false); }}
+                                className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all"
+                            >
+                                <span className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                                    <Printer size={18} />
+                                </span>
+                                <span className="flex-1 text-left">
+                                    <span className="block text-white text-xs font-bold">Wi-Fi 打印机连接演示</span>
+                                    <span className="block text-gray-400 text-[10px]">从我的文件打开 PDF 并连接打印机</span>
+                                </span>
+                                <ChevronRight size={14} className="text-gray-600" />
+                            </button>
                             {onResetDemoData ? (
                               <button
                                 type="button"
@@ -272,7 +306,7 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
                         <div className="space-y-3 pt-2 border-t border-white/10">
                             <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5">
                                 <Trophy size={11} className="text-amber-400/70" />
-                                星光学榜 · 状态 C 演示
+                                星光学榜 · 单人状态
                             </p>
                             <button
                                 onClick={() => {
@@ -285,13 +319,13 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
                                     <Users size={18} />
                                 </div>
                                 <div className="flex-1 text-left">
-                                    <div className="text-white text-xs font-bold">已获XP · 本周暂未开启</div>
-                                    <div className="text-gray-400 text-[10px]">年级不足19人 · 下周自动上榜</div>
+                                    <div className="text-white text-xs font-bold">只有本人 · 个人周成绩</div>
+                                    <div className="text-gray-400 text-[10px]">同年级仅1人 · 段位保持</div>
                                 </div>
                                 <ChevronRight size={14} className="text-gray-400 group-hover:text-white" />
                             </button>
                             <p className="text-gray-600 text-[9px] leading-relaxed">
-                                状态 A（未解锁）与 B（已上榜）见上方「我是萌新 / 初中七年级学生」入口。
+                                未参赛与正常周榜见上方学生入口；进入学榜可用「演示状态」检查零分、同分、VS 与结算。
                             </p>
                         </div>
 
@@ -302,12 +336,16 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
                 )}
             </AnimatePresence>
 
+            {showPrinterDemo && currentMode === 'student' && (
+                <PrinterConnectionScenario scenario={printerDemoScenario} onClose={() => setShowPrinterDemo(false)} />
+            )}
             <button 
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
+                disabled={showPrinterDemo}
                 aria-label={isOpen ? '关闭演示控制台' : '打开演示控制台'}
                 aria-expanded={isOpen}
-                className={`flex items-center gap-2 pl-4 pr-5 py-3 rounded-full shadow-2xl transition-all border-2 border-gray-900 text-base font-bold ${isOpen ? 'bg-brand text-white scale-105' : 'bg-gray-800 text-white hover:bg-gray-700 animate-pulse-slow'}`}
+                className={`flex items-center gap-2 pl-4 pr-5 py-3 rounded-full shadow-2xl transition-all border-2 border-gray-900 text-base font-bold disabled:invisible ${isOpen ? 'bg-brand text-white scale-105' : 'bg-gray-800 text-white hover:bg-gray-700 animate-pulse-slow'}`}
             >
                 <Settings size={28} className={isOpen ? "animate-spin-slow" : ""} />
                 <span className="whitespace-nowrap tracking-wide">{isOpen ? '收起控制台' : '演示控制台'}</span>

@@ -1,5 +1,6 @@
 
 export interface Task {
+  practiceRequest?: Record<string, unknown>;
   id: string;
   title: string;
   subject: string;

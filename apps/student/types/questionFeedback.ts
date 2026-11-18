@@ -55,7 +55,20 @@ export type QuestionFeedbackScene =
 
 export type QuestionFeedbackJudgment = 'correct' | 'wrong' | 'partial' | 'pending';
 
-export interface QuestionFeedbackReport {
+interface QuestionFeedbackEvidence {
+  handwriting?: string;
+  practiceRequest?: Record<string, unknown>;
+  questionSnapshot?: {
+    stem: string;
+    images: string[];
+    options?: string[];
+    difficulty?: number;
+    explanation?: string;
+    subQuestions?: unknown[];
+  };
+}
+
+export interface QuestionFeedbackReport extends QuestionFeedbackEvidence {
   id: string;
   createdAt: string;
   questionId: string;
@@ -74,13 +87,17 @@ export interface QuestionFeedbackReport {
   category: QuestionFeedbackCategory;
   reason: QuestionFeedbackReason;
   reasonLabel: string;
+  reasons?: QuestionFeedbackReason[];
+  reasonLabels?: string[];
   description?: string;
 }
 
-export interface QuestionFeedbackSubmitInput {
+export interface QuestionFeedbackSubmitInput extends QuestionFeedbackEvidence {
   category: QuestionFeedbackCategory;
   reason: QuestionFeedbackReason;
   reasonLabel: string;
+  reasons?: QuestionFeedbackReason[];
+  reasonLabels?: string[];
   description?: string;
   questionId: string;
   externalQuestionId?: string;

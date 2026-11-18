@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, Flashlight, History, X, Check } from 'lucide-react';
-import { AI_SOLVE_MOCK_SHOTS, MISSION_DAILY_MOCK_SHOTS } from '../../data/aiSolveMockData';
+import { AI_SOLVE_MOCK_SHOTS, MISSION_DAILY_MOCK_SHOTS, TUTOR_SAMPLE_SHOTS } from '../../data/aiSolveMockData';
 import { ShotThumbnail } from './ProblemPaperView';
 
 type CameraMode = 'ask' | 'mirror' | 'homework';
@@ -84,13 +84,13 @@ export const AISolveCameraOverlay: React.FC<AISolveCameraOverlayProps> = ({
     setShotIds((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleConfirm = () => {
-    if (shotIds.length === 0) {
+  const handleConfirm = (sampleId?: string) => {
+    if (!sampleId && shotIds.length === 0) {
       setHint('请先拍摄至少 1 张');
       window.setTimeout(() => setHint(''), 1500);
       return;
     }
-    onConfirm(shotIds);
+    onConfirm(sampleId ? [sampleId] : shotIds);
     setShotIds([]);
     setFlashOn(false);
     setHint('');
@@ -256,6 +256,22 @@ export const AISolveCameraOverlay: React.FC<AISolveCameraOverlayProps> = ({
               </button>
             </div>
 
+            {mode === 'mirror' && shotIds.length === 0 && (
+              <div className="absolute bottom-6 left-4 md:left-8 right-20 z-30 flex flex-wrap items-center gap-2">
+                <span className="text-xs text-white/65">体验讲题</span>
+                {TUTOR_SAMPLE_SHOTS.map(shot => (
+                  <button
+                    key={shot.id}
+                    type="button"
+                    onClick={() => handleConfirm(shot.id)}
+                    className="min-h-10 rounded-xl border border-white/15 bg-white/10 px-3 text-sm text-white hover:bg-white/20"
+                  >
+                    {shot.id === 'shot-paint' ? '粉刷墙面' : shot.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* 已拍缩略图 + 完成 */}
             {shotIds.length > 0 ? (
               <div className="absolute bottom-6 left-1/2 -translate-x-1/2 md:left-8 md:translate-x-0 z-30 flex items-center gap-3">
@@ -287,7 +303,7 @@ export const AISolveCameraOverlay: React.FC<AISolveCameraOverlayProps> = ({
                 </div>
                 <button
                   type="button"
-                  onClick={handleConfirm}
+                  onClick={() => handleConfirm()}
                   className="h-11 px-5 rounded-full bg-brand text-white font-bold text-sm flex items-center gap-2 shadow-[0_8px_24px_rgba(108,93,211,0.45)] hover:bg-brand-light active:scale-95 transition-all"
                 >
                   <Check size={16} />

@@ -89,6 +89,7 @@ export const SelfPracticePage: React.FC<SelfPracticePageProps> = ({
           completed: false,
           levelType: 'practice',
           quizType: 'standard',
+          practiceRequest: { ...payload, subject, grade, term: activeTerm, textbookEdition: version },
           questionCount: payload.questionCount,
           practiceDifficulty: payload.difficultyLevel,
           practiceDifficultyLabel: payload.difficulty,

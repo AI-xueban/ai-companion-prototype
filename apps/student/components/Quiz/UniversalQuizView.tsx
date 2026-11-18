@@ -30,6 +30,7 @@ import { getMistakeReasons, recordMistakeReasons } from '../../services/mistakeR
 export type QuizMode = 'practice' | 'exam' | 'mistake_review' | 'analysis' | 'browse';
 
 export interface UniversalQuizQuestion {
+    practiceRequest?: Record<string, unknown>;
     id: string;
     type: 'single_choice' | 'multiple_choice' | 'fill_in_blank' | 'true_false' | string;
     content: {
@@ -784,6 +785,9 @@ export const UniversalQuizView: React.FC<UniversalQuizViewProps> = ({
                     </div>
                 </div>
 
+                {mode === 'practice' && currentQ.practiceRequest && !showAnalysis && (
+                    <QuestionFeedbackEntry key={currentQ.id} question={currentQ} userAnswer={answers[currentQ.id]} scene="practice" variant="prominent" className="!justify-start" />
+                )}
                 {isPaperSourceQuestion && currentQ.content.originalImageUrl && (
                     <div className="flex justify-end -mt-2">
                         <PaperSourceImageControls imageUrl={currentQ.content.originalImageUrl} />

@@ -8,6 +8,7 @@ import { getCoinsToday } from '../../services/rewardService';
 import { coinLearningRules, xpLearningRules, coinRewardNotes, xpRewardNotes } from '../../data/rewardRules';
 import { RewardBreakdown } from './RewardBreakdown';
 import { getDemoCoinExpenseHistory, getDemoCoinIncomeHistory } from '../../data/rewardHistoryDemoData';
+import { growthLevel } from '../../services/starlightLeague';
 
 export const RewardAccountModal: React.FC<{ asset: 'coins' | 'xp' | null; stats: UserStats; wishApplications: WishApplication[]; onClose: () => void; onOpenStore: () => void }> = ({ asset, stats, wishApplications, onClose, onOpenStore }) => {
   const [tab, setTab] = useState<'records' | 'rules'>('records');
@@ -30,6 +31,7 @@ export const RewardAccountModal: React.FC<{ asset: 'coins' | 'xp' | null; stats:
   const reminders = coins ? coinRewardNotes : xpRewardNotes;
   const todayCoins = Math.min(150, Math.max(0, getCoinsToday()));
   const remainingCoins = 150 - todayCoins;
+  const growth = growthLevel(stats.totalXp ?? stats.xpToday);
   const pendingApplications = wishApplications.filter(application => application.status === 'pending');
   const pendingCoins = pendingApplications.reduce((sum, application) => sum + application.price, 0);
   const dateKey = (timestamp: number) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai' }).format(timestamp);
@@ -58,6 +60,8 @@ export const RewardAccountModal: React.FC<{ asset: 'coins' | 'xp' | null; stats:
           <div>
             <div className="flex items-center gap-1.5 text-xs font-bold text-white/85"><Zap size={16} />终身累计经验</div>
             <p className="mt-1 text-[28px] leading-tight font-black tabular-nums">{stats.totalXp ?? stats.xpToday}<span className="ml-1.5 text-xs font-bold">经验值（XP）</span></p>
+            <p className="mt-2 text-xs">成长等级 · {growth.name}</p>
+            <p className="mt-1 text-[11px] text-white/75">{growth.next ? `距离下一等级还需 ${Math.max(0, growth.next - (stats.totalXp ?? stats.xpToday))} XP` : '已达最高成长等级'}</p>
           </div>
           <div className="min-w-0 border-l border-white/20 pl-5">
             <div className="grid grid-cols-3 gap-3 text-xs">
@@ -66,6 +70,7 @@ export const RewardAccountModal: React.FC<{ asset: 'coins' | 'xp' | null; stats:
               <div><p className="text-white/75">今日目标</p><p className="mt-1 font-bold tabular-nums">{stats.xpTarget} 经验值（XP）</p></div>
             </div>
             <div className="mt-2 h-1 bg-white/25 rounded-full overflow-hidden"><div className="h-full bg-white rounded-full" style={{ width: `${Math.min(100, stats.xpToday / Math.max(1, stats.xpTarget) * 100)}%` }} /></div>
+            <p className="mt-2 text-[11px] text-white/75">本学期 XP：—（暂无统计） · 今日目标进度 {Math.min(100, Math.round(stats.xpToday / Math.max(1, stats.xpTarget) * 100))}%</p>
           </div>
         </section>)}
         {!coins && <nav className="flex gap-2" aria-label="奖励账户内容">{(['records', 'rules'] as const).map(value => <button key={value} onClick={() => setTab(value)} className={`rounded-xl px-5 py-2 font-bold ${tab === value ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500'}`}>{value === 'records' ? '经验记录' : '获取规则'}</button>)}</nav>}

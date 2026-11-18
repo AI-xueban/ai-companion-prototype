@@ -72,6 +72,9 @@ export const QuizPage: React.FC<QuizPageProps> = ({
       type: q.type,
       content: {
         stem: q.content.stem,
+        stemImages: q.content.stemImages,
+        htmlStem: q.content.htmlStem,
+        htmlExplanation: q.content.htmlExplanation,
         options: q.content.options,
         audioUrl: q.content.audioUrl,
         transcript: q.content.transcript,
@@ -106,7 +109,16 @@ export const QuizPage: React.FC<QuizPageProps> = ({
       return;
     }
     if (requestedCount) {
-      setQuestions(pickUnseenQuestions(pool, requestedCount));
+      const selected = pickUnseenQuestions(pool, requestedCount);
+      const request = task?.practiceRequest && {
+        ...task.practiceRequest,
+        requestId: crypto.randomUUID?.() ?? `pick-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        sessionId: task.id,
+        returnedQuestionIds: selected.map((question) => question.id),
+      };
+      setQuestions(request ? selected.map((question, index) => ({
+        ...question, practiceRequest: { ...request, questionPosition: index + 1 },
+      })) : selected);
       return;
     }
     setQuestions(pickUnseenQuestions(pool, pool.length));
@@ -150,6 +162,7 @@ export const QuizPage: React.FC<QuizPageProps> = ({
 
           return {
               questionId: q.id,
+              question: q.practiceRequest ? q : undefined,
               index: index + 1,
               isCorrect,
               timeSpentSec: Math.round(questionTimesSec?.[q.id] ?? 0),
