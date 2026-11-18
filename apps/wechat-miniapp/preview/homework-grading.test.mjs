@@ -298,3 +298,20 @@ p.compose();p.fillDemoPaste();p.inspectDraft().items.forEach((item,index)=>p.set
 // Grading progress is mutually exclusive; issue details remain on the corresponding content.
 for(const [states,expected] of [[['queued'],'queued'],[['queued','queued'],'queued'],[['queued','confirmed'],'processing'],[['processing','confirmed'],'processing'],[['confirmed'],'graded'],[['failed','review'],'graded']]){const result=filterRules.taskStatusKeys({target:1,completed:1,partial:0},states.map(state=>({state})));assert.deepEqual(Array.from(result).filter(id=>['queued','processing','graded'].includes(id)),[expected]);}
 assert.deepEqual(Array.from(filterRules.ALL_TASK_STATUSES),['unsubmitted','submitted','queued','processing','graded']);
+
+// A whole-submission estimate cannot promise completion after part of that submission fails.
+{
+  const now=Date.parse('2026-11-18T08:00:00Z');
+  const record={taskId:'estimate-task',itemId:'estimate-item',studentId:'estimate-student',version:2,
+    gradingWaitEstimate:{taskId:'estimate-task',itemId:'estimate-item',studentId:'estimate-student',submissionVersion:2,
+      minMinutes:3,maxMinutes:5,queueMinMinutes:1,queueMaxMinutes:2,expiresAt:'2026-11-18T09:00:00Z'},
+    questions:[{state:'processing'},{state:'failed'}]};
+  const progress=g.teacherGradingProgress([record],now);
+  assert.equal(progress.status.phase,'processing','Keep the questions that are still processing');
+  assert.match(progress.status.note,/批改失败/);
+  assert.match(progress.status.text,/完成时间暂无法估算/);
+  assert.doesNotMatch(progress.status.text,/3—5/,'Failed parts invalidate the submission-wide estimate');
+  const healthy={...record,studentId:'healthy',questions:[{state:'processing'}],
+    gradingWaitEstimate:{...record.gradingWaitEstimate,studentId:'healthy'}};
+  assert.match(g.teacherGradingProgress([healthy],now).status.text,/3—5/,'Healthy submissions retain their valid estimate');
+}

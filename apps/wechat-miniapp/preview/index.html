@@ -402,6 +402,10 @@
     .teacher-profile-switch{display:inline-flex;flex:none;align-items:center;justify-content:center;gap:5px;min-height:36px;padding:0 8px;border:0;border-radius:10px;background:#e9f4ff;color:#1268c4;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer}
     .teacher-profile-switch:focus-visible{outline:2px solid #247bd9;outline-offset:2px}
     .teacher-profile-switch svg,.teacher-mine-icon svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .teacher-account-screen{padding:24px 15px;background:#eef5fd}
+    .teacher-account-screen>*{flex:none}
+    .teacher-security-footer{margin-top:auto;padding-top:13px}
+    .teacher-security-logout{width:100%;min-height:44px;border:0;background:transparent;color:#62748a;font-size:13px;font-weight:500;cursor:pointer}
   .screen:has(>.teacher-tabbar)>.teacher-main{padding-bottom:104px}
 .teacher-agreement-row{display:flex;align-items:center;justify-content:center;gap:1px;margin-top:12px;white-space:nowrap;font-size:10px;line-height:22px;color:#8397aa}.teacher-agreement-row label{display:flex;align-items:center;gap:4px}.teacher-agreement-row input{width:13px;height:13px;margin:0;accent-color:#4d99de}.teacher-agreement-row button{padding:0;border:0;background:none;color:#3788ca;font:inherit;cursor:pointer}.teacher-agreement-mask{position:absolute;inset:0;z-index:120;background:#f6fbff;border-radius:inherit;display:flex;align-items:stretch;padding:52px 20px 24px;box-sizing:border-box}.teacher-agreement-detail{display:flex;flex-direction:column;width:100%;min-height:0}.teacher-agreement-detail header{display:flex;justify-content:space-between;align-items:center;color:#244766;font-size:17px}.teacher-agreement-detail header button{border:0;background:none;color:#3788ca;padding:10px}.teacher-agreement-body{flex:1;overflow:auto;padding:20px 0;color:#5c7389;font-size:13px;line-height:1.8}.teacher-agreement-body h3{font-size:14px;color:#345875}.teacher-agreement-body p{margin:8px 0 22px}
 </style>
@@ -447,7 +451,7 @@
       <button class="parent-review-reset" onclick="clearDemoCacheAndRestart()">清除缓存重新演示</button>
     </section>
   </aside>
-  <button class="review-launch" onclick="location.href='?review=1&page='+(stage==='parent'?'parent':'teacherLogin')">打开演示控制台</button>
+  <button class="review-launch" onclick="demoWorkspace.open()">打开演示控制台</button>
   <main class="device"><div id="app" class="app"></div></main>
   <script src="learning-data.js"></script>
   <script src="learning-prototype.js"></script>
@@ -524,7 +528,30 @@
     function teacherBind(){if(!teacherReplacePending){go('teacherLogin');return}const conflict=teacherBranch==='conflict';const title=conflict?'微信绑定受限':'更换绑定微信';const copy=conflict?'当前微信已绑定其他教师账号。请先由原账号持有人解绑，或联系学校管理员。':'确认后，旧微信将不能再快捷登录此教师账号。';app.innerHTML=`<main class="screen teacher-screen">${header(title,true,true)}<section class="teacher-main"><div class="teacher-hero teacher-bind-hero"><img class="teacher-art" src="assets/teacher-login-illustration.png" alt=""><div class="teacher-mark">师</div><h1>${title}</h1><p>${conflict?'请先处理当前微信的绑定关系。':'请再次验证教师账号。'}</p></div><div class="teacher-auth-card teacher-bind-card"><div class="teacher-bind-title">教师账号</div><div class="teacher-bind-account">138****8000</div><p class="teacher-bind-copy">${copy}</p>${!conflict?'<input id="teacher-replace-password" class="teacher-field-input" type="password" placeholder="请输入登录密码完成二次验证">':''}<div id="teacher-bind-error" class="teacher-security-error">${teacherBranchMessages[teacherBranch]||''}</div></div><div class="teacher-actions">${conflict?'':`<button class="teacher-primary" onclick="confirmTeacherBind()">验证并确认换绑</button>`}<button class="teacher-wechat-entry" onclick="cancelTeacherBind()">取消，返回登录</button></div></section></main>`;syncReview()}
     function confirmTeacherBind(){if(!teacherReplacePending||teacherBranch==='conflict')return;if(teacherBranch==='bindFailed'||teacherBranch==='secondFactorFailed'){document.getElementById('teacher-bind-error').textContent=teacherBranchMessages[teacherBranch];syncReview();return}if(document.getElementById('teacher-replace-password').value!=='123456'){document.getElementById('teacher-bind-error').textContent='二次验证失败，请检查登录密码';return}localStorage.setItem('ai_companion_demo_teacher_wechat_binding','teacher-demo-001');demoTeacherWechatBound=true;teacherReplacePending=false;teacherBranch='normal';saveDemoTeacherSession();if(teacherFlow==='replace')teacherFlowStep=2;go('teacherDesk')}
     function cancelTeacherBind(){teacherBranch='normal';teacherFlowOutcome='';teacherCodeSent=false;localStorage.removeItem(teacherDemoSessionKey);go('teacherPhone')}
-    function teacherSecurity(){if(teacherAvailability==='deleted'){showTeacherAccountUnavailable();return}app.innerHTML=`<main class="screen teacher-screen">${header('账号与安全',true,true,'returnToTeacherMineHome()','returnToTeacherMineHome()','回到我的首页')}<section class="teacher-main"><h1 class="teacher-security-title">账号与安全</h1><div class="teacher-security-card"><div class="teacher-security-row"><span>登录账号</span><span>138****8000</span></div><div class="teacher-security-row"><span>微信绑定状态</span><span>${demoTeacherWechatBound?'已绑定':'未绑定'}</span></div></div>${demoTeacherWechatBound?`<div class="teacher-security-card teacher-security-section"><div class="teacher-security-heading">解绑当前微信</div><p class="teacher-security-copy">解绑后需使用教师账号登录。为确认是你本人操作，请再次输入登录密码。</p><input id="teacher-reauth" class="teacher-field-input" type="password" placeholder="请输入登录密码完成二次验证"><div id="teacher-security-error" class="teacher-security-error"></div><button class="teacher-wechat-entry" onclick="unbindTeacherWechat()">验证并解绑</button></div>`:''}${teacherSecurityNotice?`<p class="teacher-security-copy">${teacherSecurityNotice}</p>`:''}</section></main>`;syncReview()}
+    function teacherSecurity(){
+      if(teacherAvailability==='deleted'){showTeacherAccountUnavailable();return}
+      app.innerHTML=`<main class="screen teacher-screen">
+        ${header('账号与安全',true,false,'returnToTeacherMineHome()')}
+        <section class="teacher-main teacher-account-screen">
+          <div class="teacher-security-card">
+            <div class="teacher-security-row"><span>登录账号</span><span>138****8000</span></div>
+            <div class="teacher-security-row"><span>微信绑定状态</span><span>${demoTeacherWechatBound?'已绑定':'未绑定'}</span></div>
+          </div>
+          ${demoTeacherWechatBound?`<div class="teacher-security-card teacher-security-section">
+            <div class="teacher-security-heading">解绑当前微信</div>
+            <p class="teacher-security-copy">解绑后需使用教师账号登录。为确认是你本人操作，请再次输入登录密码。</p>
+            <input id="teacher-reauth" class="teacher-field-input" type="password" placeholder="请输入登录密码完成二次验证">
+            <div id="teacher-security-error" class="teacher-security-error"></div>
+            <button class="teacher-wechat-entry" onclick="unbindTeacherWechat()">验证并解绑</button>
+          </div>`:''}
+          ${teacherSecurityNotice?`<p class="teacher-security-copy">${teacherSecurityNotice}</p>`:''}
+          <footer class="teacher-security-footer">
+            <button class="teacher-security-logout" type="button" onclick="logoutTeacher()">退出登录</button>
+          </footer>
+        </section>
+      </main>`;
+      syncReview();
+    }
     function startHomeworkPublishDemo(){workbenchPrototype.demoIdentity('all');workbenchPrototype.view('subject');teacherTab='homework';go('teacherDesk');homeworkPrototype.compose()}
     function showHomeworkParentDemo(){parentPrototype.scenario('twoChildren');parentPrototype.tab('homework')}
     function showHomeworkTeacherDemo(){workbenchPrototype.demoIdentity('all');workbenchPrototype.view('subject');teacherTab='homework';homeworkPrototype.toTeacherListWithoutRefresh();go('teacherDesk')}
@@ -534,6 +561,26 @@
     function teacherTeachingAssignments(){
       return teacherAvailability==='noClasses'?[]:schoolDemoRoster.getDemoTeachingAssignments('teacher-demo-001');
     }
+    let teacherGroupClassId='';
+    function openTeacherClassGroups(classId){
+      if(!teacherTeachingAssignments().some(row=>row.classIds.includes(classId)))return;
+      teacherGroupClassId=classId;
+      homeworkPrototype.resetClassGroupEditor();
+      teacherClassGroups();
+    }
+    function backFromTeacherClassGroups(){
+      if(homeworkPrototype.hasClassGroupEditor()){homeworkPrototype.closeClassGroupEditor();return;}
+      teacherGroupClassId='';
+      teacherTeaching();
+    }
+    function teacherClassGroups(){
+      if(teacherAvailability==='deleted'){showTeacherAccountUnavailable();return;}
+      if(!teacherTeachingAssignments().some(row=>row.classIds.includes(teacherGroupClassId))){teacherTeaching();return;}
+      const body=homeworkPrototype.renderClassGroupPanel(teacherGroupClassId);
+      if(!body){teacherTeaching();return;}
+      app.innerHTML=`<main class="screen teacher-screen">${header('班级分组',true,false,'backFromTeacherClassGroups()')}<section class="teacher-main teacher-teaching-detail hp-class-group-page">${body}</section></main>`;
+      syncReview();
+    }
     function teacherTeaching(){
       if(teacherAvailability==='deleted'){showTeacherAccountUnavailable();return}
       const assignments=teacherTeachingAssignments();
@@ -541,7 +588,7 @@
         ${header('任教科目与班级',true,false,'returnToTeacherMineHome(true)')}
         <section class="teacher-main teacher-teaching-detail">
           ${assignments.map(({subject,classIds})=>`<section class="teacher-mine-list teacher-teaching-subject"><h3>${subject}</h3><ul>
-            ${classIds.map(id=>schoolDemoRoster.getDemoClass(id)).filter(Boolean).map(row=>`<li>${row.name}</li>`).join('')}
+            ${classIds.map(id=>schoolDemoRoster.getDemoClass(id)).filter(Boolean).map(row=>`<li><button type="button" class="hp-teaching-group-entry" onclick="openTeacherClassGroups('${row.id}')"><span>${row.name}</span><small>${homeworkPrototype.classGroupCount(row.id)} 个分组 <b aria-hidden="true">›</b></small></button></li>`).join('')}
           </ul></section>`).join('')||'<p class="teacher-mine-list teacher-teaching-empty">暂无任教科目与班级</p>'}
         </section>
       </main>`;
@@ -661,9 +708,9 @@
     }
     function renderTeacherAvailability(){
       if(teacherAvailability==='deleted'){showTeacherAccountUnavailable();return true}
-      if(teacherAvailability==='normal')return false;
+      if(teacherAvailability==='normal'||teacherTab==='mine')return false;
       const scope=workbenchPrototype.getScope(),school=scope.view==='school';
-      if(school&&(teacherAvailability!=='noClasses'||teacherTab!=='mine'))return false;
+      if(school)return false;
       const noClasses=teacherAvailability==='noClasses',emptyClass=scope.classId==='c1'||scope.view==='homeroom';
       if(!noClasses&&!emptyClass)return false;
       const title=noClasses?'暂无已分配班级':'当前班级暂无学生';
@@ -672,9 +719,8 @@
       const roles=workbenchPrototype.getGrantedViews();
       const switches=roles.length>1?`<div class="teacher-auth-card"><span class="teacher-field-label">切换工作身份</span>${roles.map(role=>`<button class="teacher-wechat-entry" onclick="workbenchPrototype.view('${role}')">${roleNames[role]}${scope.view===role?' · 当前':''}</button>`).join('')}</div>`:'';
       const classPicker=!noClasses&&scope.view==='subject'?`<div class="teacher-auth-card"><label class="teacher-field-label">任教班级<select class="teacher-field-input" aria-label="切换空班级" onchange="teacherTab='learning';workbenchPrototype.class(this.value)"><option value="c1">七年级(2)班 · 0 名学生</option><option value="c2">七年级(4)班 · 查看学情</option></select></label></div>`:'';
-      const mine=teacherTab==='mine';
-      const content=mine?`<div class="teacher-auth-card"><h2>陈老师</h2><p>罗湖实验学校 · ${roleNames[scope.view]}</p><p>${noClasses?'暂无已分配班级':'七年级(2)班 · 0 名学生'}</p><button class="teacher-wechat-entry" onclick="go('teacherSecurity')">账号与安全 ›</button><button class="teacher-wechat-entry" onclick="logoutTeacher()">退出登录</button></div>`:`<div class="teacher-hero"><div class="teacher-mark">${noClasses?'班':'生'}</div><h1>${title}</h1><p>${copy}</p></div>${teacherTab==='homework'?'<p class="teacher-security-copy">当前暂无可选接收学生，暂不能发布作业。</p>':teacherTab==='control'?'<p class="teacher-security-copy">当前暂无可管控学生。</p>':''}<div class="teacher-actions"><button class="teacher-primary" onclick="refreshTeacherAvailability()">刷新</button><button class="teacher-wechat-entry" onclick="teacherTab='mine';teacherDesk()">查看我的账号</button><p id="teacher-empty-feedback" class="teacher-security-copy" role="status"></p></div>`;
-      app.innerHTML=`<main class="screen teacher-screen">${header(({learning:'学情',homework:'作业',control:'管控',mine:'我的'})[teacherTab],false)}<section class="teacher-main" id="teacher-tab-panel" role="tabpanel">${switches}${classPicker}${content}</section>${teacherTabBar()}</main>`;syncReview();return true;
+      const content=`<div class="teacher-hero"><div class="teacher-mark">${noClasses?'班':'生'}</div><h1>${title}</h1><p>${copy}</p></div>${teacherTab==='homework'?'<p class="teacher-security-copy">当前暂无可选接收学生，暂不能发布作业。</p>':teacherTab==='control'?'<p class="teacher-security-copy">当前暂无可管控学生。</p>':''}<div class="teacher-actions"><button class="teacher-primary" onclick="refreshTeacherAvailability()">刷新</button><button class="teacher-wechat-entry" onclick="teacherTab='mine';teacherDesk()">查看我的账号</button><p id="teacher-empty-feedback" class="teacher-security-copy" role="status"></p></div>`;
+      app.innerHTML=`<main class="screen teacher-screen">${header(({learning:'学情',homework:'作业',control:'管控'})[teacherTab],false)}<section class="teacher-main" id="teacher-tab-panel" role="tabpanel">${switches}${classPicker}${content}</section>${teacherTabBar()}</main>`;syncReview();return true;
     }
     function refreshTeacherAvailability(){teacherDesk();const feedback=document.getElementById('teacher-empty-feedback');if(feedback)feedback.textContent='已刷新，暂未发现更新。请联系学校管理员。'}
     function teacherDesk(){
@@ -682,7 +728,7 @@
       if(teacherTab==='control'){renderControl();return}
       if(teacherTab==='mine'){teacherMine();return}
       if(teacherTab==='homework'){if(workbenchPrototype.getScope().view==='school'){const teacherView=workbenchPrototype.getGrantedViews().find(view=>view!=='school');if(teacherView){workbenchPrototype.view(teacherView);return}}const body=workbenchPrototype.renderHomework(),nav=homeworkPrototype.getTeacherNavigation();if(!nav.back){renderTeacherTabPage(nav.title,body);return}app.innerHTML=`<main class="screen">${header(nav.title,true,false,'homeworkPrototype.navigateTeacherBack()','homeworkPrototype.navigateTeacherHome()','回到作业首页')}<section class="teacher-desk" id="teacher-tab-panel" role="tabpanel">${body}</section></main>`;syncReview();return}
-      if(teacherTab==='learning'){const body=workbenchPrototype.renderLearning(),nav=workbenchPrototype.getLearningNavigation();if(!nav.back){renderTeacherTabPage(nav.title,body);return}app.innerHTML=`<main class="screen">${header(nav.title,true,false,"workbenchPrototype.student('')",'workbenchPrototype.navigateLearningHome()','回到学情首页')}<section class="teacher-desk" id="teacher-tab-panel" role="tabpanel">${body}</section></main>`;syncReview();return}      const greeting=`<div class="teacher-greeting"><h1>陈老师，你好</h1><p>罗湖实验学校 · ${controlDemoRole==='admin'?'学校管理员':'数学教师'}</p><button class="teacher-security-link" onclick="go('teacherSecurity')">账号与安全 ›</button><button class="teacher-security-link" onclick="logoutTeacher()">退出登录</button></div>`;
+      if(teacherTab==='learning'){const body=workbenchPrototype.renderLearning(),nav=workbenchPrototype.getLearningNavigation();if(!nav.back){renderTeacherTabPage(nav.title,body);return}app.innerHTML=`<main class="screen">${header(nav.title,true,false,"workbenchPrototype.backLearning()",'workbenchPrototype.navigateLearningHome()','回到学情首页')}<section class="teacher-desk" id="teacher-tab-panel" role="tabpanel">${body}</section></main>`;syncReview();return}      const greeting=`<div class="teacher-greeting"><h1>陈老师，你好</h1><p>罗湖实验学校 · ${controlDemoRole==='admin'?'学校管理员':'数学教师'}</p><button class="teacher-security-link" onclick="go('teacherSecurity')">账号与安全 ›</button><button class="teacher-security-link" onclick="logoutTeacher()">退出登录</button></div>`;
       const classes=`<div class="teacher-section">我的任教班级</div><div class="teacher-classes"><button class="teacher-class ${selectedTeacherClass==='五年级 2 班'?'active':''}" onclick="selectTeacherClass('五年级 2 班')"><span class="teacher-tag">班主任</span><strong>五年级 2 班</strong><small>数学 · 42 名学生</small></button><button class="teacher-class ${selectedTeacherClass==='五年级 3 班'?'active':''}" onclick="selectTeacherClass('五年级 3 班')"><strong>五年级 3 班</strong><small>数学 · 40 名学生</small></button></div><div class="teacher-section">${selectedTeacherClass} · 数学</div>`;
       const modules=teacherTab==='learning'?[['班级学情','学习概况与趋势'],['学生学情','查看班内学生'],['错题分析','定位共性问题'],['学习时长','查看学习投入']]:[];
       app.innerHTML=`<main class="screen">${header(teacherTab==='learning'?'学情':'我的',false)}<section class="teacher-desk" id="teacher-tab-panel" role="tabpanel">${greeting}${teacherTab==='mine'?'':classes}<div class="teacher-modules">${modules.map(([name,desc])=>`<button class="teacher-module" onclick="showTeacherModule('${name}')"><b>${name}</b><span>${desc}</span></button>`).join('')}</div>${teacherTab==='mine'?'':'<p class="teacher-note">原型演示数据。正式系统由服务端按教师、班级、学科和学期校验每次请求。</p>'}</section>${teacherTabBar()}</main>`;
@@ -989,7 +1035,14 @@ app.innerHTML='<main class="screen control-screen">'+top+'<section class="contro
     function confirmDeleteHomeworkDraft(id){const draft=homeworkTasks.find(t=>t.id===id&&t.status==='draft');if(!draft)return;controlOverlay('删除草稿？','<p class="control-scope">'+draft.title+'</p><p class="control-confirm-copy">删除后将无法继续编辑这份草稿。</p>','<button class="control-secondary" onclick="closeControlOverlay()">取消</button><button class="control-primary" style="background:#db6065" onclick="deleteHomeworkDraft('+id+')">确认删除</button>')}
     function deleteHomeworkDraft(id){homeworkTasks=homeworkTasks.filter(t=>t.id!==id);renderHomeworkDrafts();controlToast('草稿已删除')}
     function selectTeacherClass(name){selectedTeacherClass=name;teacherDesk()}
-    function showTeacherModule(name){alert(`${name}页面待接入。`)}    function go(next){if(['auth','code','confirm','pending','approved'].includes(next))next='parent';stage=next;history.replaceState(null,'',location.pathname+(params.get('review')==='1'?'?review=1&page=':'?page=')+next);({home,parent:parentPrototype.render,teacherLaunch,teacherLogin,teacherPhone:teacherPhoneLogin,teacherBind,teacherDeviceConfirm,teacherDeviceKicked,teacherDesk,teacherSecurity,teacherTeaching,teacherUnavailable:showTeacherAccountUnavailable}[next]||home)()}
+    function showTeacherModule(name){alert(`${name}页面待接入。`)}
+    function go(next){
+      if(['auth','code','confirm','pending','approved'].includes(next))next='parent';
+      stage=next;
+      // Embedded previews may allow rendering while rejecting changes to their address.
+      try{history.replaceState(null,'',location.pathname+(params.get('review')==='1'?'?review=1&page=':'?page=')+next);}catch{}
+      ({home,parent:parentPrototype.render,teacherLaunch,teacherLogin,teacherPhone:teacherPhoneLogin,teacherBind,teacherDeviceConfirm,teacherDeviceKicked,teacherDesk,teacherSecurity,teacherTeaching,teacherUnavailable:showTeacherAccountUnavailable}[next]||home)();
+    }
     function enterDemoRole(role){
       if(role==='parent'){
         if(!parentPrototype.hasGuardianAccess())parentPrototype.scenario('returning');

@@ -548,14 +548,56 @@ p.openTeacher('grading-demo-v1');p.openStudents('unsubmitted');assert.doesNotMat
 nativeBrowse.setData({mode:'students'});const nativeEmpty=roster.DEMO_STUDENTS.find(s=>nativeBrowse.data.selectedTask.classIds.includes(s.classId)&&!native.getStudentSubmissions('grading-demo-v1',s.id).length);assert.ok(nativeEmpty);nativeBrowse.openStudent(event({id:nativeEmpty.id}));assert.equal(nativeBrowse.data.mode,'students');p.openStudents('completed');assert.match(p.renderTeacher(),/查看提交 ›/);
 console.log('PASS missing roster: no view link, no click action, guarded entry and submitted records still accessible.');
 
-// Overview is explicitly limited to graded attempts, excluding review/pending and unrelated task types.
-p.openTeacher('grading-demo-v1');assert.match(p.renderTeacher(),/已批改统计/);assert.match(p.renderTeacher(),/已批改 \d+ 题次/);p.openTeacher(audioWeb.id);assert.doesNotMatch(p.renderTeacher(),/已批改统计/);
+// Overview counts students; the separate accuracy metrics still use valid question results.
+p.openTeacher('grading-demo-v1');assert.match(p.renderTeacher(),/aria-label="批改进度"/);assert.match(p.renderTeacher(),/\d+ 人的作业待复核|已批 \d+\/\d+ 人|\d+ 人的作业已批完/);p.openTeacher(audioWeb.id);assert.doesNotMatch(p.renderTeacher(),/aria-label="批改进度"/);
 nativeBrowse.openTask('grading-demo-v1');const gradedCount=native.getTaskStudentRows(nativeBrowse.data.selectedTask).flatMap(r=>r.submissions).flatMap(r=>r.questions).filter(rules.isFormalGrade);assert.equal(nativeBrowse.data.gradedOverview.total,gradedCount.length);assert.equal(nativeBrowse.data.gradedOverview.correct,gradedCount.filter(q=>q.correct).length);assert.equal(nativeBrowse.data.gradedOverview.wrong,gradedCount.filter(q=>!q.correct).length);
 console.log('PASS graded overview: scoped formal grades only and no grading card for audio-only tasks.');
 
 // Summary state demos are reversible and use actual grading states, not fake percentages.
 p.openTeacher('grading-demo-v1');const overviewSnapshot=JSON.stringify(p.inspect().submissions.filter(r=>r.taskId==='grading-demo-v1'));
-for(const [id,title] of [['queued','等待批改'],['processing','正在批改'],['partial','正确率'],['unknown','完成时间暂无法估算'],['delayed','批改时间较长'],['failed','批改失败'],['review','待教师复核'],['done','正确率']]){p.applyPageDemo('grade-overview-'+id,'teacher');const html=p.renderTeacher();assert.ok(html.includes(title),id);if(['queued','processing','unknown','delayed','failed','review'].includes(id))assert.ok(!html.includes("<span>正确率</span>"));p.restorePageDemo('teacher');assert.equal(JSON.stringify(p.inspect().submissions.filter(r=>r.taskId==='grading-demo-v1')),overviewSnapshot);}
+for(const [id,title,copy] of [
+  ['queued','排队等待中','预计还需 1—2 分钟开始批改'],
+  ['processing','正在批改','预计还需 1—2 分钟完成批改'],
+  ['partial','正确率','正在批改'],
+  ['unknown','正在批改','完成时间暂无法估算'],
+  ['delayed','正在批改','批改时间较长'],
+  ['failed','批改失败','暂无已批改结果'],
+  ['review','人的作业待复核','暂无已批改结果'],
+  ['done','人的作业已批完','正确率'],
+]){
+  p.applyPageDemo('grade-overview-'+id,'teacher');
+  const html=p.renderTeacher();
+  assert.ok(html.includes(title)&&html.includes(copy),id);
+  if(id!=='partial'&&id!=='done'){
+    assert.match(html,/暂无已批改结果/);
+    assert.doesNotMatch(html,/<span>正确率<\/span>|<span>判错题次<\/span>/);
+  }
+  p.restorePageDemo('teacher');
+  assert.equal(JSON.stringify(p.inspect().submissions.filter(r=>r.taskId==='grading-demo-v1')),overviewSnapshot);
+}
+const queueStatus=rules.gradingOverviewStatus([{...reliable,questions:[{state:'queued'}]}],waitNow);
+assert.match(queueStatus.text,/开始批改时间暂无法估算。预计 3—5 分钟内完成批改（含排队）/);
+const mixedStatus=rules.gradingOverviewStatus([
+  {...reliable,questions:[{state:'queued'}],gradingWaitEstimate:{...reliable.gradingWaitEstimate,queueMinMinutes:1,queueMaxMinutes:2}},
+  {...reliable,questions:[{state:'processing'}]},
+],waitNow);
+assert.match(mixedStatus.text,/排队内容，预计还需 1—2 分钟开始批改。批改中的内容，预计还需 3—5 分钟完成批改/);
+assert.equal(rules.gradingOverviewStatus([]),null);
+const studentProgress = rules.teacherGradingProgress([
+  {studentId:'first',itemId:'one',questions:[{state:'confirmed'},{state:'confirmed'}]},
+  {studentId:'first',itemId:'two',questions:[{state:'confirmed'}]},
+  {studentId:'second',itemId:'one',questions:[{state:'review'},{state:'review'}]},
+  {studentId:'second',itemId:'two',questions:[{state:'confirmed'}]},
+], waitNow);
+assert.equal(studentProgress.label,'已批 1/2 人');
+assert.deepEqual(Array.from(studentProgress.reviewIds),['second']);
+assert.equal(rules.teacherListGradingStatus(studentProgress).action,'review');
+assert.equal(rules.teacherListGradingStatus(studentProgress).label,'待复核 1 人');
+const queuedProgress = rules.teacherGradingProgress([{...reliable,questions:[{state:'queued'}]}],waitNow);
+assert.equal(rules.teacherListGradingStatus(queuedProgress).label,'排队中');
+assert.equal(rules.teacherListGradingStatus(rules.teacherGradingProgress([{...reliable,questions:[{state:'processing'}]}],waitNow)).label,'批改中');
+assert.equal(rules.teacherListGradingStatus(rules.teacherGradingProgress([{...reliable,questions:[{state:'confirmed'}]}],waitNow)).action,'results');
+assert.equal(rules.teacherTaskWindow({deadline:'2026-01-01 08:00',submitDeadline:'2026-01-01 18:00'},Date.parse('2026-01-01T12:00')).label,'可补交');
 console.log('PASS overview states: queue, processing, partial, unknown, delay, failure, review, completed and snapshot restoration.');
 // Whole-task and item entry share the same question route; wrong-only entry keeps existing browsing.
 p.openTeacher('grading-demo-v1');assert.match(p.renderTeacher(),/按题查看 ›/);p.openQuestionResults();const wholeQuestions=p.renderTeacher();assert.match(wholeQuestions,/全部作业项/);const browseTask=p.inspect().tasks.find(t=>t.id==='grading-demo-v1');for(const item of browseTask.items.filter(i=>i.gradingEnabled===true)){p.openQuestionResults(item.id);assert.match(p.renderTeacher(),new RegExp("filterQuestionResults\\('"+item.id+"'\\)\\\" aria-pressed=\\\"true"));}p.openQuestionResults();assert.match(p.renderTeacher(),/filterQuestionResults\('all'\)" aria-pressed="true"/);nativeBrowse.openTask('grading-demo-v1');nativeBrowse.openItemGrades(event({id:'all'}));assert.equal(nativeBrowse.data.gradingItemId,'all');const allCount=nativeBrowse.data.summary.questionRows.length;assert.ok(allCount>0);for(const item of nativeBrowse.data.selectedTask.items.filter(i=>i.gradingEnabled!==false)){nativeBrowse.openItemGrades(event({id:item.id}));assert.ok(nativeBrowse.data.summary.questionRows.length<=allCount);}console.log('PASS question entry: whole task, individual item and native scope parity.');

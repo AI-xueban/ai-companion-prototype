@@ -1,80 +1,115 @@
 import { hasRole } from '../../../permissions/access';
 import { getSession, linkedGuardianStudents, selectGuardianStudent } from '../../../stores/session';
-import { activityEvidence, featureRows, getStudentLearning, learningOnDay, queryLearning, subjectRows, timelineRows } from '../../../services/learningMock';
-import { getDemoStudent, reportDate, REPORT_END } from '../../../services/schoolDemoRoster';
+import {
+  activityEvidence, learningOnDay, learningReportDays, queryLearning, reportMistakes,
+  reportSubjects, reportWeeklyComparison, timelineRows,
+} from '../../../services/learningMock';
+import { getDemoStudent } from '../../../services/schoolDemoRoster';
 
-type ParentPeriod = 'day' | '7d' | '30d';
+type Detail = 'home' | 'today' | 'mistakes' | 'child';
+
+function guardianScope() {
+  const session = getSession();
+  if (!session?.expiresAt || session.expiresAt <= Date.now() || !hasRole(session.profile, 'guardian')) return null;
+  const children = linkedGuardianStudents(session.profile);
+  const student = getDemoStudent(session.profile.activeStudentId || '');
+  return student && children.some(child => child.id === student.id) ? { student, children } : null;
+}
 
 Page({
   data: {
-    period: 'day' as ParentPeriod, day: 0,
-    studentId: '', studentName: '', className: '', dateLabel: '',
+    tab: 'overview' as 'overview' | 'week', detail: 'home' as Detail,
+    day: 0, dates: learningReportDays, date: learningReportDays[0],
+    period: '30d' as '7d' | '30d', subject: 'all',
+    studentId: '', studentName: '', className: '',
     children: [] as Array<{ id: string; name: string; className: string; selected: boolean }>, childPickerOpen: false,
-    used: false, learned: false, minutes: 0, days: 0, firstCount: 0, firstWrong: 0,
-    subjects: [] as ReturnType<typeof subjectRows>,
-    timeline: [] as ReturnType<typeof timelineRows>, visibleTimeline: [] as ReturnType<typeof timelineRows>, summaryTitle: '今日学习概况', summaryLine: '', showAllTimeline: false, featureOpen: false,
+    today: [] as ReturnType<typeof timelineRows>, timeline: [] as ReturnType<typeof timelineRows>,
+    mistakes: [] as ReturnType<typeof reportMistakes>, corrected: 0, expandedMistake: '',
+    subjects: [] as ReturnType<typeof reportSubjects>, childDays: 0, activities: 0, subjectCount: 0,
+    week: null as ReturnType<typeof reportWeeklyComparison>, weekDetails: false, weekActivities: 0,
     selectedActivity: null as ReturnType<typeof activityEvidence>,
-    chatCount: 0, solveCount: 0, solveProblems: 0, solveQuestions: 0,
   },
   onShow() {
-    const session = getSession();
-    const studentId = session?.profile.activeStudentId || '';
-    const student = getDemoStudent(studentId);
-    const linked = linkedGuardianStudents(session?.profile);
-    if (!hasRole(session?.profile, 'guardian') || !session?.expiresAt || session.expiresAt <= Date.now() || !student || !linked.some(child => child.id === studentId)) {
-      wx.reLaunch({ url: '/pages/auth/login/index' }); return;
+    const scope = guardianScope();
+    if (!scope) { wx.reLaunch({ url: '/pages/auth/login/index' }); return; }
+    const { student, children } = scope;
+    if (student.id !== this.data.studentId) {
+      this.setData({ detail: 'home', tab: 'overview', subject: 'all', selectedActivity: null, expandedMistake: '', weekDetails: false });
     }
-    this.setData({ studentId, studentName: student.name, className: student.className, children: linked.map(child => ({ id: child.id, name: child.name, className: child.className, selected: child.id === studentId })), childPickerOpen: false });
+    this.setData({ studentId: student.id, studentName: student.name, className: student.className, childPickerOpen: false,
+      children: children.map(child => ({ ...child, selected: child.id === student.id })) });
     this.refresh();
   },
-  closeChildPicker() { this.setData({ childPickerOpen: false }); },
-  stopChildDialogTap() {},
   toggleChildPicker() { if (this.data.children.length > 1) this.setData({ childPickerOpen: !this.data.childPickerOpen }); },
+  closeChildPicker() { this.setData({ childPickerOpen: false }); },
   changeChild(event: WechatMiniprogram.BaseEvent) {
-    const studentId = String(event.currentTarget.dataset.id);
-    if (!selectGuardianStudent(studentId)) return;
-    const student = getDemoStudent(studentId);
-    if (!student) return;
-    this.setData({ studentId, studentName: student.name, className: student.className, childPickerOpen: false, children: this.data.children.map(child => ({ ...child, selected: child.id === studentId })), subjects: [], timeline: [], selectedActivity: null, showAllTimeline: false, featureOpen: false });
+    if (guardianScope() && selectGuardianStudent(String(event.currentTarget.dataset.id))) this.onShow();
+  },
+  changeTab(event: WechatMiniprogram.BaseEvent) {
+    const tab = event.currentTarget.dataset.tab;
+    if (tab === 'overview' || tab === 'week') this.setData({ tab, detail: 'home', weekDetails: false, selectedActivity: null });
+  },
+  changeDay(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const day = Number(event.detail.value);
+    if (!Number.isInteger(day) || day < 0 || day >= learningReportDays.length) return;
+    this.setData({ day, date: learningReportDays[day], expandedMistake: '', selectedActivity: null });
     this.refresh();
   },
+  openDetail(event: WechatMiniprogram.BaseEvent) {
+    const detail = event.currentTarget.dataset.detail;
+    if (!['today', 'mistakes', 'child'].includes(detail)) return;
+    this.setData({ detail, expandedMistake: detail === 'mistakes' ? this.data.mistakes[0]?.id || '' : '', subject: 'all' });
+    this.refresh();
+  },
+  closeDetail() { this.setData({ detail: 'home', selectedActivity: null, expandedMistake: '' }); },
   changePeriod(event: WechatMiniprogram.BaseEvent) {
-    const period = event.currentTarget.dataset.period as ParentPeriod;
-    if (period !== 'day' && period !== '7d' && period !== '30d') return;
-    this.setData({ period, day: 0, selectedActivity: null, showAllTimeline: false });
+    const period = event.currentTarget.dataset.period;
+    if (period !== '7d' && period !== '30d') return;
+    this.setData({ period, subject: 'all', selectedActivity: null });
     this.refresh();
   },
+  changeSubject(event: WechatMiniprogram.BaseEvent) {
+    const subject = String(event.currentTarget.dataset.subject);
+    if (subject !== 'all' && !this.data.subjects.some(row => row.subject === subject)) return;
+    this.setData({ subject, selectedActivity: null });
+    this.refresh();
+  },
+  toggleMistake(event: WechatMiniprogram.BaseEvent) {
+    const id = String(event.currentTarget.dataset.id);
+    if (this.data.mistakes.some(row => row.id === id)) this.setData({ expandedMistake: this.data.expandedMistake === id ? '' : id });
+  },
+  toggleWeekDetails() { this.setData({ weekDetails: !this.data.weekDetails }); },
   openActivity(event: WechatMiniprogram.BaseEvent) {
-    const student = getDemoStudent(this.data.studentId);
-    if (!student) return;
-    const report = queryLearning(this.data.period === '30d' ? '30d' : '7d', student.classId, 'all', student.id);
-    const data = this.data.period === 'day' ? learningOnDay(report, this.data.day) : report;
-    this.setData({ selectedActivity: activityEvidence(data, String(event.currentTarget.dataset.id)) });
+    const scope = guardianScope();
+    if (!scope) return;
+    const id = String(event.currentTarget.dataset.id);
+    const list = this.data.detail === 'today' || this.data.detail === 'home' ? this.data.today : this.data.timeline;
+    if (!list.some(row => row.id === id)) return;
+    this.setData({ selectedActivity: activityEvidence(queryLearning('30d', scope.student.classId, 'all', scope.student.id, true), id) });
   },
   closeActivity() { this.setData({ selectedActivity: null }); },
-  toggleTimeline() { this.setData({ showAllTimeline: !this.data.showAllTimeline, visibleTimeline: this.data.showAllTimeline ? this.data.timeline.slice(0, 3) : this.data.timeline }); },
-  toggleFeatures() { this.setData({ featureOpen: !this.data.featureOpen }); },
+  onBackPress() {
+    if (this.data.selectedActivity) { this.closeActivity(); return true; }
+    if (this.data.childPickerOpen) { this.closeChildPicker(); return true; }
+    if (this.data.detail !== 'home') { this.closeDetail(); return true; }
+    return false;
+  },
   noop() {},
   refresh() {
-    const student = getDemoStudent(this.data.studentId);
-    if (!student) return;
-    const report = queryLearning(this.data.period === '30d' ? '30d' : '7d', student.classId, 'all', student.id);
-    const data = this.data.period === 'day' ? learningOnDay(report, this.data.day) : report;
-    const summary = getStudentLearning(data, student.id);
-    const features = featureRows(data);
-    const chat = features.find(row => row.name === '小晤问答');
-    const solve = features.find(row => row.name === 'AI解题');
-    const allRows = timelineRows(data);
-    const rows = allRows.slice(0, 12);
-    const periodLabel = this.data.period === 'day' ? this.data.day === 0 ? '今天' : reportDate(this.data.day) : this.data.period === '7d' ? '近 7 天' : '近 30 天';
-    const summaryLine = summary.learned ? `${periodLabel}有 ${allRows.length} 条学习活动，累计 ${summary.minutes} 分钟；首次作答 ${summary.firstCount} 题次，其中首次答错 ${summary.firstWrong} 题次。` : summary.used ? `${periodLabel}暂无学伴学习活动，有应用使用记录。` : `${periodLabel}暂无学伴学习活动记录。`;
+    const scope = guardianScope();
+    if (!scope || scope.student.id !== this.data.studentId) return;
+    const { student } = scope;
+    const all = queryLearning('30d', student.classId, 'all', student.id, true);
+    const child = this.data.period === '30d' ? all : queryLearning('7d', student.classId, 'all', student.id, true);
+    const weekly = queryLearning('7d', student.classId, 'all', student.id, true);
+    const mistakes = reportMistakes(all, this.data.day);
+    const timeline = timelineRows(child);
+    const subjects = reportSubjects(child);
     this.setData({
-      dateLabel: this.data.period === 'day' ? '' : `统计截至 ${REPORT_END}`,
-      used: summary.used, learned: summary.learned, minutes: summary.minutes, days: summary.days,
-      firstCount: summary.firstCount, firstWrong: summary.firstWrong,
-      subjects: subjectRows(data), timeline: rows, visibleTimeline: this.data.showAllTimeline ? rows : rows.slice(0, 3), summaryTitle: this.data.period === 'day' ? '今日学习概况' : this.data.period === '7d' ? '近 7 天学习概况' : '近 30 天学习概况', summaryLine,
-      chatCount: chat?.count || 0,
-      solveCount: solve?.count || 0, solveProblems: solve?.problems || 0, solveQuestions: solve?.questions || 0,
+      today: timelineRows(learningOnDay(all, this.data.day)), mistakes, corrected: mistakes.filter(row => row.correction).length,
+      subjects, timeline: this.data.subject === 'all' ? timeline : timeline.filter(row => row.subject === this.data.subject),
+      childDays: new Set(child.activities.map(row => row.day)).size, activities: child.activities.length, subjectCount: subjects.length,
+      week: reportWeeklyComparison(weekly), weekActivities: weekly.activities.length,
     });
   },
   openHomework() { wx.redirectTo({ url: '/pages/guardian/homework/index' }); },

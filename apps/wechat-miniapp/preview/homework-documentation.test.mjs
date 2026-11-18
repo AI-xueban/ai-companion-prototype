@@ -41,7 +41,13 @@ for(const scene of ['stats-overview','student-first']){
     assert.ok(client.getPageDemoContext('teacher').choices.some(c=>c[0]==='grading-wait-'+id));
     assert.ok(context.window.pageDemoTools.getContext().choices.some(c=>c.id==='grading-wait-'+id),'Visible state tool must retain the wait choice');
     client.applyPageDemo('grading-wait-'+id,'teacher');
-    assert.ok(client.renderTeacher().includes(copy),scene+': '+copy);
+    const html=client.renderTeacher();
+    if(scene==='stats-overview'){
+      assert.match(html,/开始批改时间暂无法估算/,'Queue start and completion must not be confused');
+      if(id==='normal')assert.match(html,/预计 3—5 分钟内完成批改（含排队）/);
+      else if(id==='peak')assert.match(html,/预计 10—15 分钟内完成批改（含排队）/);
+      else assert.doesNotMatch(html,/预计 \d+.*分钟/,'Unknown estimates must not invent a duration');
+    }else assert.ok(html.includes(copy),scene+': '+copy);
     assert.equal(realStorageCalls,0,'Wait estimates are isolated demonstrations, not real service writes');
   }
   client.restorePageDemo('teacher');

@@ -222,7 +222,7 @@ window.homeworkPrototype = (() => {
   }
   const migrateClass = id => id === 'g5-2' ? 'c1' : id === 'g5-3' ? 'c2' : id;
   const migrateStudent = id => id?.replace(/^g5-2-(\d+)$/, (_, number) => `c1-s${String(number).padStart(2, '0')}`).replace(/^g5-3-(\d+)$/, (_, number) => `c2-s${String(number).padStart(2, '0')}`);
-  store.tasks.forEach(task => { if (!task.subject) task.subject = task.id === 'demo-math' ? '数学' : task.id.startsWith('demo-read') ? '语文' : '综合'; task.parentVisible = false; task.classIds = task.classIds.map(migrateClass); if (task.targetStudentIds) task.targetStudentIds = task.targetStudentIds.map(migrateStudent); if (task.targetSnapshotIds) task.targetSnapshotIds = task.targetSnapshotIds.map(migrateStudent); if (!task.submitDeadline) task.submitDeadline = addDays(task.deadline, 7); if (!task.targetSnapshotIds) task.targetSnapshotIds = students.filter(student => task.classIds.includes(student.classId) && (!task.targetStudentIds || task.targetStudentIds.includes(student.id))).map(student => student.id); if (task.id === 'demo-math' && !task.items.some(item => item.id === 'math-offline')) task.items.push({ id: 'math-offline', title: '线下朗读', instruction: '完成后由家长确认', type: 'none' }); if (!task.publishedBy && task.id.startsWith('demo-')) task.publishedBy = task.id === 'demo-math' ? 'teacher-demo-001' : 'other-teacher-demo'; });
+  store.tasks.forEach(task => { if (!task.subject) task.subject = task.id === 'demo-math' ? '数学' : task.id.startsWith('demo-read') ? '语文' : '综合'; task.parentVisible = false; task.classIds = task.classIds.map(migrateClass); if (task.targetStudentIds) task.targetStudentIds = task.targetStudentIds.map(migrateStudent); if (task.targetSnapshotIds) task.targetSnapshotIds = task.targetSnapshotIds.map(migrateStudent); if (task.deadlineEnabled !== false && !task.submitDeadline) task.submitDeadline = addDays(task.deadline, 7); if (!task.targetSnapshotIds) task.targetSnapshotIds = students.filter(student => task.classIds.includes(student.classId) && (!task.targetStudentIds || task.targetStudentIds.includes(student.id))).map(student => student.id); if (task.id === 'demo-math' && !task.items.some(item => item.id === 'math-offline')) task.items.push({ id: 'math-offline', title: '线下朗读', instruction: '完成后由家长确认', type: 'none' }); if (!task.publishedBy && task.id.startsWith('demo-')) task.publishedBy = task.id === 'demo-math' ? 'teacher-demo-001' : 'other-teacher-demo'; });
   store.submissions.forEach(row => { row.studentId = migrateStudent(row.studentId); });
   const historicalDemo = store.tasks.find(task => task.id === 'demo-math');
   if (historicalDemo) {
@@ -365,19 +365,66 @@ window.homeworkPrototype = (() => {
    }));
    const currentSample=store.tasks.find(t=>t.id==='grading-demo-v1');if(currentSample)currentSample.needsAnswerConfirmation=true;
   store.tasks.filter(t=>t.needsAnswerConfirmation).forEach(t=>{const records=latestRows(store.submissions.filter(r=>r.taskId===t.id));grading.initializeAnswerStandards(t,records);});
-  const save = () => { if(localPageDemo?.snapshot)return; try { previewStorage.setItem(KEY, JSON.stringify(store)); } catch { /* 大图片超过浏览器本地容量时仍保留本次演示状态 */ } };
+  const save = () => {
+    if (localPageDemo?.snapshot) return;
+    const previousAwards = store.homeworkCoinAwards;
+    try {
+      settleHomeworkRewards();
+      previewStorage.setItem(KEY, JSON.stringify(store));
+    } catch {
+      store.homeworkCoinAwards = previousAwards;
+      // 存储失败时保留原先已到账记录，避免显示本次未保存的金币。
+    }
+  };
   const sessionMedia = new Map();
   const mediaKey = row => `${row.taskId}:${row.itemId}:${row.studentId}`;
   const mediaFor = row => row.media || sessionMedia.get(mediaKey(row)) || '';
   save();
    const newItem = () => ({ id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, title: '', instruction: '', type: 'photo', gradingEnabled: true });
   const defaultDeadline = () => { const date = new Date(); date.setDate(date.getDate() + 2); date.setHours(20, 0, 0, 0); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} 20:00`; };
-  const newDraft = () => { const deadline = defaultDeadline(); return { kind: 'homework', subject: '数学', title: '', description: '', photo: '', attachments: [], deadline, submitDeadline: addDays(deadline, 7), allowSupplement:true, supplementTouched:false, cycleCount: 1, classIds: ['c1', 'c2'], targetMode: 'all', recipientModes: { c1: 'all', c2: 'all' }, targetStudentIds: [], parentVisible: false, items: [newItem()] }; };
+  const newDraft = () => { const deadline = defaultDeadline(); return { kind: 'homework', subject: '数学', title: '', description: '', photo: '', attachments: [], deadlineEnabled:false, deadlineTouched:false, scheduleEnabled:false, scheduledAt:"", reminderEnabled:false, coinReward:false, deadline, submitDeadline: addDays(deadline, 1), allowSupplement:true, supplementTouched:false, cycleCount: 1, classIds: ['c1', 'c2'], targetMode: 'all', recipientModes: { c1: 'all', c2: 'all' }, targetStudentIds: [], parentVisible: false, items: [newItem()] }; };
+  let advancedSettingsOpen = false;
+  const hasDeadline = task => task.kind === 'checkin' || task.deadlineEnabled !== false;
+  const coinRewardEligible = task => task.kind === 'homework' && task.items.length > 0 &&
+    task.items.every(item => gradingEligible(item.type) && item.gradingEnabled === true);
+  const timingDraft = () => ({ ...draft, deadlineEnabled: hasDeadline(draft), scheduledAt: draft.kind === 'homework' ? draft.scheduledAt : '' });
+  const schedulePending = task => Boolean(task?.scheduledAt && !task.publishedAt);
+  let scheduleTimer;
+  function releaseScheduledTasks(refresh = false) {
+    clearTimeout(scheduleTimer);
+    if (localPageDemo?.snapshot) return;
+    const pending = store.tasks.filter(schedulePending);
+    const ready = pending.filter(task => toDate(task.scheduledAt).getTime() <= Date.now());
+    if (ready.length) {
+      ready.forEach(task => { task.publishedAt = task.scheduledAt; });
+      try { previewStorage.setItem(KEY, JSON.stringify(store)); }
+      catch { ready.forEach(task => { task.publishedAt = ''; }); }
+      if (refresh) {
+        if (teacherMode === 'list') teacherRefresh();
+        if (!parentTaskId) parentRefresh();
+      }
+    }
+    const remaining = pending.filter(schedulePending);
+    if (remaining.length) {
+      const nextAt = Math.min(...remaining.map(task => toDate(task.scheduledAt).getTime()));
+      scheduleTimer = setTimeout(() => releaseScheduledTasks(true), Math.max(1000, Math.min(2147483647, nextAt - Date.now())));
+    }
+  }
+  function refreshDefaultDeadline() {
+    if (draft.kind !== 'homework' || !hasDeadline(draft) || draft.deadlineTouched) return;
+    const sendAt = draft.scheduledAt ? toDate(draft.scheduledAt).getTime() : Date.now();
+    draft.deadline = formatDate(new Date(sendAt + 86400000));
+    if (draft.allowSupplement === false) draft.submitDeadline = draft.deadline;
+    else if (!draft.supplementTouched) draft.submitDeadline = addDays(draft.deadline, draft.kind==='checkin'?7:1);
+  }
   let teacherMode = 'list';
+  let openedFromTaskList = false;
   let browseSearch='', rosterSearch='', answerQueue=null, wholeFromAnswer=false, wholeReview=false, browseListTop=0;
   let gradeUI = { page:0, q:'', wrongOnly:false, parentOpen:false, origin:'detail' };
   let correctionUI={open:false,text:'',images:[],audio:'',recording:false,error:'',recorder:null,stream:null,chunks:[],startedAt:0};
   let recipientClassId='',recipientSearch='',recipientPickerOpen=false;
+  let recipientGroupDialog=null, recipientBeforePicker=null, classGroupEditor=null;
+  let publishedTaskId='', shareTaskId='', shareFeedback='';
   let answerExpanded='',answerError='';
   let gradeReleaseOpen = false;
   let gradeReviewDraft = null;
@@ -436,6 +483,125 @@ window.homeworkPrototype = (() => {
   const subjectClassIds = subject => [...new Set(teachingAssignments().filter(row => row.subject === subject).flatMap(row => row.classIds).filter(id => publishingClassIds().includes(id)))];
   const recipientModeForClass = id => draft.recipientModes?.[id] === 'selected' ? 'selected' : 'all';
   const draftRecipients = () => students.filter(row => draft.classIds.includes(row.classId) && (recipientModeForClass(row.classId) === 'all' || draft.targetStudentIds.includes(row.id)));
+  const classGroupAllowed = classId => classes.some(row=>row.id===classId)&&teachingAssignments().some(row=>row.classIds.includes(classId));
+  const classRosterFor = classId => students.filter(row=>row.classId===classId);
+  const classIdsFrom = (classId, ids) => classRosterFor(classId).filter(row=>ids.includes(row.id)).map(row=>row.id);
+  const classPickedIds = classId => classIdsFrom(classId,draft.targetStudentIds);
+  const groupStorageKey = () => KEY + ':class-groups:' + workScope.teacherId;
+  function savedClassGroups() {
+    const raw=previewStorage.getItem(groupStorageKey());
+    if(raw===null&&workScope.teacherId==='teacher-demo-001'){
+      const ids=classRosterFor('c1').map(row=>row.id);
+      return [{id:'demo-group-practice',classId:'c1',name:'基础巩固组',ids:ids.slice(0,4)},{id:'demo-group-extension',classId:'c1',name:'拓展练习组',ids:ids.slice(3,6)}];
+    }
+    const saved=JSON.parse(raw||'[]');
+    if(!Array.isArray(saved))throw Error('Invalid class groups');
+    return saved;
+  }
+  function classGroups(classId) {
+    if(!classGroupAllowed(classId))return [];
+    try{return savedClassGroups().filter(row=>row.classId===classId).map(row=>({...row,ids:classIdsFrom(classId,row.ids)}));}
+    catch{return [];}
+  }
+  function saveClassGroup(classId,id,name,ids) {
+    if(!classGroupAllowed(classId))return '当前已无法管理该班分组。';
+    const validIds=classIdsFrom(classId,ids);
+    if(!name)return '请输入分组名称。';
+    if(!validIds.length)return '请至少选择一名学生。';
+    try{
+      const groups=savedClassGroups();
+      if(groups.some(row=>row.classId===classId&&row.id!==id&&row.name===name))return '本班已有同名分组，请换一个名称。';
+      const existing=groups.find(row=>row.id===id&&row.classId===classId);
+      if(id&&!existing)return '这个分组已无法使用，请重新选择。';
+      if(existing)Object.assign(existing,{name,ids:validIds});
+      else groups.push({id:'group-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),name,classId,ids:validIds});
+      previewStorage.setItem(groupStorageKey(),JSON.stringify(groups));
+      return '';
+    }catch{return '分组暂时无法保存，请重试。';}
+  }
+  const selectedClassGroups = classId => classGroups(classId).filter(row=>draft.classGroupRefs?.[classId]?.includes(row.id));
+  const mergedGroupIds = groups => new Set(groups.flatMap(row=>row.ids));
+  const sameStudentIds = (ids, groupIds) => ids.length===groupIds.size&&ids.every(id=>groupIds.has(id));
+  function setClassPickedIds(classId,ids) {
+    draft.targetStudentIds=[...draft.targetStudentIds.filter(id=>!students.some(row=>row.id===id&&row.classId===classId)),...classIdsFrom(classId,ids)];
+  }
+  function setClassGroupRefs(classId,ids) {
+    draft.classGroupRefs ||= {};
+    if(ids.length)draft.classGroupRefs[classId]=ids;
+    else delete draft.classGroupRefs[classId];
+  }
+  function resetRecipientPicker() {
+    recipientPickerOpen=false;recipientSearch='';recipientGroupDialog=null;recipientBeforePicker=null;
+  }
+  function openClassRecipientPicker(classId) {
+    resetRecipientPicker();
+    recipientBeforePicker={mode:recipientModeForClass(classId),ids:classPickedIds(classId),groups:[...(draft.classGroupRefs?.[classId]||[])]};
+    draft.recipientModes ||= {};
+    draft.recipientModes[classId]='selected';recipientClassId=classId;recipientPickerOpen=true;
+  }
+  function finishClassRecipientPicker(temporary=false) {
+    if(temporary)setClassGroupRefs(recipientClassId,[]);
+    resetRecipientPicker();clearComposeError();teacherRefresh();
+  }
+  function renderGroupUsage(actions) {
+    const {count,temporary,save,saveLabel,saveCopy,cancel}=actions;
+    return `<div class="hp-group-usage"><strong>这次调整怎么使用？</strong><p>调整后 ${count} 名学生</p><button type="button" onclick="${temporary}">仅本次使用<small>${actions.temporaryCopy}</small></button><button type="button" onclick="${save}">${saveLabel||'保存到分组'}<small>${saveCopy}</small></button><button type="button" class="hp-group-cancel" onclick="${cancel}">取消</button></div>`;
+  }
+  function renderRecipientGroupDialog(classId,selectedCount) {
+    if(recipientGroupDialog.kind==='name'){
+      return `<div class="hp-group-usage"><strong>保存为分组</strong><p>${selectedCount} 名学生</p><label>分组名称<input class="hp-search" aria-label="分组名称" maxlength="20" placeholder="例如：错题巩固组" value="${escape(recipientGroupDialog.name)}" oninput="homeworkPrototype.setRecipientGroupName(this.value)"></label>${recipientGroupDialog.error?`<p class="hp-error" role="alert">${escape(recipientGroupDialog.error)}</p>`:''}<div class="hp-group-actions"><button type="button" onclick="homeworkPrototype.cancelRecipientGroupDialog()">取消</button><button type="button" class="hp-primary" onclick="homeworkPrototype.saveRecipientGroup()">保存分组</button></div></div>`;
+    }
+    const groups=selectedClassGroups(classId), multiple=groups.length>1;
+    return renderGroupUsage({count:selectedCount,temporary:'homeworkPrototype.useTemporaryRecipientGroup()',save:'homeworkPrototype.saveRecipientGroup()',cancel:'homeworkPrototype.cancelRecipientGroupDialog()',temporaryCopy:'用于当前作业，保留原有分组。',saveLabel:multiple?'保存为新分组':'保存到分组',saveCopy:multiple?'将合并后的名单另存，后续可再次选用。':`更新「${escape(groups[0]?.name||'') }」，后续可再次选用。`})+(recipientGroupDialog.error?`<p class="hp-error" role="alert">${escape(recipientGroupDialog.error)}</p>`:'');
+  }
+  function renderRecipientGroupChoices(classId) {
+    if(!classGroupAllowed(classId))return '';
+    const groups=classGroups(classId).filter(row=>row.ids.length);
+    if(!groups.length)return '';
+    const active=draft.classGroupRefs?.[classId]||[];
+    const picked=new Set(classPickedIds(classId));
+    const seen=new Set(), overlapping=new Set();
+    for(const group of groups.filter(row=>active.includes(row.id))){
+      for(const id of group.ids){
+        if(!picked.has(id))continue;
+        if(seen.has(id))overlapping.add(id);
+        seen.add(id);
+      }
+    }
+    const hint=overlapping.size
+      ?`<p class="hp-recipient-group-overlap" role="status">${overlapping.size} 名学生在多个所选分组中，本次只发送一次。</p>`
+      :'';
+    return `<section class="hp-recipient-groups"><strong>使用已保存分组</strong><div class="hp-recipient-group-options">${groups.map(group=>`<label><input type="checkbox" ${active.includes(group.id)?'checked':''} onchange="homeworkPrototype.toggleRecipientGroup('${escape(group.id)}',this.checked)"><span>${escape(group.name)}</span><small>${group.ids.length} 人</small></label>`).join('')}</div>${hint}</section>`;
+  }
+  function renderRecipientPickerActions(classId,count) {
+    const canSave=count>0&&classGroupAllowed(classId)&&!(draft.classGroupRefs?.[classId]?.length);
+    const save=canSave?'<button type="button" class="hp-secondary" onclick="homeworkPrototype.openRecipientGroupName()">保存为分组</button>':'';
+    return `<footer class="hp-recipient-picker-actions">${save}<button type="button" class="hp-primary" ${count?'':'disabled'} onclick="homeworkPrototype.closeRecipientPicker()">确定 · ${count} 名学生</button></footer>`;
+  }
+  function renderClassGroupPanel(classId) {
+    if(!classGroupAllowed(classId))return '';
+    const groups=classGroups(classId), className=classes.find(row=>row.id===classId).name;
+    const edit=classGroupEditor?.classId===classId?classGroupEditor:null;
+    if(!edit) {
+      return `<section class="hp-card hp-class-group-panel"><header><strong>${escape(className)}</strong><button type="button" class="hp-text-button" onclick="homeworkPrototype.editClassGroup('${classId}')">＋ 新建分组</button></header>${groups.length?groups.map(group=>`<button type="button" class="hp-class-group-row" onclick="homeworkPrototype.editClassGroup('${classId}','${escape(group.id)}')"><span><strong>${escape(group.name)}</strong><small>${classRosterFor(classId).filter(row=>group.ids.includes(row.id)).map(row=>escape(row.name)).join('、')}</small></span><span>${group.ids.length} 人 ›</span></button>`).join(''):'<p class="hp-muted">暂无分组。新建后可在布置作业时选用。</p>'}<p class="hp-muted hp-group-feedback" role="status"></p></section>`;
+    }
+    const query=edit.search.trim().toLowerCase();
+    const rows=classRosterFor(classId);
+    const options=rows.map(student=>`<label class="hp-student-option" data-search="${escape((student.name+' '+student.id).toLowerCase())}" ${(student.name+' '+student.id).toLowerCase().includes(query)?'':'hidden'}><span>${escape(student.name)}<small>${escape(student.id)}</small></span><input type="checkbox" ${edit.ids.includes(student.id)?'checked':''} onchange="homeworkPrototype.toggleClassGroupStudent('${student.id}',this.checked)"></label>`).join('');
+    const confirm=edit.confirm?renderGroupUsage({count:edit.ids.length,temporary:'homeworkPrototype.startTemporaryGroupHomework()',save:'homeworkPrototype.saveManagedClassGroup()',cancel:'homeworkPrototype.cancelClassGroupUsage()',temporaryCopy:'带入一份新作业，保留原有分组。',saveCopy:'保存组名和成员，后续布置可再次选用。'}):'';
+    return `<section class="hp-card hp-class-group-panel"><header><strong>${edit.id?'编辑分组':'新建分组'}</strong><span id="hp-class-group-count">已选 ${edit.ids.length} 人</span></header><label>分组名称<input class="hp-search" aria-label="分组名称" maxlength="20" value="${escape(edit.name)}" placeholder="例如：错题巩固组" oninput="homeworkPrototype.setManagedGroupName(this.value)"></label><input class="hp-search" aria-label="搜索分组成员" placeholder="搜索姓名或学号" value="${escape(edit.search)}" oninput="homeworkPrototype.searchClassGroupStudents(this.value)"><div class="hp-group-students">${options}<p class="hp-recipient-empty" ${rows.some(row=>(row.name+' '+row.id).toLowerCase().includes(query))?'hidden':''}>没有匹配的学生，已选名单保留。</p></div>${edit.error?`<p class="hp-error" role="alert">${escape(edit.error)}</p>`:''}${confirm?`<div class="hp-source-mask" role="presentation"><section class="hp-source-sheet hp-group-usage-sheet" role="dialog" aria-modal="true" aria-label="选择名单使用方式">${confirm}</section></div>`:`<div class="hp-group-actions"><button type="button" onclick="homeworkPrototype.closeClassGroupEditor()">取消</button><button type="button" class="hp-primary" onclick="homeworkPrototype.completeClassGroupEditor()">完成编辑</button></div>`}</section>`;
+  }
+  const mayShareTask = task => task&&!schedulePending(task)&&workScope.view!=='school'&&task.publishedBy===workScope.teacherId;
+  function shareTaskButton(task, className='hp-secondary hp-homework-share') {
+    return mayShareTask(task)?`<button type="button" class="${className}" onclick="homeworkPrototype.openHomeworkShare('${escape(task.id)}')">分享到班级群</button>`:'';
+  }
+  function renderHomeworkShare() {
+    const currentId=teacherMode==='detail'?teacherTaskId:teacherMode==='success'?publishedTaskId:'';
+    const feedback=shareFeedback?.taskId===currentId?`<p class="hp-draft-feedback hp-share-feedback" role="status">${escape(shareFeedback.message)}</p>`:'';
+    const task=taskById(shareTaskId);
+    if(!mayShareTask(task)||task.id!==currentId)return feedback;
+    return `${feedback}<div class="hp-source-mask" onclick="homeworkPrototype.closeHomeworkShare()"><section class="hp-source-sheet hp-attachment-source hp-share-sheet" role="dialog" aria-modal="true" aria-label="分享到班级群" onclick="event.stopPropagation()"><strong>分享到班级群</strong><p class="hp-muted">模拟微信转发 · 选择群聊</p><div class="hp-share-card"><strong>${escape(task.title)}</strong><small>${hasDeadline(task)?"截止 "+escape(task.deadline):"不限提交时间"}</small></div>${classes.map(row=>`<button type="button" onclick="homeworkPrototype.confirmHomeworkShare('${row.id}')">${escape(row.name)}家长群</button>`).join('')}<button type="button" class="hp-source-cancel" onclick="homeworkPrototype.closeHomeworkShare()">取消</button></section></div>`;
+  }
   const syncDraftTitle = () => {
     const options = subjectOptions(), changed = !options.includes(draft.subject);
     if (changed) draft.subject = options[0] || '';
@@ -444,11 +610,13 @@ window.homeworkPrototype = (() => {
     if (changed && !draft.classIds.length) draft.classIds = allowed.slice(0, 1);
     if (!draft.recipientModes) draft.recipientModes = Object.fromEntries(draft.classIds.map(id => [id, draft.targetMode === 'selected' ? 'selected' : 'all']));
     draft.recipientModes = Object.fromEntries(draft.classIds.map(id => [id, draft.recipientModes[id] === 'selected' ? 'selected' : 'all']));
+    if(draft.classGroupRefs)draft.classGroupRefs=Object.fromEntries(draft.classIds.filter(id=>draft.recipientModes[id]==='selected'&&draft.classGroupRefs[id]).map(id=>[id,draft.classGroupRefs[id]]));
     draft.targetStudentIds = draft.targetStudentIds.filter(id => students.some(row => row.id === id && draft.classIds.includes(row.classId)));
-    const defaultTitle = schoolDemoRoster.formatHomeworkTitle(draft.subject, draft.kind);
+    const scheduled = draft.kind === 'homework' && draft.scheduledAt ? toDate(draft.scheduledAt) : null;
+    const defaultTitle = schoolDemoRoster.formatHomeworkTitle(draft.subject, draft.kind, scheduled && Number.isFinite(scheduled.getTime()) ? scheduled : new Date());
     if (!draft.titleCustomized || !draft.title?.trim()) { draft.title = defaultTitle; draft.titleCustomized = false; }
   };
-  const hasTeacherDraft = () => Boolean(draft.titleCustomized || draft.description.trim() || materialAttachments(draft).length || draft.items.some(item => item.title || item.instruction) || subjectTouched || draft.kind === 'checkin');
+  const hasTeacherDraft = () => Boolean(draft.deadlineEnabled || draft.scheduleEnabled || draft.coinReward || draft.titleCustomized || draft.description.trim() || materialAttachments(draft).length || draft.items.some(item => item.title || item.instruction) || draft.temporaryGroupClassId || subjectTouched || draft.kind === 'checkin');
   let draftStorageError='',draftNotice='',draftMenu=null,draftDelete=null,composeOrigin='list',draftListScroll=0;
   let draftEditing=false,draftSelection=[];
   const draftArchiveKey = () => DRAFT_KEY + workScope.teacherId + ':archive';
@@ -505,7 +673,7 @@ window.homeworkPrototype = (() => {
     try {
       const saved = JSON.parse(previewStorage.getItem(DRAFT_KEY + workScope.teacherId) || 'null');
       if (!saved?.draft || !Array.isArray(saved.draft.items) || !Array.isArray(saved.draft.classIds) || !saved.draft.classIds.every(id => publishingClassIds().includes(id))) return;
-      draft = saved.draft; draft.attachments = materialAttachments(draft); draft.photo = ''; composeStep = saved.composeStep === 1 ? 1 : 0; settingMode = saved.settingMode === 'individual' ? 'individual' : 'uniform'; uniformType = publishTypes.includes(saved.uniformType) ? saved.uniformType : ''; recognizedCount = saved.recognizedCount || 0; recognitionStale = Boolean(saved.recognitionStale);
+      draft = saved.draft; if(draft.deadlineEnabled===undefined)draft.deadlineTouched=true; advancedSettingsOpen=false; draft.attachments = materialAttachments(draft); draft.photo = ''; composeStep = saved.composeStep === 1 ? 1 : 0; settingMode = saved.settingMode === 'individual' ? 'individual' : 'uniform'; uniformType = publishTypes.includes(saved.uniformType) ? saved.uniformType : ''; recognizedCount = saved.recognizedCount || 0; recognitionStale = Boolean(saved.recognitionStale);
       draft.attachments.forEach(file => { if (file.uploadState === 'optimizing' || file.uploadState === 'uploading') { file.uploadState = 'failed'; file.uploadError = '上传已中断，请重新上传'; } });
       subjectTouched = Boolean(saved.subjectTouched);
     } catch { /* 无有效草稿时保持新建表单。 */ }
@@ -555,7 +723,7 @@ window.homeworkPrototype = (() => {
   };
   const teacherTask = task => task && ({ ...task, targetSnapshotIds: task.targetSnapshotIds?.filter(id=>students.some(student=>student.id===id&&workScope.classIds.includes(student.classId))), classIds: task.classIds.filter(id => workScope.classIds.includes(id)), targetStudentIds: task.targetStudentIds?.filter(id => students.some(student => student.id === id && workScope.classIds.includes(student.classId))) || null });
   const detailTaskBase = task => {const allowed=workScope.view==='subject'?subjectClassIds(task.subject||'数学'):workScope.classIds;return {...task,classIds:task.classIds.filter(id=>allowed.includes(id)),targetSnapshotIds:task.targetSnapshotIds?.filter(id=>students.some(s=>s.id===id&&allowed.includes(s.classId))),targetStudentIds:task.targetStudentIds?.filter(id=>students.some(s=>s.id===id&&allowed.includes(s.classId)))||null};};
-  const teacherTaskById = id => { const task = taskById(id); return task && detailTaskBase(task).classIds.length && (workScope.view === 'school' || task.publishedBy === workScope.teacherId) ? (()=>{const scoped=id===teacherTaskId?detailTaskBase(task):teacherTask(task);return id===teacherTaskId&&detailClassId!=='all'&&scoped.classIds.includes(detailClassId)?{...scoped,classIds:[detailClassId],targetSnapshotIds:scoped.targetSnapshotIds?.filter(id=>students.some(student=>student.id===id&&student.classId===detailClassId)),targetStudentIds:scoped.targetStudentIds?.filter(id=>students.some(student=>student.id===id&&student.classId===detailClassId))||null}:scoped;})() : null; };
+  const teacherTaskById = id => { const task = taskById(id); return task && !schedulePending(task) && detailTaskBase(task).classIds.length && (workScope.view === 'school' || task.publishedBy === workScope.teacherId) ? (()=>{const scoped=id===teacherTaskId?detailTaskBase(task):teacherTask(task);return id===teacherTaskId&&detailClassId!=='all'&&scoped.classIds.includes(detailClassId)?{...scoped,classIds:[detailClassId],targetSnapshotIds:scoped.targetSnapshotIds?.filter(id=>students.some(student=>student.id===id&&student.classId===detailClassId)),targetStudentIds:scoped.targetStudentIds?.filter(id=>students.some(student=>student.id===id&&student.classId===detailClassId))||null}:scoped;})() : null; };
   const submissionsFor = task => latestRows(store.submissions.filter(row => row.taskId === task.id && targetIds(task).includes(row.studentId)));
   function summary(task) {
     const targets = targetIds(task);
@@ -606,7 +774,7 @@ window.homeworkPrototype = (() => {
     const classLabel=task.classIds.map(id=>classes.find(row=>row.id===id)?.name||id).join('、');
     const attachmentCount=materialAttachments(task).length;
     const wait=''; // Grading progress is shown with the graded summary below.
-    return `<section class="hp-card hp-task-brief"><div class="hp-task-brief-top"><span class="hp-detail-eyebrow">${escape(task.subject||'综合')}${task.kind==='checkin'?'打卡':'作业'}</span>${canManageTaskOverview(task)?'<button type="button" class="hp-task-manage-entry" onclick="homeworkPrototype.openTaskManagement()">作业管理<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 4 4 4-4 4"/></svg></button>':''}</div><div class="hp-task-title-row"><strong>${escape(task.title)}</strong>${attachmentCount?`<button class="hp-reference-shortcut" aria-label="查看 ${attachmentCount} 个附件" onclick="homeworkPrototype.openTaskAttachments()">附件 ${attachmentCount} ›</button>`:''}</div><small class="hp-brief-class">${escape(classLabel)}</small><div class="hp-brief-content"><p>${escape(briefDescription(task)||'请完成以下各项要求')}</p></div><div class="hp-brief-dates"><div><span>正常截止</span><time>${escape(task.deadline)}</time></div>${task.submitDeadline&&task.submitDeadline!==task.deadline?`<div><span>补交截止</span><time>${escape(task.submitDeadline)}</time></div>`:''}</div><div class="hp-submission-line"><button onclick="homeworkPrototype.openStudents('completed')"><b>${stat.completed}/${stat.target}</b><span>人已交齐</span></button><button onclick="homeworkPrototype.openStudents('missing')"><b>${stat.target-stat.completed}</b><span>人未交齐</span></button><button class="hp-roster-entry" aria-label="查看全部提交名单" onclick="homeworkPrototype.openStudents('all')">查看名单 ›</button></div>${wait?'<div class="hp-grading-wait-row">'+waitHint(wait)+'<button onclick="homeworkPrototype.openQuestionResults()">查看批改 ›</button></div>':''}</section>`;
+    return `<section class="hp-card hp-task-brief"><div class="hp-task-brief-top"><span class="hp-detail-eyebrow">${escape(task.subject||'综合')}${task.kind==='checkin'?'打卡':'作业'}</span>${canManageTaskOverview(task)?'<button type="button" class="hp-task-manage-entry" onclick="homeworkPrototype.openTaskManagement()">作业管理<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 4 4 4-4 4"/></svg></button>':''}</div><div class="hp-task-title-row"><strong>${escape(task.title)}</strong>${attachmentCount?`<button class="hp-reference-shortcut" aria-label="查看 ${attachmentCount} 个附件" onclick="homeworkPrototype.openTaskAttachments()">附件 ${attachmentCount} ›</button>`:''}</div><small class="hp-brief-class">${escape(classLabel)}</small><div class="hp-brief-content"><p>${escape(briefDescription(task)||'请完成以下各项要求')}</p></div><div class="hp-brief-dates"><div><span>提交截止</span><time>${hasDeadline(task)?escape(task.deadline):"不限提交时间"}</time></div>${task.submitDeadline&&task.submitDeadline!==task.deadline?`<div><span>补交截止</span><time>${escape(task.submitDeadline)}</time></div>`:''}</div><div class="hp-submission-line"><button onclick="homeworkPrototype.openStudents('completed')"><b>${stat.completed}/${stat.target}</b><span>人已交齐</span></button><button onclick="homeworkPrototype.openStudents('missing')"><b>${stat.target-stat.completed}</b><span>人未交齐</span></button><button class="hp-roster-entry" aria-label="查看全部提交名单" onclick="homeworkPrototype.openStudents('all')">查看名单 ›</button></div>${teacherTaskActions(task)}${wait?'<div class="hp-grading-wait-row">'+waitHint(wait)+'<button onclick="homeworkPrototype.openQuestionResults()">查看批改 ›</button></div>':''}</section>`;
   }
 
   function taskRequirementList(task){
@@ -641,7 +809,7 @@ window.homeworkPrototype = (() => {
     }
     if(role==='teacher'&&workScope.view!=='school'&&task&&['detail','student'].includes(mode)&&task.items.some(item=>['photo','file'].includes(item.type)&&item.gradingEnabled!==false))cases.push(['grading-wait-normal','批改正常等待','演示：批改预计还需3—5分钟完成。','业务状态'],['grading-wait-peak','批改高峰期','演示：批改预计还需10—15分钟完成。','业务状态'],['grading-wait-unknown','批改时间无法估算','演示：不编造剩余时间。','业务状态']);
     if(role==='teacher'&&mode==='detail'&&task)cases.push(['correction-demo','订正反馈演示','演示待订正、待查看、已通过，可恢复原数据。','业务状态']);
-    if(role==='teacher'&&mode==='detail'&&task&&task.items.some(i=>gradingEligible(i.type)&&i.gradingEnabled===true))cases.push(...[['queued','排队等待'],['processing','批改中·暂无结果'],['partial','部分批改完成'],['unknown','时间无法估算'],['delayed','批改超时'],['failed','批改失败'],['review','待教师复核'],['done','已提交内容批改完成']].map(([id,label])=>['grade-overview-'+id,label,'仅演示当前页，恢复正常即可还原数据。', ['failed','delayed','unknown'].includes(id)?'异常情况':'业务状态']));
+    if(role==='teacher'&&mode==='detail'&&task&&task.items.some(i=>gradingEligible(i.type)&&i.gradingEnabled===true))cases.push(...[['queued','排队等待'],['processing','批改中·暂无结果'],['partial','部分批改完成'],['mixed','排队与批改并存'],['failedProcessing','批改中有失败'],['reviewFailed','待复核并有失败'],['unknown','时间无法估算'],['delayed','批改超时'],['failed','批改失败'],['review','待教师复核'],['done','已提交内容批改完成']].map(([id,label])=>['grade-overview-'+id,label,'仅演示当前页，恢复正常即可还原数据。', ['failed','delayed','unknown'].includes(id)?'异常情况':'业务状态']));
     if(role==='teacher'&&mode==='question'){const allowed=['queued','processing','partialGrade','failed','review'];for(let i=cases.length-1;i>=0;i--)if(!allowed.includes(cases[i][0]))cases.splice(i,1);}
     if(role==='teacher'){const index=cases.findIndex(c=>c[0]==='partial');if(index>=0)cases.splice(index,1);}
     return {key:pageKey(role),role,mode,taskId:task?.id||'',title:mode==='preview'?'核对发布内容':mode==='result'?(role==='parent'?'单题批改结果':'整份批改结果'):mode==='question'?'单题批改结果':mode==='list'?'作业列表':'作业详情',choices:localPageDemo?.key===pageKey(role)?localPageDemo.choices:cases,active:localPageDemo?.key===pageKey(role)?localPageDemo.id:'',label:localPageDemo?.label||''};
@@ -663,7 +831,14 @@ window.homeworkPrototype = (() => {
   let workflowNotice='',batchReview={key:'',selected:{},choice:''},mappingChoice=null;
   function workflowCommit(change){
     const snapshot=JSON.stringify(store);
-    try{change();if(!localPageDemo?.snapshot)previewStorage.setItem(KEY,JSON.stringify(store));return true;}
+    try {
+      change();
+      if (!localPageDemo?.snapshot) {
+        settleHomeworkRewards();
+        previewStorage.setItem(KEY, JSON.stringify(store));
+      }
+      return true;
+    }
     catch{store=JSON.parse(snapshot);workflowNotice='保存失败，尚未更新。请重试。';return false;}
   }
   function batchContext(studentId){
@@ -696,13 +871,133 @@ window.homeworkPrototype = (() => {
     return {position,question,label:(question.label.match(/第\s*\d+\s*题/)?.[0]||question.label)+' · '+(classLabel||'当前班级')};
   }
   function resumeReview(task){const context=reviewResumeContext(task);return context?'<div class="hp-resume" aria-label="上次查看位置"><span>上次查看：'+escape(context.label)+'</span><button class="hp-text-button" onclick="homeworkPrototype.resumeReview()" aria-label="继续查看'+escape(context.label)+'">继续 ›</button></div>':'';}
-  let feedbackUI=null;
+  let feedbackUI=null, teacherFeedbackTaskId='';
   const feedbackReasons=['答案正确却判错','答案错误却判对','题目识别有误','其他'];
   const correctionBinding=c=>({studentId:c.studentId,taskId:c.task.id,itemId:c.record.itemId,questionId:c.q.id,version:c.record.version||1});
   const sameCorrection=(a,b)=>a&&b&&Object.keys(a).every(key=>a[key]===b[key]);
   function parentFeedback(q){const f=q.parentFeedback;return `<section class="hp-feedback">${f?.status==='resolved'?`<p>老师已处理：${escape(f.resolution||'已核对判定')}</p>`:''}<button class="hp-text-button" ${f?.status==='pending'?'disabled':''} onclick="homeworkPrototype.openGradeFeedback()">${f?.status==='pending'?'已反馈，等待老师处理':f?.status==='resolved'?'仍有疑问，补充反馈':'批改有疑问'}</button></section>`;}
   function feedbackDialog(){if(!feedbackUI)return '';return `<div class="hp-correction-mask"><section class="hp-correction-sheet" role="dialog" aria-label="批改有疑问"><header><strong>批改有疑问</strong><button onclick="homeworkPrototype.closeGradeFeedback()">取消</button></header><select aria-label="反馈原因" onchange="homeworkPrototype.setGradeFeedback('reason',this.value)">${feedbackReasons.map(reason=>`<option ${reason===feedbackUI.reason?'selected':''}>${reason}</option>`).join('')}</select><textarea aria-label="补充说明" placeholder="补充说明（选填）" maxlength="500" oninput="homeworkPrototype.setGradeFeedback('text',this.value)">${escape(feedbackUI.text)}</textarea><p role="alert">${escape(feedbackUI.error||'')}</p><button class="hp-primary" onclick="homeworkPrototype.sendGradeFeedback()">提交反馈</button></section></div>`;}
-  function teacherFeedbackList(task){if(!canRelease(task))return '';const rows=submissionsFor(task).flatMap(record=>record.questions.filter(q=>q.parentFeedback?.status==='pending').map(q=>({record,q})));return `<details class="hp-card"><summary>家长反馈 · ${rows.length} 条待处理</summary>${rows.map(({record,q})=>`<button class="hp-secondary" onclick="homeworkPrototype.openFeedbackReview('${task.id}','${q.id}','${record.studentId}')">${escape(students.find(s=>s.id===record.studentId)?.name)} · ${escape(q.label)}<small>${escape(q.parentFeedback.reason||'批改有疑问')} ${escape(q.parentFeedback.text||'')}</small></button>`).join('')||'<p>暂无待处理反馈</p>'}</details>`;}
+  function pendingTeacherFeedback(task){
+    return submissionsFor(task).flatMap(record=>(record.questions||[]).filter(q=>q.parentFeedback?.status==='pending').map(q=>({record,q})));
+  }
+  function teacherTaskActions(task){
+    const share=shareTaskButton(task,'hp-task-action');
+    const count=canRelease(task)?pendingTeacherFeedback(task).length:null;
+    const feedback=count===null?'':`<button type="button" class="hp-task-action" onclick="homeworkPrototype.openTeacherFeedback()">家长反馈${count?` <span class="hp-task-action-count">${count} 条待处理</span>`:''}</button>`;
+    const download=canRelease(task)?'<button type="button" class="hp-task-action" onclick="homeworkPrototype.openHomeworkDownload(this)">批量下载作业</button>':'';
+    return share||feedback||download?`<div class="hp-task-actions">${share}${feedback}${download}</div>`:'';
+  }
+
+  function homeworkDownloadContext(single) {
+    const task = taskById(teacherTaskId);
+    if (teacherTab !== 'homework' || !task || !teacherTaskById(task.id) || !canRelease(task)) return null;
+    if (single ? !['student','result'].includes(teacherMode) : teacherMode !== 'detail') return null;
+    const scoped = detailTaskBase(task);
+    const roster = students.filter(student => targetIds(scoped).includes(student.id));
+    const student = single ? roster.find(row => row.id === teacherStudentId) : null;
+    if (single && !student) return null;
+    const classRows = classes.filter(row => scoped.classIds.includes(row.id));
+    const photos = submissionsFor(scoped).filter(record => scoped.items.some(item => item.id === record.itemId && item.type === 'photo'));
+    return {task, roster, student, classRows, photos};
+  }
+
+  function homeworkDownloadImages(context, scope, options) {
+    const {task, roster, student, classRows, photos} = context;
+    const files = [];
+    let missingGraded = 0;
+    const safe = value => String(value || '').trim().replace(/[<>:"/\\|?*]/g, '_').replace(/[. ]+$/g, '') || '未命名';
+    for (const record of photos) {
+      const owner = roster.find(row => row.id === record.studentId);
+      if (!owner || (student && student.id !== owner.id) || (scope !== 'all' && scope !== owner.classId)) continue;
+      const item = task.items.find(row => row.id === record.itemId);
+      const sameName = roster.some(row => row.id !== owner.id && row.classId === owner.classId && row.name === owner.name);
+      const className = classRows.find(row => row.id === owner.classId)?.name || '班级未记录';
+      const name = [task.title, className, owner.name];
+      if (sameName) name.push(owner.studentNo || owner.id);
+      if (task.items.length > 1) name.push(`${task.items.indexOf(item)+1}-${item.title}`);
+      const base = name.map(safe).join('_');
+      for (const [index, page] of recordImagePages(record, 'teacher').entries()) {
+        const number = String(index+1).padStart(2,'0');
+        if (options.has('original') && page.originalPath) files.push({studentId:owner.id, name:`${base}_原图_${number}.jpg`});
+        if (!options.has('graded')) continue;
+        if (page.gradedPath || (page.originalPath && page.allMarks?.length)) {
+          files.push({studentId:owner.id, name:`${base}_批改图_${number}.jpg`});
+        } else if (page.originalPath) {
+          missingGraded++;
+        }
+      }
+    }
+    return {files, missingGraded};
+  }
+
+  function openHomeworkDownload(trigger, single = false) {
+    const context = homeworkDownloadContext(single);
+    if (!context || document.querySelector('.hp-homework-download')) return;
+    const {student, classRows} = context;
+    const className = classRows.find(row => row.id === student?.classId)?.name || '班级未记录';
+    const dialog = document.createElement('dialog');
+    dialog.className = 'hp-source-sheet hp-homework-download';
+    dialog.setAttribute('aria-labelledby','hp-download-title');
+    const scope = single
+      ? `<p class="hp-download-scope">${escape(className)} · ${escape(student.name)}</p>`
+      : `<label class="hp-download-scope">下载范围<select name="scope"><option value="all">全部班级</option>${classRows.map(row=>`<option value="${escape(row.id)}">${escape(row.name)}</option>`).join('')}</select></label>`;
+    dialog.innerHTML = `<form><header><strong id="hp-download-title">${single?'下载学生作业':'批量下载作业'}</strong><button type="button" data-download-close aria-label="关闭">×</button></header>
+      ${scope}
+      <fieldset><legend>下载内容</legend><label><input type="checkbox" name="original" checked> 提交原图</label><label><input type="checkbox" name="graded"> 带批改笔迹的图片</label></fieldset>
+      <fieldset><legend>保存到</legend><label><input type="radio" name="destination" value="album" checked> 相册</label><label><input type="radio" name="destination" value="files"> 我的文件</label></fieldset>
+      <div class="hp-download-summary" aria-live="polite"><b data-download-count></b><small data-download-skipped></small><small data-download-name></small></div>
+      <button class="hp-primary" type="submit">确认下载</button><small class="hp-muted">原型演示 · 模拟保存图片</small></form>`;
+    const form = dialog.querySelector('form');
+    const confirm = form.querySelector('[type="submit"]');
+    function update() {
+      const options = new FormData(form);
+      const {files, missingGraded} = homeworkDownloadImages(context, options.get('scope') || 'all', options);
+      const people = new Set(files.map(file=>file.studentId)).size;
+      const destination = options.get('destination') === 'files' ? '我的文件' : '相册';
+      const zip = destination === '我的文件' && files.length > 1;
+      form.querySelector('[data-download-count]').textContent = files.length
+        ? `${people} 位学生 · ${files.length} 张图片${zip?' · 打包为 ZIP':''}`
+        : options.has('original') || options.has('graded') ? '当前范围暂无可下载图片' : '请选择下载内容';
+      form.querySelector('[data-download-skipped]').textContent = missingGraded ? `${missingGraded} 页暂无批改图` : '';
+      form.querySelector('[data-download-name]').textContent = files.length ? `文件名示例 · ${files[0].name}` : '';
+      confirm.disabled = !files.length;
+      return {count:files.length, destination, zip};
+    }
+    form.addEventListener('change',update);
+    form.querySelector('[data-download-close]').addEventListener('click',()=>dialog.close());
+    form.addEventListener('submit',event=>{
+      event.preventDefault();
+      const state = update();
+      if (!state.count) return;
+      const demoQuery = typeof params === 'undefined' ? new URLSearchParams(location.search) : params;
+      const partial = demoQuery.get('downloadDemo') === 'partial' && state.destination === '相册' && state.count > 1;
+      function showResult(failed) {
+        const message = failed
+          ? `已保存 ${state.count-1} 张到相册，1 张保存失败。`
+          : `${state.count} 张图片${state.zip?'已打包为 ZIP 并':''}保存到${state.destination}。`;
+        dialog.innerHTML = `<section class="hp-download-result"><strong id="hp-download-title">${failed?'模拟部分保存失败':'模拟保存成功'}</strong>
+          <p role="status">${message}</p>
+          <button type="button" class="hp-primary">${failed?'重试失败项':'完成'}</button></section>`;
+        const action = dialog.querySelector('button');
+        action.addEventListener('click',()=>failed?showResult(false):dialog.close());
+        action.focus();
+      }
+      showResult(partial);
+    });
+    dialog.addEventListener('close',()=>{
+      dialog.remove();
+      if (trigger.isConnected) trigger.focus();
+    },{once:true});
+    update();
+    document.body.append(dialog);
+    dialog.showModal();
+  }
+  function renderTeacherFeedback(task){
+    if(teacherFeedbackTaskId!==task.id||!canRelease(task))return '';
+    const rows=pendingTeacherFeedback(task);
+    const list=rows.map(({record,q})=>`<button type="button" class="hp-teacher-feedback-row" onclick="homeworkPrototype.openFeedbackReview('${escape(task.id)}','${escape(q.id)}','${escape(record.studentId)}')"><span><strong>${escape(students.find(s=>s.id===record.studentId)?.name)} · ${escape(q.label)}</strong><small>${escape(q.parentFeedback.reason||'批改有疑问')}${q.parentFeedback.text?` · ${escape(q.parentFeedback.text)}`:''}</small></span><span class="hp-feedback-review-label">去核对 ›</span></button>`).join('');
+    return `<div class="hp-source-mask" onclick="homeworkPrototype.closeTeacherFeedback()"><section class="hp-source-sheet hp-teacher-feedback-sheet" role="dialog" aria-modal="true" aria-labelledby="hp-teacher-feedback-title" onclick="event.stopPropagation()"><header><strong id="hp-teacher-feedback-title">家长反馈</strong><button type="button" class="hp-text-button" onclick="homeworkPrototype.closeTeacherFeedback()">关闭</button></header><div class="hp-teacher-feedback-list">${list||'<p class="hp-muted hp-teacher-feedback-empty">暂无待处理反馈</p>'}</div></section></div>`;
+  }
   function unmatchedQuestions(task){
     const rows=submissionsFor(task).filter(record=>task.items.some(item=>item.id===record.itemId&&item.gradingEnabled===true&&item.type==='photo')).flatMap(record=>(record.questions||[]).filter(q=>q.mappingConfirmed===false).map(q=>({record,q})));if(!rows.length)return '';
     const choices=[...new Map(gradeQuestions(task).filter(q=>q.mappingConfirmed!==false).map(q=>[q.id,q])).values()];
@@ -721,18 +1016,29 @@ window.homeworkPrototype = (() => {
     resumeReview(){const task=teacherTaskById(teacherTaskId),context=task&&reviewResumeContext(task);if(!context)return;const p=context.position;this.selectDetailClass(p.classId);this.openGradeQuestion(p.questionId);this.filterGradeStudents(p.filter);if(p.studentId&&typeof document!=='undefined')document.querySelector('[data-student-id="'+p.studentId+'"]')?.scrollIntoView({block:'center'});},
     reportGradeIssue(){const task=taskById(parentTaskId);if(!task||!targetIds(task).includes(guardianId)||!gradeUI.parentOpen)return;const record=latestRows(store.submissions.filter(r=>r.taskId===task.id&&r.studentId===guardianId)).filter(r=>r.questions?.length)[gradeUI.page],q=record?.questions.find(q=>q.id===gradeUI.q);if(!q||q.parentFeedback?.status==='pending')return;workflowCommit(()=>{q.parentFeedback={status:'pending',at:new Date().toISOString(),version:record.version||1};});parentRefresh();},
   };
+  const teacherGradingItems = task => task.items.filter(item => gradingEligible(item.type) && item.gradingEnabled === true);
+  const teacherGradingRecords = task => {
+    const itemIds = new Set(teacherGradingItems(task).map(item => item.id));
+    return submissionsFor(task).filter(record => itemIds.has(record.itemId));
+  };
   function teacherGradedSummary(task){
-    const items=task.items.filter(item=>gradingEligible(item.type)&&item.gradingEnabled===true);if(!items.length)return '';
-    const questions=submissionsFor(task).filter(record=>items.some(item=>item.id===record.itemId)).flatMap(record=>record.questions||[]).filter(q=>q.mappingConfirmed!==false&&grading.isFormalGrade(q));
-    const count=questions.length,right=questions.filter(q=>q.correct).length;
-    const status=grading.gradingOverviewStatus(submissionsFor(task).filter(record=>items.some(item=>item.id===record.itemId))),statusView=status&&count?'<p class="hp-summary-brief" role="status">'+escape(grading.gradingOverviewBrief(status))+'</p>':status?'<div class="hp-summary-progress '+status.tone+'" role="status"><strong>'+escape(status.title)+'</strong><p>'+escape(status.text)+'</p><small>'+escape(status.note)+'</small></div>':'';
-    if(!count&&status)return '<section class="hp-card hp-graded-summary" aria-label="批改进度">'+statusView+'</section>';
-    return '<section class="hp-card hp-graded-summary" aria-label="已批改统计"><header><h3>已批改 '+count+' 题次</h3><button class="hp-text-button" onclick="homeworkPrototype.openQuestionResults()">按题查看 ›</button></header><div class="hp-graded-summary-grid"><div><b>'+(count?Math.round(right/count*100)+'%':'—')+'</b><span>正确率</span></div><div class="hp-graded-wrong"><b>'+(count-right)+'</b><span>判错题次</span></div></div>'+(count?'':'<p>暂无已批改结果</p>')+statusView+'</section>';
+    if(!teacherGradingItems(task).length)return '';
+    const records=teacherGradingRecords(task);
+    const {total:count,correct:right}=grading.teacherGradedStatistics(records);
+    const {status,label:result}=grading.teacherGradingProgress(records);
+    const state=status&&status.tone!=='complete'?`<strong>${escape(status.title)}</strong><span aria-hidden="true"> · </span>`:'';
+    const detail=status&&status.tone!=='complete'?`<span>${escape(status.text)}</span>${status.note?`<small>${escape(status.note)}</small>`:''}`:'';
+    const metrics=count?`<div class="hp-graded-summary-grid"><div><b>${Math.round(right/count*100)}%</b><span>已批改正确率</span></div><div class="hp-graded-wrong"><b>${count-right}</b><span>判错题次</span></div></div><p class="hp-graded-basis">已判定 ${count} 题次 · 待处理不计入</p>`:'';
+    return `<section class="hp-card hp-graded-summary" aria-label="批改进度">
+      <header><h3>批改进度</h3>${count?'<button class="hp-text-button" onclick="homeworkPrototype.openQuestionResults()">按题查看 ›</button>':''}</header>
+      <div class="hp-summary-progress ${status?.tone||''}" role="status"><span>${state}${result}</span>${detail}${status?.activity.failed?'<button class="hp-text-button" onclick="homeworkPrototype.openGradingIssues()">查看异常作业 ›</button>':''}</div>
+      ${metrics}
+    </section>`;
   }
   function teacherDetail() {
     const task=teacherTaskById(teacherTaskId);if(!task)return teacherList();
     const stat=summary(task);
-    return detailClassSelector()+teacherTaskOverview(task,stat)+teacherGradedSummary(task)+correctionOverview(task)+renderManagement(task)+teacherFeedbackList(task)+taskRequirementList(task);
+    return detailClassSelector()+teacherTaskOverview(task,stat)+teacherGradedSummary(task)+correctionOverview(task)+renderManagement(task)+taskRequirementList(task)+renderTeacherFeedback(task);
   }
   let questionResultsItem='';
   function teacherQuestionResults(){
@@ -913,7 +1219,9 @@ window.homeworkPrototype = (() => {
   function currentStudentRows() {
     const task=teacherTaskById(teacherTaskId);if(!task)return [];
     const scoped=rosterItemId?{...task,items:task.items.filter(item=>item.id===rosterItemId)}:task;
-    return studentRows(scoped).filter(row=>questionBrowseIds?.taskId===task.id&&teacherMode==='student'?questionBrowseIds.ids.includes(row.id):teacherFilter==='wrong'?row.wrong.length:teacherFilter==='questionWrong'?row.wrong.some(q=>q.id===teacherQuestionId):rosterMatches(row,teacherFilter));
+    const progress = ['review','failed'].includes(teacherFilter) ? grading.teacherGradingProgress(teacherGradingRecords(task)) : null;
+    const reviewIds = progress ? new Set(teacherFilter==='review'?progress.reviewIds:progress.failedIds) : null;
+    return studentRows(scoped).filter(row=>reviewIds ? reviewIds.has(row.id) : questionBrowseIds?.taskId===task.id&&teacherMode==='student'?questionBrowseIds.ids.includes(row.id):teacherFilter==='wrong'?row.wrong.length:teacherFilter==='questionWrong'?row.wrong.some(q=>q.id===teacherQuestionId):rosterMatches(row,teacherFilter));
   }
   function studentBrowseRows() {
     const rows=currentStudentRows(),current=rows.find(row=>row.id===teacherStudentId);
@@ -934,10 +1242,10 @@ window.homeworkPrototype = (() => {
   function teacherStudents() {
     const task = teacherTaskById(teacherTaskId);
     if (!task) return teacherList();
-    const special=teacherFilter==='wrong'||teacherFilter==='questionWrong';
-    const all=studentRows(rosterItemId?{...task,items:task.items.filter(item=>item.id===rosterItemId)}:task),rows=all.filter(row=>special?(teacherFilter==='wrong'?row.wrong.length:row.wrong.some(q=>q.id===teacherQuestionId)):rosterMatches(row,teacherFilter));
+    const special=['wrong','questionWrong','review','failed'].includes(teacherFilter);
+    const all=studentRows(rosterItemId?{...task,items:task.items.filter(item=>item.id===rosterItemId)}:task),rows=currentStudentRows();
     const tabs=special?'':`<div class="hp-roster-tabs" role="tablist" aria-label="提交情况">${rosterTabs.map(tab=>`<button role="tab" aria-selected="${teacherFilter===tab.id}" class="${teacherFilter===tab.id?'active':''}" onclick="homeworkPrototype.rosterSelect('${tab.id}')">${tab.label}<span>${all.filter(row=>rosterMatches(row,tab.id)).length}</span></button>`).join('')}</div>`;
-    return `<div class="hp-top"><button onclick="homeworkPrototype.backToStats()">‹ 返回统计</button><h1>学生名单</h1></div>${tabs}${browseSearchField(rosterSearch,'searchRosterStudents')}<div class="hp-roster-panel" onpointerdown="homeworkPrototype.rosterSwipeStart(event)" onpointerup="homeworkPrototype.rosterSwipeEnd(event)" onpointercancel="homeworkPrototype.rosterSwipeCancel()"><p class="hp-roster-caption">${rosterItemId?escape(task.items.find(item=>item.id===rosterItemId)?.title||'')+' · ':''}${rows.length} 名学生${teacherFilter==='missing'?' · 含未提交学生':''}${special?' · 答错学生':''}</p>${rows.length?rows.map(row=>`<${row.records.length?'button':'section'} class="hp-card hp-task hp-roster-card${row.records.length?'':' hp-roster-static'}" ${row.records.length?`onclick="homeworkPrototype.openStudent('${row.id}')"`:''}><span class="hp-line"><strong>${escape(row.name)}</strong><em>${row.status==='completed'?'已交齐':row.status==='missing'?'未提交':'未交齐'}</em></span><small>${escape(classes.find(item=>item.id===row.classId)?.name||'')}${row.wrong.length?' · 答错 '+row.wrong.length+' 题':''}${row.latest?' · 最近提交 '+escape(row.latest):''}</small>${row.missingItems.length?'<div class="hp-missing-items"><strong>还缺 '+row.missingItems.length+' 项</strong>'+row.missingItems.map(item=>'<span>· '+escape(item.title)+' <small>'+escape(typeLabel(item.type))+'</small></span>').join('')+'</div>':''}${row.records.length?'<span class="hp-line hp-task-bottom hp-roster-actions"><span class="hp-roster-link">查看提交 ›</span></span>':''}</${row.records.length?'button':'section'}>`).join(''):'<section class="hp-card hp-muted">暂无这类学生</section>'}</div>`;
+    return `<div class="hp-top"><button onclick="homeworkPrototype.backToStats()">‹ 返回统计</button><h1>${teacherFilter==='review'?'待复核作业':teacherFilter==='failed'?'批改异常作业':'学生名单'}</h1></div>${tabs}${browseSearchField(rosterSearch,'searchRosterStudents')}<div class="hp-roster-panel" onpointerdown="homeworkPrototype.rosterSwipeStart(event)" onpointerup="homeworkPrototype.rosterSwipeEnd(event)" onpointercancel="homeworkPrototype.rosterSwipeCancel()"><p class="hp-roster-caption">${rosterItemId?escape(task.items.find(item=>item.id===rosterItemId)?.title||'')+' · ':''}${rows.length} 名学生${teacherFilter==='missing'?' · 含未提交学生':''}${teacherFilter==='review'?' · 待复核作业':teacherFilter==='failed'?' · 批改异常作业':special?' · 答错学生':''}</p>${rows.length?rows.map(row=>`<${row.records.length?'button':'section'} class="hp-card hp-task hp-roster-card${row.records.length?'':' hp-roster-static'}" ${row.records.length?`onclick="homeworkPrototype.openStudent('${row.id}')"`:''}><span class="hp-line"><strong>${escape(row.name)}</strong><em>${row.status==='completed'?'已交齐':row.status==='missing'?'未提交':'未交齐'}</em></span><small>${escape(classes.find(item=>item.id===row.classId)?.name||'')}${row.wrong.length?' · 答错 '+row.wrong.length+' 题':''}${row.latest?' · 最近提交 '+escape(row.latest):''}</small>${row.missingItems.length?'<div class="hp-missing-items"><strong>还缺 '+row.missingItems.length+' 项</strong>'+row.missingItems.map(item=>'<span>· '+escape(item.title)+' <small>'+escape(typeLabel(item.type))+'</small></span>').join('')+'</div>':''}${row.records.length?'<span class="hp-line hp-task-bottom hp-roster-actions"><span class="hp-roster-link">查看提交 ›</span></span>':''}</${row.records.length?'button':'section'}>`).join(''):'<section class="hp-card hp-muted">暂无这类学生</section>'}</div>`;
   }
   const mockPhoto = (row, studentName) => {
     if(/^(?:grading|console)-page-[12]$/.test(row.itemId))return samplePhoto(row);
@@ -957,7 +1265,7 @@ window.homeworkPrototype = (() => {
   function recordImagePages(record,role){const originals=record.photos?.length?record.photos.map(photo=>resolvePhoto(photo)):[mediaFor(record)||(record.mock?mockPhoto(record,'学生'):'')];return learning().submissionEffectPages(record,originals,submissionViews.get(submissionViewKey(record,role))===true,role==='parent');}
   function submissionState(task,item,record,pending=false){return grading.homeworkItemDisplayStatus({submitted:Boolean(record),pending,gradingEnabled:task.kind==='homework'&&gradingEligible(item.type)&&item.gradingEnabled!==false,questions:record?.questions,gradingError:record?.gradingError,gradingComplete:grading.submissionGradingComplete(record)});}
   function recordMetrics(records){const progress=grading.gradingProgress(records.flatMap(record=>record.questions||[]));return progress.total?'<div class="hp-record-metrics" aria-label="当前学生当前作业批改统计">'+[[progress.total,'总题数'],[progress.correct,'答对'],[progress.wrong,'答错'],[progress.unavailable,'待处理']].map(([n,label])=>'<div><strong>'+n+'</strong><small>'+label+'</small></div>').join('')+'</div>':'';}
-  function recordOverview(task,records,person=''){return '<section class="hp-record-overview"><div class="hp-record-overview-title"><strong>'+escape(task.title)+'</strong><em>'+escape(task.subject||'综合')+'</em></div>'+person+recordMetrics(records)+'</section>';}
+  function recordOverview(task,records,person='',action=''){return '<section class="hp-record-overview"><div class="hp-record-overview-title"><strong>'+escape(task.title)+'</strong><em>'+escape(task.subject||'综合')+'</em>'+action+'</div>'+person+recordMetrics(records)+'</section>';}
   function renderGradeScopeHelp(role){
     if(gradeScopeRole!==role||(role==='parent'&&!parentTaskId)||(role==='teacher'&&teacherMode!=='compose'))return '';
     const subjects={
@@ -989,7 +1297,7 @@ window.homeworkPrototype = (() => {
     const row = scopedTask && studentRows(scopedTask).find(item => item.id === teacherStudentId);
     if (!task || !row) return teacherStudents();
     const browse=studentBrowseRows(),position=browse.findIndex(student=>student.id===row.id);
-    return `<div class="hp-student-browse" onpointerdown="homeworkPrototype.studentPhotoSwipeStart(event)" onpointerup="homeworkPrototype.studentPhotoSwipeEnd(event)" onpointercancel="homeworkPrototype.studentPhotoSwipeCancel()"><nav class="hp-student-switch" aria-label="切换学生"><button aria-label="上一位学生" ${position<=0?'disabled':''} onclick="homeworkPrototype.changeStudent(-1)"><span class="hp-student-chevron is-previous" aria-hidden="true"></span></button><div class="hp-student-identity"><strong>${escape(classes.find(item=>item.id===students.find(student=>student.id===row.id)?.classId)?.name||'班级未记录')}</strong><span>第 ${position+1} 位 / 共 ${browse.length} 位</span></div><button aria-label="下一位学生" ${position>=browse.length-1?'disabled':''} onclick="homeworkPrototype.changeStudent(1)"><span class="hp-student-chevron" aria-hidden="true"></span></button></nav>${recordOverview(task,studentRows(task).find(student=>student.id===row.id)?.records||[])}${scopedTask.items.map(item => { const index = task.items.indexOf(item);
+    return `<div class="hp-student-browse" onpointerdown="homeworkPrototype.studentPhotoSwipeStart(event)" onpointerup="homeworkPrototype.studentPhotoSwipeEnd(event)" onpointercancel="homeworkPrototype.studentPhotoSwipeCancel()"><nav class="hp-student-switch" aria-label="切换学生"><button aria-label="上一位学生" ${position<=0?'disabled':''} onclick="homeworkPrototype.changeStudent(-1)"><span class="hp-student-chevron is-previous" aria-hidden="true"></span></button><div class="hp-student-identity"><strong>${escape(classes.find(item=>item.id===students.find(student=>student.id===row.id)?.classId)?.name||'班级未记录')}</strong><span>第 ${position+1} 位 / 共 ${browse.length} 位</span></div><button aria-label="下一位学生" ${position>=browse.length-1?'disabled':''} onclick="homeworkPrototype.changeStudent(1)"><span class="hp-student-chevron" aria-hidden="true"></span></button></nav>${recordOverview(task,studentRows(task).find(student=>student.id===row.id)?.records||[],'',canRelease(task)?'<button type="button" class="hp-student-download" onclick="homeworkPrototype.openHomeworkDownload(this,true)">下载作业</button>':'')}${scopedTask.items.map(item => { const index = task.items.indexOf(item);
       const record = row.records.find(value => value.itemId === item.id);const displayStatus=submissionState(task,item,record);
       if (!record) return `<section class="hp-card hp-student-submission"><div class="hp-record-heading"><div class="hp-record-title"><b>${String(index+1).padStart(2,'0')}</b><strong>${escape(item.title)}</strong></div><div class="hp-record-badges"><span class="hp-record-state is-missing">未提交</span><span class="hp-record-type">${types[item.type]}</span></div></div></section>`;
       if(record.fileRef){resolvePhoto(record.fileRef);record.media=record.fileRef.path;}
@@ -1007,7 +1315,7 @@ window.homeworkPrototype = (() => {
   const listClassIds=()=>workScope.view==='subject'?[...new Set(teachingAssignments().filter(a=>listFilters.subject==='all'||a.subject===listFilters.subject).flatMap(a=>a.classIds))]:workScope.classIds;
   function normalizeListFilters(){if(listFilters.subject!=='all'&&!listSubjects().includes(listFilters.subject))listFilters.subject='all';if(listFilters.classId!=='all'&&!listClassIds().includes(listFilters.classId))listFilters.classId='all';}
   function listTask(task){const base=detailTaskBase(task);const ids=base.classIds.filter(id=>listFilters.classId==='all'||id===listFilters.classId);return {...base,classIds:ids,targetSnapshotIds:base.targetSnapshotIds?.filter(sid=>students.some(student=>student.id===sid&&ids.includes(student.classId))),targetStudentIds:base.targetStudentIds?.filter(sid=>students.some(student=>student.id===sid&&ids.includes(student.classId)))||null};}
-  function filteredListTasks(){normalizeListFilters();return (window.homeworkDemoConsole?.filterTasks?window.homeworkDemoConsole.filterTasks(store.tasks):store.tasks).filter(task=>(workScope.view==='school'||task.publishedBy===workScope.teacherId)&&(listFilters.subject==='all'||(task.subject||'综合')===listFilters.subject)).filter(task=>{const visible=listTask(task);return visible.classIds.length&&window.homeworkFilters.matchesTaskStatuses(listFilters.statuses,window.homeworkFilters.taskStatusKeys(summary(visible),gradeQuestions(visible)));});}
+  function filteredListTasks(){normalizeListFilters();return (window.homeworkDemoConsole?.filterTasks?window.homeworkDemoConsole.filterTasks(store.tasks):store.tasks).filter(task=>!schedulePending(task)&&(workScope.view==='school'||task.publishedBy===workScope.teacherId)&&(listFilters.subject==='all'||(task.subject||'综合')===listFilters.subject)).filter(task=>{const visible=listTask(task);return visible.classIds.length&&window.homeworkFilters.matchesTaskStatuses(listFilters.statuses,window.homeworkFilters.taskStatusKeys(summary(visible),gradeQuestions(visible)));});}
   function listFilterBar(){const groups=new Set(filteredListTasks().map(task=>task.seriesId||task.id));return '<div class="hp-list-tools"><h2>任务列表 <small>'+groups.size+'</small></h2><div class="hp-list-filters" role="group" aria-label="筛选任务">'+[['subject',listFilters.subject==='all'?'学科':listFilters.subject],['class',listFilters.classId==='all'?'班级':classes.find(c=>c.id===listFilters.classId)?.name||'班级'],['status',listFilters.statuses.length===window.homeworkFilters.ALL_TASK_STATUSES.length?'状态':'状态·'+listFilters.statuses.length]].map(([id,label])=>'<button aria-label="筛选'+({subject:'学科',class:'班级',status:'任务状态'})[id]+'，当前'+escape(label)+'" class="'+((id==='subject'?listFilters.subject!=='all':id==='class'?listFilters.classId!=='all':listFilters.statuses.length!==window.homeworkFilters.ALL_TASK_STATUSES.length)?'active':'')+'" onclick="homeworkPrototype.openTaskFilter(&quot;'+id+'&quot;)"><span>'+escape(label)+'</span><b aria-hidden="true"></b></button>').join('')+'</div></div>';}
   function renderTaskFilter(){if(!taskFilterSheet)return '';const status=taskFilterSheet==='status';const title=status?'任务状态':taskFilterSheet==='subject'?'选择学科':'选择班级';let body='';
     if(status){const groups=window.homeworkFilters.TASK_STATUS_GROUPS;body='<p>支持多选；同组任一匹配，跨组同时满足。未选的分组不限。</p><button class="hp-filter-all" aria-pressed="'+(taskStatusDraft.length===window.homeworkFilters.ALL_TASK_STATUSES.length)+'" onclick="homeworkPrototype.toggleAllTaskStatuses()">'+(taskStatusDraft.length===window.homeworkFilters.ALL_TASK_STATUSES.length?'☑':'□')+' 全选</button>'+groups.map(group=>'<h3>'+group.label+'</h3><div class="hp-filter-grid">'+group.options.map(option=>'<button aria-pressed="'+taskStatusDraft.includes(option.id)+'" class="'+(taskStatusDraft.includes(option.id)?'active':'')+'" onclick="homeworkPrototype.toggleTaskStatus(&quot;'+option.id+'&quot;)">'+(taskStatusDraft.includes(option.id)?'✓ ':'')+option.label+'</button>').join('')+'</div>').join('')+(taskFilterError?'<p class="hp-error" role="alert">'+taskFilterError+'</p>':'')+'<footer><button onclick="homeworkPrototype.resetTaskStatusDraft()">重置为全部</button><button class="hp-primary" onclick="homeworkPrototype.confirmTaskStatuses()">确定</button></footer>';}
@@ -1018,46 +1326,67 @@ window.homeworkPrototype = (() => {
     const groups = new Map();
     tasks.forEach(task => { const key = task.seriesId || task.id; if (!groups.has(key)) groups.set(key, []); groups.get(key).push(task); });
     let previousSection = '';
+    const now = Date.now();
+    const groupOpen = group => group.some(task => grading.teacherTaskWindow(task, now).open);
     return [...groups].sort(([, a], [, b]) => {
-      const aDue = Math.max(...a.map(task => toDate(task.deadline).getTime())), bDue = Math.max(...b.map(task => toDate(task.deadline).getTime()));
       const published = group => Math.max(...group.map(task => {const time=toDate(task.publishedAt||'').getTime();return Number.isFinite(time)?time:0;}));
-      return (window.homeworkDemoConsole?.taskRank?.(a[0])??99)-(window.homeworkDemoConsole?.taskRank?.(b[0])??99)||Number(bDue > Date.now()) - Number(aDue > Date.now()) || published(b) - published(a);
+      return Number(groupOpen(b)) - Number(groupOpen(a)) || (window.homeworkDemoConsole?.taskRank?.(a[0])??99)-(window.homeworkDemoConsole?.taskRank?.(b[0])??99) || published(b) - published(a);
     }).map(([seriesId, group]) => {
-      const ended = group.every(task => toDate(task.deadline).getTime() <= Date.now());
+      const ended = !groupOpen(group);
       const section = ended ? '历史任务' : '当前任务';
       const heading = section==='历史任务'&&section !== previousSection ? `<h2 class="hp-section">${section}</h2>` : '';
       previousSection = section;
       if (group.length === 1) {
-        const task = listTask(group[0]), stat = summary(task), assignedClasses=group[0].classIds;
-        const publishedTargetCount = targetIds(group[0]).length;
-        const scopeLimited = publishedTargetCount > stat.target;
-        const listProgressLabel=scopeLimited?'本班已交齐':'已交齐';
-        const allSubmitted = stat.target > 0 && stat.completed === stat.target;
-        const canSupplement = toDate(task.submitDeadline).getTime() > Date.now();
-        const status = task.withdrawnAt?'老师已撤回':task.stoppedAt?'打卡已终止':allSubmitted ? scopeLimited?'本班已交齐':'全部已交' : !ended ? '进行中' : canSupplement ? '补交中' : '已截止';
-        const statusTone = allSubmitted ? 'complete' : !ended ? 'ongoing' : canSupplement ? 'supplement' : 'closed';
-        const shortTime = value => value.slice(5).replace('-', '月').replace(' ', '日 ');
-        const timeLabel = allSubmitted || ended && !canSupplement ? '' : (!ended ? shortTime(task.deadline)+' 截止' : '补交至 '+shortTime(task.submitDeadline));
-        const reviewCount = gradeQuestions(task).filter(q=>q.state==='review').length;
-        const attention = reviewCount ? '待复核 '+reviewCount+' 题次' : '';
-        const submissionRemainder = stat.target>stat.completed?'未交齐 '+(stat.target-stat.completed)+' 人':'';
-        const audienceContext = scopeLimited ? ` · 当前范围 ${stat.target} 人，任务共 ${publishedTargetCount} 人` : assignedClasses.length>1 ? ` · 共 ${assignedClasses.length} 个班` : '';
-        return `${heading}<button class="hp-card hp-task" onclick="homeworkPrototype.openTeacher('${task.id}',true)"><strong class="hp-list-task-title" title="${escape(task.title)}">${escape(task.title)}</strong><em class="hp-list-state hp-list-state-${statusTone}">${status}</em><span class="hp-list-task-tags"><span class="hp-list-subject">${escape(task.subject||'综合')}</span><em class="hp-list-kind">${task.kind === 'checkin' ? '打卡' : '作业'} · 共 ${task.items.length} 项 · ${escape([...new Set(task.items.map(item=>typeLabel(item.type)))].join('、'))}</em></span><small>${escape(task.classIds.map(id => classes.find(row => row.id === id)?.name).join('、'))}${audienceContext}</small>${timeLabel ? `<div class="hp-task-times"><span>${escape(timeLabel)}</span></div>` : ''}${attention ? `<small>${escape(attention)}</small>` : ''}<span class="hp-line hp-task-bottom hp-submission-summary"><span>${listProgressLabel} <strong>${stat.completed}</strong> 人${submissionRemainder ? ` · ${submissionRemainder}` : ''}</span><b>查看提交 ›</b></span></button>`;
+        const task = listTask(group[0]);
+        const stat = summary(task);
+        const status = grading.teacherTaskWindow(task, now);
+        const gradingStatus = teacherGradingItems(task).length
+          ? grading.teacherListGradingStatus(grading.teacherGradingProgress(teacherGradingRecords(task), now))
+          : null;
+        const audience = task.classIds.map(id => classes.find(row => row.id === id)?.name).join('、');
+        const deadline = status.deadline.slice(5).replace('-', '月').replace(' ', '日 ');
+        const time = deadline && (status.tone==='supplement' ? `补交至 ${deadline}` : `${deadline} 截止`);
+        const itemCount = `${task.kind==='checkin'?'打卡':''}共 ${task.items.length} 项`;
+        const submission = grading.teacherListSubmissionSummary(stat, targetIds(group[0]).length);
+        const scope = [audience, submission.scope].filter(Boolean).join(' ');
+        return `${heading}<article class="hp-card hp-task hp-task-focus-card" onclick="if (!event.target.closest('button')) homeworkPrototype.openTeacher('${escape(task.id)}',true)">
+          <button type="button" class="hp-task-body" aria-label="打开${escape(task.title)}详情" onclick="homeworkPrototype.openTeacher('${escape(task.id)}',true)">
+            <span class="hp-task-card-heading">
+              <span class="hp-list-subject">${escape(task.subject||'综合')}</span>
+              <strong class="hp-list-task-title" title="${escape(task.title)}">${escape(task.title)}</strong>
+              <span class="hp-list-state hp-list-state-${status.tone}">${status.label}</span>
+            </span>
+          </button>
+          <div class="hp-task-class-row">
+            <small class="hp-task-meta hp-task-scope">${escape(scope)}</small>
+              ${gradingStatus ? `<div class="hp-task-grading-status">${gradingStatus.action
+                ? `<button type="button" class="hp-task-list-grading hp-task-list-grading-${gradingStatus.tone}" aria-label="${gradingStatus.actionLabel}" onclick="homeworkPrototype.openListTaskAction('${escape(task.id)}','${gradingStatus.action}')">${escape(gradingStatus.label)} ›</button>`
+                : `<span class="hp-task-list-grading hp-task-list-grading-${gradingStatus.tone}">${escape(gradingStatus.label)}</span>`}${gradingStatus.note?`<button type="button" class="hp-task-grading-note" aria-label="查看批改异常" onclick="homeworkPrototype.openListTaskAction('${escape(task.id)}','issues')">${escape(gradingStatus.note)} ›</button>`:''}</div>` : ''}
+          </div>
+          <div class="hp-task-list-meta">
+            <span class="hp-task-item-count">${escape(itemCount)}</span>
+            ${time ? `<span class="hp-task-list-deadline">${escape(time)}</span>` : ''}
+          </div>
+          <div class="hp-task-priority-row hp-task-priority-row-neutral">
+            <span class="hp-task-priority hp-task-counts">${stat.target ? `共 ${stat.target} 人 · 已交 <strong>${stat.completed}</strong> 人 · 待交 ${stat.target - stat.completed} 人` : escape(submission.counts)}</span>
+            <button type="button" class="hp-text-button hp-task-direct hp-task-direct-submissions" aria-label="查看提交" onclick="homeworkPrototype.openListTaskAction('${escape(task.id)}','submissions')">查看 ›</button>
+          </div>
+        </article>`;
       }
       const phases = group.sort((a, b) => a.deadline.localeCompare(b.deadline));
-      const upcoming = phases.findIndex(task => new Date(task.deadline.replace(' ', 'T')).getTime() > Date.now());
-      const nextIndex = upcoming >= 0 ? upcoming : phases.length - 1;
+      const upcoming = phases.map((task,index)=>({index,...grading.teacherTaskWindow(task,now)})).filter(window=>window.open).sort((a,b)=>a.deadline.localeCompare(b.deadline))[0];
       const totals = phases.map(task => summary(listTask(task)));
       const completed = totals.reduce((sum, stat) => sum + stat.completed, 0), target = totals.reduce((sum, stat) => sum + stat.target, 0);
       const title = phases[0].title.replace(/ · 第\d+期$/, '');
       const classesLabel = listTask(phases[0]).classIds.map(id => classes.find(row => row.id === id)?.name).join('、');
-      return `${heading}<section class="hp-card hp-series"><button class="hp-series-head" onclick="homeworkPrototype.openTeacherSeries('${escape(seriesId)}')"><strong class="hp-list-task-title" title="${escape(title)}">${escape(title)}</strong><span class="hp-list-task-tags"><span class="hp-list-subject">${escape(phases[0].subject||'综合')}</span><em>打卡 · 连续 ${phases.length} 期 · ${ended ? '已截止' : '进行中'}</em></span><small>${escape(classesLabel)} · 每日一交</small>${!ended ? `<span class="hp-series-next">最近截止：第${nextIndex+1}期 · ${escape(phases[nextIndex].deadline.slice(5))}</span>` : ''}<span class="hp-line hp-task-bottom"><span>累计完成 ${completed} / ${target} 人次</span><b>查看每日进度 ›</b></span></button></section>`;
+      return `${heading}<section class="hp-card hp-series"><button class="hp-series-head" onclick="homeworkPrototype.openTeacherSeries('${escape(seriesId)}')"><strong class="hp-list-task-title" title="${escape(title)}">${escape(title)}</strong><span class="hp-list-task-tags"><span class="hp-list-subject">${escape(phases[0].subject||'综合')}</span><em>打卡 · 连续 ${phases.length} 期 · ${ended ? '已截止' : '进行中'}</em></span><small>${escape(classesLabel)} · 每日一交</small>${!ended ? `<span class="hp-series-next">最近截止：第${upcoming.index+1}期 · ${escape(upcoming.deadline.slice(5))}${upcoming.tone==='supplement'?'（补交）':''}</span>` : ''}<span class="hp-line hp-task-bottom"><span>累计完成 ${completed} / ${target} 人次</span><b>查看每日进度 ›</b></span></button></section>`;
     }).join('');
   }
   function teacherListV2() {
+    const queued = store.tasks.filter(task => schedulePending(task) && workScope.view !== "school" && task.publishedBy === workScope.teacherId && task.classIds.every(id => subjectClassIds(task.subject).includes(id)));
     const prefix=workScope.view==='school'?teacherList().replace(/^<div class="hp-hero">.*?<\/div>/s,'').split('<h2 class="hp-section">范围内任务</h2>')[0]:
       '<button class="hp-primary hp-publish-entry" onclick="homeworkPrototype.newTeacherDraft()">＋ 发布作业或打卡</button>'+(draftNotice?'<p class="hp-draft-feedback" role="status">'+escape(draftNotice)+'</p>':'');
-    return '<div class="hp-teacher-task-list">'+prefix+listFilterBar()+(teacherTaskCards()||'<section class="hp-card hp-muted">没有符合筛选条件的任务。<button class="hp-secondary" onclick="homeworkPrototype.resetTaskFilters()">重置筛选</button></section>')+renderTaskFilter()+'</div>';
+    return '<div class="hp-teacher-task-list">'+prefix+queued.map(task=>`<section class="hp-card hp-scheduled-task"><span class="hp-line"><strong>${escape(task.title)}</strong><em>待发送</em></span><p>${escape(prettyDate(task.scheduledAt))} 发送</p><label class="hp-field">调整发送时间<input type="datetime-local" aria-label="调整发送时间" value="${escape(task.scheduledAt.replace(' ','T'))}" onchange="homeworkPrototype.rescheduleTask('${task.id}',this.value)"></label><button class="hp-secondary" onclick="homeworkPrototype.cancelScheduledTask('${task.id}')">取消定时发送</button></section>`).join('')+listFilterBar()+(teacherTaskCards()||'<section class="hp-card hp-muted">没有符合筛选条件的任务。<button class="hp-secondary" onclick="homeworkPrototype.resetTaskFilters()">重置筛选</button></section>')+renderTaskFilter()+'</div>';
   }
   function teacherSeriesView() {
     const phases = store.tasks.filter(task => task.seriesId === teacherSeriesId && teacherTaskById(task.id)).sort((a, b) => a.deadline.localeCompare(b.deadline));
@@ -1124,8 +1453,25 @@ window.homeworkPrototype = (() => {
     const attachmentBlocking = activeMaterialUploads.length || failedMaterialUploads.length;
     const material = `<div class="hp-attachment-field"><div class="hp-attachment-heading"><strong>附件<span>（选填，可供家长查看）</span></strong><button type="button" onclick="homeworkPrototype.openMaterialSource()" ${materialReading ? 'disabled' : ''}>${materialReading ? '正在添加…' : '＋ 添加附件'}</button></div>${renderMaterialAttachments(draft, true)}<input id="hp-material-album" class="hp-hidden-file" type="file" accept="image/*,video/*" multiple onchange="homeworkPrototype.addMaterialFiles(this)"><input id="hp-material-camera" class="hp-hidden-file" type="file" accept="image/*,video/*" capture="environment" onchange="homeworkPrototype.addMaterialFiles(this)"><input id="hp-material-document" class="hp-hidden-file" type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.mp3,.m4a,.wav,.aac,.ogg,audio/*" multiple onchange="homeworkPrototype.addMaterialFiles(this)"></div>${materialSourceOpen ? `<div class="hp-source-mask" onclick="homeworkPrototype.closeMaterialSource()"><section class="hp-source-sheet hp-attachment-source" role="dialog" aria-modal="true" aria-label="添加附件" onclick="event.stopPropagation()"><strong>${chatDemoOpen ? '选择演示附件' : '添加附件'}</strong>${chatDemoOpen ? demoMaterialFiles.map(file => `<button type="button" onclick="homeworkPrototype.chooseDemoAttachment('${file.id}')">${escape(file.name)}<small>${types[file.type]} · 微信聊天记录（演示）</small></button>`).join('') : `<button type="button" onclick="homeworkPrototype.chooseMaterialMedia('album')">从手机相册选择<small>选择已有图片或视频</small></button><button type="button" onclick="homeworkPrototype.chooseMaterialMedia('camera')">拍照或录像<small>现场拍摄图片或视频</small></button><button type="button" onclick="homeworkPrototype.showChatDemo()">选择演示文件<small>宣传视频、校区资料、组卷和录音</small></button><button type="button" onclick="homeworkPrototype.chooseMaterialMedia('chat-file')">从微信聊天记录选择<small>选择其他 PDF、Word、音频等文件</small></button>`}<button type="button" class="hp-source-cancel" onclick="homeworkPrototype.closeMaterialSource()">取消</button></section></div>` : ''}${renderMaterialMedia()}`;
     const worksheetPicker = worksheetLibraryOpen ? `<div class="hp-source-mask" onclick="homeworkPrototype.closeWorksheetLibrary()"><section class="hp-worksheet-sheet" role="dialog" aria-modal="true" aria-label="作业素材库" onclick="event.stopPropagation()"><header><strong>作业素材库</strong><button type="button" onclick="homeworkPrototype.closeWorksheetLibrary()">×</button></header><p>选择空白作业后，自动填入作业说明、附件和“拍照提交”要求。</p><div class="hp-worksheet-grid">${worksheetLibrary.map(item => `<button type="button" onclick="homeworkPrototype.applyWorksheet('${item.id}')"><img src="${worksheetAsset(item.blankPath)}" alt="${escape(item.title)}空白作业"><span><em>${item.grade}年级 · ${escape(item.subject)}</em><strong>${escape(item.title)}</strong><small>${escape(item.description)}</small></span></button>`).join('')}</div></section></div>` : '';
-    const deadlineExpired = toDate(draft.deadline).getTime() <= Date.now();
-    const dateRows = `${deadlineExpired ? '<p class="hp-error">截止时间已过，请重新设置。<button class="hp-text-button" onclick="homeworkPrototype.quickDeadline(0)">改为今天</button><button class="hp-text-button" onclick="homeworkPrototype.quickDeadline(1)">改为明天</button></p>' : ''}<section class="hp-compose-section hp-deadline-section"><div class="hp-section-heading"><div><h3>截止时间</h3><small>到期后仍可在补交期内提交</small></div></div><button type="button" class="hp-date-summary" onclick="homeworkPrototype.openDatePicker('deadline')"><span>首次截止</span><strong>${prettyDate(draft.deadline)}</strong><b>›</b></button><label class="hp-allow-supplement"><input type="checkbox" ${draft.allowSupplement!==false?'checked':''} onchange="homeworkPrototype.setAllowSupplement(this.checked)">允许补交</label><button type="button" class="hp-date-summary" ${draft.allowSupplement===false?'hidden':''} onclick="homeworkPrototype.openDatePicker('submitDeadline')"><span>补交截止</span><strong>${prettyDate(draft.submitDeadline)}</strong><b>›</b></button></section>`;
+    const deadlineExpired = hasDeadline(draft) && toDate(draft.deadline).getTime() <= Date.now();
+    const deadlineOn = hasDeadline(draft);
+    const homeworkSettings = draft.kind === 'homework';
+    const dateDetails = deadlineOn ? `<button class="hp-date-summary" onclick="homeworkPrototype.openDatePicker('deadline')"><span>首次截止</span><strong>${prettyDate(draft.deadline)}</strong><b>›</b></button><label class="hp-allow-supplement"><input type="checkbox" ${draft.allowSupplement!==false?'checked':''} onchange="homeworkPrototype.setAllowSupplement(this.checked)">允许补交</label>${draft.allowSupplement===false?'':`<button class="hp-date-summary" onclick="homeworkPrototype.openDatePicker('submitDeadline')"><span>补交截止</span><strong>${prettyDate(draft.submitDeadline)}</strong><b>›</b></button>`}` : '';
+    const switchRow = (label, key, checked, action, disabled = false) => `<label class="hp-publish-switch"><span>${label}</span><input type="checkbox" id="hp-${key}" role="switch" ${checked?'checked':''} ${disabled?'disabled':''} onchange="homeworkPrototype.${action}(this.checked)"></label>`;
+    const rewardAllowed = coinRewardEligible(draft);
+    const advancedSummary = [draft.scheduledAt && prettyDate(draft.scheduledAt)+' 发送', deadlineOn && draft.reminderEnabled && '已开启截止前提醒'].filter(Boolean).join(' · ');
+    const advancedFields = switchRow('截止前提醒','deadline-reminder',deadlineOn&&draft.reminderEnabled,'toggleDeadlineReminder',!deadlineOn)
+      + (!deadlineOn?'<small class="hp-muted">设置截止时间后可开启</small>':'')
+      + switchRow('定时发送','schedule-send',draft.scheduleEnabled,'toggleScheduledSend')
+      + (draft.scheduleEnabled?`<label class="hp-field">发送时间<input type="datetime-local" aria-label="发送时间" value="${escape((draft.scheduledAt||'').replace(' ','T'))}" onchange="homeworkPrototype.setScheduledTime(this.value)"></label>`:'');
+    const dateRows = (deadlineExpired?'<p class="hp-error">截止时间已过，请重新设置。</p>':'')
+      + '<section class="hp-compose-section hp-deadline-section">'
+      + (homeworkSettings?switchRow('提交截止时间','submission-deadline',deadlineOn,'toggleSubmissionDeadline'):'<h3>截止时间</h3>')
+      + dateDetails + '</section>'
+      + (homeworkSettings?`<section class="hp-compose-section hp-publish-rewards">${switchRow('自动奖励金币','auto-coin-reward',rewardAllowed&&draft.coinReward,'toggleCoinReward',!rewardAllowed)}
+        <small class="hp-muted">${rewardAllowed?'有效完成可得 5 金币，按当日剩余额度发放。':'所有作业项开启自动批改后可用。'}</small></section>
+        <section class="hp-compose-section hp-advanced-settings"><button type="button" class="hp-advanced-toggle" aria-expanded="${advancedSettingsOpen}" onclick="homeworkPrototype.toggleAdvancedSettings()"><strong>高级设置</strong><span>${advancedSettingsOpen?'⌃':'⌄'}</span></button>
+        ${advancedSettingsOpen?advancedFields:advancedSummary?`<small class="hp-muted">${escape(advancedSummary)}</small>`:''}</section>`:'');
     const firstStep = `<section class="hp-card hp-compose-card"><div class="hp-form-label"><strong>作业标题</strong></div><div class="hp-auto-title-row"><label class="hp-title-edit"><input aria-label="作业标题，可修改" maxlength="40" value="${escape(draft.title)}" oninput="homeworkPrototype.setTitle(this.value)"><span class="hp-title-pencil" aria-hidden="true">✎</span></label>${subjectOptions().length > 1 ? `<select aria-label="选择任教学科" onchange="homeworkPrototype.setSubject(this.value)">${subjectOptions().map(subject => `<option value="${escape(subject)}" ${draft.subject === subject ? 'selected' : ''}>${escape(subject)}</option>`).join('')}</select>` : ''}</div>${!subjectOptions().length ? '<p class="hp-error">暂无可发布学科，请联系学校管理员核对任教关系。</p>' : ''}${draft.kind === 'checkin' ? `<label class="hp-field">连续打卡天数（1—30 天）<input type="number" min="1" max="30" value="${draft.cycleCount}" onchange="homeworkPrototype.setCycleCount(this.value)"></label>` : ''}<div class="hp-form-label hp-requirement-label"><strong>作业详情</strong><button type="button" class="hp-demo-fill" onclick="homeworkPrototype.fillDemoPaste()">填入演示内容</button></div><div class="hp-requirement-editor"><div class="hp-description-field"><textarea class="hp-paste-area" aria-label="作业详情" placeholder="例如：完成练习册第 8 页，拍照提交" oninput="homeworkPrototype.setField('description',this.value)" onblur="setTimeout(() => homeworkPrototype.recognizeDescription(), 0)">${escape(draft.description)}</textarea></div>${material}</div></section>${settings}${dateRows}`;
     const availableClasses = classes.filter(row => subjectClassIds(draft.subject).includes(row.id));
     const selectedClasses = availableClasses.filter(row => draft.classIds.includes(row.id));
@@ -1139,19 +1485,19 @@ window.homeworkPrototype = (() => {
     const recipients=`<section class="hp-compose-section hp-recipient-merged"><div class="hp-recipient-merged-head"><h3>选择班级及接收人</h3><span>已选 ${selectedClasses.length}/${availableClasses.length}</span></div><p class="hp-recipient-merged-note">勾选班级后，设置发给全班或部分学生</p><div class="hp-recipient-class-list">${classRows}</div></section>`;
     const activeClass=selectedClasses.find(row=>row.id===recipientClassId),classRoster=students.filter(student=>student.classId===recipientClassId),selectedInClass=classRoster.filter(student=>draft.targetStudentIds.includes(student.id)).length;
     const matchStudent=student=>(student.name+' '+student.id).toLowerCase().includes(recipientSearch.toLowerCase());
-    const picker=composeStep&&recipientPickerOpen&&activeClass&&recipientModeForClass(activeClass.id)==='selected'?`<div class="hp-recipient-picker-mask" onclick="homeworkPrototype.closeRecipientPicker()"><section class="hp-recipient-picker-sheet" role="dialog" aria-modal="true" aria-label="选择${escape(activeClass.name)}学生" onclick="event.stopPropagation()"><div class="hp-recipient-picker-handle"></div><header><strong>选择${escape(activeClass.name)}学生</strong><span>${selectedInClass}/${classRoster.length} 人</span></header><p>仅勾选需要接收作业的学生</p><input class="hp-search" aria-label="搜索本班学生" placeholder="搜索姓名或学号" value="${escape(recipientSearch)}" oninput="homeworkPrototype.filterStudents(this.value)"><div class="hp-recipient-picker-list">${classRoster.map(student=>`<label class="hp-student-option" data-search="${escape((student.name+' '+student.id).toLowerCase())}" ${matchStudent(student)?'':'hidden'}><span>${escape(student.name)}<small>${escape(student.id)}</small></span><input type="checkbox" ${draft.targetStudentIds.includes(student.id)?'checked':''} onchange="homeworkPrototype.toggleStudent('${student.id}')"></label>`).join('')}<p class="hp-recipient-empty" ${classRoster.some(matchStudent)?'hidden':''}>没有匹配的学生，已选名单保留。</p></div><button type="button" class="hp-primary" onclick="homeworkPrototype.closeRecipientPicker()">确定 · ${selectedInClass} 名学生</button></section></div>`:'';
+    const picker=composeStep&&recipientPickerOpen&&activeClass&&recipientModeForClass(activeClass.id)==='selected'?`<div class="hp-recipient-picker-mask" onclick="homeworkPrototype.cancelRecipientPicker()"><section class="hp-recipient-picker-sheet" role="dialog" aria-modal="true" aria-label="选择${escape(activeClass.name)}学生" onclick="event.stopPropagation()"><div class="hp-recipient-picker-handle"></div><header><strong>选择${escape(activeClass.name)}学生</strong><span>${selectedInClass}/${classRoster.length} 人</span></header>${recipientGroupDialog?renderRecipientGroupDialog(activeClass.id,selectedInClass):`<p>仅勾选需要接收作业的学生</p>${renderRecipientGroupChoices(activeClass.id)}<input class="hp-search" aria-label="搜索本班学生" placeholder="搜索姓名或学号" value="${escape(recipientSearch)}" oninput="homeworkPrototype.filterStudents(this.value)"><div class="hp-recipient-picker-list">${classRoster.map(student=>`<label class="hp-student-option" data-search="${escape((student.name+' '+student.id).toLowerCase())}" ${matchStudent(student)?'':'hidden'}><span>${escape(student.name)}<small>${escape(student.id)}</small></span><input type="checkbox" ${draft.targetStudentIds.includes(student.id)?'checked':''} onchange="homeworkPrototype.toggleStudent('${student.id}')"></label>`).join('')}<p class="hp-recipient-empty" ${classRoster.some(matchStudent)?'hidden':''}>没有匹配的学生，已选名单保留。</p></div>${renderRecipientPickerActions(activeClass.id,selectedInClass)}`}</section></div>`:'';
     const nextLabel = composeStep ? '核对发布内容' : activeMaterialUploads.length ? `附件上传中 ${Math.max(...activeMaterialUploads.map(file => Number(file.uploadProgress || 0)))}%` : failedMaterialUploads.length ? '请处理上传失败附件' : '下一步：选择班级和学生';
-    return `<div class="hp-compose-page${composeStep ? ' hp-recipient-page' : ''}">${steps}${composeStep===0&&toDate(draft.deadline).getTime()<=Date.now()?'<p class="hp-error" role="alert">这份草稿的截止时间已过，请在下方调整截止时间。</p>':''}${composeStep === 0 ? firstStep : recipients}${composeError ? `<p class="hp-error" role="alert">${escape(composeError)}</p>` : ''}${composeStep ? '<button class="hp-text-button hp-compose-back" onclick="homeworkPrototype.backCompose()">返回修改</button>' : ''}<div class="hp-compose-footer">${composeStep?`<div class="hp-recipient-footer-summary">已选 ${selectedClasses.length} 个班 · 共发送 ${receivingStudents.length} 人</div>`:''}<button class="hp-primary" onclick="homeworkPrototype.nextCompose()" ${composeStep === 0 && attachmentBlocking ? 'disabled' : ''}>${nextLabel}</button></div>${renderDatePicker()}${worksheetPicker}${picker}</div>`;
+    return `<div class="hp-compose-page${composeStep ? ' hp-recipient-page' : ''}">${steps}${composeStep===0&&hasDeadline(draft)&&toDate(draft.deadline).getTime()<=Date.now()?'<p class="hp-error" role="alert">这份草稿的截止时间已过，请在下方调整截止时间。</p>':''}${composeStep === 0 && draft.temporaryGroupClassId ? '<p class="hp-group-notice">已带入临时名单，可在下一步核对接收人。</p>' : ""}${composeStep === 0 ? firstStep : recipients}${composeError ? `<p class="hp-error" role="alert">${escape(composeError)}</p>` : ''}${composeStep ? '<button class="hp-text-button hp-compose-back" onclick="homeworkPrototype.backCompose()">返回修改</button>' : ''}<div class="hp-compose-footer">${composeStep?`<div class="hp-recipient-footer-summary">已选 ${selectedClasses.length} 个班 · 共发送 ${receivingStudents.length} 人</div>`:''}<button class="hp-primary" onclick="homeworkPrototype.nextCompose()" ${composeStep === 0 && attachmentBlocking ? 'disabled' : ''}>${nextLabel}</button></div>${renderDatePicker()}${worksheetPicker}${picker}</div>`;
   }
   function teacherPreviewV2() {
     syncDraftTitle();
     const recipients = draftRecipients();
     const demoChoices = '';
     const recipientRows=classes.filter(c=>draft.classIds.includes(c.id)).map(c=>{const rows=recipients.filter(student=>student.classId===c.id),partial=recipientModeForClass(c.id)==='selected';return `<div class="hp-recipient-review-row"><strong>${escape(c.name)}</strong><span>${partial?'部分学生':'全班'} · ${rows.length} 人</span>${partial?`<small>${escape(rows.map(student=>student.name).join('、'))}</small>`:''}</div>`;}).join('');
-    return `<div class="hp-top"><button onclick="homeworkPrototype.backToCompose()">‹ 返回修改</button><h1>核对发布内容</h1></div><p class="hp-step-hint">请核对接收对象和两个截止时间，确认后家长会在作业列表看到这项任务。</p><section class="hp-card"><span class="hp-line"><strong>${escape(draft.title)}</strong><em>${draft.kind === 'checkin' ? '打卡' : '作业'}</em></span>${draft.description ? `<p>${escape(draft.description)}</p>` : ''}${renderMaterialAttachments(draft)}<small>正常截止：${escape(draft.deadline)}</small><small>允许补交至：${escape(draft.submitDeadline)}</small></section><section class="hp-card"><h2>完成项目 · ${draft.items.length} 项</h2>${draft.items.map((item, index) => `<div class="hp-review-item"><strong>${index + 1}. ${escape(item.title)}</strong><small>${escape(item.instruction)}</small><small>${typeLabel(item.type)} · 必交${gradingEligible(item.type)&&draft.kind==='homework'?` · ${item.gradingEnabled?'AI 自动批改':'仅收集，不批改'}`:' · 仅记录提交'}</small></div>`).join('')}</section><section class="hp-card"><h2>接收对象 · ${recipients.length} 人</h2><div class="hp-recipient-review-rows">${recipientRows}</div><small>确认发布后冻结此名单；家长仅能查看自己孩子的提交内容。</small></section><p class="hp-muted">请确认题目和页数没有遗漏。发布后不再补充题目，遗漏需另发任务。</p>${demoChoices}${composeError ? `<p class="hp-error" role="alert">${escape(composeError)}</p>` : ''}<button class="hp-primary hp-space" onclick="homeworkPrototype.publish()">确认发布</button>`;
+    return `<div class="hp-top"><button onclick="homeworkPrototype.backToCompose()">‹ 返回修改</button><h1>核对发布内容</h1></div><p class="hp-step-hint">${draft.kind==="homework"&&draft.scheduledAt?"请核对接收对象与发送设置，作业发出后家长才可查看。":"请核对接收对象与提交设置，作业发布后家长可在作业列表查看。"}</p><section class="hp-card"><span class="hp-line"><strong>${escape(draft.title)}</strong><em>${draft.kind === 'checkin' ? '打卡' : '作业'}</em></span>${draft.description ? `<p>${escape(draft.description)}</p>` : ''}${renderMaterialAttachments(draft)}<small>${hasDeadline(draft)?"正常截止："+escape(draft.deadline):"不限提交时间"}</small>${hasDeadline(draft)&&draft.allowSupplement!==false?`<small>允许补交至：${escape(draft.submitDeadline)}</small>`:""}${draft.kind==="homework"&&draft.scheduledAt?`<small>定时发送：${escape(draft.scheduledAt)}</small>`:""}${draft.kind==="homework"&&hasDeadline(draft)&&draft.reminderEnabled?"<small>已开启截止前提醒</small>":""}${coinRewardEligible(draft)&&draft.coinReward?"<small>有效完成可得 5 金币</small>":""}</section><section class="hp-card"><h2>完成项目 · ${draft.items.length} 项</h2>${draft.items.map((item, index) => `<div class="hp-review-item"><strong>${index + 1}. ${escape(item.title)}</strong><small>${escape(item.instruction)}</small><small>${typeLabel(item.type)} · 必交${gradingEligible(item.type)&&draft.kind==='homework'?` · ${item.gradingEnabled?'AI 自动批改':'仅收集，不批改'}`:' · 仅记录提交'}</small></div>`).join('')}</section><section class="hp-card"><h2>接收对象 · ${recipients.length} 人</h2><div class="hp-recipient-review-rows">${recipientRows}</div><small>确认发布后冻结此名单；家长仅能查看自己孩子的提交内容。</small></section><p class="hp-muted">请确认题目和页数没有遗漏。发布后不再补充题目，遗漏需另发任务。</p>${demoChoices}${composeError ? `<p class="hp-error" role="alert">${escape(composeError)}</p>` : ''}<button class="hp-primary hp-space" onclick="homeworkPrototype.publish()">${draft.kind==="homework"&&draft.scheduledAt?"确认定时发送":"确认发布"}</button>`;
   }
-  function renderTeacher() { return (teacherMode==='drafts' && workScope.view!=='school'?teacherDraftList():renderTeacherContent())+draftOverlays(); }
-  function renderTeacherContent() { checkLocalDemo('teacher'); return teacherMode === 'success' ? `<button class="hp-success-back" onclick="homeworkPrototype.toTeacherList()" aria-label="返回作业首页">‹ 返回作业首页</button><section class="hp-card hp-publish-success"><div class="hp-publish-check">✓</div><h2>发布成功</h2><p>${escape(publishedNotice)}</p><button class="hp-primary" onclick="homeworkPrototype.toTeacherList()">查看已发布任务</button></section>` : teacherMode === 'compose' ? teacherComposeV2() : teacherMode === 'preview' ? teacherPreviewV2() : teacherMode === 'series' ? teacherSeriesView() : teacherMode === 'questions' ? teacherQuestionResults() : teacherMode === 'answer' ? teacherQuestionAnswer() : teacherMode === 'question' ? teacherGradeQuestion() : teacherMode === 'result' ? teacherStudent() : teacherMode === 'detail' ? teacherDetailView() : teacherMode === 'students' ? teacherStudents() : teacherMode === 'student' ? teacherStudent() : teacherListV2(); }
+  function renderTeacher() { releaseScheduledTasks(); return (teacherMode==='drafts' && workScope.view!=='school'?teacherDraftList():renderTeacherContent())+draftOverlays()+renderHomeworkShare(); }
+  function renderTeacherContent() { checkLocalDemo('teacher'); return teacherMode === 'success' ? `<button class="hp-success-back" onclick="homeworkPrototype.toTeacherList()" aria-label="返回作业首页">‹ 返回作业首页</button><section class="hp-card hp-publish-success"><div class="hp-publish-check">✓</div><h2>${schedulePending(taskById(publishedTaskId))?"定时发送已设置":"发布成功"}</h2><p>${escape(publishedNotice)}</p>${schedulePending(taskById(publishedTaskId))?"":shareTaskButton(taskById(publishedTaskId))}<button class="hp-primary" onclick="homeworkPrototype.toTeacherList()">${schedulePending(taskById(publishedTaskId))?"查看作业列表":"查看已发布任务"}</button></section>` : teacherMode === 'compose' ? teacherComposeV2() : teacherMode === 'preview' ? teacherPreviewV2() : teacherMode === 'series' ? teacherSeriesView() : teacherMode === 'questions' ? teacherQuestionResults() : teacherMode === 'answer' ? teacherQuestionAnswer() : teacherMode === 'question' ? teacherGradeQuestion() : teacherMode === 'result' ? teacherStudent() : teacherMode === 'detail' ? teacherDetailView() : teacherMode === 'students' ? teacherStudents() : teacherMode === 'student' ? teacherStudent() : teacherListV2(); }
   function leavePending() {
     if(uploadBusy){alert('正在提交，请完成后再离开。');return false;}
     if(!pendingUpload)return true;
@@ -1159,27 +1505,60 @@ window.homeworkPrototype = (() => {
     try { if(persistPending()===false)throw Error(); uploadMessage='';return true; }
     catch { alert('暂存失败，请留在当前页面重试后再离开。');return false; }
   }
+  function settleHomeworkRewards() {
+    const awards = [...(store.homeworkCoinAwards || [])];
+    const day = formatDate(new Date()).slice(0, 10);
+    let changed = false;
+    for (const task of store.tasks) {
+      if (!task.coinReward || task.withdrawnAt || task.stoppedAt || !task.items.length) continue;
+      const records = latestRows(store.submissions.filter(row => row.taskId === task.id));
+      for (const studentId of targetIds(task)) {
+        if (awards.some(row => row.taskId === task.id && row.studentId === studentId)) continue;
+        const verified = task.items.every(item => records.some(row =>
+          row.studentId === studentId && row.itemId === item.id &&
+          row.questions?.some(question => grading.isFormalGrade(question) && typeof question.correct === 'boolean')));
+        if (!verified) continue;
+        const earned = awards.filter(row => row.studentId === studentId && row.day === day)
+          .reduce((total, row) => total + row.amount, 0);
+        const amount = Math.max(0, Math.min(5, 150 - earned));
+        awards.push({ taskId:task.id, studentId, day, amount });
+        changed = true;
+      }
+    }
+    if (changed) store.homeworkCoinAwards = awards;
+  }
+  function homeworkRewardNotice(task, studentId) {
+    if (!task.coinReward) return '';
+    const award = (store.homeworkCoinAwards || []).find(row => row.taskId === task.id && row.studentId === studentId);
+    const records = latestRows(store.submissions.filter(row => row.taskId === task.id && row.studentId === studentId));
+    const complete = task.items.every(item => records.some(row => row.itemId === item.id));
+    const label = award ? award.amount === 5 ? '已到账 5 金币' : award.amount > 0 ? '已到账 '+award.amount+' 金币，今日已达上限' : '今日已达金币上限，本次未到账'
+      : task.withdrawnAt || task.stoppedAt ? '本次金币奖励已关闭'
+      : complete ? '已交齐，金币待确认' : '有效完成可得 5 金币';
+    return '<p class="hp-homework-reward">'+label+'</p>';
+  }
   function parentTaskGroups(childId) {
+    releaseScheduledTasks();
     const now = Date.now();
     const submissions = latestRows(store.submissions);
-    const tasks = (window.homeworkDemoConsole?.filterTasks?window.homeworkDemoConsole.filterTasks(store.tasks):store.tasks).filter(task => targetIds(task).includes(childId)).map(task => {
+    const tasks = (window.homeworkDemoConsole?.filterTasks?window.homeworkDemoConsole.filterTasks(store.tasks):store.tasks).filter(task => !schedulePending(task) && targetIds(task).includes(childId)).map(task => {
       const complete = task.items.filter(item => submissions.some(row => row.taskId === task.id && row.studentId === childId && row.itemId === item.id)).length;
       const done = complete === task.items.length&&!task.withdrawnAt&&!task.stoppedAt;
-      const due = toDate(task.deadline).getTime();
+      const due = hasDeadline(task) ? toDate(task.deadline).getTime() : Infinity;
       const closed = closedTask(task);
-      const status = task.withdrawnAt?'老师已撤回':task.stoppedAt?'打卡已终止':done ? '已完成' : closed ? '补交已结束' : due < now ? '补交中' : due - now <= 86400000 ? '即将截止' : complete ? '部分完成' : '待完成';
+      const status = task.withdrawnAt?'老师已撤回':task.stoppedAt?'打卡已终止':done ? '已完成' : closed ? (task.allowSupplement===false?'已截止':'补交已结束') : due < now ? '补交中' : due - now <= 86400000 ? '即将截止' : complete ? '部分完成' : '待完成';
       const effectiveDue=due<now?toDate(task.submitDeadline).getTime():due; const priority = done ? 5 : closed ? 4 : 0;
       return { task, complete, done, closed, status, priority, effectiveDue };
     }).sort((a, b) => a.priority - b.priority || a.effectiveDue-b.effectiveDue || Number(b.complete>0)-Number(a.complete>0));
     const completedIds=tasks.filter(row=>row.done).map(row=>row.task.id);
-    const demoEntries=tasks.map(row=>({id:row.task.id,kind:row.task.kind,completed:row.done,closed:row.closed,completedCount:row.complete,endedByDeadline:row.status==='补交已结束'}));
+    const demoEntries=tasks.map(row=>({id:row.task.id,kind:row.task.kind,completed:row.done,closed:row.closed,completedCount:row.complete,endedByDeadline:['补交已结束','已截止'].includes(row.status)}));
     const keepDemo=row=>!schoolDemoRoster.isRedundantIncompleteHomeworkDemo(demoEntries.find(entry=>entry.id===row.task.id),demoEntries);
     const pending = tasks.filter(row => !row.done && !row.closed&&keepDemo(row)), completed = tasks.filter(row => row.done&&!schoolDemoRoster.isRedundantCompletedHomeworkDemo(row.task.id,completedIds)), ended = tasks.filter(row => !row.done && row.closed&&keepDemo(row));
     return { pending, completed, ended };
   }
   function parentListV2(studentName) {
     const groups = parentTaskGroups(guardianId);
-    const cards = rows => rows.map(({ task, complete, done, status }) => `<button class="hp-card hp-task hp-parent-task ${status === '补交中' || status === '补交已结束' ? 'hp-task-overdue' : status === '即将截止' ? 'hp-task-soon' : ''}" onclick="homeworkPrototype.openParent('${task.id}')"><span class="hp-line"><strong><span class="hp-parent-tags"><span class="hp-parent-subject">${escape(task.subject || '综合')}</span><span class="hp-parent-kind ${task.kind === 'checkin' ? 'checkin' : 'homework'}">${task.kind === 'checkin' ? '打卡' : '作业'}</span></span><span class="hp-parent-task-name">${escape(task.title)}</span></strong><em class="${status === '补交中' || status === '补交已结束' ? 'hp-state-overdue' : status === '即将截止' ? 'hp-state-soon' : ''}">${status}</em></span><small>${status==='补交中'?'可补交至 '+escape(task.submitDeadline):'正常截止 '+escape(task.deadline)}</small>${task.items.length > 1 ? `<small class="hp-parent-item-types">需完成 ${escape(task.items.map(item => item.type === 'none' ? '家长确认' : types[item.type]).join('、'))}</small>` : ''}<span class="hp-line hp-task-bottom"><span>已完成 ${complete}/${task.items.length} 项</span><b>${done || closedTask(task) ? '查看记录 ›' : complete > 0 ? '继续完成 ›' : '去完成 ›'}</b></span></button>`).join('');
+    const cards = rows => rows.map(({ task, complete, done, status }) => `<button class="hp-card hp-task hp-parent-task ${status === '补交中' || status === '补交已结束' ? 'hp-task-overdue' : status === '即将截止' ? 'hp-task-soon' : ''}" onclick="homeworkPrototype.openParent('${task.id}')"><span class="hp-line"><strong><span class="hp-parent-tags"><span class="hp-parent-subject">${escape(task.subject || '综合')}</span><span class="hp-parent-kind ${task.kind === 'checkin' ? 'checkin' : 'homework'}">${task.kind === 'checkin' ? '打卡' : '作业'}</span></span><span class="hp-parent-task-name">${escape(task.title)}</span></strong><em class="${status === '补交中' || status === '补交已结束' ? 'hp-state-overdue' : status === '即将截止' ? 'hp-state-soon' : ''}">${status}</em></span><small>${status==='补交中'?'可补交至 '+escape(task.submitDeadline):hasDeadline(task)?'正常截止 '+escape(task.deadline):'不限提交时间'}</small>${task.items.length > 1 ? `<small class="hp-parent-item-types">需完成 ${escape(task.items.map(item => item.type === 'none' ? '家长确认' : types[item.type]).join('、'))}</small>` : ''}<span class="hp-line hp-task-bottom"><span>已完成 ${complete}/${task.items.length} 项</span><b>${done || closedTask(task) ? '查看记录 ›' : complete > 0 ? '继续完成 ›' : '去完成 ›'}</b></span></button>`).join('');
     const labels = { pending: '待完成', completed: '已完成', ended: '已结束' };
     const tabs = `<div class="hp-parent-task-tabs" role="tablist" aria-label="任务状态">${Object.keys(groups).map(key => `<button id="hp-tab-${key}" role="tab" aria-controls="hp-task-panel" aria-selected="${parentTaskTab === key}" class="${parentTaskTab === key ? 'active' : ''}" onclick="homeworkPrototype.changeParentTaskTab('${key}')">${labels[key]}<span>${groups[key].length}</span></button>`).join('')}</div>`;
     const rows = groups[parentTaskTab];
@@ -1187,7 +1566,7 @@ window.homeworkPrototype = (() => {
   }
   function parentDetailV2(studentName) {
     const task = taskById(parentTaskId);
-    if (!task || !targetIds(task).includes(guardianId)) { parentTaskId = ''; return parentListV2(studentName); }
+    if (!task || schedulePending(task) || !targetIds(task).includes(guardianId)) { parentTaskId = ''; return parentListV2(studentName); }
     const closed = closedTask(task);
     const mine = latestRows(store.submissions.filter(row => row.taskId === task.id && row.studentId === guardianId));
     const done = task.items.filter(item => mine.some(row => row.itemId === item.id)).length;
@@ -1214,7 +1593,7 @@ window.homeworkPrototype = (() => {
       const history = store.submissions.filter(row => row.taskId === task.id && row.itemId === item.id && row.studentId === guardianId).sort((a, b) => (b.version || 1) - (a.version || 1));
       return `<section class="hp-card hp-parent-item"><div class="hp-item-head"><span class="hp-item-number">${String(index + 1).padStart(2, '0')}</span><strong>${escape(item.title)}</strong><span class="hp-item-badges"><em class="${displayStatus==='已提交'||displayStatus==='已批改'?'hp-tag-done':'hp-tag-pending'}">${displayStatus}</em><em>${typeLabel(item.type)}</em></span></div>${item.instruction && !['拍摄清晰完整的答题页','按上述要求完成','按要求完成','按任务要求完成'].includes(item.instruction.trim()) ? `<p class="hp-item-instruction">${escape(item.instruction)}</p>` : ''}${record ? `${item.type === 'file' ? '' : `<small class="hp-item-submitted">${item.type === 'none' ? '已确认' : '已提交'} · ${escape(record.submittedAt || '已完成')}${record.late ? ' · 补交' : ''}</small>`}${record.transient && !submittedMedia ? '<small class="hp-item-note">原文件已失效，请重新选择。</small>' : ''}${submittedPreview}${studentSubmissionHistory(task,item,guardianId)}` : ''}${gradeNotice}${upload}${pending&&!pending.photos?`<input id="hp-parent-single-${escape(item.id)}" class="hp-hidden-file" type="file" accept="${item.type==='file'&&item.gradingEnabled?'.pdf,.doc,.docx':accept[item.type]}" onchange="homeworkPrototype.submitFile('${task.id}','${item.id}',this)">`:''}</section>`;
     }).join('');
-    const deadlineNotice = task.withdrawnAt?'老师已撤回：'+task.managementReason:task.stoppedAt?'打卡已终止：'+task.managementReason:closed ? '补交已结束，任务已转为只读。' : Date.now() > toDate(task.deadline).getTime() ? '已过正常截止时间，仍可补交。' : '';
+    const deadlineNotice = task.withdrawnAt?'老师已撤回：'+task.managementReason:task.stoppedAt?'打卡已终止：'+task.managementReason:closed ? (task.allowSupplement===false?'提交已截止，任务已转为只读。':'补交已结束，任务已转为只读。') : Date.now() > toDate(task.deadline).getTime() ? '已过正常截止时间，仍可补交。' : '';
     const activePhotoItem = parentPhotoSource?.taskId === task.id ? task.items.find(item => item.id === parentPhotoSource.itemId) : null;
     const directWorksheetId = activePhotoItem?.id.startsWith('worksheet-submit-') ? activePhotoItem.id.slice('worksheet-submit-'.length) : task.id === 'worksheet-flow-grade5-v1' ? 'math-application-grade7' : '';
     const matchedDemoPhotos = directWorksheetId ? parentDemoPhotos.filter(photo => photo.templateId === directWorksheetId) : parentDemoPhotos;
@@ -1227,7 +1606,7 @@ window.homeworkPrototype = (() => {
     const correctionTarget=mine.flatMap(record=>(record.questions||[]).filter(grading.isResultReleased).map(q=>({record,q}))).find(({q})=>q.correct===false);
     const correctionEntry=correctionTarget?`<button class="hp-parent-correction-link" onclick="homeworkPrototype.openParentQuestion('${correctionTarget.record.itemId}','${correctionTarget.q.id}')">查看错题并订正 ›</button>`:'';
     const person='<div class="hp-record-overview-person"><strong>'+escape(studentName)+'</strong><span>'+escape(classes.find(c=>c.id===students.find(st=>st.id===guardianId)?.classId)?.name||'')+'</span></div>';
-    return `${recordOverview(task,mine,person)}${correctionEntry}<details class="hp-record-task-details"><summary>作业要求与截止时间</summary><div>正常截止 ${escape(task.deadline)}</div><div>补交至 ${escape(task.submitDeadline)}</div>${deadlineNotice?'<p>'+escape(deadlineNotice)+'</p>':''}${renderTeacherInstructions({...task,changes:[]},true)}</details>${renderTeacherInstructions({...task,description:''})}${uploadMessage?`<p class="${/失败|超|不支持|不符|新版本|已结束|撤回|加密|损坏|不可用/.test(uploadMessage)?'hp-error':'hp-item-note'}" role="status">${escape(uploadMessage)}</p>`:''}${attachments.length ? `<section class="hp-card hp-task-attachments"><div class="hp-task-attachments-head"><h3>附件 · ${attachments.length}</h3><button type="button" aria-expanded="${attachmentsExpanded}" aria-controls="hp-parent-attachment-list" onclick="homeworkPrototype.toggleParentAttachments('${task.id}')">${attachmentsExpanded ? '收起' : '展开'}<span class="hp-attachment-chevron" aria-hidden="true"></span></button></div><div id="hp-parent-attachment-list" ${attachmentsExpanded ? '' : 'hidden'}>${attachmentsExpanded ? renderMaterialAttachments(task) : ''}</div></section>` : ''}${items}${photoSource}`;
+    return `${recordOverview(task,mine,person)}${correctionEntry}${homeworkRewardNotice(task,guardianId)}<details class="hp-record-task-details"><summary>作业要求与截止时间</summary>${hasDeadline(task)?'<div>正常截止 '+escape(task.deadline)+'</div>':'<div>不限提交时间</div>'}${hasDeadline(task)&&task.allowSupplement!==false&&task.deadline!==task.submitDeadline?'<div>补交至 '+escape(task.submitDeadline)+'</div>':''}${deadlineNotice?'<p>'+escape(deadlineNotice)+'</p>':''}${renderTeacherInstructions({...task,changes:[]},true)}</details>${renderTeacherInstructions({...task,description:''})}${uploadMessage?`<p class="${/失败|超|不支持|不符|新版本|已结束|撤回|加密|损坏|不可用/.test(uploadMessage)?'hp-error':'hp-item-note'}" role="status">${escape(uploadMessage)}</p>`:''}${attachments.length ? `<section class="hp-card hp-task-attachments"><div class="hp-task-attachments-head"><h3>附件 · ${attachments.length}</h3><button type="button" aria-expanded="${attachmentsExpanded}" aria-controls="hp-parent-attachment-list" onclick="homeworkPrototype.toggleParentAttachments('${task.id}')">${attachmentsExpanded ? '收起' : '展开'}<span class="hp-attachment-chevron" aria-hidden="true"></span></button></div><div id="hp-parent-attachment-list" ${attachmentsExpanded ? '' : 'hidden'}>${attachmentsExpanded ? renderMaterialAttachments(task) : ''}</div></section>` : ''}${items}${photoSource}`;
   }
   const renderParent = (studentName, childIndex = 0) => { completeDemoUploads(); checkLocalDemo('parent'); guardianId = schoolDemoRoster.DEMO_GUARDIAN_CHILD_IDS[childIndex] || schoolDemoRoster.GUARDIAN_STUDENT_ID; restorePending(); if (parentTaskId && !targetIds(taskById(parentTaskId) || { classIds: [], targetStudentIds: null }).includes(guardianId)) parentTaskId = ''; return parentTaskId ? gradeUI.parentOpen ? wholeGrade(taskById(parentTaskId),guardianId,studentName,true) : parentDetailV2(studentName) : parentListV2(studentName); };
   let demoUploadTimer;
@@ -1245,6 +1624,7 @@ window.homeworkPrototype = (() => {
     if(Number.isFinite(nextReadyAt))demoUploadTimer=setTimeout(()=>parentRefresh(),Math.max(0,nextReadyAt-Date.now())+30);
   }
   const submitRecord = (task, item, label, media = '', transientMedia = '', demoPhotoIndex = null, photos = null) => {
+    if (schedulePending(task)) return false;
     const beforeSubmission=JSON.stringify(store);
     const version = store.submissions.filter(row => row.taskId === task.id && row.itemId === item.id && row.studentId === guardianId).reduce((max, row) => Math.max(max, row.version || 1), 0) + 1;
     const requestId=pendingUpload?(pendingUpload.requestId ||= 'submit-'+Date.now()+'-'+Math.random().toString(36).slice(2)):undefined;
@@ -1265,7 +1645,7 @@ window.homeworkPrototype = (() => {
     if(item.type==='file'&&item.gradingEnabled){record.questions=[];record.gradingError='当前演示未接入文档转页与批改服务；提交已保留。';}
     if(photos){record.photos=photos;record.media=photos[0]?.path||'';record.questions=photos.flatMap((photo,page)=>{const demo=Number.isInteger(photo.demoPhotoIndex),base=task.kind==='homework'&&item.gradingEnabled!==false?(demo?grading.realPhotoQuestions('page-'+photo.demoPhotoIndex,item.id+'-'+page+'-'):seedQuestions(task,item,guardianId)):[];return base.map(q=>({...q,id:page===0?q.id:q.id+'-page-'+page,label:'第 '+(page+1)+' 页 · '+q.label,pageIndex:page,demoFinalState:demo?q.state:undefined,state:demo?'processing':'queued',estimatedMinutes:2}));});if(photos.some(p=>Number.isInteger(p.demoPhotoIndex))){record.mock=true;record.demoGradeReadyAt=Date.now()+1200;}}
     store.submissions.push(record);if(task.needsAnswerConfirmation){syncAnswerWorkflow(task);grading.startStandardGrading(workflowTask(task),standardRecords(task));}
-    try{previewStorage.setItem(KEY,JSON.stringify(store));}catch{Object.assign(store,JSON.parse(beforeSubmission));throw new Error('保存失败，当前选择已保留，请释放存储空间后重试。');} parentRefresh();
+    try{settleHomeworkRewards();previewStorage.setItem(KEY,JSON.stringify(store));}catch{store=JSON.parse(beforeSubmission);throw new Error('保存失败，当前选择已保留，请释放存储空间后重试。');} parentRefresh();
   };
   const recoverPendingSubmission=()=>{const pending=pendingUpload;if(!pending?.requestId||pending.studentId!==guardianId)return false;const saved=store.submissions.find(r=>r.taskId===pending.taskId&&r.itemId===pending.itemId&&r.studentId===guardianId&&r.requestId===pending.requestId);if(!saved)return false;pendingUpload=null;persistPending();uploadMessage='本项已提交。';parentRefresh();return true;};
   async function validateSelectedMedia(file,type){
@@ -1332,7 +1712,7 @@ window.homeworkPrototype = (() => {
   }
   const managementLabels={withdraw:'撤回任务',extend:'延长截止',reopen:'重新开放补交',correct:'更正文字说明',stop:'终止连续打卡',copy:'再发一份'};
   function renderManagementActions(task){
-    const available=Object.entries(managementLabels).filter(([id])=>id==='copy'||(!task.withdrawnAt&&!task.stoppedAt&&(id!=='stop'||task.kind==='checkin')&&(id!=='extend'||!closedTask(task))&&(id!=='reopen'||closedTask(task))));
+    const available=Object.entries(managementLabels).filter(([id])=>id==='copy'||(!task.withdrawnAt&&!task.stoppedAt&&(id!=='stop'||task.kind==='checkin')&&(id!=='extend'||hasDeadline(task)&&!closedTask(task))&&(id!=='reopen'||hasDeadline(task)&&closedTask(task))));
     const hints={extend:'调整截止时间，已有提交保持不变',reopen:'为未完成的学生重新开放补交',correct:'修改任务要求和文字说明',copy:'复制到新草稿，编辑后再发布',withdraw:'停止接收提交，已有记录保留',stop:'终止指定期次及后续打卡，保留已有记录'};
     const row=([id,label])=>`<button type="button" class="hp-management-menu-item${['withdraw','stop'].includes(id)?' is-destructive':''}" onclick="homeworkPrototype.chooseManagement('${id}')"><span><strong>${label}</strong><small>${hints[id]}</small></span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 4 4 4-4 4"/></svg></button>`;
     const normal=available.filter(([id])=>!['withdraw','stop'].includes(id)),destructive=available.filter(([id])=>['withdraw','stop'].includes(id));
@@ -1540,10 +1920,10 @@ window.homeworkPrototype = (() => {
       }
       return this[action](index);
     },
-    setAllowSupplement(value){draft.allowSupplement=value;draft.submitDeadline=value?addDays(draft.deadline,7):draft.deadline;draft.supplementTouched=false;teacherRefresh();},
-    openTaskManagement(action=''){const task=taskById(teacherTaskId);if(!task||workScope.view==='school'||task.publishedBy!==workScope.teacherId)return;management={taskId:task.id,revision:task.revision||0,action:'',input:{},confirm:false};if(action==='copy'){this.chooseManagement('copy');return;}teacherRefresh();},
+    setAllowSupplement(value){draft.allowSupplement=value;draft.submitDeadline=value?addDays(draft.deadline, draft.kind==='checkin'?7:1):draft.deadline;draft.supplementTouched=false;teacherRefresh();},
+    openTaskManagement(action=''){const task=taskById(teacherTaskId);if(!task||schedulePending(task)||workScope.view==='school'||task.publishedBy!==workScope.teacherId)return;management={taskId:task.id,revision:task.revision||0,action:'',input:{},confirm:false};if(action==='copy'){this.chooseManagement('copy');return;}teacherRefresh();},
     closeTaskManagement(){management=null;teacherRefresh();},
-    chooseManagement(action){if(!management)return;const task=taskById(management.taskId);if(action==='copy'){if(!archiveCurrentDraft())return;draft={...newDraft(),...JSON.parse(JSON.stringify(task)),titleCustomized:true,title:task.title+'（副本）',deadline:defaultDeadline(),submitDeadline:addDays(defaultDeadline(),7),classIds:task.classIds.filter(id=>subjectClassIds(task.subject).includes(id)),recipientModes:Object.fromEntries(task.classIds.map(id=>[id,'all'])),targetStudentIds:[]};delete draft.withdrawnAt;delete draft.stoppedAt;delete draft.changes;delete draft.notification;delete draft.revision;management=null;teacherMode='compose';composeStep=0;recognitionStale=false;settingMode='individual';saveTeacherDraft();teacherRefresh(true);return;}management.action=action;management.input={reason:'',deadline:task.deadline,submitDeadline:task.submitDeadline,description:task.description,itemTexts:task.items.map(i=>({id:i.id,title:i.title,instruction:i.instruction})),fromCycle:Number(task.cycleId?.replace('cycle-',''))||1};management.error='';management.confirm=false;teacherRefresh();},
+    chooseManagement(action){if(!management)return;const task=taskById(management.taskId);if(action==='copy'){if(!archiveCurrentDraft())return;draft={...newDraft(),...JSON.parse(JSON.stringify(task)),titleCustomized:true,title:task.title+'（副本）',scheduledAt:'',scheduleEnabled:false,deadlineTouched:false,supplementTouched:false,deadline:defaultDeadline(),submitDeadline:addDays(defaultDeadline(),task.kind==='checkin'?7:1),classIds:task.classIds.filter(id=>subjectClassIds(task.subject).includes(id)),recipientModes:Object.fromEntries(task.classIds.map(id=>[id,'all'])),targetStudentIds:[]};delete draft.withdrawnAt;delete draft.stoppedAt;delete draft.changes;delete draft.notification;delete draft.revision;management=null;teacherMode='compose';composeStep=0;recognitionStale=false;settingMode='individual';saveTeacherDraft();teacherRefresh(true);return;}management.action=action;management.input={reason:'',deadline:task.deadline,submitDeadline:task.submitDeadline,description:task.description,itemTexts:task.items.map(i=>({id:i.id,title:i.title,instruction:i.instruction})),fromCycle:Number(task.cycleId?.replace('cycle-',''))||1};management.error='';management.confirm=false;teacherRefresh();},
     setManagementField(key,value){if(management){management.input[key]=value;management.confirm=false;management.error='';}},setManagementItem(n,key,value){if(management){management.input.itemTexts[n][key]=value;management.confirm=false;management.error='';}},
     saveTaskManagement(){if(!management)return;const m=management,task=taskById(m.taskId),allowed=subjectClassIds(task.subject);const error=(task.revision||0)!==m.revision?'任务已更新，请重新进入后核对。':grading.validateHomeworkChange(task,m.action,m.input,workScope.view==='school'?'':workScope.teacherId,allowed);if(error){m.error=error;teacherRefresh();return;}const affected=m.action==='stop'?store.tasks.filter(t=>t.seriesId===task.seriesId&&Number(t.cycleId?.replace('cycle-',''))>=m.input.fromCycle):[task];if(!affected.length||affected.some(t=>grading.validateHomeworkChange(t,m.action,m.input,workScope.teacherId,allowed))){m.error='部分期次状态或权限已变化，请重新选择。';teacherRefresh();return;}if(!m.confirm){m.error='';m.confirm=true;teacherRefresh();return;}const before=JSON.stringify(store);affected.forEach(t=>grading.applyHomeworkChange(t,m.action,m.input,workScope.teacherId,new Date().toISOString()));try{previewStorage.setItem(KEY,JSON.stringify(store));management=null;teacherRefresh(true);}catch{Object.assign(store,JSON.parse(before));m.error='保存失败，尚未应用变更，请重试。';teacherRefresh();}},
     retryItemGrading(taskId,itemId){const r=latestRows(store.submissions.filter(r=>r.taskId===taskId&&r.itemId===itemId&&r.studentId===guardianId))[0];if(!r)return;r.gradingError='已重试，等待文档转页与批改服务接入；提交状态保持已完成。';save();parentRefresh();},
@@ -1594,7 +1974,22 @@ window.homeworkPrototype = (() => {
     closeGradeFeedback(){feedbackUI=null;parentRefresh();},
     setGradeFeedback(key,value){if(feedbackUI&&['reason','text'].includes(key))feedbackUI[key]=String(value).slice(0,500);},
     sendGradeFeedback(){const c=parentQuestionContext();if(!c||!feedbackUI)return;if(!sameCorrection(feedbackUI.binding,correctionBinding(c))){feedbackUI.error='作业已更新，请核对新作答后重新反馈。';parentRefresh();return;}if(c.q.parentFeedback?.status==='pending')return;if(!feedbackReasons.includes(feedbackUI.reason))return;if(workflowCommit(()=>{c.q.parentFeedback={status:'pending',reason:feedbackUI.reason,text:feedbackUI.text.trim(),version:c.record.version||1,at:new Date().toISOString(),history:[...(c.q.parentFeedback?.history||[]),...(c.q.parentFeedback?[{...c.q.parentFeedback,history:undefined}]:[])]};})){feedbackUI=null;}else feedbackUI.error='反馈保存失败，内容已保留，请重试。';parentRefresh();},
-    openFeedbackReview(taskId,questionId,studentId){this.openTeacher(taskId);this.openGradeQuestion(questionId);this.review(taskId,questionId,undefined,studentId);},
+    openTeacherFeedback(){
+      const task=teacherTaskById(teacherTaskId);
+      if(teacherMode!=='detail'||!task||!canRelease(task))return;
+      teacherFeedbackTaskId=task.id;teacherRefresh();
+      document.querySelector('.hp-teacher-feedback-sheet header button')?.focus();
+    },
+    closeTeacherFeedback(){
+      teacherFeedbackTaskId='';teacherRefresh();
+      document.querySelector('.hp-task-actions button[onclick*="openTeacherFeedback"]')?.focus();
+    },
+    openFeedbackReview(taskId,questionId,studentId){
+      teacherFeedbackTaskId='';
+      if(teacherMode!=='detail'||teacherTaskId!==taskId)this.openTeacher(taskId);
+      this.openGradeQuestion(questionId);
+      this.review(taskId,questionId,undefined,studentId);
+    },
     keepFeedbackDecision(){const c=gradeReviewContext();if(!c||c.q.parentFeedback?.status!=='pending'||!photoPath(c.record,c.q))return;const reason=gradeReviewDraft.reason.trim();if(!reason||reason==='已对照学生原图核对'){gradeReviewDraft.error='请补充维持原判的简短说明。';teacherRefresh();return;}if(workflowCommit(()=>{c.q.parentFeedback.status='resolved';c.q.parentFeedback.resolution='维持原判：'+reason;c.q.parentFeedback.resolvedAt=new Date().toISOString();})){gradeReviewDraft=null;}teacherRefresh();},
     changeCorrectionText(value){correctionUI.text=String(value).slice(0,1000);},
     addCorrectionImages(files){const selected=Array.from(files||[]).slice(0,3-correctionUI.images.length);selected.forEach(file=>{if(!file.type.startsWith('image/')||file.size>20*1024*1024){correctionUI.error='请选择小于 20MB 的图片。';parentRefresh();return;}const reader=new FileReader();reader.onload=()=>{const image=new Image();image.onload=()=>{if(!correctionUI.open)return;const canvas=document.createElement('canvas'),ratio=Math.min(1,1400/Math.max(image.width,image.height));canvas.width=Math.max(1,Math.round(image.width*ratio));canvas.height=Math.max(1,Math.round(image.height*ratio));const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);let data=canvas.toDataURL('image/jpeg',.68);if(data.length>1000000){const scale=Math.min(1,1000/Math.max(canvas.width,canvas.height)),small=document.createElement('canvas');small.width=Math.round(canvas.width*scale);small.height=Math.round(canvas.height*scale);small.getContext('2d').drawImage(canvas,0,0,small.width,small.height);data=small.toDataURL('image/jpeg',.55);}if(data.length>1000000){correctionUI.error='图片仍然过大，请换一张。';parentRefresh();return;}correctionUI.images.push(data);correctionUI.error='';parentRefresh();};image.onerror=()=>{correctionUI.error='图片读取失败，请重选。';parentRefresh();};image.src=String(reader.result);};reader.onerror=()=>{correctionUI.error='图片读取失败，请重选。';parentRefresh();};reader.readAsDataURL(file);});},
@@ -1699,7 +2094,7 @@ window.homeworkPrototype = (() => {
         else if(id==='published')store.submissions=store.submissions.filter(r=>!isMine(r));
         else if(id==='partial'){const first=task.items[0]?.id;store.submissions=store.submissions.filter(r=>!isMine(r)||r.itemId===first);}
         else if(id==='late'||id==='closed'){task.deadline=addDays(formatDate(new Date()),-2);task.submitDeadline=addDays(formatDate(new Date()),id==='closed'?-1:5);}
-        else if(id.startsWith('grade-overview-')){const state=id.slice('grade-overview-'.length);let n=0;rows.forEach(record=>{const item=task.items.find(i=>i.id===record.itemId);if(!item||!gradingEligible(item.type)||item.gradingEnabled!==true)return;delete record.gradingError;delete record.demoGradeReadyAt;delete record.gradingResult;record.gradingDelayed=state==='delayed';record.gradingQueueState=state==='queued'?'queued':'processing';record.questions=record.questions?.length?record.questions:[{id:item.id+'-demo-q',label:'演示题目',correct:true,state:'queued'}];record.questions.forEach(q=>{q.state=state==='done'?'confirmed':state==='review'?'review':state==='failed'?'failed':state==='partial'&&n++%2===0?'confirmed':state==='queued'?'queued':'processing';});record.gradingWaitEstimate=['unknown','delayed'].includes(state)?undefined:{taskId:record.taskId,itemId:record.itemId,studentId:record.studentId,submissionVersion:record.version||1,minMinutes:1,maxMinutes:2,expiresAt:new Date(Date.now()+300000).toISOString()};});}
+        else if(id.startsWith('grade-overview-')){const state=id.slice('grade-overview-'.length);let n=0;rows.forEach(record=>{const item=task.items.find(i=>i.id===record.itemId);if(!item||!gradingEligible(item.type)||item.gradingEnabled!==true)return;delete record.gradingError;delete record.demoGradeReadyAt;delete record.gradingResult;record.gradingDelayed=state==='delayed';record.gradingQueueState=state==='queued'?'queued':'processing';record.questions=record.questions?.length?record.questions:[{id:item.id+'-demo-q',label:'演示题目',correct:true,state:'queued'}];record.questions.forEach(q=>{delete q.reviewReason;q.mappingConfirmed=true;q.state=state==='done'?'confirmed':state==='review'?'review':state==='failed'?'failed':state==='mixed'?['queued','processing'][n++%2]:state==='failedProcessing'?['processing','failed'][n++%2]:state==='reviewFailed'?['review','processing','failed'][n++%3]:state==='partial'&&n++%2===0?'confirmed':state==='queued'?'queued':'processing';});record.gradingWaitEstimate=['unknown','delayed'].includes(state)?undefined:{taskId:record.taskId,itemId:record.itemId,studentId:record.studentId,submissionVersion:record.version||1,minMinutes:state==='queued'?3:1,maxMinutes:state==='queued'?5:2,...(state==='queued'?{queueMinMinutes:1,queueMaxMinutes:2}:{}),expiresAt:new Date(Date.now()+300000).toISOString()};});}
         else if(id.startsWith('grading-wait-'))rows.forEach(record=>{const item=task.items.find(i=>i.id===record.itemId);if(!item||!['photo','file'].includes(item.type)||item.gradingEnabled===false)return;record.questions?.forEach(q=>{q.state='queued';delete q.estimatedMinutes;});record.gradingQueueState='queued';delete record.demoGradeReadyAt;delete record.gradingError;record.gradingWaitEstimate=id==='grading-wait-unknown'?undefined:{taskId:record.taskId,itemId:record.itemId,studentId:record.studentId,submissionVersion:record.version||1,minMinutes:id==='grading-wait-peak'?10:3,maxMinutes:id==='grading-wait-peak'?15:5,expiresAt:new Date(Date.now()+300000).toISOString()};});
         else rows.forEach((r,rowIndex)=>{r.questions?.forEach((q,questionIndex)=>{const single=role==='teacher'&&teacherMode==='question';if(single&&q.id!==teacherQuestionId)return;const i=single?rowIndex%2:questionIndex;q.state='confirmed';delete q.estimatedMinutes;delete q.releasedSignature;delete q.releasedAt;
           if(id==='queued'||id==='resubmit'){q.state='queued';q.estimatedMinutes=2;}if(id==='processing'||id==='partialGrade'&&i>0){q.state='processing';q.estimatedMinutes=2;}if(id==='failed'&&i>0)q.state='failed';if(id==='review'&&i===0)q.state='review';
@@ -1767,13 +2162,13 @@ window.homeworkPrototype = (() => {
       const task = taskById(teacherTaskId);
       const filterTitles = { all: '全部学生', completed: '已完成学生', partial: '未交齐学生', missing: '未交齐学生', wrong: '答错学生', questionWrong: '本题答错学生' };
       const series = store.tasks.find(row => row.seriesId === teacherSeriesId);
-      const titles = { answer:'学生本题作答', questions:task?.items.find(item=>item.id===questionResultsItem)?.title || '批改结果', question:'单题批改结果',result:'整份批改结果', list: '作业', drafts:'我的草稿', compose: '发布任务', preview: '核对发布内容', success: '发布成功', detail: task?.title || '任务详情', series: series?.title.replace(/ · 第\d+期$/, '') || '每日进度', students: ['wrong','questionWrong'].includes(teacherFilter)?filterTitles[teacherFilter]:'学生名单', student: students.find(row=>row.id===teacherStudentId)?.name || '学生提交详情' };
+      const titles = { answer:'学生本题作答', questions:task?.items.find(item=>item.id===questionResultsItem)?.title || '批改结果', question:'单题批改结果',result:'整份批改结果', list: '作业', drafts:'我的草稿', compose: '发布任务', preview: '核对发布内容', success: '发布成功', detail: task?.title || '任务详情', series: series?.title.replace(/ · 第\d+期$/, '') || '每日进度', students: teacherFilter==='review'?'待复核作业':['wrong','questionWrong'].includes(teacherFilter)?filterTitles[teacherFilter]:'学生名单', student: students.find(row=>row.id===teacherStudentId)?.name || '学生提交详情' };
       return { title: titles[teacherMode] || '作业', back: teacherMode !== 'list' };
     },
-    navigateTeacherBack() { if(correctionReview){this.closeCorrectionReview();return;}if(correctionListOpen){this.closeCorrectionList();return;}if(gradeReviewDraft){this.closeGradeReview();return;}if(teacherMode==='answer'){this.backToQuestionList();return;}if(draftDelete||draftMenu){this.closeDraftOverlay();return;}if(teacherMode==='questions'){teacherMode='detail';teacherRefresh(true);} else if(teacherMode==='result'){teacherMode=gradeUI.origin;teacherRefresh(true);} else if(teacherMode==='question'){teacherMode='questions';teacherRefresh(true);} else if (teacherMode === 'preview') this.backToCompose(); else if (teacherMode === 'compose') this.backCompose(); else if (teacherMode === 'student') this.backToStudents(); else if (teacherMode === 'students') this.backToStats(); else if (teacherMode === 'detail') this.backFromTeacherDetail(); else this.toTeacherList(); },
-    navigateTeacherHome() { if(!saveTeacherDraft()){teacherRefresh();return;}draftMenu=null;draftDelete=null;draftEditing=false;draftSelection=[]; teacherMode = 'list'; teacherTaskId = ''; teacherSeriesId = ''; teacherFilter = 'all'; teacherQuestionId = ''; teacherStudentId = ''; materialSourceOpen = false; chatDemoOpen = false; materialPreview = null; materialMedia = null; datePickerTarget = ''; composeError = ''; teacherRefresh(true); },
+    navigateTeacherBack() { if(teacherFeedbackTaskId){this.closeTeacherFeedback();return;}if(shareTaskId){this.closeHomeworkShare();return;}if(teacherMode==="compose"&&recipientPickerOpen){this.cancelRecipientPicker();return;}if(correctionReview){this.closeCorrectionReview();return;}if(correctionListOpen){this.closeCorrectionList();return;}if(gradeReviewDraft){this.closeGradeReview();return;}if(teacherMode==='answer'){this.backToQuestionList();return;}if(draftDelete||draftMenu){this.closeDraftOverlay();return;}if(teacherMode==='questions'){this.backToStats();} else if(teacherMode==='result'){teacherMode=gradeUI.origin;teacherRefresh(true);} else if(teacherMode==='question'){teacherMode='questions';teacherRefresh(true);} else if (teacherMode === 'preview') this.backToCompose(); else if (teacherMode === 'compose') this.backCompose(); else if (teacherMode === 'student') this.backToStudents(); else if (teacherMode === 'students') this.backToStats(); else if (teacherMode === 'detail') this.backFromTeacherDetail(); else this.toTeacherList(); },
+    navigateTeacherHome() { teacherFeedbackTaskId="";shareTaskId="";resetRecipientPicker();if(!saveTeacherDraft()){teacherRefresh();return;}draftMenu=null;draftDelete=null;draftEditing=false;draftSelection=[]; teacherMode = 'list'; teacherTaskId = ''; teacherSeriesId = ''; teacherFilter = 'all'; teacherQuestionId = ''; teacherStudentId = ''; materialSourceOpen = false; chatDemoOpen = false; materialPreview = null; materialMedia = null; datePickerTarget = ''; composeError = ''; teacherRefresh(true); },
     resetParentView() { if(!leavePending())return false; if(window.homeworkTutorUI?.active())window.homeworkTutorUI.close(); learningUI.mode='result';learningUI.reasonOpen=false; gradeUI.parentOpen=false; parentTaskId = ''; sharedOpen = false; parentTaskTouch = null; parentPhotoSource = null; if (pendingUpload?.media?.startsWith('blob:')) URL.revokeObjectURL(pendingUpload.media); pendingUpload = null; },
-    setScope(value) { const changedRole = workScope.view !== value.view || workScope.teacherId !== value.teacherId; const allowedForDraft = value.view !== 'school' ? [...new Set((value.teachingAssignments ?? schoolDemoRoster.getDemoTeachingAssignments(value.teacherId)).flatMap(row => row.classIds))] : value.classIds; const resetDraft = changedRole || draft.classIds.some(id => !allowedForDraft.includes(id)); if (resetDraft) saveTeacherDraft(); workScope = value; if(changedRole){draftMenu=null;draftDelete=null;draftEditing=false;draftSelection=[];draftNotice='';composeOrigin='list';if(teacherMode==='drafts')teacherMode='list';listFilters.subject='all';listFilters.classId='all';listFilters.statuses=[...window.homeworkFilters.ALL_TASK_STATUSES];taskFilterSheet='';} if(changedRole||detailClassId!=='all'&&!(value.view==='subject'?allowedForDraft:value.classIds).includes(detailClassId))detailClassId=value.classIds.length===1?value.classIds[0]:'all'; if (resetDraft) { draft = newDraft(); subjectTouched = false; draft.classIds = subjectClassIds(draft.subject); draft.recipientModes = Object.fromEntries(draft.classIds.map(id => [id, 'all'])); composeStep = 0; composeError = ''; restoreTeacherDraft(); } if (workScope.view === 'school' && (teacherMode === 'compose' || teacherMode === 'preview')) teacherMode = 'list'; },
+    setScope(value) { const changedRole = workScope.view !== value.view || workScope.teacherId !== value.teacherId; const allowedForDraft = value.view !== 'school' ? [...new Set((value.teachingAssignments ?? schoolDemoRoster.getDemoTeachingAssignments(value.teacherId)).flatMap(row => row.classIds))] : value.classIds; const resetDraft = changedRole || draft.classIds.some(id => !allowedForDraft.includes(id)); if (resetDraft) saveTeacherDraft(); workScope = value; if(changedRole){draftMenu=null;draftDelete=null;draftEditing=false;draftSelection=[];draftNotice='';composeOrigin='list';if(teacherMode==='drafts')teacherMode='list';listFilters.subject='all';listFilters.classId='all';listFilters.statuses=[...window.homeworkFilters.ALL_TASK_STATUSES];taskFilterSheet='';} if(changedRole||detailClassId!=='all'&&!(value.view==='subject'?allowedForDraft:value.classIds).includes(detailClassId))detailClassId=value.classIds.length===1?value.classIds[0]:'all'; if (resetDraft) { resetRecipientPicker();shareTaskId="";classGroupEditor=null;draft = newDraft(); subjectTouched = false; draft.classIds = subjectClassIds(draft.subject); draft.recipientModes = Object.fromEntries(draft.classIds.map(id => [id, 'all'])); composeStep = 0; composeError = ''; restoreTeacherDraft(); } if (workScope.view === 'school' && (teacherMode === 'compose' || teacherMode === 'preview')) teacherMode = 'list'; },
     toTeacherListWithoutRefresh() { draftDelete=null;draftMenu=null;teacherMode = 'list'; teacherTaskId = ''; teacherSeriesId = ''; },
     openTeacherSeries(id) { if (!store.tasks.some(task => task.seriesId === id && teacherTaskById(task.id))) return; teacherSeriesId = id; teacherMode = 'series'; teacherRefresh(true); },
     getTeacherDraftCount(){return workScope.view==='school'?0:teacherDraftRows().length;},
@@ -1818,10 +2213,10 @@ window.homeworkPrototype = (() => {
       draftDelete=null;draftMenu=null;draftNotice='草稿已删除';teacherMode='drafts';teacherRefresh();
       }catch(error){target.error=error.message.includes('已')?error.message:'删除失败，草稿仍保留，请重试。';teacherRefresh();}
     },
-    newTeacherDraft(){if(workScope.view==='school')return;composeOrigin=teacherMode==='drafts'?'drafts':'list';if(!archiveCurrentDraft()){teacherRefresh();return;}try{previewStorage.removeItem(DRAFT_KEY+workScope.teacherId);}catch{draftNotice='草稿存储不可用，请重试。';teacherRefresh();return;}draft=newDraft();subjectTouched=false;composeStep=0;uniformType='photo';settingMode='uniform';recognizedCount=0;recognitionStale=false;this.compose();},
+    newTeacherDraft(){if(workScope.view==='school')return;advancedSettingsOpen=false;composeOrigin=teacherMode==='drafts'?'drafts':'list';if(!archiveCurrentDraft()){teacherRefresh();return;}try{previewStorage.removeItem(DRAFT_KEY+workScope.teacherId);}catch{draftNotice='草稿存储不可用，请重试。';teacherRefresh();return;}draft=newDraft();subjectTouched=false;composeStep=0;uniformType='photo';settingMode='uniform';recognizedCount=0;recognitionStale=false;this.compose();},
     resumeOtherDraft(id){if(workScope.view==='school')return;try{const rows=readDraftArchive(),row=rows.find(r=>r.id===id);if(!row){draftNotice='这份草稿已不存在，请刷新列表。';teacherRefresh();return;}if(!row.saved.draft.classIds.every(id=>publishingClassIds().includes(id))){draftNotice='接收范围已变化，请切换到有权限的工作身份后继续。';teacherRefresh();return;}if(!archiveCurrentDraft()){teacherRefresh();return;}previewStorage.setItem(DRAFT_KEY+workScope.teacherId,JSON.stringify(row.saved));previewStorage.setItem(draftArchiveKey(),JSON.stringify(readDraftArchive().filter(r=>r.id!==id)));restoreTeacherDraft();this.compose();}catch{draftNotice='草稿切换失败，内容仍保留，请重试。';teacherRefresh();}},
-    compose() { if (workScope.view === 'school') return; materialMedia = null; if (teacherMode !== 'compose' && !hasTeacherDraft()) { draft = newDraft(); if(listFilters.subject!=='all'&&subjectOptions().includes(listFilters.subject))draft.subject=listFilters.subject;draft.classIds=listFilters.classId!=='all'&&subjectClassIds(draft.subject).includes(listFilters.classId)?[listFilters.classId]:subjectClassIds(draft.subject);draft.recipientModes=Object.fromEntries(draft.classIds.map(id=>[id,'all'])); composeStep = 0; uniformType = 'photo'; settingMode = 'uniform'; } if(toDate(draft.deadline).getTime()<=Date.now())composeStep=0; composeError = ''; publishDemoBranch = 'normal'; rosterReviewRequired = false; teacherMode = 'compose'; teacherRefresh(true); },
-    toTeacherList() { if(saveTeacherDraft()===false){teacherRefresh();return;}teacherMode = 'list'; teacherSeriesId = ''; teacherRefresh(true); },
+    compose() { if (workScope.view === 'school') return; materialMedia = null; if (teacherMode !== 'compose' && !hasTeacherDraft()) { draft = newDraft(); if(listFilters.subject!=='all'&&subjectOptions().includes(listFilters.subject))draft.subject=listFilters.subject;draft.classIds=listFilters.classId!=='all'&&subjectClassIds(draft.subject).includes(listFilters.classId)?[listFilters.classId]:subjectClassIds(draft.subject);draft.recipientModes=Object.fromEntries(draft.classIds.map(id=>[id,'all'])); composeStep = 0; uniformType = 'photo'; settingMode = 'uniform'; } if(hasDeadline(draft)&&toDate(draft.deadline).getTime()<=Date.now())composeStep=0; composeError = ''; publishDemoBranch = 'normal'; rosterReviewRequired = false; teacherMode = 'compose'; teacherRefresh(true); },
+    toTeacherList() { openedFromTaskList=false;if(saveTeacherDraft()===false){teacherRefresh();return;}teacherMode = 'list'; teacherSeriesId = ''; teacherRefresh(true); },
     backCompose() { if (composeStep) { composeStep -= 1; composeError = ''; teacherRefresh(true); } else if(composeOrigin==='drafts')this.openTeacherDrafts();else this.toTeacherList(); },
     nextCompose() {
       const attachments = materialAttachments(draft);
@@ -1835,8 +2230,7 @@ window.homeworkPrototype = (() => {
         if (!subjectOptions().includes(draft.subject)) composeError = '暂无可发布学科，请联系学校管理员核对任教关系。';
         else if (!draft.description.trim() && !materialAttachments(draft).length) composeError = '请填写任务描述或添加附件。';
         else if (draft.items.some(item => !publishTypes.includes(item.type))) composeError = '请为每条要求选择提交方式。';
-        else if (!draft.deadline || Number.isNaN(toDate(draft.deadline).getTime()) || toDate(draft.deadline).getTime() <= Date.now()) composeError = '截止时间请选择未来的日期和时间。';
-        else if (!draft.submitDeadline || Number.isNaN(toDate(draft.submitDeadline).getTime()) || toDate(draft.submitDeadline).getTime() < toDate(draft.deadline).getTime()) composeError = '允许补交时间必须晚于正常截止时间。';
+        else composeError = draft.scheduleEnabled && draft.kind === 'homework' && !draft.scheduledAt ? '请选择定时发送时间。' : grading.homeworkPublishTimingError(timingDraft());
       } else {
         if (!draft.classIds.length) composeError = '请至少选择一个班级。';
         else if (draft.classIds.some(id => recipientModeForClass(id) === 'selected' && !draft.targetStudentIds.some(studentId => students.some(student => student.id === studentId && student.classId === id)))) composeError = '选择“部分”的班级，请至少指定一名学生。';
@@ -1846,7 +2240,7 @@ window.homeworkPrototype = (() => {
       else { teacherMode = 'preview'; teacherRefresh(true); }
     },
     selectDetailClass(id){const original=taskById(teacherTaskId),base=original&&detailTaskBase(original);if(!base||id!=='all'&&!base.classIds.includes(id))return;restoreLocalDemo();detailClassId=id;gradeReleaseOpen=false;gradeReviewDraft=null;if(teacherMode!=='question')teacherMode='detail';teacherRefresh();},
-    openTeacher(id,fromList=false) { if (!teacherTaskById(id)) return;wholeFromAnswer=false;answerQueue=null;questionBrowseIds=null;rosterItemId=''; detailClassId=fromList?listFilters.classId:workScope.classIds.length===1?workScope.classIds[0]:'all'; if (teacherMode !== 'series') teacherSeriesId = ''; teacherTaskId = id; teacherMode = 'detail'; teacherRefresh(true); },
+    openTeacher(id,fromList=false) { if (!teacherTaskById(id)) return;openedFromTaskList=false;teacherFeedbackTaskId="";wholeFromAnswer=false;answerQueue=null;questionBrowseIds=null;rosterItemId=''; detailClassId=fromList?listFilters.classId:workScope.classIds.length===1?workScope.classIds[0]:'all'; if (teacherMode !== 'series') teacherSeriesId = ''; teacherTaskId = id; teacherMode = 'detail'; teacherRefresh(true); },
     backFromTeacherDetail() { teacherMode = teacherSeriesId && teacherTaskById(teacherTaskId)?.seriesId === teacherSeriesId ? 'series' : 'list'; teacherRefresh(true); },
     openPaper(button) {
       const source=['IMG','VIDEO'].includes(button.tagName)?button:button.querySelector('img')||button.closest('.hp-card')?.querySelector('video');if(!source)return;
@@ -1900,16 +2294,93 @@ window.homeworkPrototype = (() => {
     rosterSwipeStart(event) { if(event.isPrimary===false||(event.pointerType==='mouse'&&event.button!==0))return;rosterTouch={x:event.clientX,y:event.clientY,id:event.pointerId}; },
     rosterSwipeCancel() { rosterTouch=null; },
     rosterSwipeEnd(event) { const start=rosterTouch;rosterTouch=null;if(!start||start.id!==event.pointerId)return;const dx=event.clientX-start.x,dy=event.clientY-start.y,index=rosterTabs.findIndex(tab=>tab.id===teacherFilter);if(index<0||Math.abs(dx)<55||Math.abs(dx)<Math.abs(dy)*1.4)return;const next=index+(dx<0?1:-1);if(next>=0&&next<rosterTabs.length){event.preventDefault();this.rosterSelect(rosterTabs[next].id);} },
+    openListTaskAction(id, action) {
+      if (!teacherTaskById(id)) return;
+      this.openTeacher(id, true);
+      openedFromTaskList = true;
+      if (action === 'results') this.openQuestionResults();
+      else this.openStudents(action === 'review' ? 'review' : action === 'issues' ? 'failed' : 'all');
+    },
+    openGradingIssues(){this.openStudents('failed');},
     openItemStudents(id){questionBrowseIds=null;rosterItemId=id;teacherFilter='all';teacherMode='students';teacherRefresh(true);},
     openStudents(filter, questionId = '') { rosterSearch='';wholeFromAnswer=false;questionBrowseIds=null;rosterItemId='';teacherFilter = filter; teacherQuestionId = questionId; teacherMode = 'students'; teacherRefresh(true); },
-    backToStats() { teacherMode = 'detail'; teacherRefresh(true); },
+    backToStats() { if(openedFromTaskList){openedFromTaskList=false;this.toTeacherList();return;}teacherMode='detail';teacherRefresh(true); },
     changeStudent(delta) {const rows=studentBrowseRows(),index=rows.findIndex(row=>row.id===teacherStudentId),next=index+delta;if(next<0||next>=rows.length)return;this.openStudent(rows[next].id);},
     studentPhotoSwipeStart(event) {if(event.isPrimary===false||event.button!==0||event.target.closest('button:not(.hp-paper-preview),a,video,audio,input,dialog'))return;studentPhotoTouch={x:event.clientX,y:event.clientY,id:event.pointerId};},
     studentPhotoSwipeCancel() {studentPhotoTouch=null;},
     studentPhotoSwipeEnd(event) {const start=studentPhotoTouch;studentPhotoTouch=null;if(!start||start.id!==event.pointerId)return;const dx=event.clientX-start.x,dy=event.clientY-start.y;if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)*1.4){event.preventDefault();this.changeStudent(dx<0?1:-1);}},
     openStudent(id) { const task=teacherTaskById(teacherTaskId),row=task&&studentRows(rosterItemId?{...task,items:task.items.filter(item=>item.id===rosterItemId)}:task).find(row=>row.id===id);if(!row?.records.length)return;teacherStudentId = id; teacherMode = 'student'; teacherRefresh(true); },
     backToStudents() { if(wholeFromAnswer){wholeFromAnswer=false;teacherMode='answer';teacherRefresh(true);return;}teacherMode = questionBrowseIds?'question':'students';questionBrowseIds=null;teacherRefresh(true); },
-    setKind(kind) { draft.kind = kind; syncDraftTitle(); teacherRefresh(); },
+    setKind(kind) {
+      const changed = draft.kind !== kind;
+      draft.kind = kind;
+      if (changed && !draft.supplementTouched) {
+        draft.submitDeadline = draft.allowSupplement === false ? draft.deadline : addDays(draft.deadline, kind === 'checkin' ? 7 : 1);
+      }
+      refreshDefaultDeadline();
+      syncDraftTitle();
+      teacherRefresh();
+    },
+    rescheduleTask(id, value) {
+      releaseScheduledTasks();
+      const task = taskById(id);
+      if (!schedulePending(task) || workScope.view === 'school' || task.publishedBy !== workScope.teacherId || !task.classIds.every(classId => subjectClassIds(task.subject).includes(classId))) return;
+      const next = { ...task, scheduledAt: value.replace('T', ' ') };
+      if (!(toDate(next.scheduledAt).getTime() > Date.now())) { draftNotice = '定时发送时间请选择未来时间。'; teacherRefresh(); return; }
+      if (hasDeadline(task) && !task.deadlineTouched) {
+        next.deadline = formatDate(new Date(toDate(next.scheduledAt).getTime() + 86400000));
+        if (next.allowSupplement === false) next.submitDeadline = next.deadline;
+        else if (!next.supplementTouched) next.submitDeadline = addDays(next.deadline, 1);
+      }
+      const error = grading.homeworkPublishTimingError(next);
+      if (error) { draftNotice = error; teacherRefresh(); return; }
+      if (task.titleCustomized === false) next.title = schoolDemoRoster.formatHomeworkTitle(task.subject, task.kind, toDate(next.scheduledAt));
+      if (workflowCommit(() => Object.assign(task, next))) draftNotice = '发送时间已更新';
+      teacherRefresh();
+    },
+    cancelScheduledTask(id) {
+      releaseScheduledTasks();
+      const task = taskById(id);
+      if (!schedulePending(task) || workScope.view === 'school' || task.publishedBy !== workScope.teacherId || !task.classIds.every(classId => subjectClassIds(task.subject).includes(classId))) return;
+      if (!window.confirm('取消后，这份作业将保留在我的草稿。确定取消吗？')) return;
+      if (!archiveCurrentDraft()) return;
+      const previous = draft;
+      draft = { ...newDraft(), ...task, titleCustomized:true, scheduleEnabled:false, scheduledAt:'', targetStudentIds:task.targetStudentIds || [] };
+      draft.recipientModes = Object.fromEntries(task.classIds.map(classId => [classId,task.targetStudentIds?'selected':'all']));
+      try {
+        if (saveTeacherDraft() === false || !workflowCommit(() => { store.tasks = store.tasks.filter(row => row.id !== id); })) {
+          draft = previous;
+          saveTeacherDraft();
+          teacherRefresh();
+          return;
+        }
+      } catch { draft = previous; teacherRefresh(); return; }
+      draftNotice = '已取消定时发送，可从我的草稿继续编辑';
+      teacherRefresh();
+    },
+    toggleAdvancedSettings() { advancedSettingsOpen = !advancedSettingsOpen; teacherRefresh(); },
+    toggleSubmissionDeadline(enabled) {
+      draft.deadlineEnabled = enabled;
+      if (!enabled) draft.reminderEnabled = false;
+      refreshDefaultDeadline();
+      clearComposeError();
+      teacherRefresh();
+    },
+    toggleDeadlineReminder(enabled) { draft.reminderEnabled = hasDeadline(draft) && enabled; teacherRefresh(); },
+    toggleCoinReward(enabled) { draft.coinReward = coinRewardEligible(draft) && enabled; teacherRefresh(); },
+    toggleScheduledSend(enabled) {
+      draft.scheduleEnabled = enabled;
+      if (!enabled) draft.scheduledAt = '';
+      refreshDefaultDeadline();
+      clearComposeError();
+      teacherRefresh();
+    },
+    setScheduledTime(value) {
+      draft.scheduledAt = value.replace('T', ' ');
+      refreshDefaultDeadline();
+      clearComposeError();
+      teacherRefresh();
+    },
     setSubject(value) { if (!subjectOptions().includes(value)) return;if(draft.subject!==value&&draft.classIds.length&&!window.confirm('切换学科将重新设置接收班级和部分学生名单，作业内容与自定义标题保留。继续吗？')){teacherRefresh();return;} subjectTouched = true; draft.subject = value; const allowed = subjectClassIds(value); draft.classIds = allowed; draft.recipientModes = Object.fromEntries(allowed.map(id => [id, 'all'])); draft.targetStudentIds = []; syncDraftTitle(); saveTeacherDraft(); teacherRefresh(); },
     setTitle(value) { draft.title = value; draft.titleCustomized = value.trim() !== schoolDemoRoster.formatHomeworkTitle(draft.subject, draft.kind); clearComposeError(); saveTeacherDraft(); },
     setCycleCount(value) { const count = Number(value); draft.cycleCount = Number.isFinite(count) ? Math.max(1, Math.min(30, Math.floor(count))) : 1; },
@@ -1945,7 +2416,7 @@ window.homeworkPrototype = (() => {
     setUniformType(type) { if (!(type in types)) return; const wasEligible=gradingEligible(uniformType);uniformType = type; draft.items.forEach(item => {item.type = type;if(!gradingEligible(type))item.gradingEnabled=false;else if(!wasEligible)item.gradingEnabled=true;}); teacherRefresh(); },
     setUniformGrading(enabled) { if(draft.kind!=='homework'||!gradingEligible(uniformType))return;draft.items.forEach(item=>item.gradingEnabled=Boolean(enabled));teacherRefresh(); },
     setItemGrading(index,enabled) { const item=draft.items[index];if(!item||draft.kind!=='homework'||!gradingEligible(item.type))return;item.gradingEnabled=Boolean(enabled);teacherRefresh(); },
-    setDeadline(value) { draft.deadline = value.replace('T', ' '); if(draft.allowSupplement===false)draft.submitDeadline=draft.deadline;else if(!draft.supplementTouched)draft.submitDeadline = addDays(draft.deadline, 7); clearComposeError(); },
+    setDeadline(value) { if(draft.kind==='homework')draft.deadlineEnabled = true; draft.deadlineTouched = true; draft.deadline = value.replace('T', ' '); if(draft.allowSupplement===false)draft.submitDeadline=draft.deadline;else if(!draft.supplementTouched)draft.submitDeadline = addDays(draft.deadline, draft.kind==='checkin'?7:1); clearComposeError(); },
     setSubmitDeadline(value) { draft.submitDeadline = value.replace('T', ' ');draft.supplementTouched=true; clearComposeError(); },
     setItem(index, key, value) { if (draft.items[index]) draft.items[index][key] = value; demoPasteActive = false; clearComposeError();saveTeacherDraft(); },
     setItemType(index, value) { const item=draft.items[index];if (item && publishTypes.includes(value)) { const wasEligible=gradingEligible(item.type);item.type = value;if(!gradingEligible(value))item.gradingEnabled=false;else if(!wasEligible)item.gradingEnabled=true;expandedItemIndex = index; teacherRefresh(); } },
@@ -1956,17 +2427,160 @@ window.homeworkPrototype = (() => {
     quickPickerDate(days) { const old=toDate(datePickerValue),date=new Date();date.setDate(date.getDate()+days);date.setHours(old.getHours(),old.getMinutes(),0,0);datePickerValue=formatDate(date);teacherRefresh(); },
     pickDateDay(day) { const date = toDate(datePickerValue); date.setDate(day); if(date.getTime()<new Date().setHours(0,0,0,0))return; datePickerValue = formatDate(date); teacherRefresh(); },
     setPickerTime(part, value) { const date = toDate(datePickerValue); if (part === 'hour') date.setHours(Number(value)); else date.setMinutes(Number(value)); if(date.getTime()<=Date.now()){alert('请选择未来时间。');return;}datePickerValue = formatDate(date); teacherRefresh(); },
-    confirmDatePicker() { const date = toDate(datePickerValue); if (Number.isNaN(date.getTime()) || date.getTime() <= Date.now() && datePickerTarget === 'deadline') { alert('首次截止请选择未来时间。'); return; } if (datePickerTarget === 'submitDeadline' && date.getTime() <= toDate(draft.deadline).getTime()) { alert('补交截止必须晚于首次截止。'); return; } if (datePickerTarget === 'deadline') { draft.deadline = datePickerValue; if(draft.allowSupplement===false)draft.submitDeadline=datePickerValue;else if(!draft.supplementTouched){draft.submitDeadline=addDays(datePickerValue,7);composeError='补交时间已随截止时间调整。';} } else {draft.submitDeadline = datePickerValue;draft.supplementTouched=true;} datePickerTarget = ''; clearComposeError(); teacherRefresh(); },
+    confirmDatePicker() { const date = toDate(datePickerValue); if (Number.isNaN(date.getTime()) || date.getTime() <= Date.now() && datePickerTarget === 'deadline') { alert('首次截止请选择未来时间。'); return; } if (datePickerTarget === 'submitDeadline' && date.getTime() <= toDate(draft.deadline).getTime()) { alert('补交截止必须晚于首次截止。'); return; } if (datePickerTarget === 'deadline') { this.setDeadline(datePickerValue); } else {draft.submitDeadline = datePickerValue;draft.supplementTouched=true;} datePickerTarget = ''; clearComposeError(); teacherRefresh(); },
     addItem() { const type=settingMode === 'uniform' ? uniformType : '';draft.items.push({ ...newItem(), title: '补充要求', instruction: '按要求完成', type, gradingEnabled:draft.kind==='homework'&&gradingEligible(type) }); demoPasteActive = false; teacherRefresh(); },
     removeItem(index) { if (draft.items.length > 1) draft.items.splice(index, 1); demoPasteActive = false; teacherRefresh(); },
-    toggleClass(id) { if (!subjectClassIds(draft.subject).includes(id)) return; const selected=draft.classIds.includes(id); draft.classIds = selected ? draft.classIds.filter(value => value !== id) : [...draft.classIds, id]; draft.recipientModes ||= {}; if(selected)delete draft.recipientModes[id];else draft.recipientModes[id]='all'; draft.targetStudentIds = draft.targetStudentIds.filter(studentId => students.some(row => row.id === studentId && draft.classIds.includes(row.classId))); if(selected&&recipientClassId===id)recipientPickerOpen=false;clearComposeError();teacherRefresh(); },
-    setTargetMode(mode) { if(!['all','selected'].includes(mode))return;draft.targetMode=mode;draft.recipientModes=Object.fromEntries(draft.classIds.map(id=>[id,mode]));recipientPickerOpen=false;clearComposeError();teacherRefresh(); },
-    setClassRecipientMode(id,mode){if(!draft.classIds.includes(id)||!['all','selected'].includes(mode))return;draft.recipientModes ||= {};draft.recipientModes[id]=mode;recipientClassId=id;recipientSearch='';recipientPickerOpen=mode==='selected';clearComposeError();teacherRefresh();},
-    closeRecipientPicker(){recipientPickerOpen=false;recipientSearch='';teacherRefresh();},
-    toggleStudent(id) { if (!students.some(row => row.id === id && draft.classIds.includes(row.classId) && recipientModeForClass(row.classId)==='selected')) return; draft.targetStudentIds = draft.targetStudentIds.includes(id) ? draft.targetStudentIds.filter(value => value !== id) : [...draft.targetStudentIds, id];clearComposeError(); teacherRefresh(); },
-    selectRecipientClass(id){if(!draft.classIds.includes(id)||!subjectClassIds(draft.subject).includes(id))return;recipientClassId=id;recipientSearch='';recipientPickerOpen=recipientModeForClass(id)==='selected';teacherRefresh();},
+    toggleClass(id) { if (!subjectClassIds(draft.subject).includes(id)) return; const selected=draft.classIds.includes(id); draft.classIds = selected ? draft.classIds.filter(value => value !== id) : [...draft.classIds, id]; draft.recipientModes ||= {}; if(selected)delete draft.recipientModes[id];else draft.recipientModes[id]='all'; draft.targetStudentIds = draft.targetStudentIds.filter(studentId => students.some(row => row.id === studentId && draft.classIds.includes(row.classId))); if(selected&&recipientClassId===id)resetRecipientPicker();clearComposeError();teacherRefresh(); },
+    setTargetMode(mode) { if(!['all','selected'].includes(mode))return;draft.targetMode=mode;draft.recipientModes=Object.fromEntries(draft.classIds.map(id=>[id,mode]));resetRecipientPicker();clearComposeError();teacherRefresh(); },
+    setClassRecipientMode(id,mode){
+      if(!draft.classIds.includes(id)||!['all','selected'].includes(mode))return;
+      if(mode==='selected')openClassRecipientPicker(id);
+      else {resetRecipientPicker();draft.recipientModes[id]='all';setClassGroupRefs(id,[]);}
+      clearComposeError();teacherRefresh();
+    },
+    closeRecipientPicker(){
+      if(!recipientPickerOpen)return;
+      const groups=selectedClassGroups(recipientClassId), ids=classPickedIds(recipientClassId);
+      if(ids.length&&groups.length&&!sameStudentIds(ids,mergedGroupIds(groups))){
+        recipientGroupDialog={kind:'confirm',error:''};teacherRefresh();return;
+      }
+      if(!ids.length&&groups.length){
+        composeError='请至少指定一名学生。';teacherRefresh();return;
+      }
+      finishClassRecipientPicker();
+    },
+    cancelRecipientPicker(){
+      if(recipientGroupDialog){this.cancelRecipientGroupDialog();return;}
+      if(recipientBeforePicker){
+        draft.recipientModes[recipientClassId]=recipientBeforePicker.mode;
+        setClassPickedIds(recipientClassId,recipientBeforePicker.ids);
+        setClassGroupRefs(recipientClassId,recipientBeforePicker.groups);
+      }
+      resetRecipientPicker();teacherRefresh();
+    },
+    toggleRecipientGroup(id,checked){
+      const classId=recipientClassId;
+      if(!recipientPickerOpen||!classGroups(classId).some(row=>row.id===id&&row.ids.length))return;
+      const groups=selectedClassGroups(classId), before=mergedGroupIds(groups), picked=new Set(classPickedIds(classId));
+      const nextRefs=checked?[...new Set([...groups.map(row=>row.id),id])]:groups.map(row=>row.id).filter(value=>value!==id);
+      setClassGroupRefs(classId,nextRefs);
+      const next=mergedGroupIds(selectedClassGroups(classId));
+      for(const studentId of before)if(!picked.has(studentId))next.delete(studentId);
+      for(const studentId of picked)if(!before.has(studentId))next.add(studentId);
+      setClassPickedIds(classId,[...next]);clearComposeError();teacherRefresh();
+    },
+    openRecipientGroupName(){
+      if(!recipientPickerOpen||!classPickedIds(recipientClassId).length)return;
+      recipientGroupDialog={kind:'name',name:'',error:'',returnToConfirm:false};teacherRefresh();
+    },
+    setRecipientGroupName(value){if(recipientGroupDialog?.kind==='name')recipientGroupDialog.name=value;},
+    cancelRecipientGroupDialog(){
+      recipientGroupDialog=recipientGroupDialog?.returnToConfirm?{kind:'confirm',error:''}:null;
+      teacherRefresh();
+    },
+    useTemporaryRecipientGroup(){if(recipientPickerOpen&&recipientGroupDialog?.kind==='confirm')finishClassRecipientPicker(true);},
+    saveRecipientGroup(){
+      if(!recipientPickerOpen||!recipientGroupDialog)return;
+      const classId=recipientClassId, ids=classPickedIds(classId), groups=selectedClassGroups(classId);
+      if(recipientGroupDialog.kind==='confirm'&&groups.length!==1){
+        recipientGroupDialog={kind:'name',name:'',error:'',returnToConfirm:true};teacherRefresh();return;
+      }
+      const fromConfirm=recipientGroupDialog.kind==='confirm';
+      const name=fromConfirm?groups[0].name:recipientGroupDialog.name.trim();
+      const result=saveClassGroup(classId,fromConfirm?groups[0].id:'',name,ids);
+      if(result){recipientGroupDialog.error=result;teacherRefresh();return;}
+      if(fromConfirm||recipientGroupDialog.returnToConfirm){finishClassRecipientPicker(!fromConfirm);return;}
+      const saved=classGroups(classId).find(row=>row.name===name);
+      if(saved)setClassGroupRefs(classId,[saved.id]);
+      recipientGroupDialog=null;teacherRefresh();
+    },
+    toggleStudent(id) {
+      if (!students.some(row => row.id === id && draft.classIds.includes(row.classId) && recipientModeForClass(row.classId)==='selected')) return;
+      const list=()=>document.querySelector('.hp-recipient-picker-list');
+      const scroll=list()?.scrollTop;
+      draft.targetStudentIds=draft.targetStudentIds.includes(id)?draft.targetStudentIds.filter(value=>value!==id):[...draft.targetStudentIds,id];
+      clearComposeError();teacherRefresh();
+      const updated=list();
+      if(updated&&scroll!==undefined)updated.scrollTop=scroll;
+    },
+    selectRecipientClass(id){if(!draft.classIds.includes(id)||!subjectClassIds(draft.subject).includes(id))return;const selected=recipientModeForClass(id)==='selected';if(selected)openClassRecipientPicker(id);else resetRecipientPicker();teacherRefresh();},
     selectRecipientClassAll(selected){if(recipientModeForClass(recipientClassId)!=='selected'||!draft.classIds.includes(recipientClassId)||!subjectClassIds(draft.subject).includes(recipientClassId))return;const ids=students.filter(student=>student.classId===recipientClassId).map(student=>student.id);draft.targetStudentIds=selected?[...new Set([...draft.targetStudentIds,...ids])]:draft.targetStudentIds.filter(id=>!ids.includes(id));teacherRefresh();},
     filterStudents(value) { recipientSearch=value;if (typeof document === 'undefined') return; const query = value.trim().toLowerCase(); document.querySelectorAll('.hp-recipient-picker-list .hp-student-option').forEach(node => { node.hidden = !node.dataset.search.includes(query); }); const empty=document.querySelector('.hp-recipient-picker-list .hp-recipient-empty');if(empty)empty.hidden=Array.from(document.querySelectorAll('.hp-recipient-picker-list .hp-student-option')).some(row=>!row.hidden); },
+    classGroupCount(classId){return classGroups(classId).length;},
+    renderClassGroupPanel,
+    hasClassGroupEditor(){return Boolean(classGroupEditor);},
+    resetClassGroupEditor(){classGroupEditor=null;},
+    closeClassGroupEditor(){classGroupEditor=null;teacherClassGroups();},
+    editClassGroup(classId,id=''){
+      if(!classGroupAllowed(classId))return;
+      const existing=classGroups(classId).find(row=>row.id===id);
+      if(id&&!existing)return;
+      classGroupEditor={classId,id,name:existing?.name||'',ids:existing?.ids||[],search:'',error:'',confirm:false};
+      teacherClassGroups();
+    },
+    setManagedGroupName(value){if(classGroupEditor)classGroupEditor.name=value;},
+    toggleClassGroupStudent(id,checked){
+      if(!classGroupEditor||!classRosterFor(classGroupEditor.classId).some(row=>row.id===id))return;
+      const picked=new Set(classGroupEditor.ids);
+      if(checked)picked.add(id);else picked.delete(id);
+      classGroupEditor.ids=[...picked];
+      const count=document.getElementById('hp-class-group-count');if(count)count.textContent=`已选 ${picked.size} 人`;
+    },
+    searchClassGroupStudents(value){
+      if(!classGroupEditor)return;classGroupEditor.search=value;
+      const query=value.trim().toLowerCase(), options=[...document.querySelectorAll('.hp-group-students .hp-student-option')];
+      options.forEach(node=>{node.hidden=!node.dataset.search.includes(query);});
+      const empty=document.querySelector('.hp-group-students .hp-recipient-empty');if(empty)empty.hidden=options.some(node=>!node.hidden);
+    },
+    completeClassGroupEditor(){
+      if(!classGroupEditor)return;
+      const edit=classGroupEditor, existing=classGroups(edit.classId).find(row=>row.id===edit.id);
+      if(!edit.ids.length){edit.error='请至少选择一名学生。';teacherClassGroups();return;}
+      if(existing&&existing.name===edit.name.trim()&&sameStudentIds(edit.ids,new Set(existing.ids))){this.closeClassGroupEditor();return;}
+      edit.error='';edit.confirm=true;teacherClassGroups();
+    },
+    cancelClassGroupUsage(){if(classGroupEditor){classGroupEditor.confirm=false;teacherClassGroups();}},
+    saveManagedClassGroup(){
+      const edit=classGroupEditor;
+      if(!edit?.confirm)return;
+      const result=saveClassGroup(edit.classId,edit.id,edit.name.trim(),edit.ids);
+      if(result){edit.error=result;edit.confirm=false;teacherClassGroups();return;}
+      this.closeClassGroupEditor();
+      const feedback=document.querySelector('.hp-group-feedback');if(feedback)feedback.textContent='已保存分组';
+    },
+    startTemporaryGroupHomework(){
+      const edit=classGroupEditor;
+      if(!edit?.confirm||!classGroupAllowed(edit.classId))return;
+      const subject=teachingAssignments().find(row=>row.classIds.includes(edit.classId))?.subject;
+      const workbench=window.workbenchPrototype;
+      if(workbench?.getScope().view==='school'){
+        const view=workbench.getGrantedViews().find(value=>value!=='school');
+        if(view)workbench.view(view);
+      }
+      if(workbench){
+        this.setScope({...workbench.getScope(),teacherId:workScope.teacherId,teachingAssignments:teachingAssignments()});
+        classGroupEditor=edit;
+      }
+      if(!subject||workScope.view==='school'||!archiveCurrentDraft()){
+        edit.error='暂时无法发起作业，现有草稿仍保留，请重试。';edit.confirm=false;teacherClassGroups();return;
+      }
+      resetRecipientPicker();
+      draft={...newDraft(),subject,classIds:[edit.classId],recipientModes:{[edit.classId]:'selected'},targetStudentIds:[...edit.ids],temporaryGroupClassId:edit.classId};
+      classGroupEditor=null;teacherMode='compose';composeStep=0;composeOrigin='list';subjectTouched=false;uniformType='photo';settingMode='uniform';recognizedCount=0;recognitionStale=false;expandedItemIndex=-1;clearComposeError();
+      teacherTab='homework';go('teacherDesk');teacherRefresh(true);
+    },
+    openHomeworkDownload,
+    openHomeworkShare(id){
+      const active=teacherMode==='detail'?teacherTaskId:teacherMode==='success'?publishedTaskId:'';
+      if(id!==active||!mayShareTask(taskById(id)))return;
+      shareTaskId=id;shareFeedback='';teacherRefresh();
+    },
+    closeHomeworkShare(){shareTaskId='';teacherRefresh();},
+    confirmHomeworkShare(classId){
+      const task=taskById(shareTaskId), row=classes.find(value=>value.id===classId);
+      if(!row||!mayShareTask(task))return;
+      shareFeedback={taskId:task.id,message:`已模拟分享至 ${row.name}家长群`};this.closeHomeworkShare();
+    },
     openMaterialSource() { if (materialReading) return; materialSourceOpen = true; chatDemoOpen = false; materialMedia = null; teacherRefresh(); },
     closeMaterialSource() { materialSourceOpen = false; chatDemoOpen = false; teacherRefresh(); },
     openWorksheetLibrary() { materialSourceOpen = false; chatDemoOpen = false; worksheetLibraryOpen = true; teacherRefresh(); },
@@ -2061,7 +2675,7 @@ window.homeworkPrototype = (() => {
     backToCompose() { teacherMode = 'compose'; composeStep = 1; rosterReviewRequired = false; composeError = ''; teacherRefresh(true); },
     setPublishDemoBranch(value) { if (!['normal', 'network', 'roster'].includes(value)) return; publishDemoBranch = value; composeError = ''; teacherRefresh(); },
     publish() {
-      const error=grading.homeworkPublishError(draft);if(error){composeError=error;teacherMode='compose';composeStep=0;teacherRefresh(true);return;}
+      const error=draft.scheduleEnabled&&draft.kind==='homework'&&!draft.scheduledAt?'请选择定时发送时间。':grading.homeworkPublishError(timingDraft());if(error){composeError=error;teacherMode='compose';composeStep=0;teacherRefresh(true);return;}
       if (draft.items.some(item => !publishTypes.includes(item.type))) { composeError = '请为每条要求选择提交方式。'; teacherRefresh(); return; }
       syncDraftTitle();
       if (!subjectOptions().includes(draft.subject) || workScope.view === 'school' || teacherMode !== 'preview' || !draft.classIds.length || !draft.classIds.every(id => subjectClassIds(draft.subject).includes(id))) return;
@@ -2072,15 +2686,17 @@ window.homeworkPrototype = (() => {
       const snapshot = draftRecipients().map(row => row.id);
       const allFull = draft.classIds.every(id => recipientModeForClass(id) === 'all');
       const tasks = Array.from({ length: count }, (_, index) => {
-        const deadline = addDays(draft.deadline, index), submitDeadline = addDays(draft.submitDeadline, index);
-        return { id: count === 1 ? seriesId : `${seriesId}-cycle-${index + 1}`, seriesId, cycleId: draft.kind === 'checkin' ? `cycle-${index + 1}` : null, kind: draft.kind, allowSupplement:draft.allowSupplement,subject: draft.subject, schoolId: 'luohu-demo', title: count === 1 ? draft.title.trim() : `${draft.title.trim()} · 第${index + 1}期`, description: draft.description.trim(), photo: draft.photo, attachments: materialAttachments(draft).map(file => ({ ...file })), publishedAt: formatDate(new Date()), deadline, submitDeadline, classIds: [...draft.classIds], targetStudentIds: allFull ? null : [...snapshot], targetSnapshotIds: [...snapshot], parentVisible: false, notification:{status:'pending',message:'本地演示：任务已保存，通知待服务接入后发送。',attempts:0}, publishedBy: workScope.teacherId, items: draft.items.map(item => ({ ...item, required: true, title: item.title.trim(), instruction: item.instruction.trim() })) };
+        const deadline = hasDeadline(draft) ? addDays(draft.deadline, index) : '';
+        const submitDeadline = hasDeadline(draft) ? addDays(draft.submitDeadline, index) : '';
+        return { id: count === 1 ? seriesId : `${seriesId}-cycle-${index + 1}`, seriesId, cycleId: draft.kind === 'checkin' ? `cycle-${index + 1}` : null, kind: draft.kind, deadlineEnabled:hasDeadline(draft), deadlineTouched:draft.deadlineTouched, supplementTouched:draft.supplementTouched, titleCustomized:draft.titleCustomized, allowSupplement:hasDeadline(draft)&&draft.allowSupplement!==false, scheduledAt:draft.kind==='homework'?draft.scheduledAt:'', reminderEnabled:draft.kind==='homework'&&hasDeadline(draft)&&draft.reminderEnabled, coinReward:coinRewardEligible(draft)&&draft.coinReward, subject: draft.subject, schoolId: 'luohu-demo', title: count === 1 ? draft.title.trim() : `${draft.title.trim()} · 第${index + 1}期`, description: draft.description.trim(), photo: draft.photo, attachments: materialAttachments(draft).map(file => ({ ...file })), publishedAt: draft.kind==='homework'&&draft.scheduledAt ? '' : formatDate(new Date()), deadline, submitDeadline, classIds: [...draft.classIds], targetStudentIds: allFull ? null : [...snapshot], targetSnapshotIds: [...snapshot], parentVisible: false, notification:{status:'pending',message:'本地演示：任务已保存，通知待服务接入后发送。',attempts:0}, publishedBy: workScope.teacherId, items: draft.items.map(item => ({ ...item, required: true, title: item.title.trim(), instruction: item.instruction.trim() })) };
       });
       store.tasks.unshift(...tasks);
       if(store.consoleDemo?.publishing)store.consoleDemo={taskId:tasks[0].id,scenario:'published',publishing:false};
       try{previewStorage.setItem(KEY,JSON.stringify(store));}catch{store.tasks.splice(0,tasks.length);composeError='发布未保存成功，内容已保留，请重试。';teacherRefresh();return;}
+      publishedTaskId=tasks[0].id;shareTaskId='';shareFeedback='';
       const studentsCount = targetIds(tasks[0]).length;
-      publishedNotice = `已发布给 ${studentsCount} 名学生${count > 1 ? `，共 ${count} 期` : ''}，接收名单已冻结；家长可在作业列表查看。`;
-      draft = newDraft(); subjectTouched = false; recipientPickerOpen = false;
+      publishedNotice = schedulePending(tasks[0]) ? `将在 ${prettyDate(tasks[0].scheduledAt)} 发送给 ${studentsCount} 名学生。` : `已发布给 ${studentsCount} 名学生${count > 1 ? `，共 ${count} 期` : ''}，接收名单已冻结；家长可在作业列表查看。`;
+      draft = newDraft(); subjectTouched = false; resetRecipientPicker();
       try { previewStorage.removeItem(DRAFT_KEY + workScope.teacherId); } catch {}
       composeStep = 0; publishDemoBranch = 'normal'; rosterReviewRequired = false; teacherMode = 'success'; teacherRefresh(true);
     },
@@ -2103,7 +2719,7 @@ window.homeworkPrototype = (() => {
     setGradeReviewReason(reason){if(gradeReviewDraft)gradeReviewDraft.reason=reason;},
     closeGradeReview(){if(gradeReviewDraft?.browse&&(gradeReviewDraft.correct!==null||gradeReviewDraft.reason.trim())&&typeof window.confirm==='function'&&!window.confirm('复核内容尚未保存，确定放弃吗？'))return;gradeReviewDraft=null;teacherRefresh();},
     confirmGradeReview(next=false){const draft=gradeReviewDraft,c=gradeReviewContext();if(!draft)return;if(!c){draft.error='提交版本或权限已更新，请关闭后重新核对。';teacherRefresh();return;}if(!photoPath(c.record,c.q)){draft.error='原图不可用，请保留待复核';teacherRefresh();return;}if(typeof draft.correct!=='boolean'){draft.error='请先选择判对或判错';teacherRefresh();return;}if(!draft.reason.trim()){draft.error='请填写复核说明';teacherRefresh();return;}const q=c.q,at=new Date().toISOString();if(!workflowCommit(()=>{q.reviewHistory=[...(q.reviewHistory||[]),{at,before:q.state,after:'confirmed',correct:draft.correct,reason:draft.reason.trim(),reviewerId:workScope.teacherId}];grading.confirmManualResult(workflowTask(c.task),standardRecords(workflowTask(c.task)),q,draft.correct,at);if(q.parentFeedback){q.parentFeedback.status='resolved';q.parentFeedback.resolution='教师已核对，'+(q.correct?'判对':'判错');}})){gradeReviewDraft.error=workflowNotice;teacherRefresh();return;}rememberReview();gradeReviewDraft=null;answerError='已保存，统计和家长结果已更新';if(draft.browse){if(!wholeReview&&next)this.changeQuestionStudent(1);teacherRefresh();return;}if(next&&submissionsFor(c.task).some(r=>r.questions?.some(q=>q.id===draft.questionId&&q.state==='review'))){this.review(draft.taskId,draft.questionId);return;}answerError='已保存，统计和家长结果已更新';teacherRefresh();},
-    openParent(id) { gradeUI.parentOpen=false;learningUI.sheetExpanded=false;learningUI.sheetHeightRatio=null; parentTaskId = id; sharedOpen = false; parentPhotoSource = null; parentRefresh(true); },
+    openParent(id) { releaseScheduledTasks(); if(schedulePending(taskById(id))) return; gradeUI.parentOpen=false;learningUI.sheetExpanded=false;learningUI.sheetHeightRatio=null; parentTaskId = id; sharedOpen = false; parentPhotoSource = null; parentRefresh(true); },
     toggleParentAttachments(id) { const task = taskById(id); if (id !== parentTaskId || !task || !materialAttachments(task).length) return; if (collapsedParentAttachments.has(id)) collapsedParentAttachments.delete(id); else collapsedParentAttachments.add(id); parentRefresh(); },
     openTutorScenario(index){if(!Number.isInteger(index)||index<0||index>=tutorScenarioSamples.length)return;this.openParent('tutor-scenarios-v1');requestAnimationFrame(()=>document.querySelectorAll('.hp-parent-item')[index]?.scrollIntoView({block:'start'}));},
     toParentList() { if(learningUI.reasonOpen){learningUI.reasonOpen=false;parentRefresh();return;}if(learningUI.mode!=='result'){this.closeHomeworkLearning();return;}if(gradeUI.parentOpen){gradeUI.parentOpen=false;learningUI.sheetExpanded=false;learningUI.sheetHeightRatio=null;parentRefresh(true);return;} if(!leavePending())return; parentTaskId = ''; parentPhotoSource = null; parentRefresh(true); },

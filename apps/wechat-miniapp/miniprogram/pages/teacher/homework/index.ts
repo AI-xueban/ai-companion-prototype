@@ -1,6 +1,6 @@
 import { correctionRows, readCorrections, CORRECTION_KEY } from '../../../services/homeworkCorrections';
 import { keepHomeworkFeedback } from '../../../services/homeworkMock';
-import { gradingWaitNotice, gradingOverviewStatus, gradingOverviewBrief } from '../../../services/homeworkGrading';
+import { gradingWaitNotice, teacherGradingProgress, teacherListGradingStatus, teacherListSubmissionSummary, teacherTaskWindow, teacherGradedStatistics } from '../../../services/homeworkGrading';
 import { validateHomeworkMedia } from '../../../services/homeworkMedia';
 import { homeworkAttachmentError } from '../../../services/homeworkGrading';
 import { submissionGradingComplete, submissionImageFailure, homeworkItemDisplayStatus } from '../../../services/homeworkGrading';
@@ -17,7 +17,7 @@ import { TASK_STATUS_GROUPS, ALL_TASK_STATUSES, normalizeTaskStatuses, matchesTa
 import { gradingProgress, gradeLabel, demoPhotoPath, gradingSignature, isFormalGrade, standardPhase, answersEquivalent } from '../../../services/homeworkGrading';
 import type { GradeQuestion } from '../../../services/homeworkMock';
 import { getSession } from '../../../stores/session';
-import { DEMO_CLASSES, DEMO_STUDENTS, SUBMIT_LABEL, enableHomeworkAnswerWorkflow, approveHomeworkAnswer, approveMatchingHomeworkAnswers, refreshMockHomeworkAnswerGrading, releaseHomeworkResults, confirmMockReview, getHomeworkTask, getTaskStudentRows, listHomeworkTasks, publishHomework, summarizeHomework } from '../../../services/homeworkMock';
+import { DEMO_CLASSES, DEMO_STUDENTS, SUBMIT_LABEL, enableHomeworkAnswerWorkflow, approveHomeworkAnswer, approveMatchingHomeworkAnswers, refreshMockHomeworkAnswerGrading, releaseHomeworkResults, confirmMockReview, getHomeworkTask, getTargetStudents, getTaskStudentRows, listHomeworkTasks, publishHomework, summarizeHomework } from '../../../services/homeworkMock';
 import type { HomeworkTask, HomeworkAttachment, HomeworkItem, HomeworkKind, SubmitType } from '../../../services/homeworkMock';
 import { availableWorkViews, homeworkScopeSubtitle, scopeClassIds, scopedHomeworkTask, selectWorkClass, taskInScope, workScope, teachingSubjectOptions, subjectClassIds, publishingClassIds } from '../../../services/workbenchScope';
 import type { SessionProfile } from '../../../types/identity';
@@ -38,7 +38,7 @@ const addDays = (value: string, days: number) => { const date = new Date(value.r
 const formatDateTime = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 const displayDateTime = (value: string) => { const date = new Date(value.replace(' ', 'T')); return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 周${'日一二三四五六'[date.getDay()]} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`; };
 const calendarFor = (value: string) => { const date = new Date(value.replace(' ', 'T')); const year = date.getFullYear(), month = date.getMonth(); const offset = (new Date(year, month, 1).getDay() + 6) % 7; const count = new Date(year, month + 1, 0).getDate(); return { title: `${year}年${month + 1}月`, days: [...Array.from({ length: offset }, (_, index) => ({ key: `empty-${index}`, day: 0, empty: true, selected: false })), ...Array.from({ length: count }, (_, index) => ({ key: `day-${index + 1}`, day: index + 1, empty: false, disabled:new Date(year,month,index+1,23,59,59).getTime()<Date.now(), selected: date.getDate() === index + 1 }))] }; };
-const emptyDraft = (classId: string) => { const deadline = defaultDeadline(); return { title: '', titleCustomized:false, allowSupplement:true, supplementTouched:false, recipientModes:{} as Record<string,'all'|'selected'>, description: '', materialPhoto: '', attachments: [] as HomeworkAttachment[], kind: 'homework' as HomeworkKind, subject: '数学', cycleCount: 1, classIds: [classId], targetStudentIds: [] as string[], targetMode: 'all', items: [createItem(0)], deadline, submitDeadline: addDays(deadline, 7), parentVisible: false }; };
+const emptyDraft = (classId: string) => { const deadline = defaultDeadline(); return { title: '', titleCustomized:false, allowSupplement:true, supplementTouched:false, recipientModes:{} as Record<string,'all'|'selected'>, description: '', materialPhoto: '', attachments: [] as HomeworkAttachment[], kind: 'homework' as HomeworkKind, subject: '数学', cycleCount: 1, classIds: [classId], targetStudentIds: [] as string[], targetMode: 'all', items: [createItem(0)], deadline, submitDeadline: addDays(deadline, 1), parentVisible: false }; };
 const teacherDraftKey = (userId: string) => `ai_companion_teacher_homework_draft_v1:${userId}`;
 interface SavedTeacherDraft { updatedAt?:number; draft: ReturnType<typeof emptyDraft>; composeStep: number; settingMode: string; uniformType: SubmitType | ''; recognizedCount: number; recognitionStale: boolean }
 const draftHasContent=(draft:ReturnType<typeof emptyDraft>)=>Boolean(draft.titleCustomized||draft.description.trim()||draft.attachments.length||draft.items.some(i=>i.title||i.instruction)||draft.kind==='checkin');
@@ -81,9 +81,11 @@ const recognizeItems = (description: string): string[] => {
   }).filter(Boolean);
 };
 
+const isTeacherGradingItem = (item: {submitType:string;gradingEnabled?:boolean}) => ['photo','file'].includes(item.submitType) && item.gradingEnabled !== false;
+
 Page({
   data: {
-    gradedStatusBrief:"",gradedStatus:null as ReturnType<typeof gradingOverviewStatus>,
+    gradedProgress:null as ReturnType<typeof teacherGradingProgress>|null,
     gradedOverview:null as {total:number;correct:number;wrong:number;rate:string}|null,
     questionSearch:"",questionWrongRate:"—",answerQueue:[] as string[],answerIndex:0,answerStudentId:"",answerWhole:false,browseReview:false,answerView:null as {name:string;label:string;path:string;result:string;version:number;explanation:string;corrections:Array<{id:string;at:string;photos:string[];text:string;audioPath:string;version:number}>}|null,
     reviewFeedbackPending:false,feedbackExpanded:false,feedbackRows:[] as {studentId:string;questionId:string;name:string;label:string;reason:string;text:string}[],
@@ -97,6 +99,7 @@ Page({
     reviewDraft:null as {studentId:string;itemId:string;version:number;questionId:string;signature:string;studentName:string;className:string;label:string;path:string;style:string;mock:boolean;studentAnswer:string;answer:string;explanation:string;aiCorrect:boolean|null;correct:string;reason:string;error:string;aiAnswer:string;referenceAnswer:string;region:QuestionRegion|null}|null,reviewPhotoHeight:180,
     resumeReviewLabel:'',resumeReviewQuestionId:'',
     gradeQuestionId: '', gradeFilter: 'wrong', selectedGradeQuestion: null as GradeQuestion | null, gradeQuestionStats: null as ReturnType<typeof summarizeHomework>['questionRows'][number] | null, gradeQuestionSections: [] as Array<{title:string; text:string; open:boolean}>, gradeStudents: [] as Array<{id:string; name:string; answer:string; result:string}>,
+    openedFromTaskList: false,
     mode: 'list', entryTaskId: '', fromSeries: false,
     tasks: [] as Array<Record<string, unknown>>,
     taskGroups: [] as Array<Record<string, unknown>>,
@@ -158,7 +161,7 @@ Page({
   currentRosterSignature(){const draft=this.data.draft,profile=getSession()?.profile;return JSON.stringify({teacherId:profile?.userId,allowed:profile?subjectClassIds(profile,this.data.scope,draft.subject):[],students:this.draftRecipients(draft).map(s=>({id:s.id,name:s.name,classId:s.classId}))});},
   changeTitle(event:WechatMiniprogram.CustomEvent<{value:string}>){this.setData({draft:{...this.data.draft,title:event.detail.value,titleCustomized:true},hasDraft:true});this.saveTeacherDraft();},
   toggleGrading(event:WechatMiniprogram.CustomEvent<{value:boolean}>){const index=Number(event.currentTarget.dataset.index),items=this.data.draft.items.map((i,n)=>n===index?{...i,gradingEnabled:event.detail.value}:i);this.setData({draft:{...this.data.draft,items}});this.refreshDraft();},
-  toggleSupplement(event:WechatMiniprogram.CustomEvent<{value:boolean}>){const d=this.data.draft;this.setData({draft:{...d,allowSupplement:event.detail.value,supplementTouched:false,submitDeadline:event.detail.value?addDays(d.deadline,7):d.deadline}});this.refreshDraft();},
+  toggleSupplement(event:WechatMiniprogram.CustomEvent<{value:boolean}>){const d=this.data.draft;this.setData({draft:{...d,allowSupplement:event.detail.value,supplementTouched:false,submitDeadline:event.detail.value?addDays(d.deadline,d.kind==='checkin'?7:1):d.deadline}});this.refreshDraft();},
   setClassRecipients(event:WechatMiniprogram.BaseEvent){const id=String(event.currentTarget.dataset.id),mode=String(event.currentTarget.dataset.mode) as 'all'|'selected';if(!this.data.draft.classIds.includes(id))return;this.setData({draft:{...this.data.draft,recipientModes:{...this.data.draft.recipientModes,[id]:mode}},recipientClassId:id,recipientPickerOpen:mode==='selected',studentSearch:''});this.refreshDraft();},
   closeRecipientPicker(){this.setData({recipientPickerOpen:false});},
   openWaitingGrades(){const id=this.data.waitingGradingItemId;if(!id)return;this.openItemGrades({currentTarget:{dataset:{id}}} as unknown as WechatMiniprogram.BaseEvent);wx.pageScrollTo({selector:'#hw-grading-section',duration:200});},
@@ -266,18 +269,28 @@ Page({
       const allowed=scope.view==='subject'?subjectClassIds(profile,scope,task.subject||'数学'):scopeClassIds(scope);
       const visibleTask=taskInClasses(task,allowed.filter(id=>this.data.listClassId==='all'||id===this.data.listClassId));
       if(!visibleTask.classIds.length)return [];
-      const questions=getTaskStudentRows(visibleTask).flatMap(row=>row.submissions.flatMap(s=>s.questions));
+      const records = getTaskStudentRows(visibleTask).flatMap(row => row.submissions);
+      const questions = records.flatMap(record => record.questions);
       const summary = summarizeHomework(visibleTask);
       if(!matchesTaskStatuses(this.data.listStatuses,taskStatusKeys(summary,questions)))return [];
-      const ongoing = new Date(task.deadline.replace(' ', 'T')).getTime() > Date.now();
-      const assignedClassCount = task.classIds.filter(id=>(scope.view==='subject'?subjectClassIds(profile,scope,task.subject||'数学'):scopeClassIds(scope)).includes(id)).length;
-      const allSubmitted = summary.target > 0 && summary.completed === summary.target;
-      const canSupplement = new Date(task.submitDeadline.replace(' ', 'T')).getTime() > Date.now();
-      const shortTime = (value: string) => value.slice(5).replace('-', '月').replace(' ', '日 ');
-      const timeLabel = allSubmitted || !ongoing && !canSupplement ? '' : ongoing ? `${shortTime(task.deadline)} 截止` : `补交至 ${shortTime(task.submitDeadline)}`;
-      const attentionLabel = summary.review ? `待复核 ${summary.review} 题次` : '';
-      const submissionRemainder = summary.target > summary.completed ? `未交齐 ${summary.target-summary.completed}` : '';
-      return [{ itemCount:task.items.length,itemTypes:[...new Set(task.items.map(item=>item.submitType==='none'?'家长确认':SUBMIT_LABEL[item.submitType]))].join('、'),subject:task.subject||'综合', timeLabel, attentionLabel, submissionRemainder, listProgressLabel: assignedClassCount > visibleTask.classIds.length ? '本班交齐' : '交齐', id: task.id, seriesId: task.seriesId || task.id, title: task.title, kind: task.kind, kindLabel: task.kind === 'checkin' ? '打卡' : '作业', classLabel: visibleTask.classIds.map(id => DEMO_CLASSES.find(row => row.id === id)?.name).join('、') + (assignedClassCount > 1 ? ` · 共 ${assignedClassCount} 个班` : ''), publishedAt: task.publishedAt || '', deadline: task.deadline, submitDeadline: task.submitDeadline, ongoing, statusLabel: task.withdrawnAt?'老师已撤回':task.stoppedAt?'打卡已终止':allSubmitted ? this.data.listClassId!=='all'&&assignedClassCount>1?'本班已交齐':'全部已交' : ongoing ? '进行中' : canSupplement ? '补交中' : '已结束', target: summary.target, completed: summary.completed, partial: summary.partial, missing: summary.missing, completionRate: summary.completionRate }];
+      const submissionWindow = teacherTaskWindow(task);
+      const deadline = submissionWindow.deadline;
+      const shortDeadline = deadline.slice(5).replace('-', '月').replace(' ', '日 ');
+      const timeLabel = shortDeadline ? (submissionWindow.tone === 'supplement' ? `补交至 ${shortDeadline}` : `${shortDeadline} 截止`) : '';
+      const gradingItemIds = new Set(visibleTask.items.filter(isTeacherGradingItem).map(item => item.id));
+      const gradingStatus = gradingItemIds.size
+        ? teacherListGradingStatus(teacherGradingProgress(records.filter(record => gradingItemIds.has(record.itemId))))
+        : null;
+      const classLabel = visibleTask.classIds.map(id => DEMO_CLASSES.find(row => row.id === id)?.name).join('、');
+      const submission = teacherListSubmissionSummary(summary, getTargetStudents(task).length);
+      return [{
+        ...summary, id:task.id, seriesId:task.seriesId||task.id, title:task.title, kind:task.kind,
+        kindLabel:task.kind==='checkin'?'打卡':'作业', subject:task.subject||'综合', classLabel,
+        itemCount:task.items.length,
+        publishedAt:task.publishedAt||'', deadline:task.deadline, submitDeadline:task.submitDeadline,
+        ongoing:submissionWindow.open, statusLabel:submissionWindow.label, statusTone:submissionWindow.tone, timeLabel, activeDeadline:deadline,
+        gradingStatus, submission,
+      }];
     });
     const scopeSummary = tasks.reduce((total, row) => {
       const source=getHomeworkTask(String(row.id));if(source?.withdrawnAt||source?.stoppedAt)return total;
@@ -292,7 +305,8 @@ Page({
       seen.add(row.seriesId);
       const phases = tasks.filter(item => item.seriesId === row.seriesId).sort((a, b) => a.deadline.localeCompare(b.deadline));
       if (phases.length === 1) return [{ ...row, isSeries: false }];
-      const upcomingIndex = phases.findIndex(phase => phase.ongoing);
+      const upcoming = phases.map((phase,index)=>({phase,index})).filter(row=>row.phase.ongoing).sort((a,b)=>a.phase.activeDeadline.localeCompare(b.phase.activeDeadline))[0];
+      const upcomingIndex = upcoming?.index ?? -1;
       const nextIndex = upcomingIndex >= 0 ? upcomingIndex : phases.length - 1;
       const next = phases[nextIndex] || phases[phases.length - 1];
       const completed = phases.reduce((sum, phase) => sum + phase.completed, 0);
@@ -300,7 +314,7 @@ Page({
       return [{ id: row.seriesId, isSeries: true, title: row.title.replace(/ · 第\d+期$/, ''), kindLabel: row.kindLabel, classLabel: row.classLabel, phaseCount: phases.length,
         publishedAt: phases.map(phase=>phase.publishedAt).sort().pop() || '', deadline: phases[phases.length - 1].deadline, ongoing: upcomingIndex >= 0,
         dateRange: `${phases[0].deadline.slice(0, 10)} — ${phases[phases.length - 1].deadline.slice(0, 10)}`,
-        nextLabel: `${upcomingIndex >= 0 ? '最近截止' : '最后截止'}：第${nextIndex + 1}期 · ${next.deadline}`, completed, target }];
+        nextLabel: `${upcomingIndex >= 0 ? '最近截止' : '最后截止'}：第${nextIndex + 1}期 · ${next.activeDeadline || next.deadline}${next.statusTone==='supplement'?'（补交）':''}`, completed, target }];
     });
     taskGroups.sort((a, b) => Number(Boolean(b.ongoing)) - Number(Boolean(a.ongoing)) || String(b.publishedAt || '').localeCompare(String(a.publishedAt || '')));
     let previousSection = '';
@@ -415,7 +429,17 @@ Page({
   returnToHomeworkHome() { if(this.saveTeacherDraft()===false)return; this.setData({ fromSeries: false, entryTaskId: '', mode: 'list', previewOpen: false, gradeScopeOpen:false, selectedTask: null, summary: null, datePickerOpen: false }); returnToHomeworkModuleHome(); this.refreshList(); },
   backToList() { if(this.data.mode==='compose'&&this.saveTeacherDraft()===false)return;if (this.data.fromSeries) { wx.navigateBack({ delta: 1 }); return; } this.setData({ mode: 'list', previewOpen: false, selectedTask: null, summary: null }); this.refreshList(); },
   openLearning() { if (this.data.mode === 'list') wx.redirectTo({ url: '/pages/teacher/learning/index' }); },
-  openDetail(event: WechatMiniprogram.BaseEvent) { this.setData({detailClassId:this.data.listClassId});this.openTask(String(event.currentTarget.dataset.id),true); },
+  openDetail(event: WechatMiniprogram.BaseEvent) { this.setData({openedFromTaskList:false,detailClassId:this.data.listClassId});this.openTask(String(event.currentTarget.dataset.id),true); },
+  openListTaskAction(event: WechatMiniprogram.BaseEvent) {
+    const { id, action } = event.currentTarget.dataset;
+    this.openDetail(event);
+    if (this.data.mode !== 'detail' || this.data.selectedTask?.id !== String(id)) return;
+    if (action === 'results') this.openAllGrades();
+    else {
+      this.setData({openedFromTaskList:true});
+      this.showSubmissionStudents(action === 'review' ? 'review' : action === 'issues' ? 'failed' : 'all');
+    }
+  },
   openTask(taskId: string, keepClass = false) {
     const profile = getSession()?.profile;
     let task = getHomeworkTask(taskId);
@@ -431,8 +455,13 @@ Page({
       const canSupplement = new Date(task.submitDeadline.replace(' ', 'T')).getTime() > Date.now();
       this.setData({ detailStatus: ongoing ? '进行中' : canSupplement ? '可补交' : '已结束', detailStatusTone: ongoing ? 'active' : canSupplement ? 'late' : 'ended', detailOngoing: ongoing, detailCanSupplement: canSupplement, descriptionOpen: false, detailClassLabel: visibleTask.classIds.map(id => DEMO_CLASSES.find(row => row.id === id)?.name || id).join('、') });
       const detailRows=getTaskStudentRows(visibleTask),detailSummary=summarizeHomework(visibleTask);this.refreshCorrections(visibleTask);
-      const gradedItems=visibleTask.items.filter(i=>['photo','file'].includes(i.submitType)&&i.gradingEnabled!==false),judged=detailRows.flatMap(row=>row.submissions).filter(r=>gradedItems.some(i=>i.id===r.itemId)).flatMap(r=>r.questions||[]).filter(q=>isFormalGrade(q)),correct=judged.filter(q=>q.correct).length;
-      this.setData({gradedStatusBrief:gradingOverviewBrief(gradingOverviewStatus(detailRows.flatMap(row=>row.submissions).filter(r=>gradedItems.some(i=>i.id===r.itemId)))),gradedStatus:gradingOverviewStatus(detailRows.flatMap(row=>row.submissions).filter(r=>gradedItems.some(i=>i.id===r.itemId))),gradedOverview:gradedItems.length?{total:judged.length,correct,wrong:judged.length-correct,rate:judged.length?Math.round(correct/judged.length*100)+'%':'—'}:null});
+      const gradedItems=visibleTask.items.filter(isTeacherGradingItem);
+      const gradingRecords=detailRows.flatMap(row=>row.submissions).filter(record=>gradedItems.some(item=>item.id===record.itemId));
+      const judged = teacherGradedStatistics(gradingRecords);
+      this.setData({
+        gradedProgress:gradedItems.length ? teacherGradingProgress(gradingRecords) : null,
+        gradedOverview:gradedItems.length?{...judged,rate:judged.rate===null?'':judged.rate+'%'}:null,
+      });
       this.setData({feedbackRows:this.data.readOnly?[]:detailRows.flatMap(row=>row.submissions.flatMap(record=>record.questions.filter(q=>q.parentFeedback?.status==='pending').map(q=>({studentId:row.student.id,questionId:q.id,name:row.student.name,label:q.label,reason:q.parentFeedback!.reason,text:q.parentFeedback!.text}))))});
       const waitingItems=visibleTask.kind==='homework'?visibleTask.items.filter(item=>['photo','file'].includes(item.submitType)&&item.gradingEnabled!==false):[];
       this.setData({gradingWaitText:this.data.readOnly?'':gradingWaitNotice(detailRows.flatMap(row=>row.submissions).filter(record=>waitingItems.some(item=>item.id===record.itemId))),waitingGradingItemId:waitingItems[0]?.id||''});
@@ -447,12 +476,16 @@ Page({
     const question=this.data.mode==='question';this.setData({detailClassId:id});this.openTask(task.id,true);if(question)this.loadGradeQuestion();
   },
   openStudentList(event: WechatMiniprogram.BaseEvent) {
+    this.showSubmissionStudents(String(event.currentTarget.dataset.filter || 'all'), String(event.currentTarget.dataset.question || ''));
+  },
+  openFailedGrades() { this.showSubmissionStudents('failed'); },
+  showSubmissionStudents(filter: string, questionId = '') {
     const task = this.data.selectedTask;
     if (!task) return;
-    const filter = String(event.currentTarget.dataset.filter || 'all');
-    const questionId = String(event.currentTarget.dataset.question || '');
-    const titles: Record<string, string> = { all: '全部学生', completed: '已完成学生', partial: '未交齐学生', missing: '未交齐学生', wrong: '答错学生', questionWrong: '本题答错学生' };
-    const rows = getTaskStudentRows(task).filter(row => filter === 'all' || filter === 'wrong' && row.wrongQuestions.length > 0 || filter === 'questionWrong' && row.wrongQuestions.some(question => question.id === questionId) || filter === 'missing' && row.status !== 'completed' || row.status === filter);
+    const reviewIds = new Set(this.data.gradedProgress?.reviewIds || []);
+    const failedIds = new Set(this.data.gradedProgress?.failedIds || []);
+    const titles: Record<string, string> = { failed:'批改异常作业', review:'待复核作业', all: '全部学生', completed: '已完成学生', partial: '未交齐学生', missing: '未交齐学生', wrong: '答错学生', questionWrong: '本题答错学生' };
+    const rows = getTaskStudentRows(task).filter(row => filter === 'all' || filter === 'review' && reviewIds.has(row.student.id) || filter === 'failed' && failedIds.has(row.student.id) || filter === 'wrong' && row.wrongQuestions.length > 0 || filter === 'questionWrong' && row.wrongQuestions.some(question => question.id === questionId) || filter === 'missing' && row.status !== 'completed' || row.status === filter);
     this.setData({ studentEntryOrigin:'list',browseItemId:'',mode: 'students', studentFilter: filter, studentListTitle: titles[filter] || '学生名单', studentRows: rows.map(row => ({ id: row.student.id, name: row.student.name, className: DEMO_CLASSES.find(item => item.id === row.student.classId)?.name || '', statusLabel: row.status === 'completed' ? '已交齐' : !row.submissions.length ? '未提交' : '未交齐', progress: `${row.submissions.length}/${task.items.length} 项`, wrongCount: row.wrongQuestions.length, latestSubmittedAt: row.latestSubmittedAt || '尚无提交时间' })) });
   },
   openItemStudents(event: WechatMiniprogram.BaseEvent) {
@@ -562,7 +595,14 @@ Page({
   studentImageError(event:WechatMiniprogram.BaseEvent){const id=String(event.currentTarget.dataset.item),page=Number(event.currentTarget.dataset.page);this.setData({studentItems:this.data.studentItems.map(item=>item.id===id?{...item,displayPhotos:item.displayPhotos.map((p,i)=>i===page?submissionEffectFailure(p):p)}:item)});},
   toggleSubmissionHistory(event:WechatMiniprogram.BaseEvent) {const id=String(event.currentTarget.dataset.id);this.setData({studentItems:this.data.studentItems.map(item=>item.id===id?{...item,historyOpen:!item.historyOpen}:item)});},
   backToStudents() { if(this.data.answerWhole){this.setData({answerWhole:false});this.showQuestionAnswer(this.data.answerStudentId);return;}if(this.data.studentEntryOrigin==='question'){this.loadGradeQuestion();return;}this.setData({ mode: 'students' }); },
-  backToStats() { this.setData({ mode: 'detail' }); },
+  backToStats() {
+    if (this.data.mode === 'students' && this.data.openedFromTaskList) {
+      this.setData({openedFromTaskList:false});
+      this.backToList();
+      return;
+    }
+    this.setData({mode:'detail'});
+  },
   studentBrowseRows(id?:string) {
     const current=DEMO_STUDENTS.find(row=>row.id===(id||this.data.selectedStudentId));return this.data.studentRows.filter(row=>row.statusLabel!=='未提交'&&DEMO_STUDENTS.some(student=>student.id===row.id&&student.classId===current?.classId));
   },
@@ -657,7 +697,7 @@ Page({
     if (this.data.datePickerTarget === 'deadline' && selected <= Date.now()) { wx.showToast({ title: '首次截止须晚于当前时间', icon: 'none' }); return; }
     if (this.data.datePickerTarget === 'submitDeadline' && selected <= new Date(this.data.draft.deadline.replace(' ', 'T')).getTime()) { wx.showToast({ title: '补交截止须晚于首次截止', icon: 'none' }); return; }
     const previous=this.data.draft;
-    const draft = this.data.datePickerTarget === 'deadline' ? { ...previous, deadline: value, submitDeadline: previous.allowSupplement===false?value:previous.supplementTouched?previous.submitDeadline:addDays(value,7) } : { ...previous, submitDeadline: value,supplementTouched:true };
+    const draft = this.data.datePickerTarget === 'deadline' ? { ...previous, deadline: value, submitDeadline: previous.allowSupplement===false?value:previous.supplementTouched?previous.submitDeadline:addDays(value,previous.kind==='checkin'?7:1) } : { ...previous, submitDeadline: value,supplementTouched:true };
     if(homeworkTime(draft.submitDeadline)<homeworkTime(draft.deadline)){this.setData({composeError:'补交截止早于正常截止，请调整补交时间。'});}
     this.setData({ draft, datePickerOpen: false, datePickerTarget: '', composeError:homeworkTime(draft.submitDeadline)<homeworkTime(draft.deadline)?'补交截止早于正常截止，请调整补交时间。':!previous.supplementTouched&&previous.allowSupplement!==false?'补交时间已随截止时间调整。':'' }); this.refreshDraft();
   },
@@ -728,11 +768,11 @@ Page({
     if (failures) wx.showToast({ title: '部分附件保存失败，请重新添加', icon: 'none' });
   },
   removeMaterialAttachment(event: WechatMiniprogram.CustomEvent<{ id: string }>) { this.setData({ draft: { ...this.data.draft, attachments: this.data.draft.attachments.filter(file => file.id !== event.detail.id) } }); this.saveTeacherDraft(); },
-  changeDeadlineDate(event: WechatMiniprogram.CustomEvent<{ value: string }>) { const deadline = `${event.detail.value} ${this.data.deadlineTime}`; this.setData({ draft: { ...this.data.draft, deadline, submitDeadline:this.data.draft.allowSupplement===false?deadline:this.data.draft.supplementTouched?this.data.draft.submitDeadline:addDays(deadline,7) }, composeError: '' }); this.refreshDraft(); },
-  changeDeadlineTime(event: WechatMiniprogram.CustomEvent<{ value: string }>) { const deadline = `${this.data.deadlineDate} ${event.detail.value}`; this.setData({ draft: { ...this.data.draft, deadline, submitDeadline:this.data.draft.allowSupplement===false?deadline:this.data.draft.supplementTouched?this.data.draft.submitDeadline:addDays(deadline,7) }, composeError: '' }); this.refreshDraft(); },
+  changeDeadlineDate(event: WechatMiniprogram.CustomEvent<{ value: string }>) { const deadline = `${event.detail.value} ${this.data.deadlineTime}`; this.setData({ draft: { ...this.data.draft, deadline, submitDeadline:this.data.draft.allowSupplement===false?deadline:this.data.draft.supplementTouched?this.data.draft.submitDeadline:addDays(deadline,this.data.draft.kind==='checkin'?7:1) }, composeError: '' }); this.refreshDraft(); },
+  changeDeadlineTime(event: WechatMiniprogram.CustomEvent<{ value: string }>) { const deadline = `${this.data.deadlineDate} ${event.detail.value}`; this.setData({ draft: { ...this.data.draft, deadline, submitDeadline:this.data.draft.allowSupplement===false?deadline:this.data.draft.supplementTouched?this.data.draft.submitDeadline:addDays(deadline,this.data.draft.kind==='checkin'?7:1) }, composeError: '' }); this.refreshDraft(); },
   changeSubmitDeadlineDate(event: WechatMiniprogram.CustomEvent<{ value: string }>) { this.setData({ draft: { ...this.data.draft, supplementTouched:true,submitDeadline: `${event.detail.value} ${this.data.submitDeadlineTime}` }, composeError: '' }); this.refreshDraft(); },
   changeSubmitDeadlineTime(event: WechatMiniprogram.CustomEvent<{ value: string }>) { this.setData({ draft: { ...this.data.draft, supplementTouched:true,submitDeadline: `${this.data.submitDeadlineDate} ${event.detail.value}` }, composeError: '' }); this.refreshDraft(); },
-  changeKind(event: WechatMiniprogram.BaseEvent) { this.setData({ draft: { ...this.data.draft, kind: event.currentTarget.dataset.kind as HomeworkKind } }); this.refreshDraft(); },
+  changeKind(event: WechatMiniprogram.BaseEvent) { const draft=this.data.draft,kind=event.currentTarget.dataset.kind as HomeworkKind; this.setData({ draft: { ...draft, kind, submitDeadline:draft.allowSupplement===false?draft.deadline:draft.supplementTouched?draft.submitDeadline:addDays(draft.deadline,kind==='checkin'?7:1) } }); this.refreshDraft(); },
   changeSubject(event:WechatMiniprogram.CustomEvent<{value:string}>){const subject=this.data.subjectOptions[Number(event.detail.value)],profile=getSession()?.profile;if(!subject||!profile)return;const allowed=subjectClassIds(profile,this.data.scope,subject),removed=this.data.draft.classIds.filter(id=>!allowed.includes(id));const apply=()=>{const selected=this.data.draft.classIds.filter(id=>allowed.includes(id));this.setData({draft:{...this.data.draft,subject,classIds:selected.length?selected:allowed.slice(0,1)}});this.refreshDraft();this.saveTeacherDraft();};if(removed.length)wx.showModal({title:'核对接收范围变化',content:'切换学科将取消 '+removed.map(id=>DEMO_CLASSES.find(c=>c.id===id)?.name||id).join('、')+' 及其学生选择，作业内容和自定义标题保留。',success:r=>{if(r.confirm)apply();}});else apply();},
   changeCycleCount(event: WechatMiniprogram.CustomEvent<{ value: string }>) { const count = Number(event.detail.value); this.setData({ draft: { ...this.data.draft, cycleCount: Number.isFinite(count) ? Math.max(1, Math.min(30, Math.floor(count))) : 1 } }); },
   toggleClass(event: WechatMiniprogram.BaseEvent) {

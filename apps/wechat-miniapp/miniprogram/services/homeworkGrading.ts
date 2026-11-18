@@ -56,47 +56,171 @@ export function homeworkGradingNotice(status:string,error?:string):string {
 export interface GradingWaitEstimate {
   taskId:string; itemId:string; studentId:string; submissionVersion:number;
   minMinutes:number; maxMinutes:number; expiresAt:string;
+  /** Optional estimate until grading starts, available while queued. */
+  queueMinMinutes?:number; queueMaxMinutes?:number;
 }
 export interface GradingWaitRecord {
   taskId:string; itemId:string; studentId:string; version?:number;
-  gradingDelayed?:boolean; questions?:Array<{state:string}>; gradingQueueState?:'queued'|'processing';
+  gradingDelayed?:boolean; questions?:Array<{state:string; reviewReason?:string; mappingConfirmed?:boolean}>; gradingQueueState?:'queued'|'processing';
   gradingWaitEstimate?:GradingWaitEstimate; gradingError?:string; gradingResult?:SubmissionGradingImages;
 }
+function currentGradingEstimate(record:GradingWaitRecord,now:number){
+  const estimate=record.gradingWaitEstimate;
+  if(estimate&&estimate.taskId===record.taskId&&estimate.itemId===record.itemId&&estimate.studentId===record.studentId
+    &&estimate.submissionVersion===(record.version||1)&&Date.parse(estimate.expiresAt)>now)return estimate;
+}
+
+function estimatedMinutes(records:GradingWaitRecord[],now:number,queue=false):string{
+  const ranges=records.map(record=>{
+    // The estimate covers this submission as a whole. Failed parts invalidate
+    // that completion promise even while its other questions keep processing.
+    if(gradingRecordFailed(record))return [undefined,undefined];
+    const estimate=currentGradingEstimate(record,now);
+    return queue?[estimate?.queueMinMinutes,estimate?.queueMaxMinutes]:[estimate?.minMinutes,estimate?.maxMinutes];
+  });
+  const valid=ranges.filter((range):range is [number,number]=>{
+    const [min,max]=range;
+    return typeof min==='number'&&Number.isFinite(min)&&min>0&&typeof max==='number'&&Number.isFinite(max)&&max>=min;
+  });
+  if(!valid.length||valid.length!==ranges.length)return '';
+  const min=Math.ceil(Math.max(...valid.map(range=>range[0])));
+  const max=Math.ceil(Math.max(...valid.map(range=>range[1])));
+  return min===max?String(min):min+'—'+max;
+}
+
 export function gradingWaitNotice(records:GradingWaitRecord[],now=Date.now()):string {
   const waiting=records.filter(record=>{
     const questions=record.questions||[];
-    if(submissionGradingComplete(record)===true||record.gradingError&&!/未接入|等待|已重试/.test(record.gradingError))return false;
-    if(questions.some(q=>q.state==='failed'))return false;
+    if(!questions.length&&submissionGradingComplete(record)===true)return false;
+    if(!questions.length&&record.gradingError&&!/未接入|等待|已重试/.test(record.gradingError))return false;
     return questions.some(q=>['queued','processing'].includes(q.state))||(!questions.length&&['queued','processing'].includes(record.gradingQueueState||''));
   });
   if(!waiting.length)return '';
-  const estimates=waiting.map(record=>{
-    const e=record.gradingWaitEstimate;
-    return e&&e.taskId===record.taskId&&e.itemId===record.itemId&&e.studentId===record.studentId&&e.submissionVersion===(record.version||1)
-      &&Number.isFinite(e.minMinutes)&&Number.isFinite(e.maxMinutes)&&e.minMinutes>0&&e.maxMinutes>=e.minMinutes
-      &&Date.parse(e.expiresAt)>now?e:null;
-  });
-  if(estimates.some(e=>!e))return '正在排队批改，完成时间暂无法估算';
-  const min=Math.ceil(Math.max(...estimates.map(e=>e!.minMinutes))),max=Math.ceil(Math.max(...estimates.map(e=>e!.maxMinutes)));
-  return `批改预计还需${min===max?min:min+'—'+max}分钟完成`;
+  const estimate=estimatedMinutes(waiting,now);
+  return estimate?`批改预计还需${estimate}分钟完成`:'正在排队批改，完成时间暂无法估算';
 }
 
-export function gradingOverviewStatus(records:GradingWaitRecord[]){
-  const active=records.filter(r=>submissionGradingComplete(r)!==true),questions=active.flatMap(r=>r.questions||[]);
-  const waiting=active.filter(r=>!r.gradingError&&(r.questions?.some(q=>['queued','processing'].includes(q.state))||(!r.questions?.length&&r.gradingQueueState)));
-  const failed=questions.some(q=>q.state==='failed')||active.some(r=>r.gradingError&&!/未接入|等待|已重试/.test(r.gradingError));
-  const review=questions.filter(q=>q.state==='review').length;
-  if(waiting.length){const delayed=waiting.some(r=>r.gradingDelayed),processing=waiting.some(r=>r.gradingQueueState==='processing'||r.questions?.some(q=>q.state==='processing')),notice=gradingWaitNotice(waiting),estimate=notice.startsWith('批改预计')?notice.replace('批改预计','预计'):'';return {title:delayed?'批改时间较长':processing?'正在批改':'等待批改',text:delayed?'正在继续处理，完成后自动更新':estimate||'完成时间暂无法估算，完成后自动更新',note:'仅指当前已提交内容'+(failed?' · 部分内容批改失败':'')+(review?' · 待复核 '+review+' 题次':''),tone:delayed||failed?'warning':'waiting'};}
-  if(failed)return {title:'部分内容批改失败',text:'已完成结果保留，失败内容不计入对错统计',note:'请进入对应作业项查看详情',tone:'warning'};
-  if(review)return {title:'待教师复核 '+review+' 题次',text:'请核对学生原图，未复核题次不计入正确率',note:'',tone:'warning'};
+function needsTeacherReview(question: NonNullable<GradingWaitRecord['questions']>[number]) {
+  return question.state === 'review' || Boolean(question.reviewReason) || question.mappingConfirmed === false;
+}
+
+function gradingRecordComplete(record: GradingWaitRecord) {
+  const explicit = submissionGradingComplete(record);
+  const questions = record.questions || [];
+  if (gradingRecordFailed(record) || questions.some(q => needsTeacherReview(q) || ['queued','processing'].includes(q.state))) return false;
+  return explicit === true || (explicit === undefined && !record.gradingError && questions.length > 0 &&
+    questions.every(question => question.state === 'confirmed'));
+}
+
+function gradingRecordFailed(record: GradingWaitRecord) {
+  return Boolean(record.gradingError && !/未接入|等待|已重试/.test(record.gradingError)) ||
+    Boolean(record.questions?.some(q => q.state === 'failed'));
+}
+
+/** Callers provide scoped, latest effective submissions; percentages are weighted by judged question attempts. */
+export function teacherGradedStatistics(records: Array<{questions?:Array<{state:string;correct?:boolean;reviewReason?:unknown;mappingConfirmed?:boolean}>}>) {
+  const judged = records.flatMap(record => record.questions || []).filter(q =>
+    q.state === 'confirmed' && !q.reviewReason && q.mappingConfirmed !== false && typeof q.correct === 'boolean');
+  const total = judged.length, correct = judged.filter(q => q.correct).length;
+  return { total, correct, wrong: total - correct, rate: total ? Math.round(correct / total * 100) : null };
+}
+
+export function gradingOverviewStatus(records:GradingWaitRecord[],now=Date.now(),reviewStudents?:number){
+  const active=records.filter(r=>!gradingRecordComplete(r));
+  const questions=active.flatMap(r=>r.questions||[]);
+  const failed=active.some(gradingRecordFailed);
+  const review=reviewStudents ?? questions.filter(needsTeacherReview).length;
+  const reviewLabel=reviewStudents===undefined?`待复核 ${review} 题次`:`${review} 人的作业待复核`;
+  const queued:GradingWaitRecord[]=[], processing:GradingWaitRecord[]=[];
+  for(const record of active){
+    const states = record.questions?.length ? record.questions.map(q=>q.state)
+      : gradingRecordFailed(record) ? [] : [record.gradingQueueState];
+    if(states.includes('processing'))processing.push(record);
+    if(states.includes('queued'))queued.push(record);
+  }
+  const activity={queued:queued.length>0,processing:processing.length>0,failed};
+  if(queued.length||processing.length){
+    const title=processing.length?queued.length?'正在批改，部分内容排队等待':'正在批改':'排队等待中';
+    const delayed=[...queued,...processing].some(r=>r.gradingDelayed);
+    const descriptions:string[]=[];
+    if(queued.length){
+      const queueTime=estimatedMinutes(queued,now,true);
+      const totalTime=processing.length?'':estimatedMinutes(queued,now);
+      const queueDescription=queueTime?`预计还需 ${queueTime} 分钟开始批改`:'开始批改时间暂无法估算';
+      descriptions.push(processing.length?'排队内容，'+queueDescription:queueDescription);
+      if(!queueTime&&totalTime)descriptions.push(`预计 ${totalTime} 分钟内完成批改（含排队）`);
+    }
+    if(processing.length){
+      const shared=queued.some(record=>processing.includes(record));
+      const remaining=estimatedMinutes(shared?Array.from(new Set([...queued,...processing])):processing,now);
+      const processingDescription=remaining?`预计还需 ${remaining} 分钟完成批改${shared?'（含排队）':''}`:'完成时间暂无法估算';
+      descriptions.push(shared?'当前排队及批改中的内容，'+processingDescription:queued.length?'批改中的内容，'+processingDescription:processingDescription);
+    }
+    const note=[delayed?'批改时间较长':'',failed?'部分内容批改失败':'',review?reviewLabel:''].filter(Boolean).join(' · ');
+    const phase = processing.length ? (queued.length ? 'mixed' : 'processing') : 'queued';
+    return {phase,title,text:descriptions.join('。')+'。',note,tone:delayed||failed?'warning':'waiting',activity} as const;
+  }
+  if(failed)return {phase:'failed',title:'部分内容批改失败',text:'已完成结果保留，失败内容不计入对错统计',note:review?reviewLabel:'请进入对应作业项查看详情',tone:'warning',activity} as const;
+  if(review)return {phase:'review',title:reviewLabel,text:'请核对学生原图，未复核题次不计入正确率',note:'',tone:'warning',activity} as const;
+  const complete=records.length&&records.every(gradingRecordComplete);
+  if(complete)return {phase:'complete',title:'批改已完成',text:'当前已提交的内容均已处理',note:'',tone:'complete',activity} as const;
   return null;
 }
 
-export function gradingOverviewBrief(status:ReturnType<typeof gradingOverviewStatus>):string{
-  if(!status)return '';
-  const extra=status.note.split(' · ').slice(1).join(' · ');
-  const text=status.title==='正在批改'?'其余已提交内容批改中，'+status.text.replace('完成时间暂无法估算，完成后自动更新','完成后自动更新'):status.title==='等待批改'?'其余已提交内容排队中，'+status.text.replace('完成时间暂无法估算，完成后自动更新','完成后自动更新'):status.title==='批改时间较长'?'其余已提交内容处理较慢，完成后自动更新':status.title.includes('失败')?'部分内容批改失败，已完成结果保留':status.title;
-  return text.replace(/分钟完成$/,'分钟')+(extra?' · '+extra:'');
+export function teacherGradingProgress(records: GradingWaitRecord[], now = Date.now()) {
+  const byStudent = new Map<string, GradingWaitRecord[]>();
+  for (const record of records) {
+    if (!record.studentId) continue;
+    const studentRecords = byStudent.get(record.studentId) || [];
+    studentRecords.push(record);
+    byStudent.set(record.studentId, studentRecords);
+  }
+  const reviewIds: string[] = [];
+  const failedIds: string[] = [];
+  let completed = 0;
+  for (const [studentId, studentRecords] of byStudent) {
+    if (studentRecords.some(record => record.questions?.some(needsTeacherReview))) reviewIds.push(studentId);
+    if (studentRecords.some(gradingRecordFailed)) failedIds.push(studentId);
+    if (studentRecords.every(gradingRecordComplete)) completed++;
+  }
+  const total = byStudent.size;
+  const status = gradingOverviewStatus(records, now, reviewIds.length);
+  const label = total && completed === total ? `${completed} 人的作业已批完`
+    : completed ? `已批 ${completed}/${total} 人`
+    : '暂无已批改结果';
+  return { total, completed, reviewIds, failedIds, status, label };
+}
+
+export function teacherTaskWindow(task: { deadline: string; submitDeadline: string; deadlineEnabled?: boolean; withdrawnAt?: string; stoppedAt?: string }, now = Date.now()) {
+  if (task.withdrawnAt) return { label:'老师已撤回', tone:'closed', open:false, deadline:'' };
+  if (task.stoppedAt) return { label:'打卡已终止', tone:'closed', open:false, deadline:'' };
+  if (task.deadlineEnabled === false) return { label:'进行中', tone:'ongoing', open:true, deadline:'' };
+  if (homeworkTime(task.deadline) > now) return { label:'进行中', tone:'ongoing', open:true, deadline:task.deadline };
+  if (homeworkTime(task.submitDeadline) > now) return { label:'可补交', tone:'supplement', open:true, deadline:task.submitDeadline };
+  return { label:'已截止', tone:'closed', open:false, deadline:'' };
+}
+
+export function teacherListSubmissionSummary(submission: { target: number; completed: number }, taskTarget: number) {
+  const { target, completed } = submission;
+  return {
+    scope: taskTarget > target ? `${target} 人 · 共 ${taskTarget} 人` : '',
+    counts: target ? `共 ${target} 人 · 已交 ${completed} 人 · 待交 ${target - completed} 人` : '当前范围暂无学生',
+  };
+}
+
+export function teacherListGradingStatus(progress: ReturnType<typeof teacherGradingProgress>) {
+  const { total, reviewIds, failedIds, status } = progress;
+  const note = failedIds.length ? '有失败' : '';
+  if (reviewIds.length) return { label: `待复核 ${reviewIds.length} 人`, note, tone: 'attention', action: 'review', actionLabel: '查看待复核' } as const;
+  if (status?.phase === 'complete') return { label: '已批完', note:'', tone: 'complete', action: 'results', actionLabel: '查看结果' } as const;
+  if (status?.phase === 'failed') return { label: '批改异常', note:'', tone: 'attention', action: 'issues', actionLabel: '查看批改异常' } as const;
+
+  const label = status?.phase === 'queued' ? '排队中'
+    : status?.phase === 'mixed' ? '批改中'
+    : status?.phase === 'processing' ? '批改中'
+    : !total ? '暂无待批作业'
+    : '暂无批改结果';
+  return { label, note, tone: note ? 'attention' : 'normal', action: '', actionLabel: '' } as const;
 }
 
 export function canUseAIExplanation(q:GradingQuestion){return isFormalGrade(q)&&!q.explanationInvalidated&&!(q.decisionSource==='teacher'&&typeof q.aiCorrect==='boolean'&&q.aiCorrect!==q.correct);}
@@ -193,7 +317,7 @@ export function homeworkSnapshotText(snapshot:string):string {
   } catch { return '历史变更内容暂不可用，请查看变更原因。'; }
 }
 export const homeworkTime = (value: string) => new Date((value || '').replace(' ', 'T')).getTime();
-export const homeworkClosed = (task: { withdrawnAt?: string; stoppedAt?: string; submitDeadline: string }, now = Date.now()) => Boolean(task.withdrawnAt || task.stoppedAt || !Number.isFinite(homeworkTime(task.submitDeadline)) || now > homeworkTime(task.submitDeadline));
+export const homeworkClosed = (task: { withdrawnAt?: string; stoppedAt?: string; submitDeadline: string; deadlineEnabled?: boolean }, now = Date.now()) => Boolean(task.withdrawnAt || task.stoppedAt || (task.deadlineEnabled !== false && (!Number.isFinite(homeworkTime(task.submitDeadline)) || now > homeworkTime(task.submitDeadline))));
 export interface HomeworkFileReadiness { size?:number; type?:string; uploadState?:'optimizing'|'uploading'|'complete'|'failed'; previewState?:'pending'|'ready'|'failed'; unavailable?:boolean; validationError?:string }
 export function homeworkOriginalError(file:HomeworkFileReadiness):string {
   if(file.unavailable||file.uploadState==='failed')return '原件上传失败或已失效，请重新上传。';
@@ -207,9 +331,10 @@ export function homeworkPreviewNotice(file?:HomeworkFileReadiness|null,attachmen
   return '';
 }
 // Both prototypes simulate this service boundary locally. Production must supply server receipt time.
-export function homeworkSubmissionReceipt(task:{deadline:string;submitDeadline:string;allowSupplement?:boolean;withdrawnAt?:string;stoppedAt?:string},receivedAt=Date.now()) {
-  const due=homeworkTime(task.deadline),end=task.allowSupplement===false?due:homeworkTime(task.submitDeadline);
-  if(!Number.isFinite(receivedAt)||!Number.isFinite(due)||!Number.isFinite(end)||task.withdrawnAt||task.stoppedAt||receivedAt>end)throw new Error('任务已撤回、终止或补交已结束，当前选择已保留。');
+export function homeworkSubmissionReceipt(task:{deadline:string;submitDeadline:string;deadlineEnabled?:boolean;allowSupplement?:boolean;withdrawnAt?:string;stoppedAt?:string},receivedAt=Date.now()) {
+  const due = task.deadlineEnabled === false ? Infinity : homeworkTime(task.deadline);
+  const end = task.deadlineEnabled === false ? Infinity : task.allowSupplement === false ? due : homeworkTime(task.submitDeadline);
+  if(!Number.isFinite(receivedAt)||Number.isNaN(due)||Number.isNaN(end)||task.withdrawnAt||task.stoppedAt||receivedAt>end)throw new Error('任务已撤回、终止或补交已结束，当前选择已保留。');
   const date=new Date(receivedAt),pad=(n:number)=>String(n).padStart(2,'0');
   const submittedAt=`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
   return {receivedAt,submittedAt,late:receivedAt>due};
@@ -253,20 +378,27 @@ export function homeworkDocumentError(name: string, bytes: Uint8Array): string {
   if (text.includes('EncryptionInfo') || text.includes('EncryptedPackage')) return '文档已加密，请导出为无需密码的 Word 或 PDF。';
   return '';
 }
-export function homeworkPublishError(task: {title:string;description:string;attachments?:HomeworkFileReadiness[];allowSupplement?:boolean;deadline:string;submitDeadline:string;items:Array<{title:string;type?:string;submitType?:string}>}, now=Date.now()): string {
+export function homeworkPublishError(task: {title:string;description:string;attachments?:HomeworkFileReadiness[];deadlineEnabled?:boolean;scheduledAt?:string;allowSupplement?:boolean;deadline:string;submitDeadline:string;items:Array<{title:string;type?:string;submitType?:string}>}, now=Date.now()): string {
   if (!task.title.trim()) return '请填写作业标题。';
   if (!task.description.trim() && !task.attachments?.length) return '请填写老师的要求或添加附件。';
   const capacityError=homeworkAttachmentError(task.attachments||[]);if(capacityError)return capacityError;
   const attachmentError=task.attachments?.map(homeworkOriginalError).find(Boolean);if(attachmentError)return attachmentError;
   if (!task.items.length || task.items.some(i=>!i.title.trim() || !(i.type || i.submitType))) return '请补全每项要求和提交方式。';
-  if (!(homeworkTime(task.deadline)>now)) return '截止时间已过，请重新设置。';
+  return homeworkPublishTimingError(task, now);
+}
+
+export function homeworkPublishTimingError(task: { deadlineEnabled?: boolean; scheduledAt?: string; deadline: string; submitDeadline: string; allowSupplement?: boolean }, now = Date.now()): string {
+  const sendTime = task.scheduledAt ? homeworkTime(task.scheduledAt) : now;
+  if (task.scheduledAt && !(sendTime > now)) return '定时发送时间请选择未来时间。';
+  if (task.deadlineEnabled === false) return '';
+  if (!(homeworkTime(task.deadline) > sendTime)) return task.scheduledAt ? '提交截止必须晚于发送时间。' : '截止时间已过，请重新设置。';
   if (!(task.allowSupplement===false?homeworkTime(task.submitDeadline)===homeworkTime(task.deadline):homeworkTime(task.submitDeadline)>homeworkTime(task.deadline))) return '请调整补交时间：开启补交时须晚于正常截止，关闭时与正常截止一致。';
   return '';
 }
 export type HomeworkManagementAction = 'withdraw'|'extend'|'reopen'|'correct'|'stop';
 export interface HomeworkChangeInput { reason:string; deadline?:string; submitDeadline?:string; description?:string; itemTexts?:Array<{id:string;title:string;instruction:string}>; fromCycle?:number }
 export interface ManagedHomework {
-  title:string; description:string; allowSupplement?:boolean; deadline:string; submitDeadline:string; publishedBy?:string; classIds:string[]; kind:string; cycleId?:string; seriesId?:string;
+  title:string; description:string; deadlineEnabled?:boolean; allowSupplement?:boolean; deadline:string; submitDeadline:string; publishedBy?:string; classIds:string[]; kind:string; cycleId?:string; seriesId?:string;
   items:Array<{id:string;title:string;instruction:string}>;
   revision?:number; withdrawnAt?:string; stoppedAt?:string; managementReason?:string;
   changes?:Array<{at:string;action:string;reason:string;before:string;after:string;by:string}>;
@@ -278,6 +410,7 @@ export function validateHomeworkChange(task:ManagedHomework, action:HomeworkMana
   if (!input.reason.trim()) return '请填写本次变更的原因。';
   if (task.withdrawnAt || task.stoppedAt) return '任务已撤回或终止，不能继续修改；可复制重发。';
   if (action==='extend' || action==='reopen') {
+    if (task.deadlineEnabled === false) return '本作业不限提交时间。';
     const due=homeworkTime(input.deadline || task.deadline), end=homeworkTime(input.submitDeadline || '');
     if (!Number.isFinite(due)||!Number.isFinite(end)||due<homeworkTime(task.deadline)||end<homeworkTime(task.submitDeadline)||end<due||end<=now) return '只允许延长时间，补交截止须晚于当前时间且不早于正常截止。';
     if(action==='extend'&&homeworkClosed(task,now))return '任务已结束，请使用“重新开放补交”。';
