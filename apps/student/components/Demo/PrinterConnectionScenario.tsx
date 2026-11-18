@@ -6,7 +6,7 @@ import { MyPrintedFilesPage } from '../Growth/MyPrintedFilesPage';
 import { buildPaperQuestions, createCombinedPaperDocument } from '../LumiSpace/lumiPaperPdf';
 import { PrinterConnectionDemo } from '../SubjectMap/PaperPrintFlow';
 import { PrinterDemoWifi } from './PrinterDemoWifi';
-import { classroomWifi, demoPrintIssues, type DemoPrinterIssue, type DemoPrintInterruption, type DemoWifiIssue, type DemoWifiNetwork, type PrinterDemoScenarioId } from './printerDemoScenarios';
+import { classroomWifi, demoPrintIssues, type DemoPrinterIssue, type DemoPrintInterruption, type DemoWifiIssue, type DemoWifiNetwork, type PrinterDemoScenarioId, type PrinterWifiScheme } from './printerDemoScenarios';
 
 const scope = '一元一次方程';
 const title = '一元一次方程练习（演示）.pdf';
@@ -22,13 +22,15 @@ const loadDemoPdf = () => createCombinedPaperDocument({
   questions: buildPaperQuestions(scope, questionCount),
 });
 
-type DemoScreen = 'connection' | 'search' | 'wifi' | 'hotspot' | 'sending' | 'interrupted' | null;
+type DemoScreen = 'connection' | 'search' | 'sending' | 'interrupted' | null;
 
 export const PrinterConnectionScenario = ({ scenario, onClose }: { scenario: PrinterDemoScenarioId; onClose: () => void }) => {
+  const [wifiScheme, setWifiScheme] = useState<PrinterWifiScheme>('honor');
   const [screen, setScreen] = useState<DemoScreen>(null);
+  const [wifiOpen, setWifiOpen] = useState(false);
   const [wifiEnabled, setWifiEnabled] = useState(scenario !== 'no-wifi');
   const [network, setNetwork] = useState<DemoWifiNetwork | null>(() => {
-    if (scenario === 'no-wifi' || scenario === 'hidden-wifi' || scenario === 'hotspot' || scenario === 'wrong-password' || scenario === 'wifi-timeout') return null;
+    if (scenario === 'no-wifi' || scenario === 'hidden-wifi' || scenario === 'wrong-password' || scenario === 'wifi-timeout') return null;
     return classroomWifi;
   });
   const [connectedPrinter, setConnectedPrinter] = useState<string | null>(null);
@@ -71,6 +73,16 @@ export const PrinterConnectionScenario = ({ scenario, onClose }: { scenario: Pri
     setInterruption(null);
   };
 
+  const returnFromWifi = (nextNetwork: DemoWifiNetwork | null, enabled: boolean) => {
+    setWifiEnabled(enabled);
+    setWifiOpen(false);
+    if (nextNetwork?.name === network?.name) return;
+    setNetwork(nextNetwork);
+    setConnectedPrinter(null);
+    if (printerIssue === 'no-printers') setPrinterIssue(null);
+    setScreen(nextNetwork ? 'search' : 'connection');
+  };
+
   return createPortal(
     <div className="absolute inset-0 z-[1000] isolate overflow-hidden bg-slate-50">
       <div className="h-full" inert={screen !== null}>
@@ -86,37 +98,29 @@ export const PrinterConnectionScenario = ({ scenario, onClose }: { scenario: Pri
               setScreen('sending');
               return true;
             },
-          } }}
+          }, printerWifiScheme: wifiScheme, onPrinterWifiSchemeChange: setWifiScheme }}
         />
       </div>
       {(screen === 'connection' || screen === 'search') && <PrinterConnectionDemo
+        key={network?.name ?? ''}
         network={network}
         connectedPrinter={connectedPrinter}
         autoSearch={screen === 'search'}
         issue={printerIssue}
         onIssueShown={() => setPrinterIssue(null)}
-        onWifi={setScreen}
+        wifiOpen={wifiOpen}
+        onWifi={() => setWifiOpen(true)}
         onConnected={setConnectedPrinter}
         onClose={() => setScreen(null)}
       />}
-      {(screen === 'wifi' || screen === 'hotspot') && <PrinterDemoWifi
+      {wifiOpen && <PrinterDemoWifi
+        scheme={wifiScheme}
         current={network}
         enabled={wifiEnabled}
-        hotspot={screen === 'hotspot'}
         showHiddenHint={scenario === 'hidden-wifi'}
         issue={wifiIssue}
-        onToggle={() => {
-          if (wifiEnabled) { setNetwork(null); setConnectedPrinter(null); }
-          setWifiEnabled(!wifiEnabled);
-        }}
         onIssueShown={() => setWifiIssue(null)}
-        onConnected={(next) => {
-          setNetwork(next);
-          setConnectedPrinter(null);
-          if (printerIssue === 'no-printers') setPrinterIssue(null);
-          setScreen('search');
-        }}
-        onBack={() => setScreen('connection')}
+        onBack={returnFromWifi}
       />}
       {(screen === 'sending' || screen === 'interrupted') && (
         <div className="absolute inset-0 z-[600] grid place-items-center bg-slate-900/50 p-5">

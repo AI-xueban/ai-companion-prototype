@@ -38,6 +38,7 @@ import { OnboardingOverlay } from './components/Onboarding/OnboardingOverlay';
 import { WelcomeGift } from './components/Dashboard/WelcomeGift';
 import { AssessmentResult } from './components/Assessment/AssessmentResult';
 import { TeacherApp } from './components/Teacher/TeacherApp';
+import { InternalAdminApp } from './components/InternalAdmin/InternalAdminApp';
 import type { TeacherPortalRole } from './components/Teacher/data/teacherAccess';
 import { recordNodePracticeComplete, KG_PRACTICE_PENDING_KEY, kgReturnNodeKey } from './services/knowledgeTreeService';
 import { DashboardImmersive, type HomeRailTool } from './components/Dashboard/DashboardImmersive';
@@ -135,7 +136,7 @@ const DEMO_TOOL_RAIL_WIDTH = 96;
 
 const App: React.FC = () => {
   // --- Global Mode State ---
-  const [appMode, setAppMode] = useState<'student' | 'teacher'>('student');
+  const [appMode, setAppMode] = useState<'student' | 'teacher' | 'internal'>('student');
   const [controlException, setControlException] = useState<ControlExceptionDemo | undefined>();
   const [teacherEntryRole, setTeacherEntryRole] = useState<TeacherPortalRole>('teacher');
   const [demoLockScreen, setDemoLockScreen] = useState<DemoLockType | null>(null);
@@ -207,7 +208,7 @@ const App: React.FC = () => {
   const [achievementUnlockOverrides, setAchievementUnlockOverrides] = useState<Record<string, boolean>>({});
   const [lastQuizDemoResult, setLastQuizDemoResult] = useState<RewardGrantResult | null>(null);
   const [newbieLeagueOpenSignal, setNewbieLeagueOpenSignal] = useState(0);
-  // 星光学榜·状态 C：已获得 XP，但当前年级人数不足 19 人，本周榜单暂未开启
+  // 星光学榜：同年级只有本人时展示个人周成绩
   const [leagueSparse, setLeagueSparse] = useState(false);
   const [shouldSkipMapWizard, setShouldSkipMapWizard] = useState(false);
   const [openFocusSignal, setOpenFocusSignal] = useState(0);
@@ -482,7 +483,7 @@ const App: React.FC = () => {
       setDataVersion((version) => version + 1);
   };
 
-  // 演示：星光学榜·状态 C —— 已获得 XP，但年级人数不足 19 人，本周榜单暂未开启
+  // 演示：同年级只有本人，保留段位并展示个人成绩
   const handleDemoLeagueSparse = () => {
       resetBlockingOverlays();
       setAppMode('student');
@@ -861,6 +862,13 @@ const App: React.FC = () => {
       );
   }
 
+  if (appMode === 'internal') {
+    return <>
+      <InternalAdminApp onSwitchBack={() => setAppMode('student')} />
+      {demoControls}
+    </>;
+  }
+
   return (
     <RewardGrantContext.Provider value={handleRewardGranted}>
     <div
@@ -989,7 +997,8 @@ const App: React.FC = () => {
                                 nextLevelXp={personaProgress.nextLevelXp}
                                 xp={userStats.xpToday}
                                 coins={userStats.coins}
-                                weeklyXp={currentUserPersona === 'newbie' ? userStats.weeklyXp : (userStats.weeklyXp || 2100)}
+                                weeklyXp={userStats.weeklyXp}
+                                totalXp={userStats.totalXp ?? userStats.xpToday}
                                 userPersona={currentUserPersona}
                                 userGrade={userGrade}
                                 schoolSystem={schoolSystem}

@@ -137,6 +137,7 @@ export const SingleQuestionResultCard: React.FC<SingleQuestionResultCardProps> =
 
   const questionForPreview = useMemo<UniversalQuizQuestion>(() => ({
     id: questionId,
+    practiceRequest: sourceQuestion?.practiceRequest,
     type: (questionType as any) || bankQuestion?.type || 'single_choice',
     content: {
       ...bankQuestion?.content,
@@ -163,6 +164,7 @@ export const SingleQuestionResultCard: React.FC<SingleQuestionResultCardProps> =
     similarIds: bankQuestion?.similarIds,
   }), [
     bankQuestion,
+    sourceQuestion,
     cognitiveState,
     correctAnswerPreview,
     difficulty,

@@ -905,6 +905,7 @@ export const SubjectMap: React.FC<SubjectMapProps> = ({
         durationMinutes: Math.max(Math.ceil(payload.questionCount * 1.5), 10),
         levelType: 'practice',
         quizType: 'standard',
+        practiceRequest: { ...payload, subject: activeSubject, grade: userGrade, term: activeTerm, textbookEdition: syncTextbookVersion },
         questionCount: payload.questionCount,
         practiceDifficulty: payload.difficultyLevel,
         practiceDifficultyLabel: payload.difficulty,

@@ -11,6 +11,9 @@ export interface AISolveQuestion {
   subject: string;
   /** 题目实拍图 */
   imageSrc?: string;
+  /** 完整材料按原顺序展示；讲题时只引用当前小问需要的内容。 */
+  materials?: Array<{ type: 'text'; text: string } | { type: 'image'; id: string; src: string; caption: string }>;
+  subQuestions?: Array<{ id: string; label: string; text: string; imageIds?: string[]; conditions?: string[] }>;
   /** 多题同页时的相对区域（百分比） */
   region?: { top: number; left: number; width: number; height: number };
 }
@@ -125,12 +128,39 @@ export const MISSION_DAILY_MOCK_SHOTS: AISolveMockShot[] = [
   },
 ];
 
+export const TUTOR_SAMPLE_SHOTS: AISolveMockShot[] = [
+  {
+    id: 'sample-apples',
+    label: '苹果分袋',
+    multiQuestion: false,
+    questions: [{
+      id: 'tutor-apples',
+      number: '1',
+      subject: '数学',
+      text: '把 48 个苹果平均装成 6 袋，卖出 2 袋，还剩多少个苹果？',
+    }],
+  },
+  {
+    id: 'sample-reading',
+    label: '雨中的伞',
+    multiQuestion: false,
+    questions: [{
+      id: 'tutor-umbrella',
+      number: '2',
+      subject: '语文',
+      text: '小林是怎样的人？请结合描写说明。',
+      materials: [{ type: 'text', text: '雨越下越大。小林把伞往同学那边挪，自己的半边肩膀却湿透了。' }],
+    }],
+  },
+  AI_SOLVE_MOCK_SHOTS[0],
+];
+
 export function getShotById(id: string): AISolveMockShot | undefined {
-  return [...AI_SOLVE_MOCK_SHOTS, ...MISSION_DAILY_MOCK_SHOTS].find((s) => s.id === id);
+  return [...AI_SOLVE_MOCK_SHOTS, ...MISSION_DAILY_MOCK_SHOTS, ...TUTOR_SAMPLE_SHOTS].find((s) => s.id === id);
 }
 
 export function getQuestionById(id: string): AISolveQuestion | undefined {
-  for (const shot of AI_SOLVE_MOCK_SHOTS) {
+  for (const shot of [...AI_SOLVE_MOCK_SHOTS, ...TUTOR_SAMPLE_SHOTS]) {
     const q = shot.questions.find((item) => item.id === id);
     if (q) return q;
   }

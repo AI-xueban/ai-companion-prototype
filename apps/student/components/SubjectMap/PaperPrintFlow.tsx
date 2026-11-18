@@ -76,17 +76,18 @@ interface PrinterConnectionDemoProps {
   autoSearch: boolean;
   issue: DemoPrinterIssue | null;
   onIssueShown: () => void;
-  onWifi: (mode: 'wifi' | 'hotspot') => void;
+  wifiOpen: boolean;
+  onWifi: () => void;
   onConnected: (name: string) => void;
   onClose: () => void;
 }
 
-export const PrinterConnectionDemo = ({ connectedPrinter, network, autoSearch, issue, onIssueShown, onWifi, onConnected, onClose }: PrinterConnectionDemoProps) => {
+export const PrinterConnectionDemo = ({ connectedPrinter, network, autoSearch, issue, onIssueShown, wifiOpen, onWifi, onConnected, onClose }: PrinterConnectionDemoProps) => {
   const [stage, setStage] = useState<ConnectionDemoStage>(autoSearch ? 'searching' : connectedPrinter ? 'results' : 'ready');
   const [printerName, setPrinterName] = useState('');
   const [pendingPrinter, setPendingPrinter] = useState<string | null>(null);
   const nextStage = CONNECTION_DEMO_TRANSITIONS[stage];
-  const printers = network?.hotspot ? CONNECTION_DEMO_PRINTERS.slice(0, 1) : CONNECTION_DEMO_PRINTERS;
+  const printers = CONNECTION_DEMO_PRINTERS;
 
   const search = () => {
     if (issue === 'no-printers') {
@@ -120,6 +121,7 @@ export const PrinterConnectionDemo = ({ connectedPrinter, network, autoSearch, i
   }, [nextStage, onConnected, printerName]);
 
   useEffect(() => {
+    if (wifiOpen) return;
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.defaultPrevented) return;
       if (pendingPrinter) setPendingPrinter(null);
@@ -127,13 +129,13 @@ export const PrinterConnectionDemo = ({ connectedPrinter, network, autoSearch, i
     };
     window.addEventListener('keydown', closeOnEscape);
     return () => window.removeEventListener('keydown', closeOnEscape);
-  }, [onClose, pendingPrinter]);
+  }, [onClose, pendingPrinter, wifiOpen]);
 
   const primaryButton = 'rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700';
   const secondaryButton = 'rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50';
 
   return (
-    <section role="dialog" aria-labelledby="printer-demo-title" className="absolute inset-0 z-[600] flex flex-col bg-slate-100 text-slate-900">
+    <section role="dialog" aria-labelledby="printer-demo-title" inert={wifiOpen} className={`absolute inset-0 z-[600] flex-col bg-slate-100 text-slate-900 ${wifiOpen ? 'hidden' : 'flex'}`}>
       <header className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-5">
         <button type="button" autoFocus onClick={onClose} aria-label="返回" className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200">
           <ArrowLeft size={20} />
@@ -150,7 +152,7 @@ export const PrinterConnectionDemo = ({ connectedPrinter, network, autoSearch, i
               <p className="break-words text-sm font-semibold">{network?.name ?? '未连接'}</p>
             </div>
             {network?.localOnly && <span className="shrink-0 rounded-full bg-amber-50 px-2 py-1 text-[11px] text-amber-800">无互联网</span>}
-            {network && stage !== 'connected' && <button type="button" className="shrink-0 rounded-lg px-2 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50" onClick={() => onWifi('wifi')}>更换 Wi-Fi</button>}
+            {network && stage !== 'connected' && <button type="button" className="shrink-0 rounded-lg px-2 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50" onClick={onWifi}>更换 Wi-Fi</button>}
           </div>
           {stage === 'results' ? (
             <>
@@ -162,7 +164,7 @@ export const PrinterConnectionDemo = ({ connectedPrinter, network, autoSearch, i
                 <button type="button" className={secondaryButton} onClick={search}>重新搜索</button>
               </div>
               {printers.map(({ name, meta }) => (
-                <DemoPrinterDeviceRow key={name} name={name} meta={meta} offline={issue === 'printer-offline' && name === CONNECTION_DEMO_PRINTERS[0].name} connected={name === connectedPrinter} onClick={() => selectPrinter(name)} />
+                <DeviceRow key={name} name={name} meta={meta} offline={issue === 'printer-offline' && name === CONNECTION_DEMO_PRINTERS[0].name} connected={name === connectedPrinter} onClick={() => selectPrinter(name)} />
               ))}
             </>
           ) : (
@@ -175,7 +177,7 @@ export const PrinterConnectionDemo = ({ connectedPrinter, network, autoSearch, i
                 <h3 className="mt-4 text-base font-semibold">{network ? CONNECTION_DEMO_TITLES[stage] : '先连接 Wi-Fi 再搜索打印机'}</h3>
                 {(['connecting', 'connectingFailure', 'connected', 'connectFailed', 'offline'].includes(stage)) && <p className="mt-2 text-sm text-slate-500">{printerName}</p>}
                 {(stage === 'ready' || stage === 'empty') && (
-                  <p className="mt-2 text-sm text-slate-500">{network ? '请确认打印机已开机，并与平板连接同一个 Wi-Fi。' : '可以加入打印机所在的 Wi-Fi，也可以连接打印机自己的热点。'}</p>
+                  <p className="mt-2 text-sm text-slate-500">{network ? '请确认打印机已开机，并与平板连接同一个 Wi-Fi。' : '请让平板加入打印机所在的 Wi-Fi。'}</p>
                 )}
                 {stage === 'connectFailed' && <p className="mt-2 text-sm text-slate-500">设备无响应或连接已中断，请确认设备在线并重新搜索。</p>}
                 {stage === 'offline' && <p className="mt-2 text-sm text-slate-500">请开启打印机后重新搜索，或返回列表选择其他设备。</p>}
@@ -183,7 +185,7 @@ export const PrinterConnectionDemo = ({ connectedPrinter, network, autoSearch, i
               {stage === 'ready' && (
                 <div className="mt-5">
                   {network ? <button type="button" className={primaryButton} onClick={search}>搜索同网打印机</button>
-                    : <button type="button" className={primaryButton} onClick={() => onWifi('wifi')}>连接 Wi-Fi</button>}
+                    : <button type="button" className={primaryButton} onClick={onWifi}>连接 Wi-Fi</button>}
                 </div>
               )}
               {(stage === 'empty' || stage === 'connectFailed' || stage === 'offline') && (
@@ -197,13 +199,6 @@ export const PrinterConnectionDemo = ({ connectedPrinter, network, autoSearch, i
                   <button type="button" className={primaryButton} onClick={onClose}>返回打印设置</button>
                 </div>
               )}
-            </div>
-          )}
-          {stage !== 'connected' && !network?.hotspot && (
-            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5">
-              <Printer size={15} className="shrink-0 text-slate-500" />
-              <p className="flex-1 text-[11px] text-slate-600">也可以直接加入打印机的 Wi-Fi 热点</p>
-              <button type="button" className="min-h-7 shrink-0 rounded-md px-2 text-[11px] font-semibold text-blue-700 hover:bg-blue-50" onClick={() => onWifi('hotspot')}>连接打印机热点</button>
             </div>
           )}
         </div>
@@ -393,9 +388,8 @@ const DevicePanel = ({ state, setState, connectedPrinter, onSelect, onClose }: {
     if (name === connectedPrinter) { onClose(); return; }
     setPendingPrinter(name);
   };
-  return <div className="absolute inset-0 z-20 bg-slate-100"><header className="flex h-16 items-center border-b border-slate-200 bg-white px-5"><button onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-slate-100"><X size={20} /></button><div className="ml-3"><h2 className="text-[17px] font-semibold">连接打印机</h2><p className="text-[10px] text-slate-400">{connectedPrinter ? `当前已连接：${connectedPrinter}` : '尚未连接打印机'} · 当前 Wi-Fi：AI-Classroom</p></div><button onClick={() => { setState('searching'); window.setTimeout(() => setState('results'), 900); }} className="ml-auto flex h-9 items-center gap-2 rounded-xl bg-blue-600 px-4 text-[12px] font-semibold text-white"><RefreshCw size={14} />重新搜索</button></header><main className="mx-auto max-w-[900px] p-6">{state === 'searching' ? <div className="rounded-2xl bg-white p-12 text-center"><Search size={32} className="mx-auto animate-pulse text-blue-600" /><p className="mt-3 text-sm font-semibold">正在搜索同一 Wi-Fi 下的打印机…</p></div> : state === 'empty' ? <div className="rounded-2xl bg-white p-10 text-center"><Wifi size={34} className="mx-auto text-slate-300" /><h3 className="mt-3 font-semibold">没有找到打印机</h3><p className="mt-2 text-[12px] leading-6 text-slate-500">请确认打印机已开机、与本机连接同一 Wi-Fi，或打开 Wi-Fi Direct 后重试。</p><button onClick={() => setState('results')} className="mt-4 rounded-xl bg-blue-600 px-5 py-2.5 text-[12px] font-semibold text-white">重新搜索</button></div> : state === 'connectFailed' ? <div className="rounded-2xl bg-white p-10 text-center"><AlertTriangle size={34} className="mx-auto text-amber-500" /><h3 className="mt-3 font-semibold">打印机连接失败</h3><p className="mt-2 text-[12px] leading-6 text-slate-500">设备无响应或网络连接已中断。请确认打印机在线，并保持在同一 Wi-Fi 下。</p><button onClick={() => { setState('searching'); window.setTimeout(() => setState('results'), 900); }} className="mt-4 rounded-xl bg-blue-600 px-5 py-2.5 text-[12px] font-semibold text-white">重新搜索</button></div> : <div className="space-y-3"><DeviceRow name="EPSON AM-C5000 Series" meta="IPP Everywhere · 在线 · 支持双面/彩色" connected={connectedPrinter === 'EPSON AM-C5000 Series'} onClick={() => choosePrinter('EPSON AM-C5000 Series')} /><DeviceRow name="HP LaserJet Pro MFP" meta="Mopria / IPPS · 在线 · 黑白" connected={connectedPrinter === 'HP LaserJet Pro MFP'} onClick={() => choosePrinter('HP LaserJet Pro MFP')} /></div>}</main>{pendingPrinter ? <div className="absolute inset-0 z-30 flex items-center justify-center bg-slate-950/35"><div className="w-[380px] rounded-3xl bg-white p-6 text-center shadow-2xl"><span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600"><Printer size={24} /></span><h3 className="mt-4 text-[17px] font-semibold">切换连接的打印机？</h3><p className="mt-2 text-[12px] leading-6 text-slate-500">当前已连接 {connectedPrinter}<br />确认切换到 {pendingPrinter}？</p><div className="mt-6 flex gap-3"><button type="button" onClick={() => setPendingPrinter(null)} className="h-10 flex-1 rounded-xl bg-slate-100 text-[13px] font-semibold text-slate-600">取消</button><button type="button" onClick={() => { const name = pendingPrinter; setPendingPrinter(null); onSelect(name); }} className="h-10 flex-1 rounded-xl bg-blue-600 text-[13px] font-semibold text-white">确认切换</button></div></div></div> : null}</div>;
+  return <div className="absolute inset-0 z-20 bg-slate-100"><header className="flex h-16 items-center border-b border-slate-200 bg-white px-5"><button onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-slate-100"><X size={20} /></button><div className="ml-3"><h2 className="text-[17px] font-semibold">连接打印机</h2><p className="text-[10px] text-slate-400">{connectedPrinter ? `当前已连接：${connectedPrinter}` : '尚未连接打印机'} · 当前 Wi-Fi：AI-Classroom</p></div><button onClick={() => { setState('searching'); window.setTimeout(() => setState('results'), 900); }} className="ml-auto flex h-9 items-center gap-2 rounded-xl bg-blue-600 px-4 text-[12px] font-semibold text-white"><RefreshCw size={14} />重新搜索</button></header><main className="mx-auto max-w-[900px] p-6">{state === 'searching' ? <div className="rounded-2xl bg-white p-12 text-center"><Search size={32} className="mx-auto animate-pulse text-blue-600" /><p className="mt-3 text-sm font-semibold">正在搜索同一 Wi-Fi 下的打印机…</p></div> : state === 'empty' ? <div className="rounded-2xl bg-white p-10 text-center"><Wifi size={34} className="mx-auto text-slate-300" /><h3 className="mt-3 font-semibold">没有找到打印机</h3><p className="mt-2 text-[12px] leading-6 text-slate-500">请确认打印机已开机，并与本机连接同一 Wi-Fi 后重试。</p><button onClick={() => setState('results')} className="mt-4 rounded-xl bg-blue-600 px-5 py-2.5 text-[12px] font-semibold text-white">重新搜索</button></div> : state === 'connectFailed' ? <div className="rounded-2xl bg-white p-10 text-center"><AlertTriangle size={34} className="mx-auto text-amber-500" /><h3 className="mt-3 font-semibold">打印机连接失败</h3><p className="mt-2 text-[12px] leading-6 text-slate-500">设备无响应或网络连接已中断。请确认打印机在线，并保持在同一 Wi-Fi 下。</p><button onClick={() => { setState('searching'); window.setTimeout(() => setState('results'), 900); }} className="mt-4 rounded-xl bg-blue-600 px-5 py-2.5 text-[12px] font-semibold text-white">重新搜索</button></div> : <div className="space-y-3">{CONNECTION_DEMO_PRINTERS.map(({ name, meta }) => <DeviceRow key={name} name={name} meta={meta} connected={connectedPrinter === name} onClick={() => choosePrinter(name)} />)}</div>}</main>{pendingPrinter && connectedPrinter ? <PrinterSwitchConfirmation current={connectedPrinter} next={pendingPrinter} onCancel={() => setPendingPrinter(null)} onConfirm={() => { const name = pendingPrinter; setPendingPrinter(null); onSelect(name); }} /> : null}</div>;
 };
-const DeviceRow = ({ name, meta, connected, onClick }: { name: string; meta: string; connected?: boolean; onClick: () => void }) => <button onClick={onClick} className={`flex w-full items-center rounded-2xl border bg-white p-5 text-left shadow-sm ${connected ? 'border-emerald-200 ring-1 ring-emerald-100' : 'border-slate-100'}`}><span className={`flex h-11 w-11 items-center justify-center rounded-xl ${connected ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}><Printer size={22} /></span><span className="ml-4"><span className="flex items-center gap-2 text-[14px] font-semibold">{name}{connected ? <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-semibold text-emerald-600">已连接</span> : null}</span><span className="mt-1 block text-[11px] text-slate-400">{meta}</span></span>{connected ? <Check size={18} className="ml-auto text-emerald-500" /> : <ChevronRight className="ml-auto text-slate-400" />}</button>;
 
 const PrinterSwitchConfirmation = ({ current, next, onCancel, onConfirm }: { current: string; next: string; onCancel: () => void; onConfirm: () => void }) => (
   <div className="absolute inset-0 z-30 flex items-center justify-center bg-slate-950/35">
@@ -410,7 +404,7 @@ const PrinterSwitchConfirmation = ({ current, next, onCancel, onConfirm }: { cur
     </div>
   </div>
 );
-const DemoPrinterDeviceRow = ({ name, meta, connected, offline, onClick }: { name: string; meta: string; connected?: boolean; offline?: boolean; onClick: () => void }) => (
+const DeviceRow = ({ name, meta, connected, offline, onClick }: { name: string; meta: string; connected?: boolean; offline?: boolean; onClick: () => void }) => (
   <button type="button" onClick={onClick} className={`flex w-full items-center gap-3 rounded-2xl border bg-white px-4 py-3 text-left shadow-sm hover:border-blue-200 ${connected ? 'border-emerald-200 ring-1 ring-emerald-100' : 'border-slate-200'}`}>
     <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${connected ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}><Printer size={19} /></span>
     <span className="min-w-0 flex-1">

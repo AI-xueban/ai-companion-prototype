@@ -14,10 +14,10 @@ import { controlExceptionScenarios, type ControlExceptionDemo } from '../Teacher
 interface DemoControlsProps {
     onControlException?: (scenario: ControlExceptionDemo) => void;
     onSwitchPersona: (type: UserPersona, calibrated?: boolean, grade?: string) => void;
-    onSwitchMode: (mode: 'student' | 'teacher') => void;
+    onSwitchMode: (mode: 'student' | 'teacher' | 'internal') => void;
     onSwitchTeacherRole: (role: TeacherPortalRole) => void;
     onJumpToMap: () => void;
-    currentMode: 'student' | 'teacher';
+    currentMode: 'student' | 'teacher' | 'internal';
     onJumpToSubject?: (subject: 'math' | 'chinese' | 'english') => void;
     onJumpToQuizResult?: () => void;
     onJumpToSteppingQuiz?: (subject?: 'math' | 'chinese' | 'english') => void;
@@ -64,9 +64,7 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
     useEffect(() => setSelectedMode(currentMode), [currentMode]);
 
     useEffect(() => {
-        if (new URLSearchParams(window.location.search).get('demo') === 'wifi-printer') {
-            setShowPrinterDemo(true);
-        }
+        if (new URLSearchParams(window.location.search).get('demo') === 'wifi-printer') setShowPrinterDemo(true);
     }, []);
 
     const handlePersonaClick = (p: UserPersona, calibrated = false, grade?: string) => {
@@ -74,12 +72,10 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
         setIsOpen(false);
     };
 
-    const handleModeSwitch = (mode: 'student' | 'teacher') => {
+    const handleModeSwitch = (mode: 'student' | 'teacher' | 'internal') => {
         setSelectedMode(mode);
-        if (mode === 'student') {
-            onSwitchMode('student');
-            setIsOpen(false);
-        }
+        onSwitchMode(mode);
+        setIsOpen(false);
     };
 
     const handleResetDemoData = () => {
@@ -108,7 +104,7 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
                             <button type="button" onClick={() => setIsOpen(false)} aria-label="关闭演示控制台" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white transition-colors"><X size={16} /></button>
                         </div>
 
-                        <div className="p-1 bg-white/10 rounded-xl grid grid-cols-2 gap-1">
+                        <div className="p-1 bg-white/10 rounded-xl grid grid-cols-3 gap-1">
                             <button 
                                 type="button"
                                 onClick={() => handleModeSwitch('student')}
@@ -132,6 +128,14 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
                                 }`}
                             >
                                 <LayoutDashboard size={12} /> 教师端
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleModeSwitch('internal')}
+                                disabled={selectedMode === 'internal'}
+                                className={`py-2 text-[11px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1 ${selectedMode === 'internal' ? 'bg-brand text-white shadow-sm cursor-default' : 'text-gray-400 hover:bg-white/10 hover:text-white'}`}
+                            >
+                                <Settings size={12} /> 内部管理
                             </button>
                         </div>
 
@@ -302,7 +306,7 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
                         <div className="space-y-3 pt-2 border-t border-white/10">
                             <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5">
                                 <Trophy size={11} className="text-amber-400/70" />
-                                星光学榜 · 状态 C 演示
+                                星光学榜 · 单人状态
                             </p>
                             <button
                                 onClick={() => {
@@ -315,13 +319,13 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
                                     <Users size={18} />
                                 </div>
                                 <div className="flex-1 text-left">
-                                    <div className="text-white text-xs font-bold">已获XP · 本周暂未开启</div>
-                                    <div className="text-gray-400 text-[10px]">年级不足19人 · 下周自动上榜</div>
+                                    <div className="text-white text-xs font-bold">只有本人 · 个人周成绩</div>
+                                    <div className="text-gray-400 text-[10px]">同年级仅1人 · 段位保持</div>
                                 </div>
                                 <ChevronRight size={14} className="text-gray-400 group-hover:text-white" />
                             </button>
                             <p className="text-gray-600 text-[9px] leading-relaxed">
-                                状态 A（未解锁）与 B（已上榜）见上方「我是萌新 / 初中七年级学生」入口。
+                                未参赛与正常周榜见上方学生入口；进入学榜可用「演示状态」检查零分、同分、VS 与结算。
                             </p>
                         </div>
 

@@ -39,6 +39,7 @@ export const QuestionFeedbackEntry: React.FC<QuestionFeedbackEntryProps> = ({
   className = '',
 }) => {
   const [open, setOpen] = useState(false);
+  const reportId = useRef('');
   const [toast, setToast] = useState<string | null>(null);
   const toastTimerRef = useRef<number | null>(null);
 
@@ -63,20 +64,19 @@ export const QuestionFeedbackEntry: React.FC<QuestionFeedbackEntryProps> = ({
   const triggerClass =
     variant === 'footnote'
       ? 'text-[10px] text-slate-300 hover:text-slate-500 font-medium transition-colors'
-      : 'inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-indigo-600 transition-colors';
+      : 'inline-flex items-center gap-1.5 rounded-lg bg-violet-50 px-3 py-2 text-xs font-bold text-indigo-600 shadow-sm transition-colors hover:bg-violet-100';
 
   return (
     <>
-      <div className={`flex justify-end ${className}`}>
-        <button type="button" onClick={() => setOpen(true)} className={triggerClass}>
+      <div className={`${variant === 'prominent' ? 'flex justify-start' : 'flex justify-end'} ${className}`}>
+        <button type="button" onClick={() => { reportId.current = crypto.randomUUID?.() ?? `qfb-${Date.now()}-${Math.random().toString(36).slice(2)}`; setOpen(true); }} className={triggerClass}>
           {variant === 'footnote' ? (
             <>
               有疑问？<span className="underline underline-offset-2">反馈</span>
             </>
           ) : (
             <>
-              <span>这道题有问题？</span>
-              <span className="text-indigo-500 font-bold">反馈</span>
+              <span className="text-indigo-600 font-bold">⚑ 纠错 / 超纲反馈</span>
             </>
           )}
         </button>
@@ -85,9 +85,10 @@ export const QuestionFeedbackEntry: React.FC<QuestionFeedbackEntryProps> = ({
       <QuestionFeedbackSheet
         open={open}
         onClose={() => setOpen(false)}
-        onSubmit={(payload) => {
-          const reasonMeta = QUESTION_FEEDBACK_REASON_META[payload.reason];
-          submitQuestionFeedback({
+        onSubmit={async (payload) => {
+          const reasonMeta = payload.reasons.map((reason) => QUESTION_FEEDBACK_REASON_META[reason]);
+          const reasonLabels = reasonMeta.map((item) => item.label);
+          await submitQuestionFeedback({
             ...buildQuestionFeedbackInput({
               question,
               userAnswer,
@@ -96,11 +97,13 @@ export const QuestionFeedbackEntry: React.FC<QuestionFeedbackEntryProps> = ({
               draftImageUrl,
               systemJudgment: judgment,
             }),
-            category: reasonMeta.category,
-            reason: payload.reason,
-            reasonLabel: reasonMeta.label,
+            category: reasonMeta[0].category,
+            reason: payload.reasons[0],
+            reasonLabel: reasonLabels.join('、'),
+            reasons: payload.reasons,
+            reasonLabels,
             description: payload.description,
-          });
+          }, reportId.current);
           setOpen(false);
           showToast('感谢反馈，我们已收到');
         }}

@@ -23,6 +23,14 @@ const writeReports = (reports: QuestionFeedbackReport[]) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(reports));
 };
 
+const saveReport = (report: QuestionFeedbackReport) => {
+  const reports = readReports();
+  const existingIndex = reports.findIndex((item) => item.id === report.id);
+  if (existingIndex >= 0) reports[existingIndex] = report;
+  else reports.push(report);
+  writeReports(reports);
+};
+
 const resolveBankQuestionId = (id: string) => (id.startsWith('mist-') ? id.replace('mist-', '') : id);
 
 const formatAnswer = (val: unknown): string | undefined => {
@@ -76,6 +84,16 @@ export const buildQuestionFeedbackInput = (params: {
     questionType: params.question.type,
     knowledgePoints: params.question.knowledgePoints || bankQuestion?.knowledgePoints,
     stemSnapshot: stemSnapshot(params.question),
+    practiceRequest: params.question.practiceRequest,
+    questionSnapshot: {
+      stem: (params.question.content.htmlStem || params.question.content.stem).replace(/<[^>]+>/g, ' ').trim(),
+      images: [...(params.question.content.stemImages ?? []), ...(params.question.content.originalImageUrl ? [params.question.content.originalImageUrl] : [])]
+        .map((url) => new URL(url, document.baseURI).href),
+      options: params.question.content.options,
+      difficulty: params.question.difficulty,
+      explanation: (params.question.content.htmlExplanation || params.question.result?.explanation)?.replace(/<[^>]+>/g, ' ').trim(),
+      subQuestions: params.question.content.subQuestions,
+    },
     scene: params.scene,
     userAnswer: formatAnswer(params.userAnswer ?? params.question.userAnswer),
     systemCorrectAnswer: formatAnswer(params.question.result?.correctAnswer),
@@ -84,19 +102,32 @@ export const buildQuestionFeedbackInput = (params: {
   };
 };
 
-export const submitQuestionFeedback = (
+export const submitQuestionFeedback = async (
   input: QuestionFeedbackSubmitInput,
-): QuestionFeedbackReport => {
+  id: string,
+): Promise<QuestionFeedbackReport> => {
   const report: QuestionFeedbackReport = {
-    id: `qfb-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id,
     createdAt: new Date().toISOString(),
     ...input,
     description: input.description?.trim() || undefined,
   };
 
-  const reports = readReports();
-  reports.push(report);
-  writeReports(reports);
+  if (input.practiceRequest) {
+    const endpoint = import.meta.env.VITE_QUESTION_FEEDBACK_URL ||
+      (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? 'http://127.0.0.1:8080/api/question-feedback' : '/api/question-feedback');
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(report),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!response.ok) throw new Error('反馈提交失败');
+    saveReport(report);
+    return report;
+  }
+
+  saveReport(report);
   return report;
 };
 

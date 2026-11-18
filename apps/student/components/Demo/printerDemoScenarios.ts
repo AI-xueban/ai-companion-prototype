@@ -2,7 +2,6 @@ export const printerDemoScenarios = [
   { id: 'same-wifi', label: '同一 Wi-Fi · 正常连接' },
   { id: 'no-wifi', label: '未连接 Wi-Fi' },
   { id: 'hidden-wifi', label: '手动添加隐藏网络' },
-  { id: 'hotspot', label: '直连打印机热点 · 无互联网' },
   { id: 'wrong-password', label: 'Wi-Fi 连接失败 · 密码错误' },
   { id: 'wifi-timeout', label: 'Wi-Fi 连接失败 · 超时' },
   { id: 'no-printers', label: '同网搜不到打印机' },
@@ -18,6 +17,7 @@ export const printerDemoScenarios = [
 ] as const;
 
 export type PrinterDemoScenarioId = typeof printerDemoScenarios[number]['id'];
+export type PrinterWifiScheme = 'inka' | 'honor';
 export type DemoPrintInterruption = Extract<PrinterDemoScenarioId, 'before-send' | 'after-send'>;
 export type DemoWifiIssue = Extract<PrinterDemoScenarioId, 'wrong-password' | 'wifi-timeout'>;
 export type DemoPrinterIssue = Extract<PrinterDemoScenarioId, 'no-printers' | 'printer-failed' | 'printer-offline'>;
@@ -38,9 +38,7 @@ export const demoPrintIssues: Partial<Record<PrinterDemoScenarioId, DemoPrintIss
 export interface DemoWifiNetwork {
   name: string;
   localOnly?: boolean;
-  hotspot?: boolean;
 }
 
 export const classroomWifi: DemoWifiNetwork = { name: 'AI-Classroom' };
-export const printerHotspot: DemoWifiNetwork = { name: 'DIRECT-58-EPSON', localOnly: true, hotspot: true };
 export const hiddenWifiName = 'AI-Classroom-Hidden';
