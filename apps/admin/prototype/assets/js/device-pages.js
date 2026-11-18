@@ -626,6 +626,7 @@ function renderAlertMonthSelect(selectedYm) {
 
 function getDefaultUsageFilter() {
   return {
+    borrowerType: '全部',
     student: '',
     sn: '',
     cabinetId: '',
@@ -706,6 +707,7 @@ function filterUsageRecords(records, filter) {
   const snKey = (filter.sn || '').trim().toLowerCase();
   const cabinetKey = (filter.cabinetId || '').trim().toLowerCase();
   return records.filter(r => {
+    if (filter.borrowerType && filter.borrowerType !== '全部' && (r.borrowerType || 'student') !== filter.borrowerType) return false;
     if (studentKey) {
       const hay = `${r.studentId || ''} ${r.studentName || ''}`.toLowerCase();
       if (!hay.includes(studentKey)) return false;
@@ -717,7 +719,7 @@ function filterUsageRecords(records, filter) {
     if (filter.status !== '全部') {
       if (getUsageRecordStatusLabel(r) !== filter.status) return false;
     }
-    const borrowYmd = parseRecordYmd(r.borrowAt);
+    const borrowYmd = parseRecordYmd(r.operatedAt || r.borrowAt);
     if (!isYmdInRange(borrowYmd, filter.borrowStart, filter.borrowEnd)) return false;
     if (filter.returnStart || filter.returnEnd) {
       const returnYmd = parseRecordYmd(r.returnAt);
@@ -757,6 +759,7 @@ function filterDeviceAlerts(alerts, filter) {
 
 function readUsageFilterFromForm() {
   return {
+    borrowerType: document.getElementById('usage-filter-borrower-type')?.value || '全部',
     student: document.getElementById('usage-filter-student')?.value || '',
     sn: document.getElementById('usage-filter-sn')?.value || '',
     cabinetId: document.getElementById('usage-filter-cabinet-id')?.value || '',
@@ -830,22 +833,35 @@ function resetAlertFilter() {
   navigate('device-alert', { keepFilter: true });
 }
 
+function usageBorrowerTypeLabel(record) {
+  if (record.borrowerType === 'teacher') return '教师';
+  return record.borrowerType === 'local_admin' ? '管理员' : '学生';
+}
+
+
+function usageClassLabel(record) {
+  const value = String(record.grade ?? '').trim();
+  if (record.borrowerType === 'teacher' && (!value || /^[—–-]+$/.test(value))) return '';
+  return value || '——';
+}
+
 function renderUsageTableRows(records, startIndex = 0) {
   if (!records.length) {
-    return '<tr><td colspan="11" style="text-align:center;color:var(--text-muted);padding:32px">暂无符合条件的使用记录</td></tr>';
+    return '<tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:32px">暂无符合条件的使用记录</td></tr>';
   }
   return records.map((r, index) => `
     <tr>
       <td>${startIndex + index + 1}</td>
-      <td>${esc(r.sn || '—')}</td>
+      <td>${esc(r.sn || '——')}</td>
       <td>${r.slotBorrow != null ? `#${esc(String(r.slotBorrow))}` : '—'}</td>
       <td>${esc(r.cabinetBorrow || '—')}</td>
+      <td><span class="usage-borrower-tag">${usageBorrowerTypeLabel(r)}</span></td>
       <td>${esc(r.studentName)}</td>
       <td>${esc(r.studentId || '—')}</td>
-      <td>${esc(r.grade || '—')}</td>
+      <td>${esc(usageClassLabel(r))}</td>
       <td>${usageRecordStateTag(r)}</td>
-      <td>${r.borrowAt}</td>
-      <td>${r.returnAt || '—'}</td>
+      <td>${esc(r.operatedAt || r.borrowAt || '——')}</td>
+      <td>${r.returnAt || '——'}</td>
       <td><button class="btn-link" onclick="openTab('device-usage-detail','使用记录详情',{id:'${r.id}'})">详情</button></td>
     </tr>
   `).join('');
@@ -916,14 +932,18 @@ function formatRecordTimeOffset(datetimeStr, offsetSec = 0) {
 }
 
 function renderBorrowTimelineItems(record) {
-  const borrowDesc = record.status === 'cancelled'
+  const localAdmin = record.borrowerType === 'local_admin';
+  const teacher = record.borrowerType === 'teacher';
+  const borrowDesc = teacher ? '教师点击该设备借取，柜门打开，该设备记为借出'
+    : localAdmin ? '管理员按数量借取，柜门打开，该设备记为借出'
+    : record.status === 'cancelled'
     ? '确认借取，柜门打开；设备未拔充电器'
     : '确认借取，柜门打开；设备已取出';
   return `
         <div class="dev-timeline-item">
           <div class="dev-timeline-time">${formatRecordTimeOffset(record.borrowAt, -8)}</div>
           <div class="dev-timeline-title">编号密码验证</div>
-          <div class="dev-timeline-desc">学生提交编号与密码</div>
+          <div class="dev-timeline-desc">${teacher ? '教师提交编号与密码' : localAdmin ? '本地管理员提交账号与密码' : '学生提交编号与密码'}</div>
         </div>
         <div class="dev-timeline-item">
           <div class="dev-timeline-time">${record.borrowAt}</div>
@@ -1074,7 +1094,7 @@ function renderDeviceOverviewPage() {
                 <td>${data.tablets.find(t => t.id === r.tabletId)?.slotNo != null ? `#${esc(String(data.tablets.find(t => t.id === r.tabletId).slotNo))}` : `#${esc(String(r.slotBorrow || '—'))}`}</td>
                 <td>${esc(data.tablets.find(t => t.id === r.tabletId)?.cabinetId || r.cabinetBorrow || '—')}</td>
                 <td>${esc(r.studentName)} (${esc(r.studentId)})</td>
-                <td>${r.borrowAt}</td>
+                <td>${esc(r.operatedAt || r.borrowAt || '——')}</td>
                 <td>${usageRecordStateTag(r)}</td>
                 <td class="status-ref-note">${esc(usageRecordStateNote(r))}</td>
                 <td><button class="btn-link" onclick="openTab('device-usage-detail','使用记录详情',{id:'${r.id}'})">详情</button></td>
@@ -1217,10 +1237,57 @@ function deleteCabinet(cabinetId) {
   });
 }
 
+function getCabinetLocalAdmins(cabinet) {
+  if (Array.isArray(cabinet.localAdmins)) return cabinet.localAdmins;
+  return cabinet.localAdminAccount !== undefined || cabinet.localAdminPassword !== undefined
+    ? [{ account: cabinet.localAdminAccount, password: cabinet.localAdminPassword }] : [];
+}
+
+function toggleCabinetAdminPassword(button, cabinetId, accountIndex) {
+  const cabinet = data.cabinets.find(c => c.id === cabinetId);
+  const admin = cabinet && getCabinetLocalAdmins(cabinet)[Number(accountIndex)];
+  if (!admin?.password) return;
+  const visible = button.getAttribute('aria-pressed') !== 'true';
+  button.previousElementSibling.textContent = visible ? admin.password : '••••••';
+  button.setAttribute('aria-pressed', String(visible));
+  button.setAttribute('aria-label', visible ? '隐藏本地管理员密码' : '查看本地管理员密码');
+  button.title = visible ? '隐藏密码' : '查看密码';
+}
+
+function getCabinetDetailPagination(rows, requestedPage) {
+  const totalPages = Math.max(1, Math.ceil(rows.length / 10));
+  const page = Math.min(totalPages, Math.max(1, Math.floor(Number(requestedPage) || 1)));
+  const start = (page - 1) * 10;
+  return { page, start, totalPages, rows: rows.slice(start, start + 10) };
+}
+
+function goToCabinetDetailPage(button, requestedPage) {
+  const { cabinetId, pageKey } = button.dataset;
+  if (!['tabletPage', 'alertPage'].includes(pageKey)) return;
+  navigate('cabinet-detail', { ...currentParams, id: cabinetId, [pageKey]: Number(requestedPage) });
+}
+
+function renderCabinetDetailPagination(cabinetId, pageKey, total, pagination) {
+  const { page, totalPages } = pagination;
+  const attrs = `data-cabinet-id="${esc(cabinetId)}" data-page-key="${pageKey}"`;
+  const pages = Array.from({ length: totalPages }, (_, i) => i + 1)
+    .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 2);
+  return `<div class="pagination pagination--with-size" aria-label="${pageKey === 'tabletPage' ? '绑定设备' : '最近告警'}分页">
+    <span class="page-size-picker">共 ${total} 条 · 每页 10 条</span>
+    <button type="button" class="page-btn${page === 1 ? ' disabled' : ''}" ${attrs} ${page === 1 ? 'disabled' : ''} aria-label="上一页" onclick="goToCabinetDetailPage(this, ${page - 1})">‹</button>
+    ${pages.map((p, i) => `${i > 0 && p > pages[i - 1] + 1 ? '<span>…</span>' : ''}<button type="button" class="page-btn${p === page ? ' active' : ''}" ${attrs} ${p === page ? 'aria-current="page"' : ''} onclick="goToCabinetDetailPage(this, ${p})">${p}</button>`).join('')}
+    <button type="button" class="page-btn${page === totalPages ? ' disabled' : ''}" ${attrs} ${page === totalPages ? 'disabled' : ''} aria-label="下一页" onclick="goToCabinetDetailPage(this, ${page + 1})">›</button>
+    <label class="page-size-picker">跳至 <select class="select" style="width:auto;min-width:64px" ${attrs} aria-label="选择页码" onchange="goToCabinetDetailPage(this, this.value)">${Array.from({ length: totalPages }, (_, i) => `<option value="${i + 1}"${i + 1 === page ? ' selected' : ''}>${i + 1}</option>`).join('')}</select> 页</label>
+  </div>`;
+}
+
 function renderCabinetDetailPage(params) {
   const cab = data.cabinets.find(c => c.id === params?.id) || data.cabinets[0];
+  const localAdmins = getCabinetLocalAdmins(cab);
   const tablets = data.tablets.filter(t => t.cabinetId === cab.id);
-  const alerts = getCabinetAlerts(cab.id).slice(0, 5);
+  const alerts = getCabinetAlerts(cab.id);
+  const tabletPagination = getCabinetDetailPagination(tablets, params?.tabletPage);
+  const alertPagination = getCabinetDetailPagination(alerts, params?.alertPage);
   return `
     <div class="page-card">
       <div class="page-card-title">柜机详情 · ${esc(cab.name)}</div>
@@ -1238,6 +1305,17 @@ function renderCabinetDetailPage(params) {
         <div class="detail-item"><label>联系方式</label><span>${esc(cab.managerContact || '—')}</span></div>
         <div class="detail-item"><label>创建时间</label><span>${esc(cab.createdAt || '—')}</span></div>
       </div>
+      <details class="cabinet-admin-disclosure">
+        <summary>本地管理员账号（${localAdmins.length}）</summary>
+        <div class="table-wrap">
+        <table class="data-table" style="max-width:720px">
+          <thead><tr><th style="width:50%">账号</th><th>密码</th></tr></thead>
+          <tbody>${localAdmins.length ? localAdmins.map((admin, index) => `
+            <tr><td>${esc(admin.account || '—')}</td><td><div class="cabinet-admin-password"><span>${admin.password ? '••••••' : '—'}</span>${admin.password ? `<button type="button" class="cabinet-password-toggle" data-cabinet-id="${esc(cab.id)}" data-account-index="${index}" onclick="toggleCabinetAdminPassword(this, this.dataset.cabinetId, this.dataset.accountIndex)" aria-label="查看本地管理员密码" aria-pressed="false" title="查看密码"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>` : ''}</div></td></tr>
+          `).join('') : '<tr><td colspan="2" style="text-align:center;color:var(--text-muted)">暂无本地管理员账号</td></tr>'}</tbody>
+        </table>
+        </div>
+      </details>
       <div class="form-section-title">格口概览</div>
       <div class="toolbar" style="margin-bottom:12px">
         <div class="toolbar-left">
@@ -1253,9 +1331,9 @@ function renderCabinetDetailPage(params) {
             <th>序号</th><th>设备ID</th><th>SN</th><th>仓位</th><th>柜门</th><th>格口状态</th><th>设备状态</th><th>说明</th><th>操作</th>
           </tr></thead>
           <tbody>
-            ${tablets.length ? tablets.map((t, i) => `
+            ${tablets.length ? tabletPagination.rows.map((t, i) => `
               <tr>
-                <td>${i + 1}</td>
+                <td>${tabletPagination.start + i + 1}</td>
                 <td>${esc(formatTabletIdDisplay(t.id))}</td>
                 <td>${esc(t.sn)}</td>
                 <td>#${t.slotNo}</td>
@@ -1269,12 +1347,13 @@ function renderCabinetDetailPage(params) {
           </tbody>
         </table>
       </div>
+      ${renderCabinetDetailPagination(cab.id, 'tabletPage', tablets.length, tabletPagination)}
       <div class="form-section-title">最近告警</div>
       <div class="table-wrap">
         <table class="data-table">
           <thead><tr><th>告警ID</th><th>类型</th><th>告警内容</th><th>状态</th><th>产生时间</th></tr></thead>
           <tbody>
-            ${alerts.length ? alerts.map(a => `
+            ${alerts.length ? alertPagination.rows.map(a => `
               <tr>
                 <td>${esc(a.id)}</td>
                 <td>${alertTypeLabel(a.type)}</td>
@@ -1286,6 +1365,7 @@ function renderCabinetDetailPage(params) {
           </tbody>
         </table>
       </div>
+      ${renderCabinetDetailPagination(cab.id, 'alertPage', alerts.length, alertPagination)}
       <div class="form-footer"><button class="btn" onclick="openTab('cabinet')">返回列表</button></div>
     </div>`;
 }
@@ -1424,9 +1504,10 @@ function renderDeviceUsagePage(params) {
   const start = (page - 1) * pageSize;
   const pageRows = filtered.slice(start, start + pageSize);
   return `
-    <div class="page-card">
+    <div class="page-card usage-records-page">
       <div class="page-card-title">使用记录</div>
       <div class="filter-form">
+        <div class="filter-item"><label>借用人类型</label><select class="select" id="usage-filter-borrower-type"><option value="全部"${!f.borrowerType || f.borrowerType === '全部' ? ' selected' : ''}>全部</option><option value="student"${f.borrowerType === 'student' ? ' selected' : ''}>学生</option><option value="teacher"${f.borrowerType === 'teacher' ? ' selected' : ''}>教师</option></select></div>
         <div class="filter-item"><label>编号 / 姓名</label><input class="input" id="usage-filter-student" placeholder="请输入" value="${esc(f.student)}"></div>
         <div class="filter-item"><label>设备 SN</label><input class="input" id="usage-filter-sn" placeholder="请输入" value="${esc(f.sn)}"></div>
         <div class="filter-item"><label>所属柜机ID</label><input class="input" id="usage-filter-cabinet-id" placeholder="请输入" value="${esc(f.cabinetId)}"></div>
@@ -1435,11 +1516,10 @@ function renderDeviceUsagePage(params) {
         <div class="filter-item"><label>归还时间</label><div class="date-range"><input class="input" type="date" id="usage-filter-return-start" value="${esc(f.returnStart)}"><span>至</span><input class="input" type="date" id="usage-filter-return-end" value="${esc(f.returnEnd)}"></div></div>
         <div class="filter-actions"><button type="button" class="btn" onclick="resetUsageFilter()">重置</button><button type="button" class="btn btn-primary" onclick="applyUsageFilter()">搜索</button></div>
       </div>
-      <p class="form-hint" style="margin:0 0 12px">模拟数据默认展示全部使用记录，共 ${filtered.length} 条（含开门中 / 已归还 / 借出中 / 归还异常 / 已逾期 / 取消借用）；每页 ${pageSize} 条${f.borrowStart || f.borrowEnd ? `；借出 ${esc(f.borrowStart || '不限')} 至 ${esc(f.borrowEnd || '不限')}` : ''}${f.returnStart || f.returnEnd ? `；归还 ${esc(f.returnStart || '不限')} 至 ${esc(f.returnEnd || '不限')}` : ''}</p>
       <div class="table-wrap">
         <table class="data-table">
           <thead><tr>
-            <th>序号</th><th>设备SN</th><th>格口编号</th><th>柜机编号</th><th>用户</th><th>用户编号</th><th>班级</th><th>平板使用记录状态</th><th>借出时间</th><th>归还时间</th><th>操作</th>
+            <th>序号</th><th>设备SN</th><th>格口编号</th><th>柜机编号</th><th class="usage-borrower-heading">借用人类型</th><th>用户</th><th>用户编号</th><th>班级</th><th>记录状态</th><th>借出时间</th><th>归还时间</th><th>操作</th>
           </tr></thead>
           <tbody>${renderUsageTableRows(pageRows, start)}</tbody>
         </table>
@@ -1450,13 +1530,17 @@ function renderDeviceUsagePage(params) {
 
 function renderDeviceUsageDetailPage(params) {
   const r = data.usageRecords.find(u => u.id === params?.id) || data.usageRecords[0];
+  if (!r) return '<div class="page-card">暂无使用记录</div>';
+
   return `
     <div class="page-card">
       <div class="page-card-title">使用记录详情</div>
       <div class="detail-grid">
         <div class="detail-item"><label>记录ID</label><span>${esc(r.id)}</span></div>
         <div class="detail-item"><label>设备</label><span>${esc(formatTabletIdDisplay(r.tabletId))} / ${esc(r.sn)}</span></div>
-        <div class="detail-item"><label>借用人</label><span>${esc(r.studentName)}（${esc(r.studentId)}）${esc(r.grade)}</span></div>
+        <div class="detail-item"><label>借用人类型</label><span>${usageBorrowerTypeLabel(r)}</span></div>${r.batchId ? `<div class="detail-item"><label>借取批次号</label><span>${esc(r.batchId)}</span></div>` : ''}
+        <div class="detail-item"><label>借用人</label><span>${esc(r.studentName)}（${esc(r.studentId)}）</span></div>
+        <div class="detail-item"><label>班级</label><span>${esc(usageClassLabel(r))}</span></div>
         <div class="detail-item"><label>借出</label><span>${esc(r.cabinetBorrow)} 仓位 #${r.slotBorrow} · ${r.borrowAt}</span></div>
         <div class="detail-item"><label>${r.status === 'cancelled' ? '取消' : '归还'}</label><span>${
           r.status === 'cancelled'

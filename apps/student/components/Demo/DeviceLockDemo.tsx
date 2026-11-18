@@ -48,7 +48,7 @@ export const DeviceLockDemo: React.FC<DeviceLockDemoProps> = ({ type, onExit }) 
         <div className="relative z-10 flex items-center gap-2 text-[13px] font-bold text-slate-600">
           <span className="flex items-center gap-1"><ShieldCheck size={17} />学习守护</span>
           <span className="h-4 w-px bg-slate-400/70" />
-          <span className="flex items-center gap-1"><Clock3 size={17} />{isLowBattery ? '低电量锁屏' : '老师已锁屏'}</span>
+          <span className="flex items-center gap-1"><Clock3 size={17} />{isLowBattery ? '低电量锁屏' : '已锁屏'}</span>
         </div>
 
         <div className="absolute bottom-0 left-1/2 flex -translate-x-1/2 items-end">
@@ -72,7 +72,6 @@ export const DeviceLockDemo: React.FC<DeviceLockDemoProps> = ({ type, onExit }) 
           {isLowBattery ? <BatteryLow size={30} strokeWidth={2} /> : <LockKeyhole size={30} strokeWidth={2} />}
         </span>
         <h1 className="mt-3 text-[24px] font-bold leading-tight">{isLowBattery ? '电量过低，设备已锁屏' : '设备已被老师锁定'}</h1>
-        {!isLowBattery && <p className="mt-1.5 text-sm text-slate-600">当前暂时无法使用设备，请等待老师解除锁屏。</p>}
         <div className={`mt-5 text-[54px] font-semibold leading-none tabular-nums tracking-tight ${isLowBattery ? 'text-amber-600' : 'text-slate-800'}`}>
           {isLowBattery ? <>5<span className="ml-1 text-[28px]">%</span></> : now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}
         </div>

@@ -87,7 +87,7 @@ const context = {
 };
 runInNewContext(parentSource, context);
 const parent = context.window.parentPrototype;
-const parentScenarios = ['first', 'returning', 'duplicateScan', 'twoChildren', 'otherDevice', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'familyManage', 'ordinary', 'wrong', 'lostWechat', 'lostPhone', 'bothLost'];
+const parentScenarios = ['first', 'wechatScan', 'returning', 'duplicateScan', 'twoChildren', 'otherDevice', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'familyManage', 'ordinary', 'wrong', 'lostWechat', 'lostPhone', 'bothLost'];
 for (const scenario of parentScenarios) {
   parent.scenario(scenario);
   assert.equal(parent.inspect().flow, scenario);
@@ -107,4 +107,4 @@ assert.equal(parent.inspect().bound, false);
 assert.equal(parent.inspect().agreementAccepted, false);
 assert.equal(parent.inspect().boundStudents.length, 0);
 assert.equal(parent.inspect().families[0].members.length, 0);
-console.log('Passed: inline JavaScript syntax; 5 teacher URL flows; 4 account states; review gating, invalid values and precedence; unbind verification, session revocation and reload; 17 parent scenario baselines and repeatable resets.');
+console.log('Passed: inline JavaScript syntax; 5 teacher URL flows; 4 account states; review gating, invalid values and precedence; unbind verification, session revocation and reload; 18 parent scenario baselines and repeatable resets.');

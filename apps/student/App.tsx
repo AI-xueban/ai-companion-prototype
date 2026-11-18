@@ -22,7 +22,6 @@ import { CoinStoreModal } from './components/Store/CoinStoreModal';
 import type { ControlExceptionDemo } from './components/Teacher/data/controlExceptionDemo';
 import { DemoControls } from './components/Demo/DemoControls'; 
 import { DeviceLockDemo, type DemoLockType } from './components/Demo/DeviceLockDemo';
-import { createWorldLockNotification, type StudentNotification } from './data/studentNotifications';
 import { EssayLabContainer } from './components/EssayLab/EssayLabContainer';  
 import { LumiSpace } from './components/LumiSpace/LumiSpace';
 import { generateDailyPlan, setMockPersona, getUserGrowthData, completeMockAssessment, setMockNewbieCalibrated, resetMockStateForDemo } from './services/geminiService';
@@ -143,7 +142,6 @@ const App: React.FC = () => {
   const [demoLockScreen, setDemoLockScreen] = useState<DemoLockType | null>(null);
   const [lowBatteryDemoNext, setLowBatteryDemoNext] = useState<'reminder' | 'lock'>('reminder');
   const [worldLocked, setWorldLocked] = useState(false);
-  const [worldLockNotifications, setWorldLockNotifications] = useState<StudentNotification[]>([]);
 
   // --- Global Journey State ---
   const [journeyPhase, setJourneyPhase] = useState<UserJourneyPhase>('dashboard');
@@ -444,7 +442,6 @@ const App: React.FC = () => {
 
   const handleResetDemoData = () => {
       setWorldLocked(false);
-      setWorldLockNotifications([]);
       resetDemoPersistentState();
       resetMockStateForDemo();
       setDonationStageDemoStatus('募集中');
@@ -845,7 +842,6 @@ const App: React.FC = () => {
       onDemoWorldLockToggle={() => {
         const nextLocked = !worldLocked;
         setWorldLocked(nextLocked);
-        setWorldLockNotifications((current) => [createWorldLockNotification(nextLocked), ...current]);
       }}
     />
   ) : null;
@@ -1026,7 +1022,6 @@ const App: React.FC = () => {
                                 onNotificationLayerOpenChange={setIsNotificationLayerOpen}
                                 onDiscoveryFullPageOpenChange={setIsDiscoveryFullPageOpen}
                                 worldLocked={worldLocked}
-                                worldLockNotifications={worldLockNotifications}
                                 onOpenHomeTool={handleOpenHomeTool}
                                 onGoStudy={() => {
                                     if (isJuniorGrade(userGrade, schoolSystem)) {

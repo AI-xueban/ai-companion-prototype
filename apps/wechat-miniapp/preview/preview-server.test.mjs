@@ -37,3 +37,14 @@ for (const path of [
   assert.equal(result.headers['Content-Type'], 'image/jpeg', path);
   assert.ok(result.body.length > 0, path);
 }
+
+// Every control page dependency must be served; otherwise legacy fallbacks hide missing modules.
+const controlPage = await readFile(new URL('./control-prototype.html', import.meta.url), 'utf8');
+const controlAssets = [...new Set([...controlPage.matchAll(/(?:src|href)="(control-[a-z-]+\.(?:js|css))(?:\?[^"\s]*)?"/g)].map(match => match[1]))];
+for (const asset of controlAssets) {
+  const result = await request('/' + asset + '?v=route-check');
+  assert.equal(result.status, 200, asset);
+  assert.equal(result.body, await readFile(new URL('./' + asset, import.meta.url), 'utf8'), asset);
+  assert.match(result.headers['Content-Type'], asset.endsWith('.js') ? /javascript/ : /text\/css/);
+}
+console.log('Passed: all ' + controlAssets.length + ' control page dependencies and MIME types.');

@@ -176,25 +176,34 @@ function cvHistory(taskId, cabinetId) {
   }).join('') || '<tr><td colspan="4" style="text-align:center;padding:30px">暂无安装成功的版本记录</td></tr>'}</tbody></table></div>`, footer: '<button class="btn btn-primary" onclick="closeModal()">关闭</button>' });
 }
 
+const cvUploadingVersions = new Set();
+const CV_DUPLICATE_VERSION_MESSAGE = '该版本号已存在，请使用已有APK下发';
+function cvUploadVersionKey(version) { return String(version || '').trim().toLowerCase(); }
+function cvUploadVersionExists(version) {
+  const key = cvUploadVersionKey(version);
+  return cvUploadingVersions.has(key) || (data.cabinetVersions || []).some(pack => !pack.deleted && cvUploadVersionKey(pack.version) === key);
+}
 function cvUpload() {
-  openSimpleModal({ title: '上传apk', size: 'md', body: `<form id="cv-upload-form" style="display:grid;gap:24px;padding:8px 0"><div><label class="form-label" for="cv-version"><span class="required">*</span>版本号</label><input class="input" style="width:100%;background:#f5f5f5;color:#8c8c8c;cursor:not-allowed" id="cv-version" name="version" disabled placeholder="选择 APK 后自动解析"></div><div><label class="form-label" for="cv-package"><span class="required">*</span>apk</label><div style="border:1px dashed var(--border);border-radius:6px;background:#fafafa;padding:20px"><input id="cv-package" name="package" type="file" accept=".apk" onchange="cvParseUpload(this)" required style="max-width:70%"><button type="button" class="btn" onclick="cvDemoUpload()">演示上传apk</button><p class="form-hint" style="margin:12px 0 0">仅支持 APK 格式，文件大小不超过 500 MB</p></div></div><div><label class="form-label" for="cv-notes">更新说明 <span class="form-hint">（选填）</span></label><textarea class="input" style="width:100%;height:auto;resize:vertical" id="cv-notes" name="notes" maxlength="1000" rows="4" placeholder="请输入本次更新内容"></textarea></div><p id="cv-error" role="alert" style="color:var(--danger);margin:0"></p></form>`, footer: '<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="cvSaveUpload()">上传</button>' });
+  openSimpleModal({ title: '上传apk', size: 'md', body: `<form id="cv-upload-form" style="display:grid;gap:24px;padding:8px 0"><div><label class="form-label" for="cv-version"><span class="required">*</span>版本号</label><input class="input" style="width:100%;background:#f5f5f5;color:#8c8c8c;cursor:not-allowed" id="cv-version" name="version" disabled placeholder="选择 APK 后自动解析"></div><div><label class="form-label" for="cv-package"><span class="required">*</span>apk</label><div style="border:1px dashed var(--border);border-radius:6px;background:#fafafa;padding:20px"><input id="cv-package" name="package" type="file" accept=".apk" onchange="cvParseUpload(this)" required style="max-width:70%"><button type="button" class="btn" onclick="cvDemoUpload()">演示上传apk</button><p class="form-hint" style="margin:12px 0 0">仅支持 APK 格式，文件大小不超过 500 MB；已有同版本号的 APK 不可重复上传，删除后可重新上传</p></div></div><div><label class="form-label" for="cv-notes">更新说明 <span class="form-hint">（选填）</span></label><textarea class="input" style="width:100%;height:auto;resize:vertical" id="cv-notes" name="notes" maxlength="1000" rows="4" placeholder="请输入本次更新内容"></textarea></div><p id="cv-error" role="alert" style="color:var(--danger);margin:0"></p></form>`, footer: '<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="cvSaveUpload()">上传</button>' });
 }
 function cvSaveUpload() {
   const form = document.getElementById('cv-upload-form');
   if (!form.reportValidity()) return;
   if (!form.apkMetadata || form.apkFile !== form.elements.package.files[0]) { document.getElementById('cv-error').textContent = '请先选择 APK 并等待版本解析成功'; return; }
-  const version = form.apkMetadata.version;
+  const version = String(form.apkMetadata.version || '').trim();
   const file = form.elements.package.files[0];
   const error = !version ? '未解析到版本号，请重新选择有效的 APK' : !file || !/\.apk$/i.test(file.name) || file.size === 0 || file.size > 500 * 1024 * 1024 ? '请选择有效的 APK 文件，大小须大于 0 且不超过 500 MB' : '';
   if (error) { document.getElementById('cv-error').textContent = error; return; }
   const candidate = { id: crypto.randomUUID(), version, versionCode: form.apkMetadata.versionCode, fileName: file.name, size: (file.size / 1024 / 1024).toFixed(2), notes: form.elements.notes.value.trim(), createdAt: cvTime() };
-  let saving = false;
-  const save = async () => { if (saving) return; saving = true; try { await cvApkFile('put', candidate.id, file); data.cabinetVersions.unshift(candidate); saveData(data); closeModal(); cvRefresh(); toast('APK已保存'); } catch (e) { toast('保存失败，请检查浏览器存储空间后重试', 'error'); } finally { saving = false; } };
-  // 上传不限制版本高低；未删除列表中的同版本禁止重复上传。
-  if (cvStore().some(v => v.version.toLowerCase() === version.toLowerCase())) {
-    document.getElementById('cv-error').textContent = '该版本已存在，请使用已有APK下发';
+  cvStore();
+  // 同版本按当前未删除APK及正在保存的上传校验，已删除版本允许重新上传。
+  if (cvUploadVersionExists(version)) {
+    document.getElementById('cv-error').textContent = CV_DUPLICATE_VERSION_MESSAGE;
     return;
   }
+  const key = cvUploadVersionKey(version);
+  cvUploadingVersions.add(key);
+  const save = async () => { try { await cvApkFile('put', candidate.id, file); data.cabinetVersions.unshift(candidate); saveData(data); closeModal(); cvRefresh(); toast('APK已保存'); } catch (e) { toast('保存失败，请检查浏览器存储空间后重试', 'error'); } finally { cvUploadingVersions.delete(key); } };
   save();
 }
 function cvDispatch(id) {
