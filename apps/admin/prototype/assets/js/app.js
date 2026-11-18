@@ -22,11 +22,13 @@ function navigate(route, params) {
 }
 
 function renderApp(route, params) {
+  if (typeof window.companyResetWorkbenchDirty === 'function') window.companyResetWorkbenchDirty();
   ensureFaceTabs(route, params);
   renderSiderMenu(route);
   renderBreadcrumb(route);
   renderTabs(route, params);
   document.getElementById('main-content').innerHTML = renderPage(route, params);
+  if (route === 'homework-management') initHomeworkManagementPage();
   if (route === 'channel-add' || route === 'channel-edit') {
     requestAnimationFrame(() => refreshChannelLayoutSelector());
   }

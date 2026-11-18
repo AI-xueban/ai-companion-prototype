@@ -114,6 +114,9 @@
 .dc-content {
   max-width: 1280px;
 }
+.dc-content.dc-borrowing-content {
+  max-width: 1680px;
+}
 .dc-breadcrumb {
   gap: 14px;
   min-height: 36px;
@@ -462,14 +465,15 @@
 .dc-feedback {
   pointer-events: none;
   position: fixed;
-  bottom: 25px;
+  top: max(24px, env(safe-area-inset-top));
+  bottom: auto;
   left: 50%;
   z-index: 10005;
   display: flex;
   align-items: center;
   gap: 9px;
   max-width: calc(100vw - 36px);
-  padding: 12px 15px;
+  padding: 14px 18px;
   border: 1px solid #ccebdc;
   border-radius: 11px;
   background: #f4fcf8;
@@ -484,6 +488,21 @@
   background: #f5f7ff;
   color: #3730a3;
 }
+.dc-feedback[data-tone="success"] {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+}
+.dc-feedback[data-tone="info"] {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+.dc-feedback[data-tone="warning"] {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #b45309;
+}
 .dc-feedback > svg {
   flex-shrink: 0;
 }
@@ -493,10 +512,10 @@
   padding: 3px;
   margin-left: 8px;
   border-radius: 5px;
-  color: #5f8c75;
+  color: inherit;
 }
 .dc-feedback button:hover {
-  background: #e2f2e9;
+  background: #00000008;
 }
 .dc-feedback[data-tone="notice"] button {
   color: #6366a1;
@@ -504,44 +523,54 @@
 .dc-feedback[data-tone="notice"] button:hover {
   background: #e8edff;
 }
+.dc-feedback[data-tone="error"] {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+.dc-feedback[data-tone="error"] button {
+  color: #b91c1c;
+}
+.dc-feedback[data-tone="error"] button:hover {
+  background: #fee2e2;
+}
 .dc-overlay {
   position: fixed;
   inset: 0;
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
   background: #17233959;
   backdrop-filter: blur(3px);
   animation: dc-backdrop-in 180ms ease-out;
-}
-.dc-overlay[data-variant="dialog"] {
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
 }
 .dc-panel {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 680px;
-  height: 100%;
+  max-width: 760px;
+  height: auto;
+  max-height: calc(100dvh - 48px);
   min-height: 0;
+  overflow: hidden;
+  border-radius: 17px;
   background: #fff;
-  box-shadow: -12px 0 40px #14203d14;
+  box-shadow: 0 18px 60px #14203d29;
   outline: none;
-  animation: dc-drawer-in 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  animation: dc-dialog-in 180ms ease-out;
 }
 .dc-overlay[data-size="wide"] .dc-panel {
-  max-width: 900px;
+  max-width: 960px;
 }
-.dc-overlay[data-variant="dialog"] .dc-panel {
-  height: auto;
-  max-height: calc(100dvh - 40px);
+.dc-overlay[data-size="compact"] .dc-panel {
   max-width: 480px;
   padding: 25px;
-  border-radius: 17px;
   overflow-y: auto;
-  animation: dc-dialog-in 180ms ease-out;
-  box-shadow: 0 18px 60px #14203d29;
+}
+.dc-panel > header,
+.dc-panel > .dc-confirm-footer {
+  flex-shrink: 0;
 }
 .dc-panel > header {
   padding: 24px;
@@ -743,7 +772,7 @@
   pointer-events: none;
 }
 .dc-overlay[data-closing="true"] .dc-panel {
-  animation: dc-drawer-out 170ms ease-in forwards;
+  animation: dc-dialog-out 170ms ease-in forwards;
 }
 .dc-overlay[data-closing="true"][data-variant="dialog"] .dc-panel {
   animation: dc-dialog-out 170ms ease-in forwards;
@@ -765,7 +794,7 @@
 @keyframes dc-feedback-in {
   from {
     opacity: 0;
-    transform: translate(-50%, 6px);
+    transform: translate(-50%, -8px);
   }
   to {
     opacity: 1;
@@ -786,22 +815,6 @@
   to {
     background-color: #17233900;
     backdrop-filter: blur(0);
-    opacity: 0;
-  }
-}
-@keyframes dc-drawer-in {
-  from {
-    transform: translateX(28px);
-    opacity: 0.4;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-@keyframes dc-drawer-out {
-  to {
-    transform: translateX(28px);
     opacity: 0;
   }
 }
@@ -1057,16 +1070,20 @@
   .dc-overlay[data-variant="dialog"] {
     padding: 16px;
   }
-  .dc-overlay[data-variant="dialog"] .dc-panel {
-    padding: 21px;
+  .dc-panel {
+    max-height: calc(100dvh - 32px);
     border-radius: 15px;
+  }
+  .dc-overlay[data-size="compact"] .dc-panel {
+    padding: 21px;
   }
   .dc-confirm-footer button {
     flex: 1;
     min-height: 44px;
   }
   .dc-feedback {
-    bottom: 98px;
+    top: max(16px, env(safe-area-inset-top));
+    bottom: auto;
     width: max-content;
   }
 }
@@ -1079,3 +1096,29 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Match the borrowing workspace's cards, tables and action controls. */
+.dc-unified-panels .dc-breadcrumb { padding: 0; background: transparent; border: 0; }
+.dc-unified-panels .dc-breadcrumb nav button { color: #4f46e5; }
+.dc-unified-panels .dc-scope-heading { gap: 0; }
+.dc-unified-panels .dc-list-heading { padding: 20px 22px; }
+.dc-unified-panels .dc-selection-bar { background: #eef2ff; color: #475569; padding: 12px 20px; flex-wrap: wrap; }
+.dc-unified-panels .dc-selection-bar > div { flex-wrap: wrap; }
+.dc-unified-panels .dc-data-table { font-size: 14px; }
+.dc-unified-panels .dc-data-table th,
+.dc-unified-panels .dc-data-table td { padding: 16px; vertical-align: middle; }
+.dc-unified-panels .dc-data-table th { font-weight: 600; background: #f8fafc; }
+.dc-unified-panels .dc-row-actions > div { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+/* Keep all module list typography aligned with the borrowing list. */
+.dc-unified-panels .dc-data-table th { font-size: 14px; line-height: 20px; font-weight: 700; color: #64748b; height: auto; }
+.dc-unified-panels .dc-data-table td { font-size: 12px; line-height: 20px; color: #64748b; }
+.dc-unified-panels .dc-data-table td > button { font-size: 14px; font-weight: 700; }
+.dc-unified-panels .dc-data-table td p { font-size: 12px; line-height: 20px; }
+.dc-unified-panels .dc-data-table td p.font-semibold { font-weight: 400; color: #64748b; }
+.dc-unified-panels .dc-data-table td:has(> .dc-btn),
+.dc-unified-panels .dc-data-table td:has(> span.whitespace-nowrap) { white-space: nowrap; }
+.dc-unified-panels .dc-data-table th { min-width: 88px; }
+.dc-unified-panels .dc-data-table td.min-w-44 { min-width: 140px; white-space: normal; }
+.dc-unified-panels .dc-data-table td.min-w-72 { min-width: 240px; }
+.dc-unified-panels .dc-data-table td > span.rounded-lg { border-radius: 6px; padding: 4px 8px; }

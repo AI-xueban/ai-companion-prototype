@@ -354,6 +354,8 @@ export const UniversalQuizResult: React.FC<{
   const [rewardDetailsOpen, setRewardDetailsOpen] = useState(false);
   const isSingleQuestion = resultData.questions.length === 1;
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const questionNavRef = useRef<HTMLDivElement | null>(null);
+  const [questionNavOverflow, setQuestionNavOverflow] = useState(false);
 
   useEffect(() => {
     setResultData(initialData);
@@ -380,6 +382,16 @@ export const UniversalQuizResult: React.FC<{
       .some((answer: unknown) => String(answer ?? '').trim() !== '' && String(answer).trim() !== '—'));
   const unreviewedCount = wrongQuestions.filter(q => !q.userMistakeTags?.length).length;
   const showRemedialFloat = !isPerfect && unreviewedCount > 0;
+  useEffect(() => {
+    const nav = questionNavRef.current;
+    if (!nav) return;
+    const updateOverflow = () => setQuestionNavOverflow(nav.scrollWidth > nav.clientWidth + 1);
+    updateOverflow();
+    const observer = new ResizeObserver(updateOverflow);
+    observer.observe(nav);
+    if (nav.firstElementChild) observer.observe(nav.firstElementChild);
+    return () => observer.disconnect();
+  }, [resultData.questions, showRemedialFloat]);
   const totalXp = resultData.rewards.baseXp + resultData.rewards.bonusXp;
 
   // 知识点统计用于状态着色
@@ -699,8 +711,9 @@ export const UniversalQuizResult: React.FC<{
         >
           总结
         </button>}
-        <div className="flex-1 min-w-0 overflow-x-auto no-scrollbar">
-          <div className="flex items-center gap-2 px-1">
+        <div className="flex-1 min-w-0">
+          <div ref={questionNavRef} className="overflow-x-auto pb-1" aria-label="题号导航，可左右滑动" style={{ scrollbarWidth: 'thin' }}>
+          <div className="flex items-center gap-2 px-1 py-1">
             {resultData.questions.map((q, idx) => {
               const outcome = getQuestionOutcome(q);
               const isSelected = currentSelectedQuestion?.questionId === q.questionId;
@@ -708,7 +721,8 @@ export const UniversalQuizResult: React.FC<{
                 <button
                   key={q.questionId}
                   type="button"
-                  onClick={() => {
+                  onClick={(event) => {
+                    event.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
                     setSelectedQuestionId(q.questionId);
                     setShowSummary(false);
                     setReviewIndex(idx);
@@ -716,6 +730,7 @@ export const UniversalQuizResult: React.FC<{
                   className={`shrink-0 px-2.5 h-8 rounded-full border text-xs font-black transition-all ${
                     OUTCOME_STYLE[outcome].chip
                   } ${isSelected ? 'ring-2 ring-indigo-200' : ''}`}
+                  aria-current={isSelected ? 'step' : undefined}
                   title={`第${q.index}题 · ${OUTCOME_STYLE[outcome].label}${q.questionPracticeState ? ` · ${PRACTICE_STATE_LABEL[q.questionPracticeState]}` : ''}`}
                 >
                   {q.index} {OUTCOME_STYLE[outcome].label}
@@ -723,6 +738,8 @@ export const UniversalQuizResult: React.FC<{
               );
             })}
           </div>
+          </div>
+          {questionNavOverflow && <div className="text-[10px] leading-3 text-slate-500 px-1">左右滑动查看更多题号</div>}
         </div>
 
         {isSingleQuestion && !hideRewardDetails && resultData.grantResult && <button type="button" onClick={() => setRewardDetailsOpen(true)} className="shrink-0 text-xs font-bold text-indigo-600 hover:text-indigo-800">查看明细</button>}
@@ -772,11 +789,11 @@ export const UniversalQuizResult: React.FC<{
       </div>
 
       {/* --- Main Content (Scrollable) --- */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4">
         <div className="max-w-6xl mx-auto space-y-6">
           {/* Inline Single Question Result under recap */}
           {currentSelectedQuestion && (
-            <div className="mt-4">
+            <div className="min-w-0">
               <SingleQuestionResultCard
                 question={currentSelectedQuestion.question && {
                   ...currentSelectedQuestion.question,

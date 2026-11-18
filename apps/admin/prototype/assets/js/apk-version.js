@@ -94,7 +94,7 @@ async function cvParseUpload(input) {
     if (input.files[0] !== file) return;
     form.apkMetadata = metadata; form.apkFile = file;
     form.elements.version.value = metadata.version;
-    error.textContent = '';
+    error.textContent = typeof cvUploadVersionExists === 'function' && cvUploadVersionExists(metadata.version) ? CV_DUPLICATE_VERSION_MESSAGE : '';
   } catch (e) {
     if (input.files[0] === file) error.textContent = '版本解析失败：' + (e instanceof RangeError ? 'APK 文件损坏' : e.message);
   }

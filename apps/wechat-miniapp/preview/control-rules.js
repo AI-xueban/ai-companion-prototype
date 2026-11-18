@@ -11,24 +11,18 @@
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   };
   const periods = rule => Array.isArray(rule.periods) ? copy(rule.periods) : rule.start && rule.end ? [{ start: rule.start, end: rule.end }] : [];
+  const borrowDayPeriods = (rule, day) => Array.isArray(rule.dailyPeriods?.[day]) ? copy(rule.dailyPeriods[day]) : periods(rule);
   const normalize = (rule, id) => ({ ...copy(rule), id: rule.id || id, weekdays: [...(rule.weekdays || [])].sort(), periods: periods(rule) });
   const prune = (rules, date = today()) => rules.filter(rule => rule.mode !== 'dates' || !rule.endDate || rule.endDate >= date);
   const overlap = (a, b) => a.mode === b.mode && (a.mode === 'weekly' ? a.weekdays.some(day => b.weekdays.includes(day)) : a.startDate <= b.endDate && b.startDate <= a.endDate);
   function mergeBorrow(existing, next, editingId) {
-    const retained = existing.filter(rule => rule.id !== editingId).flatMap(rule => {
-      if (!overlap(rule, next)) return [copy(rule)];
-      if (rule.mode === 'weekly') {
-        const days = rule.weekdays.filter(day => !next.weekdays.includes(day));
-        return days.length ? [{ ...copy(rule), weekdays: days }] : [];
-      }
-      const pieces = [];
-      if (rule.startDate < next.startDate) pieces.push({ ...copy(rule), id: rule.id + '-before-' + next.id, endDate: dateOffset(next.startDate, -1) });
-      if (rule.endDate > next.endDate) pieces.push({ ...copy(rule), id: rule.id + '-after-' + next.id, startDate: dateOffset(next.endDate, 1) });
-      return pieces;
-    });
-    return [...retained, copy(next)];
+    const retained = existing.filter(rule => rule.id !== editingId);
+    if (next.mode === 'weekly') return [...retained.filter(rule => rule.mode !== 'weekly').map(copy), copy(next)];
+    if (retained.some(rule => rule.mode === 'dates' && overlap(rule, next))) throw Error('所选日期已有规则，请重新选择');
+    return [...retained.map(copy), copy(next)];
   }
   function mergeDuration(existing, next, editingId) {
+    if (next.dailySettings) return [copy(next)];
     return [...existing.map(rule => ({ ...copy(rule), id: rule.id === editingId ? rule.id + '-retained' : rule.id, weekdays: rule.weekdays.filter(day => !next.weekdays.includes(day)) })).filter(rule => rule.weekdays.length), copy(next)];
   }
   function effectiveBorrow(student, date, enabled = true) {
@@ -37,11 +31,18 @@
     const rules = prune(student.schedules || [], date);
     const matched = [...rules].reverse().find(rule => rule.mode === 'dates' && rule.startDate <= date && rule.endDate >= date)
       || [...rules].reverse().find(rule => rule.mode === 'weekly' && rule.weekdays.includes(day));
-    return matched ? { ...copy(matched), periods: matched.deny ? [] : periods(matched) } : { deny: rules.some(rule => rule.mode === 'weekly'), periods: [], reason: rules.some(rule => rule.mode === 'weekly') ? '当前星期不在借用安排内' : '未设置借用时间，默认随时可借' };
+    if (matched?.mode === 'dates') return { ...copy(matched), deny: true, periods: [] };
+    return matched ? { ...copy(matched), periods: matched.deny ? [] : matched.mode === 'weekly' ? borrowDayPeriods(matched, day) : periods(matched) } : { deny: rules.some(rule => rule.mode === 'weekly'), periods: [], reason: rules.some(rule => rule.mode === 'weekly') ? '当前星期不在借用安排内' : '未设置借用时间，默认随时可借' };
   }
   function effectiveDuration(student, day) {
-    const own = [...(student.durationRules || [])].reverse().find(rule => rule.weekdays.includes(day));
-    const rule = !own || own.useDefault ? defaultDuration : own;
+    const schoolOwned=durationDays(student,[day],'unmodified').length>0;
+    const teacherActive=!schoolOwned&&!student.durationTeacherPaused;
+    const customActive=!student.durationSchoolPaused&&student.durationSchoolWeekdays?.includes(day);
+    if(student.durationDefaultEnabled===false&&!teacherActive&&!customActive)return {continuousMinutes:null,restMinutes:null,dailyMinutes:null,periods:[],limitsEnabled:false,unavailable:false,allDay:true,source:'学校默认规则已关闭'};
+    const paused=schoolOwned?student.durationSchoolPaused:student.durationTeacherPaused;
+    const own = paused?null:[...(student.durationRules || [])].reverse().find(rule => rule.weekdays.includes(day));
+    const selected = !schoolOwned&&student.durationTeacherPaused&&!student.durationSchoolPaused&&student.durationGradeSettings?.[day] || own?.dailySettings?.[day] || own;
+    const rule = !selected || selected.useDefault ? defaultDuration : selected;
     return { ...copy(rule), unavailable: false, allDay: periods(rule).length === 0, source: own && !own.useDefault ? '单独规则' : '默认规则' };
   }
   const dayText = days => {
@@ -55,8 +56,8 @@
     }
     return parts.join('、');
   };
-  const periodText = rule => rule.deny ? '全天禁止借用' : periods(rule).length ? periods(rule).map(p => p.start + '–' + p.end).join('、') : '全天可用';
-  const borrowText = rule => (rule.mode === 'dates' ? rule.startDate + ' 至 ' + rule.endDate : dayText(rule.weekdays)) + ' · ' + periodText(rule);
+  const periodText = rule => rule.mode === 'dates' || rule.deny ? '全天停止借用' : periods(rule).length ? periods(rule).map(p => p.start + '–' + p.end).join('、') : '全天可用';
+  const borrowText = rule => rule.mode === 'dates' ? rule.startDate + ' 至 ' + rule.endDate + ' · ' + periodText(rule) : (rule.weekdays || []).map(day => dayText([day]) + ' ' + (rule.deny ? '全天停止借用' : periodText({ periods: borrowDayPeriods(rule, day) }))).join('；');
   const durationText = rule => `连续 ${rule.continuousMinutes} 分钟 · 休息 ${rule.restMinutes} 分钟 · 每日 ${rule.dailyMinutes} 分钟 · ${periodText(rule)}`;
   function durationGroups(student) {
     const groups = [];
@@ -80,26 +81,41 @@
     if (date > rule.endDate) return '已失效';
     return '生效中';
   }
-  function validateBorrow(rule, now = new Date(), original = null) {
-    if (rule.mode === 'weekly' && !rule.weekdays.length) return '请至少选择一个星期';
+  function validateBorrow(rule, now = new Date(), original = null, options = {}) {
+    if (rule.mode === 'weekly') {
+      if (!rule.weekdays.length) return '请至少选择一个星期';
+      for (const day of rule.weekdays) {
+        const error = validatePeriods(borrowDayPeriods(rule, day));
+        if (error) return dayText([day]) + '：' + error;
+      }
+      return '';
+    }
     if (rule.mode === 'dates') {
       if (!rule.startDate || !rule.endDate || rule.startDate > rule.endDate) return '请选择正确的开始和结束日期';
       const currentDate = schoolDate(now);
-      if (original && borrowStatus(original, now) === '生效中') {
-        if (rule.startDate !== original.startDate || rule.deny !== original.deny || JSON.stringify(periods(rule)) !== JSON.stringify(periods(original))) return '生效中的规则只能修改结束日期';
+      if (original && options.allowDateRangeEdit) {
+        if (rule.endDate < currentDate) return '结束日期不能早于今天';
+      } else if (original && borrowStatus(original, now) === '生效中') {
+        if (rule.startDate !== original.startDate) return '生效中的规则只能修改结束日期';
         if (rule.endDate < currentDate) return '结束日期不能早于今天';
       } else if (rule.startDate < currentDate) return '生效日期只能选择今天及以后';
-      if (rule.deny) return '';
+      return rule.deny === true && periods(rule).length === 0 ? '' : '指定日期规则仅支持全天停止借用';
     }
     const error = validatePeriods(rule.periods);
     if (error) return error;
     return '';
   }
-  function signature(student, module) {
-    const value = module === 'borrowing' ? student.schedules || [] : module === 'duration' ? student.durationRules || [] : module === 'homework' ? [student.answer, student.explanation] : student[module === 'lock' ? 'locked' : 'world'];
-    return JSON.stringify([value, student.updated?.[module]?.version || 0, module === 'duration' ? student.durationTeacherWeekdays || [] : module === 'world' ? student.worldSource : null]);
+  function homeworkValue(student, subject) {
+    return student.homeworkSubjects?.[subject] || { answer: Boolean(student.answer), explanation: Boolean(student.explanation) };
   }
-  const modified = (student, module) => module === 'world' && student.worldSource !== undefined ? student.worldSource === 'teacher' : Boolean(student.teacherModified?.[module]) && (module === 'borrowing' ? prune(student.schedules || []).length > 0 : module === 'duration' ? (student.durationRules || []).length > 0 : true);
+  function signature(student, module) {
+    const subject = module.startsWith('homework:') ? module.slice('homework:'.length) : null;
+    const homework = subject ? homeworkValue(student, subject) : null;
+    const value = module === 'borrowing' ? student.schedules || [] : module === 'duration' ? student.durationRules || [] : module === 'homework' ? [student.answer, student.explanation] : subject ? [homework.answer, homework.explanation] : student[module === 'lock' ? 'locked' : 'world'];
+    const subjectVersions = module === 'homework' ? Object.keys(student.homeworkSubjects || {}).sort().map(key => [key, student.homeworkSubjects[key], student.updated?.['homework:' + key]?.version || 0]) : null;
+    return JSON.stringify([value, student.updated?.[module]?.version || 0, module === 'duration' ? [student.durationTeacherWeekdays || [],!!student.durationSchoolPaused,!!student.durationTeacherPaused,student.durationGradeSettings || null] : module === 'world' ? student.worldSource : subject ? student.updated?.homework?.version || 0 : subjectVersions]);
+  }
+  const modified = (student, module) => module === 'world' && student.worldSource !== undefined ? student.worldSource === 'teacher' : module === 'homework' ? Object.entries(student.teacherModified || {}).some(([key, value]) => value && (key === 'homework' || key.startsWith('homework:'))) : Boolean(student.teacherModified?.[module] ?? (module.startsWith('homework:') ? student.teacherModified?.homework : false)) && (module === 'borrowing' ? prune(student.schedules || []).length > 0 : module === 'duration' ? (student.durationRules || []).length > 0 : true);
   function resolve(data, refs) {
     const seen = new Set();
     return refs.filter(ref => { const key = ref.className + ':' + ref.id; if (seen.has(key)) return false; seen.add(key); return true; }).map(ref => {
@@ -142,7 +158,55 @@
     });
     return { data: next, count };
   }
-  const api = { copy, today, defaultDuration, normalize, periods, prune, overlap, mergeBorrow, mergeDuration, effectiveBorrow, effectiveDuration, dayText, periodText, borrowText, borrowStatus, durationText, durationGroups, validatePeriods, validateBorrow, signature, modified, resolve, prepare, durationDays, deletionPreview, transaction };
+  function durationWeek(student, id = 'duration-week') {
+    return { id, weekdays: [...weekdays], useDefault: false, dailySettings: Object.fromEntries(weekdays.map(day => {
+      const rule = effectiveDuration(student, day);
+      return [day, { continuousMinutes: rule.continuousMinutes, restMinutes: rule.restMinutes, dailyMinutes: rule.dailyMinutes, periods: periods(rule) }];
+    })) };
+  }
+  function validateDurationWeek(rule) {
+    for (const day of weekdays) {
+      const setting = rule.dailySettings?.[day];
+      if (!setting) return dayText([day]) + '：请设置当天规则';
+      if (![setting.continuousMinutes, setting.restMinutes, setting.dailyMinutes].every(value => Number.isInteger(value) && value > 0) || setting.dailyMinutes < setting.continuousMinutes) return dayText([day]) + '：时长须为正整数，每日累计不能短于连续使用时长';
+      const error = validatePeriods(setting.periods || [], true);
+      if (error) return dayText([day]) + '：' + error;
+    }
+    return '';
+  }
+  function settingGroups(rule, kind) {
+    if (rule.settingGroups) return copy(rule.settingGroups);
+    const groups=[];
+    (kind === 'duration' ? weekdays : rule.weekdays || []).forEach(day => {
+      const value=kind === 'duration' ? rule.dailySettings[day] : {periods:borrowDayPeriods(rule,day)};
+      const found=groups.find(group => JSON.stringify(group.value) === JSON.stringify(value));
+      if(found) found.weekdays.push(day); else groups.push({weekdays:[day],value:copy(value)});
+    });
+    return groups;
+  }
+  function validateSettingGroups(groups, kind) {
+    if (!groups.length) return kind === 'duration' ? '' : '请至少设置一组规则';
+    const seen=new Set();
+    for(const [index,group] of groups.entries()) {
+      if (!group.weekdays.length) return '第' + (index+1) + '组请选择星期';
+      for(const day of group.weekdays) { if(!weekdays.includes(day) || seen.has(day)) return '同一星期不能归属多个组'; seen.add(day); }
+      const error=kind === 'duration' ? validateDurationWeek({dailySettings:Object.fromEntries(weekdays.map(day=>[day,group.value]))}) : validatePeriods(group.value.periods);
+      if(error) return '第' + (index+1) + '组：' + error;
+    }
+    return '';
+  }
+  function expandSettingGroups(rule, groups, kind) {
+    const next=copy(rule); next.settingGroups=copy(groups);
+    if(kind === 'duration') next.dailySettings=durationWeek({durationRules:[]}).dailySettings;
+    else { next.weekdays=[];next.dailyPeriods={}; }
+    groups.forEach(group=>group.weekdays.forEach(day=>{
+      if(kind === 'duration') next.dailySettings[day]=copy(group.value);
+      else { next.weekdays.push(day);next.dailyPeriods[day]=copy(group.value.periods); }
+    }));
+    if(kind !== 'duration') next.weekdays.sort();
+    return next;
+  }
+  const api = { settingGroups, validateSettingGroups, expandSettingGroups, durationWeek, validateDurationWeek, copy, today, defaultDuration, normalize, periods, borrowDayPeriods, prune, overlap, mergeBorrow, mergeDuration, effectiveBorrow, effectiveDuration, dayText, periodText, borrowText, borrowStatus, durationText, durationGroups, validatePeriods, validateBorrow, homeworkValue, signature, modified, resolve, prepare, durationDays, deletionPreview, transaction };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.controlRules = api;
 })(typeof window !== 'undefined' ? window : globalThis);

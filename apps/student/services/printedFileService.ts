@@ -148,6 +148,7 @@ export function clearPaperDocuments() {
 export async function savePaperDocument(
   input: Omit<PrintedFileRecord, 'id' | 'createdAt' | 'updatedAt' | 'attempts' | 'documentId'>,
   document: StoredPaperDocument,
+  replaceFileId?: string,
 ) {
   const storageBytes = document.pdf.size + document.previewPages.reduce((total, page) => total + page.size, 0);
   if (storageBytes > MAX_SINGLE_PRINTED_FILE_BYTES) {
@@ -159,16 +160,35 @@ export async function savePaperDocument(
     const legacyBytes = stored ? stored.pdf.size + stored.previewPages.reduce((total, page) => total + page.size, 0) : 0;
     return { ...file, storageBytes: legacyBytes };
   }));
-  const usedBytes = existingFiles.reduce((total, file) => total + Math.max(0, file.storageBytes ?? 0), 0);
+  const previous = existingFiles.find(file => file.id === replaceFileId);
+  if (replaceFileId && !previous) throw new Error('原 PDF 已不存在。');
+  const usedBytes = existingFiles.reduce((total, file) => total + (file.id === replaceFileId ? 0 : Math.max(0, file.storageBytes ?? 0)), 0);
   if (usedBytes + storageBytes > MAX_SAVED_PRINTED_BYTES) {
     throw new PrintedFileCapacityError();
   }
   const id = `pdf-${crypto.randomUUID()}`;
   await documentOperation('readwrite', (store) => store.put(document, id));
   const now = new Date().toISOString();
-  const record: PrintedFileRecord = { ...input, id, documentId: id, createdAt: now, updatedAt: now, attempts: 0, storageBytes };
-  try { write([record, ...existingFiles]); }
-  catch (error) { await documentOperation('readwrite', (store) => store.delete(id)); throw error; }
+  const record: PrintedFileRecord = { ...input, id: previous?.id ?? id, documentId: id, createdAt: previous?.createdAt ?? now, updatedAt: now, attempts: previous?.attempts ?? 0, storageBytes };
+  try {
+    const current = listPrintedFiles();
+    const currentPrevious = current.find(file => file.id === replaceFileId);
+    if (previous && (!currentPrevious || currentPrevious.documentId !== previous.documentId)) {
+      throw new Error('原 PDF 已发生变化，请重试。');
+    }
+    const files = current.filter(file => file.id !== record.id).map(file => ({
+      ...file,
+      storageBytes: file.storageBytes ?? existingFiles.find(old => old.id === file.id)?.storageBytes,
+    }));
+    if (files.reduce((total, file) => total + (file.storageBytes ?? 0), storageBytes) > MAX_SAVED_PRINTED_BYTES) {
+      throw new PrintedFileCapacityError();
+    }
+    write([record, ...files]);
+  } catch (error) {
+    await documentOperation('readwrite', (store) => store.delete(id));
+    throw error;
+  }
+  if (previous) removeStoredDocuments([previous]);
   return record;
 }
 

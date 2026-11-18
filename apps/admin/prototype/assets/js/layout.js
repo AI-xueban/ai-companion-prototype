@@ -22,6 +22,12 @@ const MENU = [
     ]
   },
   {
+    key: 'teaching-business', label: '教学业务', icon: '▤', expanded: true,
+    children: [
+      { key: 'homework-management', label: '作业与打卡', route: 'homework-management' },
+    ]
+  },
+  {
     key: 'content-op', label: '内容运营', icon: '📋', expanded: true,
     children: [
       {
@@ -60,6 +66,7 @@ const MENU = [
 
 const ROUTE_META = {
   'cabinet-version': { title: '柜机升级', breadcrumb: ['设备管理', '柜机升级'] },
+  'homework-management': { title: '作业与打卡', breadcrumb: ['教学业务', '作业与打卡'] },
   'mall': { title: '捐赠与爱心池', breadcrumb: ['金币运营', '捐赠与爱心池'] },
   'home-config': { title: '首页配置', breadcrumb: ['内容运营', '万象视界管理', '首页配置'] },
   'hot-recommend': { title: '热门推荐', breadcrumb: ['内容运营', '万象视界管理', '热门推荐'] },
@@ -87,8 +94,8 @@ const ROUTE_META = {
   'third-party-apps': { title: '第三方应用', breadcrumb: ['第三方应用'] },
   'app-library': { title: '第三方应用', breadcrumb: ['第三方应用'] },
   'school-apps': { title: '学校应用', breadcrumb: ['第三方应用', '学校应用'] },
-  'face-sync-status': { title: '同步记录', breadcrumb: ['用户管理','人脸信息管理','同步记录'] },
-  'face-sync-detail': { title: '同步状态详情', breadcrumb: ['用户管理','人脸信息管理','同步状态','详情'] },
+  'face-sync-status': { title: '上传注册记录', breadcrumb: ['用户管理','人脸信息管理','上传注册记录'] },
+  'face-sync-detail': { title: '注册状态详情', breadcrumb: ['用户管理','人脸信息管理','注册状态','详情'] },
   'face-library': { title: '人脸信息管理', breadcrumb: ['用户管理', '人脸信息管理'] },
 };
 
@@ -157,7 +164,7 @@ function ensureFaceTabs(route, params) {
     openTabs.push({ id: 'face-library', route: 'face-library', title: '人脸信息管理', params: null });
   }
   if (route === 'face-sync-status' && !openTabs.some(t => t.route === route && JSON.stringify(t.params || null) === JSON.stringify(params || null))) {
-    openTabs.push({ id: params?._tabId || route + '-' + tabSeq++, route, title: '同步记录', params: params || null });
+    openTabs.push({ id: params?._tabId || route + '-' + tabSeq++, route, title: '上传注册记录', params: params || null });
   }
 }
 

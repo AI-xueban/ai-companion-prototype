@@ -1,13 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, User, Baby, X, ChevronRight, LayoutDashboard, RotateCcw, CheckCircle2, Trophy, Users, Sparkles, LockKeyhole } from 'lucide-react';
+import { BatteryLow, Settings, User, Baby, X, ChevronRight, LayoutDashboard, RotateCcw, CheckCircle2, Trophy, Users, Sparkles, LockKeyhole, Printer } from 'lucide-react';
 import { UserPersona } from '../../types';
 import type { DonationStageStatus } from '../../data/charityStage';
 import type { TeacherPortalRole } from '../Teacher/data/teacherAccess';
 import type { DemoLockType } from './DeviceLockDemo';
+import { PrinterConnectionScenario } from './PrinterConnectionScenario';
+import { printerDemoScenarios, type PrinterDemoScenarioId } from './printerDemoScenarios';
+
+import { controlExceptionScenarios, type ControlExceptionDemo } from '../Teacher/data/controlExceptionDemo';
 
 interface DemoControlsProps {
+    onControlException?: (scenario: ControlExceptionDemo) => void;
     onSwitchPersona: (type: UserPersona, calibrated?: boolean, grade?: string) => void;
     onSwitchMode: (mode: 'student' | 'teacher') => void;
     onSwitchTeacherRole: (role: TeacherPortalRole) => void;
@@ -23,11 +28,13 @@ interface DemoControlsProps {
     onDemoLeagueSparse?: () => void;
     onDemoAchievement?: (achievementId: string) => void;
     onDemoLockScreen?: (type: DemoLockType) => void;
+    lowBatteryDemoNext?: 'reminder' | 'lock';
     worldLocked?: boolean;
     onDemoWorldLockToggle?: () => void;
 }
 
 export const DemoControls: React.FC<DemoControlsProps> = ({ 
+    onControlException,
     onSwitchPersona, 
     onSwitchMode,
     onSwitchTeacherRole,
@@ -43,14 +50,24 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
     onDemoLeagueSparse,
     onDemoAchievement,
     onDemoLockScreen,
+    lowBatteryDemoNext = 'reminder',
     worldLocked = false,
     onDemoWorldLockToggle,
 }) => {
+    const [exceptionModule, setExceptionModule] = useState<ControlExceptionDemo['module']>('duration');
     const [isOpen, setIsOpen] = useState(false);
+    const [showPrinterDemo, setShowPrinterDemo] = useState(false);
+    const [printerDemoScenario, setPrinterDemoScenario] = useState<PrinterDemoScenarioId>('same-wifi');
     const [resetComplete, setResetComplete] = useState(false);
     const [selectedMode, setSelectedMode] = useState(currentMode);
 
     useEffect(() => setSelectedMode(currentMode), [currentMode]);
+
+    useEffect(() => {
+        if (new URLSearchParams(window.location.search).get('demo') === 'wifi-printer') {
+            setShowPrinterDemo(true);
+        }
+    }, []);
 
     const handlePersonaClick = (p: UserPersona, calibrated = false, grade?: string) => {
         onSwitchPersona(p, calibrated, grade);
@@ -130,11 +147,40 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
                               { key: 'school-admin' as const, role: '学校管理员', account: 'admin@luohu.edu', scope: '全校管理 · 兼任教师与班主任' },
                             ].map((item) => <button key={item.role} type="button" onClick={() => { onSwitchTeacherRole(item.key); setIsOpen(false); }} className="w-full rounded-xl border border-white/10 bg-white/5 p-3 text-left transition-colors hover:bg-white/10"><div className="flex items-center justify-between"><span className="text-xs font-bold text-white">{item.role}</span><ChevronRight size={14} className="text-gray-500"/></div><div className="mt-1 text-[10px] text-gray-400">{item.account} · {item.scope}</div></button>)}
                             <p className="text-[10px] text-gray-600">演示密码：12345678</p>
+                            <div className="border-t border-white/10 pt-3 space-y-2">
+                              <p className="text-xs font-bold text-white">全校设备管控 · 异常场景</p>
+                              <select aria-label="异常演示模块" value={exceptionModule} onChange={e => setExceptionModule(e.target.value as ControlExceptionDemo['module'])} className="w-full rounded-lg bg-gray-800 p-2 text-xs text-white">
+                                <option value="borrowing">柜机借用管控</option><option value="duration">使用时长管控</option><option value="homework">智阅作业管控</option><option value="world">万象视界管控</option>
+                              </select>
+                              <p className="text-[10px] leading-4 text-gray-400">设置冲突需进入编辑后最终提交才会提示。学校暂无年级场景在使用时长页面展示。</p>
+                              <div className="grid grid-cols-2 gap-2">{controlExceptionScenarios.filter(item => !['load-failed', 'save-failed', 'permission', 'no-classes', 'no-students'].includes(item.id)).map(item => <button type="button" key={item.id} className="rounded-lg border border-white/10 bg-white/5 p-2 text-left text-xs text-white hover:bg-white/10" onClick={() => { onControlException?.({ kind: item.id, module: item.id.startsWith('no-') ? 'duration' : exceptionModule, key: Date.now() }); setIsOpen(false); }}>{item.label}</button>)}</div>
+                              <button type="button" className="w-full rounded-lg bg-indigo-500/20 p-2 text-xs text-indigo-200" onClick={() => { onControlException?.({ kind: 'normal', module: exceptionModule, key: Date.now() }); setIsOpen(false); }}>恢复正常管控页面</button>
+                            </div>
                           </div>
                         ) : (
                           <>
                         {/* Scenario Switcher */}
                         <div className="space-y-3 pt-2 border-t border-white/10">
+                            <label className="block text-[10px] font-medium text-gray-300">
+                                打印机演示场景
+                                <select value={printerDemoScenario} onChange={(event) => setPrinterDemoScenario(event.target.value as PrinterDemoScenarioId)} className="mt-1 block w-full rounded-lg bg-gray-800 p-2 text-xs text-white">
+                                    {printerDemoScenarios.map(({ id, label }) => <option key={id} value={id}>{label}</option>)}
+                                </select>
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => { setShowPrinterDemo(true); setIsOpen(false); }}
+                                className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all"
+                            >
+                                <span className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                                    <Printer size={18} />
+                                </span>
+                                <span className="flex-1 text-left">
+                                    <span className="block text-white text-xs font-bold">Wi-Fi 打印机连接演示</span>
+                                    <span className="block text-gray-400 text-[10px]">从我的文件打开 PDF 并连接打印机</span>
+                                </span>
+                                <ChevronRight size={14} className="text-gray-600" />
+                            </button>
                             {onResetDemoData ? (
                               <button
                                 type="button"
@@ -207,6 +253,20 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
                                     <LockKeyhole size={20} className="text-violet-300" />
                                     <span className="mt-2 text-[11px] font-bold text-white">教师端手动锁屏</span>
                                 </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        onDemoLockScreen?.(lowBatteryDemoNext === 'reminder' ? 'low-battery-reminder' : 'low-battery');
+                                        setIsOpen(false);
+                                    }}
+                                    className="col-span-2 flex min-h-20 items-center justify-center gap-3 rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 text-center transition-colors hover:bg-amber-400/20"
+                                >
+                                    <BatteryLow size={24} className="text-amber-300" />
+                                    <div className="text-left">
+                                        <span className="block text-[11px] font-bold text-white">低电量锁屏</span>
+                                        <span className="mt-1 block text-[10px] text-amber-200">{lowBatteryDemoNext === 'reminder' ? '点击模拟10%低电量提醒' : '下次点击：5%低电量锁屏'}</span>
+                                    </div>
+                                </button>
                             </div>
                         </div>
 
@@ -272,12 +332,16 @@ export const DemoControls: React.FC<DemoControlsProps> = ({
                 )}
             </AnimatePresence>
 
+            {showPrinterDemo && currentMode === 'student' && (
+                <PrinterConnectionScenario scenario={printerDemoScenario} onClose={() => setShowPrinterDemo(false)} />
+            )}
             <button 
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
+                disabled={showPrinterDemo}
                 aria-label={isOpen ? '关闭演示控制台' : '打开演示控制台'}
                 aria-expanded={isOpen}
-                className={`flex items-center gap-2 pl-4 pr-5 py-3 rounded-full shadow-2xl transition-all border-2 border-gray-900 text-base font-bold ${isOpen ? 'bg-brand text-white scale-105' : 'bg-gray-800 text-white hover:bg-gray-700 animate-pulse-slow'}`}
+                className={`flex items-center gap-2 pl-4 pr-5 py-3 rounded-full shadow-2xl transition-all border-2 border-gray-900 text-base font-bold disabled:invisible ${isOpen ? 'bg-brand text-white scale-105' : 'bg-gray-800 text-white hover:bg-gray-700 animate-pulse-slow'}`}
             >
                 <Settings size={28} className={isOpen ? "animate-spin-slow" : ""} />
                 <span className="whitespace-nowrap tracking-wide">{isOpen ? '收起控制台' : '演示控制台'}</span>

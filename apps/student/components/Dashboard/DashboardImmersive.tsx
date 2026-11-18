@@ -379,7 +379,6 @@ interface DashboardImmersiveProps {
   /** 万象视界全屏页打开时，由页面壳隐藏底部 Tab。 */
   onDiscoveryFullPageOpenChange?: (open: boolean) => void;
   worldLocked?: boolean;
-  worldLockNotifications?: StudentNotification[];
   onOpenHomeTool?: (tool: HomeRailTool) => void;
   onGoStudy?: () => void;
 }
@@ -412,7 +411,6 @@ export const DashboardImmersive: React.FC<DashboardImmersiveProps> = ({
   onNotificationLayerOpenChange,
   onDiscoveryFullPageOpenChange,
   worldLocked = false,
-  worldLockNotifications = [],
   onOpenHomeTool,
   onGoStudy,
 }) => {
@@ -487,7 +485,7 @@ export const DashboardImmersive: React.FC<DashboardImmersiveProps> = ({
     onNotificationLayerOpenChange?.(isMessageOpen);
     return () => onNotificationLayerOpenChange?.(false);
   }, [isMessageOpen, onNotificationLayerOpenChange]);
-  const notifications = [...worldLockNotifications, ...STUDENT_NOTIFICATION_DEMO];
+  const notifications = STUDENT_NOTIFICATION_DEMO;
   const messageAttentionCount = notifications.filter(
     (item) => item.isUnread || item.isPersistentRisk,
   ).length;

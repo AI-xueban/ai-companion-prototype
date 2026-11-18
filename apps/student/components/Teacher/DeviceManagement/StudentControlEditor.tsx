@@ -1,12 +1,14 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { Plus, Trash2, X } from "lucide-react";
 import {
   BorrowSchedule,
   StudentControl,
   validateSchedule,
+  schoolDate,
   weekdayNames,
 } from "../data/hierarchicalDeviceControl";
 import { DeviceControlLayer } from "./DeviceControlLayer";
+import { ControlValidationNotice } from "./ControlValidationNotice";
 
 export type ControlEditorValue = {
   schedule?: BorrowSchedule;
@@ -15,51 +17,56 @@ export type ControlEditorValue = {
   applyScope?: "all" | "unmodified";
 };
 export const StudentControlEditor: React.FC<{
+  scopeChanged?: boolean; defaultHomeworkRule?: boolean; scopeSelector?: React.ReactNode;
+  initialApplyScope?: "all" | "unmodified";
   targetLabel: string;
   count: number;
   selectedObjects?: string[];
   schedule?: BorrowSchedule;
   homework?: Pick<StudentControl, "answer" | "explanation">;
   requireApplyScope?: boolean;
+  batchDefaults?: boolean;
+  activeDateEdit?: boolean;
   onClose: () => void;
   onSave: (value: ControlEditorValue) => void;
-}> = ({ targetLabel, count, selectedObjects, schedule, homework, requireApplyScope, onClose, onSave }) => {
+}> = ({ scopeChanged = false, defaultHomeworkRule = false, scopeSelector, initialApplyScope, targetLabel, count, selectedObjects, schedule, homework, requireApplyScope, batchDefaults, activeDateEdit = false, onClose, onSave }) => {
   const [draft, setDraft] = useState(schedule);
   const [answer, setAnswer] = useState(homework?.answer ?? false);
   const [explanation, setExplanation] = useState(
     homework?.explanation ?? false,
   );
   const [error, setError] = useState("");
-  const [applyScope, setApplyScope] = useState<"all" | "unmodified" | null>(null);
-  const showApplyScope = requireApplyScope && draft?.mode !== "dates";
+  const applyScope = "unmodified" as const;
+  const initial = useRef(JSON.stringify({ draft, answer, explanation, applyScope }));
+  const dirty = initial.current !== JSON.stringify({ draft, answer, explanation, applyScope });
   const update = (changes: Partial<BorrowSchedule>) => {
     setError("");
     setDraft((current) => (current ? { ...current, ...changes } : current));
   };
   const submit = () => {
+    if (scopeSelector && !count) return setError("请选择年级");
+    if (!draft && defaultHomeworkRule && !answer && !explanation) return setError("当前仍为默认规则，无需修改");
     if (draft) {
-      const problem = validateSchedule(draft);
+      const problem = validateSchedule(draft, new Date(), activeDateEdit ? schedule?.startDate : undefined);
       if (problem) {
         setError(problem);
         return;
       }
     }
-    if (showApplyScope && !applyScope) {
-      setError("请选择本次修改范围");
-      return;
-    }
+
     setError("");
     onSave(draft ? { schedule: draft, applyScope: draft.mode === "dates" ? "all" : applyScope ?? undefined } : { answer, explanation, applyScope: applyScope ?? undefined });
   };
   const inputClass =
     "rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm";
   const now = new Date();
-  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const today = schoolDate(now);
   return (
     <DeviceControlLayer
       labelId="student-control-editor-title"
       level={1}
       onClose={onClose}
+      unsavedChanges={scopeChanged || dirty}
     >
       {(close) => (
         <>
@@ -84,11 +91,10 @@ export const StudentControlEditor: React.FC<{
             </button>
           </header>
           <div className="dc-panel-body space-y-6">
-            <div className="dc-target">
+            {scopeSelector}
+            {!draft && !scopeSelector && <p className="text-sm text-slate-600">{targetLabel}</p>}
+            {draft && <div className="dc-target">
               <p className="text-sm font-bold text-indigo-900">{targetLabel}</p>
-              <p className="mt-1 text-xs text-indigo-700">
-                {draft?.mode === "dates" ? `默认全校生效，影响 ${count} 名学生` : `本次设置影响 ${count} 名学生`}
-              </p>
               {!!selectedObjects?.length && (
                 <ul className="dc-selected-objects" aria-label="本次设置对象列表">
                   {selectedObjects.map((name) => (
@@ -96,7 +102,7 @@ export const StudentControlEditor: React.FC<{
                   ))}
                 </ul>
               )}
-            </div>
+            </div>}
             {draft ? (
               <>
                 <div>
@@ -129,6 +135,7 @@ export const StudentControlEditor: React.FC<{
                           type="date"
                           aria-label="开始日期"
                           min={today}
+                          disabled={activeDateEdit}
                           value={draft.startDate}
                           onChange={(e) =>
                             update({ startDate: e.target.value })
@@ -145,13 +152,11 @@ export const StudentControlEditor: React.FC<{
                           className={inputClass}
                         />
                       </div>
-                      <p className="mt-2 text-xs leading-5 text-slate-500">
-                        生效日期只能选择当天及之后，包含起止日期。到期后恢复每周规则；已失效规则仅支持删除。
-                      </p>
+                      <p className="mt-2 text-xs leading-5 text-slate-500">{activeDateEdit ? '规则已生效，开始日期和借用方式保持不变，仅可调整结束日期。' : '生效日期只能选择当天及之后，包含起止日期。到期后按剩余规则执行；无每周规则时默认可借。已失效规则仅支持删除。'}</p>
                     </>
                   )}
                 </div>
-                {draft.mode === "dates" && (
+                {draft.mode === "dates" && !activeDateEdit && (
                   <div>
                     <h3 className="mb-3 text-sm font-bold text-slate-800">
                       借用方式
@@ -171,7 +176,7 @@ export const StudentControlEditor: React.FC<{
                     </div>
                   </div>
                 )}
-                {!(draft.mode === "dates" && draft.deny) && (
+                {!activeDateEdit && !(draft.mode === "dates" && draft.deny) && (
                   <div>
                     <h3 className="mb-3 text-sm font-bold text-slate-800">
                       <span className="mr-1 text-red-500">*</span>借用时段
@@ -292,34 +297,14 @@ export const StudentControlEditor: React.FC<{
                 ))}
               </div>
             )}
-            {showApplyScope && (
-              <fieldset className="rounded-lg bg-slate-50 p-4">
-                <legend className="text-sm font-bold text-slate-800"><span className="text-red-500">*</span> 修改范围</legend>
-                <div className="mt-3 space-y-3">
-                  <label className="block cursor-pointer">
-                    <span className="flex items-start gap-3"><input type="radio" name="apply-scope" checked={applyScope === "all"} onChange={() => { setApplyScope("all"); setError(""); }} className="mt-1" /><span><b className="block text-sm text-slate-900">{targetLabel === "全校" ? "全校修改" : "修改当前范围全部学生"}</b><span className="mt-1 block text-xs leading-5 text-slate-500">覆盖本次范围内全部学生，包括老师此前单独设置的学生。</span></span></span>
-                  </label>
-                  <label className="block cursor-pointer">
-                    <span className="flex items-start gap-3"><input type="radio" name="apply-scope" checked={applyScope === "unmodified"} onChange={() => { setApplyScope("unmodified"); setError(""); }} className="mt-1" /><span><b className="block text-sm text-slate-900">跳过老师单独设置的学生</b><span className="mt-1 block text-xs leading-5 text-slate-500">保留老师已按班级或学生设置的规则。</span></span></span>
-                  </label>
-                </div>
-              </fieldset>
-            )}
-            {error && (
-              <p
-                role="alert"
-                className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600"
-              >
-                {error}
-              </p>
-            )}
+            {error && <ControlValidationNotice message={error} onClose={() => setError("")} />}
           </div>
-          <footer className="flex justify-end gap-3 border-t p-5">
+      <footer className="flex justify-end gap-3 border-t p-5">
             <button type="button" onClick={close} className="dc-btn">
               取消
             </button>
-            <button type="button" onClick={submit} className="dc-btn-primary">
-              {draft?.mode === "dates" ? "保存" : "保存并生效"}
+            <button type="button" onClick={submit} disabled={activeDateEdit && draft?.endDate === schedule?.endDate} className="dc-btn-primary">
+              {!draft || draft.mode === "dates" ? "保存" : "保存并生效"}
             </button>
           </footer>
         </>

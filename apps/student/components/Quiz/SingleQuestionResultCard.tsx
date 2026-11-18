@@ -188,7 +188,7 @@ export const SingleQuestionResultCard: React.FC<SingleQuestionResultCardProps> =
     : 'fixed inset-0 bg-slate-900/40 backdrop-blur-xl z-[999] flex items-center justify-center px-4 py-6 pointer-events-auto';
 
   const cardClass = isInline
-    ? 'w-full bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col'
+    ? 'w-full min-w-0 flex flex-col'
     : 'w-full max-w-5xl bg-slate-50/85 backdrop-blur-2xl border border-white/50 shadow-[0_28px_56px_-14px_rgba(0,0,0,0.18)] rounded-3xl overflow-hidden flex flex-col max-h-[90vh]';
 
   const cardMotionProps = isInline
@@ -242,6 +242,7 @@ export const SingleQuestionResultCard: React.FC<SingleQuestionResultCardProps> =
 
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <MistakePreviewResultCard
+            embedded={isInline}
             allowSimilarPractice={allowSimilarPractice}
             question={questionForPreview}
             practiceStats={practiceStats}
