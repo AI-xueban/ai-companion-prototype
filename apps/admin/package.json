@@ -4,7 +4,7 @@
   "private": true,
   "description": "万象视界管理后台原型",
   "scripts": {
-    "dev": "serve prototype -l tcp://0.0.0.0:8080",
+    "dev": "node scripts/dev.js",
     "start": "npm run dev",
     "build": "node scripts/build.js",
     "preview": "serve dist -l 8080",

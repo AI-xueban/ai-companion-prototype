@@ -1372,6 +1372,7 @@ function confirmSaveAndPublishHotRecommend() {
 
 function renderPage(route, params) {
   switch (route) {
+    case 'question-feedback': return renderQuestionFeedbackPage();
     case 'homework-management': return renderHomeworkManagementPage();
     case 'home-config': return renderHomeConfigPage(params);
     case 'cabinet-carousel': return renderCarouselConfigEditPage(params);
