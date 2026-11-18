@@ -10,10 +10,10 @@ export function borrowingWeekGroups(rule: BorrowSchedule): BorrowingWeekGroup[] 
     group.days.push(day);
     groups.set(key, group);
   }
-  return groups.size ? [...groups.values()] : [{ days: [], periods: [{ start: '', end: '' }] }];
+  return groups.size ? [...groups.values()] : [{ days: [], periods: [] }];
 }
 
 export function applyBorrowingWeekGroups(rule: BorrowSchedule, groups: BorrowingWeekGroup[]): BorrowSchedule {
   return { ...rule, weekdays: groups.flatMap(group => group.days).sort((a, b) => a - b), periods: [],
-    weekdayPeriods: Object.fromEntries(groups.flatMap(group => group.days.map(day => [day, group.periods.map(period => ({ ...period }))]))) };
+    weekdayPeriods: Object.fromEntries(groups.flatMap(group => group.days.map(day => [day, group.periods.filter(period => period.start || period.end).map(period => ({ ...period }))]))) };
 }

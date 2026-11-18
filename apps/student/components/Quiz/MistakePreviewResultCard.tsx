@@ -35,6 +35,7 @@ export interface MistakePreviewResultCardProps {
   onSimilarItemSelect?: (id: string) => void;
   onOpenTutor?: () => void;
   preferSplitLayout?: boolean;
+  embedded?: boolean;
   /** 试卷原图题：作答草稿图 */
   draftImageUrl?: string | null;
   /** 试卷原图题：用户自批阅 */
@@ -57,6 +58,7 @@ export const MistakePreviewResultCard: React.FC<MistakePreviewResultCardProps> =
   onSimilarItemSelect,
   onOpenTutor,
   preferSplitLayout = false,
+  embedded = false,
   draftImageUrl = null,
   selfGrade = null,
   onSelfGrade,
@@ -239,17 +241,17 @@ export const MistakePreviewResultCard: React.FC<MistakePreviewResultCardProps> =
   const isPaperSourceQuestion = Boolean(question.content.originalImageUrl);
 
   return (
-    <div className="p-4 md:p-6 max-w-6xl mx-auto w-full">
+    <div className={`${embedded ? '' : 'p-4 md:p-6'} max-w-6xl mx-auto w-full min-w-0`}>
       <div
-        className={`grid grid-cols-1 gap-5 items-start ${
+        className={`grid grid-cols-1 gap-4 items-start ${
           preferSplitLayout
             ? 'md:grid-cols-[minmax(0,1.05fr)_minmax(280px,0.95fr)]'
             : 'lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]'
         }`}
       >
-        <section className={`relative rounded-[28px] bg-white border border-slate-100 p-5 md:p-6 shadow-sm overflow-hidden ${preferSplitLayout ? 'min-h-[360px]' : 'min-h-[480px]'}`}>
+        <section className={`relative min-w-0 rounded-2xl bg-white border border-slate-200/70 p-4 shadow-sm overflow-hidden ${preferSplitLayout ? 'min-h-[360px]' : 'min-h-[480px]'}`}>
           <div className={`${onRetry && isWrongAnswer ? 'pb-16' : ''}`}>
-          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-3 mb-4">
             <div className="flex flex-wrap items-center gap-2">
               {!isImageQuestion && (
                 <>
@@ -264,11 +266,16 @@ export const MistakePreviewResultCard: React.FC<MistakePreviewResultCardProps> =
                 </>
               )}
             </div>
-            <div className="flex items-center gap-2 shrink-0 ml-auto">
+              {!isImageQuestion && (
+                <div className="flex items-center gap-1 border-l border-slate-200 pl-2" title="题目难度">
+                  <DifficultyStars level={question.difficulty} />
+                </div>
+              )}
+            <div className="flex items-center ml-auto">
               <button
                 type="button"
                 onClick={handleBookmarkClick}
-                className={`inline-flex items-center gap-1 h-9 px-2.5 rounded-full border text-[11px] font-black transition-all shadow-sm ${
+                className={`inline-flex items-center gap-1 h-9 px-2.5 whitespace-nowrap rounded-xl border text-[11px] font-semibold transition-all ${
                   isWrongAnswer || isBookmarked
                     ? 'bg-amber-50 border-amber-200 text-amber-600 hover:border-amber-300'
                     : 'bg-white border-slate-200 text-slate-500 hover:border-amber-200 hover:text-amber-500'
@@ -282,11 +289,6 @@ export const MistakePreviewResultCard: React.FC<MistakePreviewResultCardProps> =
                 />
                 {isWrongAnswer || isBookmarked ? '已加入错题本' : '加入错题本'}
               </button>
-              {!isImageQuestion && (
-                <div className="flex items-center gap-0.5">
-                  <DifficultyStars level={question.difficulty} />
-                </div>
-              )}
             </div>
           </div>
           <QuestionRichContent question={question} showAudioPlayer={false} />
@@ -305,7 +307,7 @@ export const MistakePreviewResultCard: React.FC<MistakePreviewResultCardProps> =
           )}
         </section>
 
-        <aside className={`rounded-[28px] bg-white border border-slate-100 shadow-sm p-4 md:p-5 ${isPaperSourceQuestion ? 'flex flex-col min-h-[360px]' : 'space-y-4'}`}>
+        <aside className={`min-w-0 rounded-2xl bg-white border border-slate-200/70 shadow-sm p-4 ${isPaperSourceQuestion ? 'flex flex-col min-h-[360px]' : 'space-y-4'}`}>
           {allowSimilarPractice && <div className="mb-4"><SimilarPracticeEntry key={question.id} question={question} /></div>}
           {isPaperSourceQuestion ? (
             <PaperSourceAnalysisPanel
@@ -333,7 +335,7 @@ export const MistakePreviewResultCard: React.FC<MistakePreviewResultCardProps> =
           <div className="flex flex-wrap items-stretch gap-2 [&_svg]:shrink-0">
             <button
               type="button"
-              className="flex-1 min-h-10 whitespace-nowrap flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-black bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-sm"
+              className="flex-1 min-h-10 whitespace-nowrap flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200"
             >
               <FileText size={14} />
               解析
@@ -342,7 +344,7 @@ export const MistakePreviewResultCard: React.FC<MistakePreviewResultCardProps> =
               <button
                 type="button"
                 onClick={onOpenTutor}
-                className="flex-[1.6] min-h-10 whitespace-nowrap flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-sky-500 to-indigo-500 text-white shadow-md shadow-indigo-500/20 hover:brightness-105 active:scale-[0.98] transition-all"
+                className="flex-[1.6] min-h-10 whitespace-nowrap flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 active:scale-[0.98] transition-all"
               >
                 <Sparkles size={14} />
                 AI 1对1解答
@@ -357,11 +359,9 @@ export const MistakePreviewResultCard: React.FC<MistakePreviewResultCardProps> =
               <div className="rounded-2xl border border-slate-100 bg-slate-50/60 px-4 py-3 space-y-2">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0 space-y-2">
-                    <p className="text-sm leading-relaxed">
-                      <span className="text-slate-400 font-bold mr-2">你的答案</span>
-                    </p>
                     {isMultiBlankSurvey ? (
                       <div className="space-y-1.5">
+                        <p className="text-sm font-bold text-slate-500">你的答案</p>
                         {correctAnswerParts.map((correctPart, idx) => {
                           const userPart = userAnswerParts[idx];
                           const isManual = idx === manualGradeBlankIndex;
@@ -404,7 +404,8 @@ export const MistakePreviewResultCard: React.FC<MistakePreviewResultCardProps> =
                       </div>
                     ) : (
                       <p className="text-sm leading-relaxed">
-                        <span className={`font-black ${isUnanswered ? 'text-slate-400' : isAnswerCorrect ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        <span className="text-slate-500 font-bold mr-2">你的答案</span>
+                        <span className={`font-black ${isUnanswered ? 'text-slate-500' : isAnswerCorrect ? 'text-emerald-600' : 'text-rose-600'}`}>
                           {isUnanswered ? '未作答' : `${userAnswer}${answerStateSuffix}`}
                         </span>
                       </p>
@@ -412,7 +413,7 @@ export const MistakePreviewResultCard: React.FC<MistakePreviewResultCardProps> =
                   </div>
                 </div>
                 <p className="text-sm leading-relaxed">
-                  <span className="text-slate-400 font-bold mr-2">参考答案</span>
+                  <span className="text-slate-500 font-bold mr-2">参考答案</span>
                   <span className="font-black text-emerald-700">
                     {isMultiBlankSurvey
                       ? correctAnswerParts.map((part, idx) => `空${idx + 1} ${part}`).join('；')

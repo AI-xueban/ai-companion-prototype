@@ -1,16 +1,16 @@
 .borrowing-mobile .control-content { padding-bottom: 170px; }
 .control-screen.borrowing-teacher .control-content { padding-bottom:24px; }
 .control-screen.borrowing-teacher .borrowing-student-action { flex:none; width:auto; min-height:36px; padding:8px 12px; font-size:12px; }
-.borrowing-times-link, .borrowing-roster-link { border:0; background:transparent; color:#087fc5; cursor:pointer; }
+.borrowing-times-link, .borrowing-roster-link { border:0; background:transparent; color:var(--control-link); cursor:pointer; }
 .borrowing-times-link { display:block; width:auto; margin-top:10px; padding:5px 0; font-size:12px; text-align:left; }
 .borrowing-roster-link { width:auto; padding:4px 0; font-size:11px; }
-.control-screen.borrowing-mobile .admin-scope-summary > button { flex:none; width:auto; min-width:0; min-height:34px; margin-left:auto; padding:7px 12px; border:1px solid #dcebf2; border-radius:9px; background:#e5f5ff; color:#087fc5; font-size:12px; white-space:nowrap; }
-.borrowing-detail-link { border:0; background:transparent; color:#168fce; padding:8px 0 8px 12px; white-space:nowrap; font-size:14px; }
+.control-screen.borrowing-mobile .admin-scope-summary > button { flex:none; width:auto; min-width:0; min-height:34px; margin-left:auto; padding:7px 12px; border:1px solid #dcebf2; border-radius:9px; background:#e5f5ff; color:var(--control-link); font-size:12px; white-space:nowrap; }
+.borrowing-detail-link { border:0; background:transparent; color:var(--control-primary); padding:8px 0 8px 12px; white-space:nowrap; font-size:14px; }
 .borrowing-list-actions { flex-direction:column; gap:8px; flex-shrink:0; }
 .borrowing-list-actions button { min-width:96px; padding:9px 12px; font-size:14px; }
 .borrowing-rule-section { margin-top:18px; }
 .borrowing-rule-section + .borrowing-rule-section { padding-top:18px; border-top:1px solid #dce9f3; }
-.borrowing-rule-section > h3 { margin:0 0 10px; color:#193349; font-size:15px; }
+.borrowing-rule-section > h3 { margin:0 0 10px; color:var(--control-text); font-size:15px; }
 .borrowing-rule-item { display:flex; align-items:flex-start; gap:8px; }
 .borrowing-rule-copy { flex:1; min-width:0; }
 .borrowing-rule-item .parity-rule-actions { flex:none; gap:2px; margin-top:0; }
@@ -19,8 +19,8 @@
 .borrowing-scope-cards { display:grid; gap:12px; }
 .control-grade-group-title { margin:10px 2px 0; color:#59738c; font-size:13px; font-weight:700; }
 .borrowing-scope-card { padding:16px; border:1px solid #e2ebf1; border-radius:17px; background:#fff; }
-.borrowing-card-head { display:flex; flex-wrap:wrap; align-items:center; gap:8px; color:#193349; font-size:14px; }
-.control-screen .borrowing-grade-link { display:inline-flex; align-items:center; gap:8px; width:auto; padding:0; border:0; background:transparent; color:#193349; font-size:14px; font-weight:700; }
+.borrowing-card-head { display:flex; flex-wrap:wrap; align-items:center; gap:8px; color:var(--control-text); font-size:14px; }
+.control-screen .borrowing-grade-link { display:inline-flex; align-items:center; gap:8px; width:auto; padding:0; border:0; background:transparent; color:var(--control-text); font-size:14px; font-weight:700; }
 .borrowing-grade-link span { color:#91a6b7; font-size:20px; }
 .borrowing-denied-badge { color:#a26859; background:#fff5ef; border-radius:6px; padding:3px 6px; font-size:10px; }
 .borrowing-card-count { margin:6px 0 0; color:#8196a8; font-size:11px; }
@@ -30,14 +30,14 @@
 .borrowing-card-rules > p { line-height:1.5; }
 .borrowing-card-rules > p.parity-note { padding:6px 0; }
 .borrowing-scope-card.borrowing-selectable { cursor:pointer; outline:none; }
-.borrowing-scope-card.borrowing-selectable:focus-visible { outline:2px solid #287cca; outline-offset:2px; }
+.borrowing-scope-card.borrowing-selectable:focus-visible { outline:2px solid var(--control-link); outline-offset:2px; }
 .borrowing-scope-card.borrowing-selectable.is-selected,
-.borrowing-scope-card.borrowing-selectable[aria-checked=true] { border-color:#287cca; background:#eaf5ff; }
+.borrowing-scope-card.borrowing-selectable[aria-checked=true] { border-color:var(--control-link); background:#eaf5ff; }
 .borrowing-card-check { display:grid; place-items:center; width:22px; height:22px; flex:none; border:1px solid #b8cddd; border-radius:6px; color:#fff; font-size:15px; line-height:1; }
-.borrowing-selectable[aria-checked=true] .borrowing-card-check { border-color:#287cca; background:#287cca; }
+.borrowing-selectable[aria-checked=true] .borrowing-card-check { border-color:var(--control-link); background:var(--control-link); }
 .borrowing-selectable .borrowing-card-head { min-height:24px; }
 .borrowing-card-rules small { display:block; color:#8196a8; font-size:10px; }
-.control-screen .borrowing-card-more { display:block; width:100%; margin-top:4px; padding:6px; border:0; background:transparent; color:#6c8395; font-size:11px; }
+.control-screen .borrowing-card-more { display:block; width:100%; margin-top:4px; padding:6px; border:0; background:transparent; color:var(--control-secondary-text); font-size:11px; }
 .borrowing-card-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
 .control-screen .borrowing-card-actions button { width:auto; min-height:34px; padding:7px 10px; font-size:12px; }
 .borrowing-mobile .control-actions { flex-wrap:wrap; gap:8px; }
@@ -64,7 +64,7 @@
 .borrowing-period input { width:0; flex:1; min-width:0; padding:10px 3px; border:1px solid #dce9f3; border-radius:8px; }
 .borrowing-period button { padding:10px 8px; }
 .borrowing-conflicts { max-height:180px; overflow:auto; background:#f4f9fc; padding:8px; }
-.borrowing-mobile .control-student-row input[type=checkbox] { width:22px; height:22px; accent-color:#1296df; }
+.borrowing-mobile .control-student-row input[type=checkbox] { width:22px; height:22px; accent-color:var(--control-primary); }
 
 /* Borrowing uses the same role tokens and card/form treatment as the other modules. */
 body.dw-ui-new #app .control-screen .borrowing-scope-card { border-color:var(--control-line); border-radius:16px; background:#ffffffed; box-shadow:0 8px 23px var(--dw-shadow,#4b85b81a); }

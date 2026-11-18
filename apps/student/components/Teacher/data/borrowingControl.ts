@@ -5,6 +5,7 @@ export const borrowingStorageKey = (schoolId: string) => `ai-companion-borrowing
 export type BorrowingHistory = { id: string; at: string; operator: string; title: string; scope: string; classIds?: string[]; before: string[]; after: string[] };
 export type BorrowingState = {
   revision: number;
+  ruleTypesEnabled?: Partial<Record<BorrowSchedule['mode'], boolean>>;
   classRules: Record<string, BorrowSchedule[]>;
   schoolTemporaryActive: boolean;
   temporaryClasses: Record<string, boolean>;
@@ -13,9 +14,29 @@ export type BorrowingState = {
   history: BorrowingHistory[];
 };
 export const initialBorrowingState = (): BorrowingState => ({ revision: 0, classRules: {}, schoolTemporaryActive: false, temporaryClasses: {}, studentBans: {}, history: [] });
-export const readBorrowingState = (schoolId: string): BorrowingState => {
+export const borrowingRuleTypeEnabled = (state: BorrowingState, mode: BorrowSchedule['mode']) => state.ruleTypesEnabled?.[mode] !== false;
+export const setBorrowingRuleTypeEnabled = (state: BorrowingState, mode: BorrowSchedule['mode'], enabled: boolean): BorrowingState => ({
+  ...state, ruleTypesEnabled: { ...state.ruleTypesEnabled, [mode]: enabled },
+});
+export const removeExpiredBorrowingDateRules = (state: BorrowingState, now = new Date()): BorrowingState => {
+  const today = schoolDate(now);
+  let changed = false;
+  const classRules = Object.fromEntries(Object.entries(state.classRules).map(([id, rules]) => {
+    const retained = rules.filter(rule => rule.mode !== 'dates' || !rule.endDate || rule.endDate >= today);
+    if (retained.length === rules.length) return [id, rules];
+    changed = true;
+    return [id, retained];
+  }));
+  return changed ? { ...state, classRules, revision: state.revision + 1 } : state;
+};
+export const readBorrowingState = (schoolId: string, now = new Date()): BorrowingState => {
+  const clean = (state: BorrowingState) => {
+    const next = removeExpiredBorrowingDateRules(state, now);
+    if (next !== state) localStorage.setItem(borrowingStorageKey(schoolId), JSON.stringify(next));
+    return next;
+  };
   const raw = localStorage.getItem(borrowingStorageKey(schoolId));
-  if (raw) return { ...initialBorrowingState(), ...JSON.parse(raw) };
+  if (raw) return clean({ ...initialBorrowingState(), ...JSON.parse(raw) });
   const state = initialBorrowingState();
   // 迁移旧演示的学校借用时间，不改动旧模块或老师的其他设置。
   const legacy = JSON.parse(localStorage.getItem('ai-companion-device-controls-v2') ?? 'null');
@@ -28,7 +49,7 @@ export const readBorrowingState = (schoolId: string): BorrowingState => {
     .filter(record => record.module === 'borrowing' && record.source === 'teacher-portal' && record.operatorRole === 'school-admin')
     .slice(0, 100).map(record => ({ id: record.id, at: record.time, operator: record.operator, title: record.title, scope: record.scope, before: record.before, after: record.after,
       classIds: [...new Set(deviceControlStudents.filter(student => record.ids?.includes(student.id)).map(student => student.classId))] }));
-  return state;
+  return clean(state);
 };
 export const classTemporarilyDenied = (state: BorrowingState, classId: string) => state.temporaryClasses[classId] ?? state.schoolTemporaryActive;
 export const setTemporaryBorrowing = (state: BorrowingState, classIds: string[], denied: boolean, schoolAction = false): BorrowingState => {
@@ -58,12 +79,13 @@ export const borrowingResult = (state: BorrowingState, student: { id: string; cl
   const date = schoolDate(now);
   const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(now);
   const weekday = (new Date(`${date}T12:00:00+08:00`).getUTCDay() + 6) % 7;
-  const rules = state.classRules[student.classId] ?? [];
+  const rules = (state.classRules[student.classId] ?? []).filter(rule => borrowingRuleTypeEnabled(state, rule.mode));
   const rule = rules.find(item => item.mode === 'dates' && item.startDate <= date && item.endDate >= date)
     ?? rules.find(item => item.mode === 'weekly' && item.weekdays.includes(weekday));
   if (!rule) return rules.some(item => item.mode === 'weekly') ? '当前不在借用时段' : '当前可借用';
   if (rule.deny) return '指定日期禁止借用';
   const periods = rule.mode === 'weekly' ? borrowingPeriodsForDay(rule, weekday) : rule.periods;
+  if (rule.mode === 'weekly' && !periods.length) return '当前可借用';
   return periods.some(period => period.start <= parts && parts < period.end) ? '当前可借用' : '当前不在借用时段';
 };
 
@@ -87,7 +109,10 @@ export function saveGradeBorrowingRule(state: BorrowingState, classIds: string[]
   if (rule.mode === 'weekly' && !confirmWeeklyChange && !originals.length && classIds.some(classId => (state.classRules[classId] ?? []).some(existing => existing.mode === 'weekly'))) throw new Error('所选年级已有每周固定规则，请编辑已有规则或删除后再新增');
   if (gradeBorrowingDateConflict(state, classIds, rule, originals)) throw new Error('所选日期已有规则，请重新选择');
   const normalized: BorrowSchedule = rule.mode === 'dates' ? { ...rule, deny: true, periods: [], weekdays: [], weekdayPeriods: undefined } : { ...rule, deny: false };
-  return { ...state, classRules: { ...state.classRules, ...Object.fromEntries(classIds.map(classId => [classId,
+  // Scope edits remove this rule from deselected grades, without touching their other rules.
+  const removedEntries = originals.filter(entry => !classIds.includes(entry.classId));
+  const base = deleteGroupedBorrowingRule(state, removedEntries);
+  return { ...base, classRules: { ...base.classRules, ...Object.fromEntries(classIds.map(classId => [classId,
     [...(state.classRules[classId] ?? []).filter(existing => rule.mode === 'weekly'
       ? existing.mode !== 'weekly'
       : !originals.some(entry => entry.classId === classId && entry.ruleId === existing.id)), structuredClone(normalized)],

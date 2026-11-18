@@ -7,7 +7,7 @@ export type DurationRule = { source?: 'school' | 'homeroom'; id: string; weekday
 export const defaultDurationRule: Omit<DurationRule, 'id' | 'weekdays' | 'useDefault'> = { continuousMinutes: 60, restMinutes: 15, dailyMinutes: 180, periods: [] };
 export const newDurationRule = (): DurationRule => ({ id: `duration-${Date.now()}`, weekdays: [0, 1, 2, 3, 4, 5, 6], useDefault: true, ...defaultDurationRule, periods: [] });
 export const durationRuleText = (rule: DurationRule) => `${rule.useDefault ? '默认规则 · ' : ''}连续 ${rule.continuousMinutes} 分钟 · 休息 ${rule.restMinutes} 分钟 · 每日累计 ${rule.dailyMinutes} 分钟 · ${rule.periods.length ? rule.periods.map(p => `${p.start}–${p.end}`).join('、') : '不限可用时段'}`;
-export type StudentControl = { revisions?: Partial<Record<ControlModule, number>>; homeworkSource?: 'school' | 'teacher'; worldSource?: 'school' | 'teacher'; durationTeacherWeekdays?: number[]; schedules: BorrowSchedule[]; durationRules: DurationRule[]; answer: boolean; explanation: boolean; world: boolean; locked: boolean; updated: Partial<Record<ControlModule, { by: string; at: string }>> };
+export type StudentControl = { revisions?: Partial<Record<ControlModule, number>>; homeworkSource?: 'school' | 'teacher'; homeworkUsesDefault?: boolean; worldSource?: 'school' | 'teacher'; durationTeacherWeekdays?: number[]; schedules: BorrowSchedule[]; durationRules: DurationRule[]; answer: boolean; explanation: boolean; world: boolean; locked: boolean; updated: Partial<Record<ControlModule, { by: string; at: string }>> };
 export const controlGrades = [...new Set(schoolDeviceClasses.map(c => c.grade))].sort((a, b) => a - b);
 const surnames = ['李', '王', '张', '刘', '陈', '杨', '赵', '黄', '周', '吴'];
 const givenNames = ['明', '梓涵', '宇轩', '诗涵', '一诺', '浩然', '欣怡', '子墨', '雨桐', '沐辰', '若溪', '佳宁', '思远', '可欣', '书瑶', '星宇', '语彤', '嘉言', '晨曦', '安然', '文博', '乐瑶', '奕辰', '心悦', '景行', '知夏', '清越', '亦凡', '舒然', '予安'];
@@ -38,9 +38,9 @@ export const scheduleDateText = (s: BorrowSchedule) => s.mode === 'weekly' ? wee
 export const borrowingPeriodsForDay = (s: BorrowSchedule, day: number) => s.weekdayPeriods ? s.weekdayPeriods[day] ?? [] : s.weekdays.includes(day) ? s.periods : [];
 export const schedulePeriodText = (s: BorrowSchedule) => {
   if (s.deny) return '全天禁止借用';
-  if (s.mode !== 'weekly' || !s.weekdayPeriods) return s.periods.map(p => `${p.start}–${p.end}`).join('、');
+  if (s.mode !== 'weekly' || !s.weekdayPeriods) return s.periods.map(p => `${p.start}–${p.end}`).join('、') || (s.mode === 'weekly' ? '全天可借用' : '');
   const groups = new Map<string, number[]>();
-  s.weekdays.forEach(day => { const text = borrowingPeriodsForDay(s, day).map(p => `${p.start}–${p.end}`).join('、'); groups.set(text, [...(groups.get(text) ?? []), day]); });
+  s.weekdays.forEach(day => { const text = borrowingPeriodsForDay(s, day).map(p => `${p.start}–${p.end}`).join('、') || '全天可借用'; groups.set(text, [...(groups.get(text) ?? []), day]); });
   return [...groups].map(([text, days]) => `${weekdayRangeText(days)} ${text}`).join('；');
 };
 // 生命周期按包含起止日期的有效期判断，借用时段只决定当前能否借出。
@@ -62,13 +62,14 @@ export const validateSchedule = (s: BorrowSchedule, now = new Date(), preservedS
   if (s.mode === 'weekly' && s.weekdayPeriods) {
     for (const day of s.weekdays) {
       const periods = borrowingPeriodsForDay(s, day);
-      if (!periods.length || periods.some(p => !p.start || !p.end)) return `${weekdayNames[day]}：请填写完整的借用时段`;
+      if (periods.some(p => !p.start || !p.end)) return `${weekdayNames[day]}：请填写完整的借用时段`;
       if (periods.some(p => p.start >= p.end)) return `${weekdayNames[day]}：结束时间须晚于开始时间，暂不支持跨日`;
       const sorted = [...periods].sort((a, b) => a.start.localeCompare(b.start));
       if (sorted.some((p, i) => i > 0 && p.start < sorted[i - 1].end)) return `${weekdayNames[day]}：借用时段不能重叠`;
     }
     return '';
   }
+  if (s.mode === 'weekly' && !s.periods.length) return '';
   if (!s.periods.length || s.periods.some(p => !p.start || !p.end)) return '请填写完整的借用时段';
   if (s.periods.some(p => p.start >= p.end)) return '结束时间须晚于开始时间，暂不支持跨日';
   const sorted = [...s.periods].sort((a, b) => a.start.localeCompare(b.start));
@@ -99,7 +100,7 @@ export const policyDisplaySignature = (s: StudentControl, module: ControlModule)
 };
 const policyContentSignature = (s: StudentControl, module: ControlModule) => {
   if (module === 'duration') return JSON.stringify(s.durationTeacherWeekdays ?? []) + JSON.stringify(s.durationRules.map(({ id: _id, ...rule }) => rule).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))));
-  if (module === 'homework') return `${s.answer}-${s.explanation}:${s.homeworkSource ?? 'school'}`;
+  if (module === 'homework') return `${s.answer}-${s.explanation}:${s.homeworkSource ?? 'school'}:${s.homeworkUsesDefault ?? false}`;
   if (module === 'world') return `${s.world}:${s.worldSource ?? 'school'}`;
   if (module === 'lock') return String(s.locked);
   return JSON.stringify(s.schedules.map(({ id: _id, ...schedule }) => schedule).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))));

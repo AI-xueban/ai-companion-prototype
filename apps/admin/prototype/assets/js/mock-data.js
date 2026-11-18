@@ -817,6 +817,22 @@ function syncCabinetInstalledVersions(data) {
   });
 }
 
+// 原型演示凭据；仅为已存在的样例柜机补充字段，不覆盖已有值。
+function syncCabinetLocalAdmin(data) {
+  const sampleCounts = { 'CAB-001': 3, 'CAB-002': 2, 'CAB-003': 1 };
+  (data.cabinets || []).forEach(cabinet => {
+    if (Array.isArray(cabinet.localAdmins)) return;
+    const legacy = cabinet.localAdminAccount !== undefined || cabinet.localAdminPassword !== undefined;
+    const count = sampleCounts[cabinet.id] || 0;
+    if (!count && !legacy) return;
+    cabinet.localAdmins = [{ account: legacy ? cabinet.localAdminAccount : '123', password: legacy ? cabinet.localAdminPassword : '123' }];
+    for (let i = 1; i < count; i++) {
+      cabinet.localAdmins.push({ account: `admin00${i + 1}`, password: `demo00${i + 1}` });
+    }
+  });
+  return data;
+}
+
 function loadData() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -826,12 +842,15 @@ function loadData() {
       syncCabinetCreatedAt(data); syncCabinetInstalledVersions(data);
       syncTabletCreatedAt(data);
       syncDeviceAlerts(data);
+      removeAdminOpeningDemo(data);
+      syncTeacherUsageDemo(data);
       syncContentCovers(data);
       syncSectionPublishedAt(data);
       syncChannelPublishedAt(data);
       syncHotRecommend(data);
       syncCabinetCarousels(data);
       syncLovePoolData(data);
+      syncCabinetLocalAdmin(data);
       return data;
     }
   } catch (e) { /* ignore */ }
@@ -839,7 +858,50 @@ function loadData() {
   syncCabinetCreatedAt(data); syncCabinetInstalledVersions(data);
   syncTabletCreatedAt(data);
   syncDeviceAlerts(data);
-  return data;
+  removeAdminOpeningDemo(data);
+  syncTeacherUsageDemo(data);
+  return syncCabinetLocalAdmin(data);
+}
+
+function syncTeacherUsageDemo(data) {
+  const records = data.usageRecords || (data.usageRecords = []);
+  const additions = DEFAULT_DATA.tablets.slice(10, 15).map((tablet, index) => ({
+    id: `UR-DEMO-TEACHER-20261113-${index + 1}`,
+    batchId: `TEACHER-20261113-093${index}`,
+    operationType: 'normal', borrowerType: 'teacher',
+    studentId: '18018001800', studentName: '18018001800', grade: '',
+    tabletId: tablet.id, sn: tablet.sn,
+    cabinetBorrow: tablet.cabinetId, slotBorrow: tablet.slotNo,
+    borrowAt: `2026-11-13 09:3${index}:00`,
+    status: index < 2 ? 'returned' : 'borrowed',
+    returnAt: index < 2 ? `2026-11-13 10:${index === 0 ? '15' : '18'}:00` : null,
+    cabinetReturn: index < 2 ? tablet.cabinetId : null,
+    slotReturn: index < 2 ? tablet.slotNo : null,
+  })).filter(record => !records.some(existing => existing.id === record.id));
+  records.unshift(...additions);
+  // Preserve actual teacher class values; retire only the old empty-value marker.
+  records.filter(record => record.borrowerType === 'teacher').forEach(record => {
+    if (/^[—–-]+$/.test(String(record.grade || '').trim())) record.grade = '';
+  });
+  const classDemoId = 'UR-DEMO-TEACHER-WITH-CLASS-20261117';
+  if (!records.some(record => record.id === classDemoId)) {
+    const tablet = DEFAULT_DATA.tablets[9];
+    records.unshift({
+      id: classDemoId, operationType: 'normal', borrowerType: 'teacher',
+      studentId: '18018001801', studentName: '陈老师', grade: '五年级1班',
+      tabletId: tablet.id, sn: tablet.sn, cabinetBorrow: tablet.cabinetId, slotBorrow: tablet.slotNo,
+      borrowAt: '2026-11-14 09:30:00', status: 'returned', returnAt: '2026-11-14 10:00:00',
+      cabinetReturn: tablet.cabinetId, slotReturn: tablet.slotNo,
+    });
+  }
+}
+
+function removeAdminOpeningDemo(data) {
+  // Usage records contain student and teacher loans only, including for existing demo caches.
+  data.usageRecords = (data.usageRecords || []).filter(record =>
+    record.borrowerType !== 'local_admin' && record.operationType !== 'admin_open' &&
+    !String(record.id).startsWith('UR-DEMO-LOCAL-ADMIN-') &&
+    !String(record.id).startsWith('OP-DEMO-ADMIN-'));
 }
 
 function syncTabletCreatedAt(data) {
@@ -879,6 +941,29 @@ function syncDeviceAlerts(data) {
   if (!data.deviceAlerts.some(alert => alert.type === 'cabinet_offline')) {
     const sample = (DEFAULT_DATA.deviceAlerts || []).find(alert => alert.type === 'cabinet_offline');
     if (sample) data.deviceAlerts.push({ ...sample, description: sample.message || '—' });
+  }
+  // Keep monthly alert demos available in the default current-month filter.
+  // Stable IDs preserve status changes and avoid duplicating saved demo records.
+  const today = new Date();
+  const existingIds = new Set(data.deviceAlerts.map(alert => alert.id));
+  for (let month = new Date(2026, 7, 1); month <= today; month.setMonth(month.getMonth() + 1)) {
+    const monthKey = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}`;
+    [...supportedTypes].forEach((type, typeIndex) => {
+      const sample = DEFAULT_DATA.deviceAlerts.find(alert => alert.type === type);
+      if (!sample) return;
+      ['pending', 'resolved'].forEach((status, statusIndex) => {
+        const id = `ALT-DEMO-${monthKey}-${type}-${status}`;
+        if (existingIds.has(id)) return;
+        const { inspectionId, usageRecordId, workorderId, ...demo } = sample;
+        data.deviceAlerts.push({
+          ...demo, id, status,
+          description: sample.description || sample.message || '—',
+          createdAt: `${monthKey}-01 00:${String(typeIndex * 2 + statusIndex).padStart(2, '0')}:00`,
+          workorderId: null,
+        });
+        existingIds.add(id);
+      });
+    });
   }
 }
 
