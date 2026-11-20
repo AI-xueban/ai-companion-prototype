@@ -1,12 +1,11 @@
 .screen.parent-screen{position:relative;background:linear-gradient(165deg,#fff7f5 0,#f8fbff 46%,#f3f8fb 100%)}
-.parent-recovery-background{display:flex;flex:1;flex-direction:column;min-height:0}
-.parent-recovery-mask{position:absolute;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(20,30,43,.46)}
-.parent-recovery-dialog{width:100%;max-width:340px;padding:26px 20px 20px;border-radius:23px;background:#fff;text-align:center;box-shadow:0 12px 36px #15243926}
-.parent-recovery-dialog h2{margin:0;color:#172333;font-size:17px;line-height:1.4}
-.parent-recovery-dialog p{margin:20px 0 25px;color:#7b818a;font-size:14px;line-height:1.7}
-.parent-recovery-actions{display:flex;gap:10px}
-.parent-recovery-actions button{flex:1;min-width:0;min-height:40px;padding:8px 12px;border:0;border-radius:22px;background:#eaf3ff;color:#428bff;font:inherit;font-size:15px;cursor:pointer}
-.parent-recovery-actions .parent-recovery-confirm{background:linear-gradient(105deg,#35a5ff,#626bff);color:#fff;font-weight:600}
+.parent-issue-list{display:grid;gap:11px}
+.parent-issue{width:100%;padding:17px 16px;border:1px solid #f1d9ce;border-radius:15px;background:#fffdfb;text-align:left;box-shadow:0 8px 20px #b98c5d12;cursor:pointer}
+.parent-issue strong{display:block;color:#493b36;font-size:15px;line-height:1.45}
+.parent-issue span{display:block;margin-top:7px;color:#9a7464;font-size:12px;line-height:1.5}
+.parent-issue:hover,.parent-issue:focus-visible{border-color:#ea9276;background:#fff8f3;outline:none}
+.parent-solution ol{margin:10px 0 0;padding-left:20px;color:#71839a;font-size:13px;line-height:1.8}
+.parent-solution li+li{margin-top:8px}
 .parent-wechat-guide .parent-recovery-phone{display:block;margin:15px 0 20px;color:#273b5c;font-size:25px;line-height:1.3;letter-spacing:.5px}
 .parent-wechat-guide ol{margin:0;padding-left:20px;color:#71839a;font-size:13px;line-height:1.75}
 .parent-wechat-guide li+li{margin-top:10px}
