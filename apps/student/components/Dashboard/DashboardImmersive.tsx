@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, Scroll, Sparkles, BarChart2, Trophy, Coins, SmilePlus, ChevronDown, Zap, Timer, Crown, Medal, TrendingUp, Activity, Clock, Rocket, AlertCircle, X, Star, ArrowUp, ChevronRight, ChevronLeft, Brain, Telescope, ArrowRight, Lock, Heart, BadgeCheck, PiggyBank, ClipboardCheck, BookOpen } from 'lucide-react';
+import { Bell, Scroll, Sparkles, BarChart2, Trophy, Coins, SmilePlus, ChevronDown, Zap, Timer, Crown, Medal, TrendingUp, Activity, Clock, Rocket, AlertCircle, X, Star, ArrowUp, ChevronRight, ChevronLeft, Brain, Telescope, ArrowRight, Lock, Heart, BadgeCheck, PiggyBank, ClipboardCheck, BookOpen, Headphones } from 'lucide-react';
+import { EnglishSpeaking } from '../EnglishSpeaking/EnglishSpeaking';
 import { TaskStream } from './TaskStream';
 import { DiscoveryFullPage } from './DiscoveryFullPage';
 import { StudentNotificationRail } from './StudentNotificationRail';
@@ -293,7 +294,7 @@ const LeagueSparsePanel: React.FC<{
 );
 
 type HomeRailEntry = {
-  id: HomeRailTool;
+  id: HomeRailTool | 'english-speaking';
   label: string;
   subtitle: string;
   Icon: React.ComponentType<{ size?: number; className?: string }>;
@@ -301,6 +302,17 @@ type HomeRailEntry = {
   iconGradient: string;
   buttonShadow: string;
   iconShadow: string;
+};
+
+const ENGLISH_SPEAKING_ENTRY: HomeRailEntry = {
+  id: 'english-speaking',
+  label: '英语听说',
+  subtitle: '听力训练，开口表达',
+  Icon: Headphones,
+  borderColor: '#BAE6FD',
+  iconGradient: 'linear-gradient(135deg, #7DD3FC 0%, #0EA5E9 100%)',
+  buttonShadow: '0 6px 18px rgba(14,165,233,0.16)',
+  iconShadow: '0 3px 10px rgba(14,165,233,0.35)',
 };
 
 const JUNIOR_HOME_RAIL: HomeRailEntry[] = [
@@ -422,7 +434,8 @@ export const DashboardImmersive: React.FC<DashboardImmersiveProps> = ({
   const isNewbiePersona = userPersona === 'newbie';
   const isPreL1 = userLevel < 1;
   const isJuniorStudent = isJuniorGrade(userGrade || '', schoolSystem as UiSchoolSystem);
-  const homeRightEntries = isJuniorStudent ? JUNIOR_HOME_RAIL : ELEMENTARY_HOME_RAIL;
+  const homeRightEntries = [...(isJuniorStudent ? JUNIOR_HOME_RAIL : ELEMENTARY_HOME_RAIL), ENGLISH_SPEAKING_ENTRY];
+  const [englishSpeakingOpen, setEnglishSpeakingOpen] = useState(false);
   const [activePanel, setActivePanel] = useState<'tasks' | 'league' | 'stats' | 'tutor' | 'discovery_full' | null>(null);
   const [worldLockDialogOpen, setWorldLockDialogOpen] = useState(false);
   const [worldLockToast, setWorldLockToast] = useState(false);
@@ -1431,7 +1444,10 @@ export const DashboardImmersive: React.FC<DashboardImmersiveProps> = ({
               key={entry.id}
               type="button"
               aria-label={entry.label}
-              onClick={() => onOpenHomeTool?.(entry.id)}
+              onClick={() => {
+                if (entry.id === 'english-speaking') setEnglishSpeakingOpen(true);
+                else onOpenHomeTool?.(entry.id);
+              }}
               className="pointer-events-auto group flex w-full flex-row-reverse items-center justify-between gap-3 rounded-2xl border bg-white px-3 py-2.5 ring-1 ring-white transition-all duration-300 active:scale-[0.97]"
               style={{ borderColor: entry.borderColor, boxShadow: entry.buttonShadow }}
             >
@@ -2332,6 +2348,7 @@ export const DashboardImmersive: React.FC<DashboardImmersiveProps> = ({
           document.body
       )}
 
+      {englishSpeakingOpen && createPortal(<EnglishSpeaking onClose={() => setEnglishSpeakingOpen(false)} />, document.getElementById('app-viewport') || document.body)}
       {worldLockToast && !worldLockDialogOpen && (
         <div role="status" className="pointer-events-none absolute inset-x-0 top-24 z-[520] flex justify-center px-4">
           <div className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-xl">万象视界已被老师锁定，暂时无法进入</div>
