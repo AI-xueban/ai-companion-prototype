@@ -76,9 +76,10 @@ assert.equal(securityContext.stage, 'teacherLogin');
 const parentSource = readFileSync(new URL('./parent-prototype.js', import.meta.url), 'utf8')
   .replace('render, start, scenario,', 'inspect: () => JSON.parse(JSON.stringify(state)), render, start, scenario,');
 const storage = new Map();
+const reviewUi = Object.fromEntries(['parent-review-context','parent-review-steps','parent-review-actions','parent-review-detail'].map(id => [id, { innerHTML: '' }]));
 const context = {
   window: {}, app: { innerHTML: '' }, URLSearchParams, location: { search: '?review=1' },
-  document: { getElementById: () => null, querySelector: () => null, querySelectorAll: () => [] },
+  document: { getElementById: id => reviewUi[id] ?? null, querySelector: () => null, querySelectorAll: () => [] },
   localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },
   syncReview() {}, setTimeout: () => 1, clearTimeout() {}, setInterval: () => 1, clearInterval() {},
   learningPrototype: { resetDetail() {}, renderParent: () => '学习详情' },
@@ -171,7 +172,8 @@ assert.equal(parent.inspect().families[0].members[0].relation, '妈妈');
 scheduled.shift()();
 assert.equal(parent.inspect().view, 'home');
 parent.scenario('invitationJourney');
-assert.match(context.app.innerHTML, /A 手机 · 主管理家长/);
+assert.doesNotMatch(context.app.innerHTML, /A 手机 · 主管理家长|B 手机 · 受邀家长|原型演示 · 角色切换/);
+assert.match(reviewUi['parent-review-context'].innerHTML, /A 手机 · 主管理家长/);
 parent.action('invite');
 parent.action('shareInvite');
 assert.equal(parent.inspect().view, 'shareInvite');
@@ -181,11 +183,13 @@ assert.equal(parent.inspect().inviteShareSheetOpen, true);
 assert.match(context.app.innerHTML, /微信分享示意/);
 parent.action('confirmInviteShare');
 assert.equal(parent.inspect().inviteShareSheetOpen, false);
-assert.match(context.app.innerHTML, /切换到 B 手机 · 打开邀请/);
+assert.doesNotMatch(context.app.innerHTML, /切换到 B 手机 · 打开邀请/);
+assert.match(reviewUi['parent-review-actions'].innerHTML, /切换到 B 手机 · 打开邀请/);
 parent.action('openInviteLink');
 assert.equal(parent.inspect().view, 'inviteLanding');
 assert.equal(parent.inspect().bound, false);
-assert.match(context.app.innerHTML, /B 手机 · 受邀家长/);
+assert.doesNotMatch(context.app.innerHTML, /B 手机 · 受邀家长/);
+assert.match(reviewUi['parent-review-context'].innerHTML, /B 手机 · 受邀家长/);
 assert.match(context.app.innerHTML, /接受邀请，申请绑定/);
 parent.action('beginRequest');
 parent.familyInput('name', '陈女士');
@@ -195,12 +199,14 @@ parent.setAgreement(true);
 parent.action('skipPhone');
 assert.equal(parent.inspect().view, 'pending');
 assert.equal(parent.inspect().families[0].members.some(member => member.name === '陈女士'), false);
-assert.match(context.app.innerHTML, /切换到 A 手机 · 查看申请/);
+assert.doesNotMatch(context.app.innerHTML, /切换到 A 手机 · 查看申请/);
+assert.match(reviewUi['parent-review-actions'].innerHTML, /切换到 A 手机 · 查看申请/);
 parent.action('switchManagerForDemo');
 parent.action('inviter');
 parent.action('approve');
 assert.equal(parent.inspect().families[0].members.some(member => member.name === '陈女士'), true);
-assert.match(context.app.innerHTML, /切换到 B 手机 · 查看结果/);
+assert.doesNotMatch(context.app.innerHTML, /切换到 B 手机 · 查看结果/);
+assert.match(reviewUi['parent-review-actions'].innerHTML, /切换到 B 手机 · 查看结果/);
 parent.action('switchRecipientForDemo');
 assert.equal(parent.inspect().view, 'pending');
 parent.action('home');

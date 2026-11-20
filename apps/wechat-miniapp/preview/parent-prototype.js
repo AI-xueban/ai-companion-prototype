@@ -56,16 +56,13 @@ window.parentPrototype = (() => {
   const actions = (...items) => `<div class="parent-actions">${items.join('')}</div>`;
   const card = (title, body) => `<section class="parent-card"><h2>${title}</h2><p>${body}</p></section>`;
   const notice = () => `${state.error ? `<p class="parent-error" role="alert">${esc(state.error)}</p>` : ''}${state.notice ? `<div class="parent-info">${esc(state.notice)}</div>` : ''}`;
-  const isInvitationReview = () => state.flow === 'invitationJourney' && new URLSearchParams(location.search).get('review') === '1';
-  const invitationRole = () => !isInvitationReview() ? '' : `<div class="parent-invitation-role"><strong>${isManager() ? 'A 手机 · 主管理家长' : 'B 手机 · 受邀家长'}</strong><span>邀请绑定交互演示</span></div>`;
-  const invitationHandoff = () => {
-    if (!isInvitationReview()) return '';
+  const invitationReviewHandoff = () => {
+    if (state.flow !== 'invitationJourney') return null;
     const application = family().application;
-    let next = null;
-    if (state.view === 'shareInvite' && state.inviteShareStarted) next = ['接下来由受邀家长操作', '切换到受邀家长手机，点击微信聊天中的邀请卡片。', '切换到 B 手机 · 打开邀请', 'openInviteLink'];
-    else if (state.view === 'pending' && application?.status === 'pending' && !isManager()) next = ['接下来由主管理家长操作', '受邀家长等待审核，切回主管理家长查看“绑定申请”。', '切换到 A 手机 · 查看申请', 'switchManagerForDemo'];
-    else if (state.view === 'familyManage' && application?.status === 'approved' && isManager()) next = ['接下来由受邀家长操作', '主管理家长已同意，切回受邀家长查看绑定结果。', '切换到 B 手机 · 查看结果', 'switchRecipientForDemo'];
-    return next ? `<section class="parent-invitation-handoff" aria-label="原型演示角色切换"><small>原型演示 · 角色切换</small><strong>${next[0]}</strong><p>${next[1]}</p>${button(next[2], next[3], 'secondary')}</section>` : '';
+    if (state.view === 'shareInvite' && state.inviteShareStarted) return ['接下来由受邀家长操作', 'B 在自己的微信聊天中打开邀请卡片。', '切换到 B 手机 · 打开邀请', 'openInviteLink'];
+    if (state.view === 'pending' && application?.status === 'pending' && !isManager()) return ['接下来由主管理家长操作', 'A 到“家长管理 → 绑定申请”查看待审核申请。', '切换到 A 手机 · 查看申请', 'switchManagerForDemo'];
+    if (state.view === 'familyManage' && application?.status === 'approved' && isManager()) return ['接下来由受邀家长操作', 'B 回到申请结果页，查看是否绑定成功。', '切换到 B 手机 · 查看结果', 'switchRecipientForDemo'];
+    return null;
   };
   const invitationShareSheet = () => !state.inviteShareSheetOpen ? '' : `<div class="parent-invitation-share-mask" role="dialog" aria-modal="true" aria-label="微信分享示意"><section class="parent-invitation-share-sheet"><small>微信分享示意</small><h2>发送家长邀请卡片</h2><p>在微信中选择需要绑定${esc(student.name)}的家长并发送。对方打开后仍须提交申请，审核通过后才能查看孩子内容。</p><div class="parent-invitation-share-preview">邀请你一起关注${esc(student.name)}的成长</div>${button('演示：完成发送', 'confirmInviteShare')}${button('取消', 'cancelInviteShare', 'secondary')}</section></div>`;
   const roleSwitchEntry = () => typeof canSwitchToTeacherRole === 'function' && canSwitchToTeacherRole() ? '<button class="parent-profile-switch" aria-label="切换到教师端" onclick="switchToTeacherRole()">切换教师端 ›</button>' : '';
@@ -418,22 +415,25 @@ window.parentPrototype = (() => {
     if (!context || !steps || !actions || !detail) return;
     const count = guardianCount();
     const actor = state.actor === 'inviter' ? '邀请方家长' : ['second','third','fourth','fifth','sixth','seventh'].includes(state.flow) ? '申请方家长' : '当前家长';
-    context.innerHTML = `<strong>${esc(flowNames[state.flow])}</strong><br>${actor}${['second','seventh'].includes(state.flow) ? ` · ${esc(student.name)} · 已关联 ${count}/${MAX_GUARDIANS_PER_STUDENT} 位` : ''}`;
+    context.innerHTML = state.flow === 'invitationJourney' ? `<strong>${esc(flowNames[state.flow])}</strong><br>当前画面：${isManager() ? 'A 手机 · 主管理家长' : 'B 手机 · 受邀家长'}<br>蓝色步骤与角色切换仅供原型评审` : `<strong>${esc(flowNames[state.flow])}</strong><br>${actor}${['second','seventh'].includes(state.flow) ? ` · ${esc(student.name)} · 已关联 ${count}/${MAX_GUARDIANS_PER_STUDENT} 位` : ''}`;
     const current = reviewStep();
     steps.innerHTML = (flowSteps[state.flow] || flowSteps.first).map((label, index) => `<li class="${index < current ? 'done' : index === current ? 'current' : ''}">${index + 1}. ${label}</li>`).join('');
     let available = '';
-    if (family().application?.status === 'pending' && !isManager()) {
+    const handoff = invitationReviewHandoff();
+    if (state.flow === 'invitationJourney' && handoff) {
+      available = `<div class="parent-review-handoff"><strong>${handoff[0]}</strong><p>${handoff[1]}</p><button onclick="parentPrototype.action('${handoff[3]}')">${handoff[2]} →</button></div>`;
+    } else if (state.flow !== 'invitationJourney' && family().application?.status === 'pending' && !isManager()) {
       available += '<button onclick="parentPrototype.familyReview(&quot;manager&quot;)">切换主管理家长审核 →</button>';
     }
-    if(isManager() && state.view==='shareInvite' && state.inviteShareStarted) available += '<button onclick="parentPrototype.action(&quot;openInviteLink&quot;)">切换到受邀家长手机 →</button>';
-    if(isManager() && family().application) available += '<button onclick="parentPrototype.familyReview(&quot;recipient&quot;)">切换申请家长查看结果 →</button>';
-    if(!isManager() && family().primaryId && family().application?.status!=='pending') available += '<button onclick="parentPrototype.familyReview(&quot;manager&quot;)">切换主管理家长 →</button>';
+    if(state.flow !== 'invitationJourney' && isManager() && state.view==='shareInvite' && state.inviteShareStarted) available += '<button onclick="parentPrototype.action(&quot;openInviteLink&quot;)">切换到受邀家长手机 →</button>';
+    if(state.flow !== 'invitationJourney' && isManager() && family().application) available += '<button onclick="parentPrototype.familyReview(&quot;recipient&quot;)">切换申请家长查看结果 →</button>';
+    if(state.flow !== 'invitationJourney' && !isManager() && family().primaryId && family().application?.status!=='pending') available += '<button onclick="parentPrototype.familyReview(&quot;manager&quot;)">切换主管理家长 →</button>';
     if (state.view === 'wechatGuide') available += '<button onclick="parentPrototype.action(\'continueNewWechat\')">模拟从新微信继续换绑 →</button>';
     if (state.flow === 'otherDevice' && state.view === 'home') available += '<button onclick="parentPrototype.action(\'showOriginalDevice\')">查看原设备的下线提示 →</button>';
     actions.innerHTML = available || '<p class="parent-review-hint">请在手机画面继续操作，进度会自动更新。</p>';
     detail.innerHTML = state.flow === 'otherDevice' ? '演示条件：两台设备使用同一微信。新设备确认登录后，原设备会话失效。' : '演示验证码：123456';
   }
-  function render() { if (typeof app === 'undefined') return; family(); if(state.view==='home' && (!state.bound || !family().members.some(m=>m.id===state.currentId))) state.view=family().application?.id===state.currentId?'pending':'entry'; const name = state.view in views ? state.view : 'entry'; const taskNavigation = name === 'home' && state.homeTab === 'homework' ? homeworkPrototype.getParentNavigation(state.activeStudent) : null; const detail = Boolean(taskNavigation?.detail); const title = detail ? taskNavigation.title : name === 'home' ? ({ learning: '学习报告', homework: '作业', mine: '我的' })[state.homeTab] : ({ entry: '家长登录', recoveryIssues: '登录遇到问题', lostPhoneHelp: '更换手机号', schoolHelp: '学校协助找回', newWechat: '确认使用当前微信', childDetail: '孩子绑定', scanning: '扫描二维码', confirm: '确认孩子', firstGuardianForm: '填写家长信息', binding: '确认孩子', bindSuccess: '确认孩子', phone: '手机号验证', deviceConfirm: '确认登录', deviceKicked: '登录已退出' })[name] || '家长服务'; app.innerHTML = `<main class="screen parent-screen${name === 'entry' ? ' parent-login-screen' : ''}">${bar(title, detail)}${exceptionPanel()}<section class="parent-main${name === 'home' && !detail ? ' parent-main--tabbed' : ''}">${invitationRole()}${invitationHandoff()}${views[name]()}</section>${name === 'home' && !detail ? tabBar() : ''}${childPickerDialog()}${agreementDialog()}${wechatAuthSheet()}${invitationShareSheet()}</main>`; syncReview(); syncParentReview(); updateCodeButton(); if(state.exceptionMenuOpen)document.querySelector('.parent-exception-close')?.focus(); }
+  function render() { if (typeof app === 'undefined') return; family(); if(state.view==='home' && (!state.bound || !family().members.some(m=>m.id===state.currentId))) state.view=family().application?.id===state.currentId?'pending':'entry'; const name = state.view in views ? state.view : 'entry'; const taskNavigation = name === 'home' && state.homeTab === 'homework' ? homeworkPrototype.getParentNavigation(state.activeStudent) : null; const detail = Boolean(taskNavigation?.detail); const title = detail ? taskNavigation.title : name === 'home' ? ({ learning: '学习报告', homework: '作业', mine: '我的' })[state.homeTab] : ({ entry: '家长登录', recoveryIssues: '登录遇到问题', lostPhoneHelp: '更换手机号', schoolHelp: '学校协助找回', newWechat: '确认使用当前微信', childDetail: '孩子绑定', scanning: '扫描二维码', confirm: '确认孩子', firstGuardianForm: '填写家长信息', binding: '确认孩子', bindSuccess: '确认孩子', phone: '手机号验证', deviceConfirm: '确认登录', deviceKicked: '登录已退出' })[name] || '家长服务'; app.innerHTML = `<main class="screen parent-screen${name === 'entry' ? ' parent-login-screen' : ''}">${bar(title, detail)}${exceptionPanel()}<section class="parent-main${name === 'home' && !detail ? ' parent-main--tabbed' : ''}">${views[name]()}</section>${name === 'home' && !detail ? tabBar() : ''}${childPickerDialog()}${agreementDialog()}${wechatAuthSheet()}${invitationShareSheet()}</main>`; syncReview(); syncParentReview(); updateCodeButton(); if(state.exceptionMenuOpen)document.querySelector('.parent-exception-close')?.focus(); }
   function tab(name) { window.homeworkTutorUI?.suspend(); childPickerOpen = false; if (!state.bound || !['learning', 'homework', 'mine'].includes(name)) return; state.homeTab = name; state.view = 'home'; clearMessage(); render(); }
   function selectChild(index) { if (!state.boundStudents.includes(index)) return; childPickerOpen = false; if (state.activeStudent !== index) { if(homeworkPrototype.resetParentView()===false)return; learningPrototype.resetDetail(); } chooseStudent(index); if (state.homeTab === 'mine') state.homeTab = 'learning'; save(); render(); }
   function openChildDetail(index) { if (!state.boundStudents.includes(index)) return; chooseStudent(index); state.homeTab = 'mine'; state.view = 'childDetail'; save(); render(); }
