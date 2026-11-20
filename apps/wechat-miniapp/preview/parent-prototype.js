@@ -59,9 +59,10 @@ window.parentPrototype = (() => {
   const invitationReviewHandoff = () => {
     if (state.flow !== 'invitationJourney') return null;
     const application = family().application;
-    if (state.view === 'familyManage' && application?.status === 'approved' && isManager()) return ['接下来由受邀家长操作', 'B 回到申请结果页，查看是否绑定成功。', '切换到 B 手机 · 查看结果', 'switchRecipientForDemo'];
+    if (state.view === 'familyManage' && application?.status === 'approved' && isManager()) return ['绑定成功通知 · 发给 B', 'B 点击微信订阅消息后，打开这条申请的绑定结果；有效关联成立后才能查看孩子内容。', '模拟 B 点击绑定成功通知', 'switchRecipientForDemo'];
+    if (state.view === 'familyManage' && application?.status === 'rejected' && isManager()) return ['申请拒绝通知 · 发给 B', 'B 点击微信订阅消息后，打开这条申请的拒绝结果；仍不能查看孩子内容。', '模拟 B 点击申请拒绝通知', 'openRejectionNoticeForDemo'];
     if (state.view === 'familyManage' && state.inviteShareStarted && isManager()) return ['微信分享由系统完成', '已调起微信会话列表。评审时假定 A 在微信发送邀请，接下来由 B 打开聊天中的卡片。', '切换到 B 手机 · 打开邀请', 'openInviteLink'];
-    if (state.view === 'pending' && application?.status === 'pending' && !isManager()) return ['接下来由主管理家长操作', 'A 到“家长管理 → 绑定申请”查看待审核申请。', '切换到 A 手机 · 查看申请', 'switchManagerForDemo'];
+    if (state.view === 'pending' && application?.status === 'pending' && !isManager()) return ['绑定申请通知 · 发给 A', `${esc(application.name)}申请绑定${esc(student.name)}。A 点击微信订阅消息后，直接打开这条申请的审核页。`, '模拟 A 点击绑定申请通知', 'openManagerRequestNoticeForDemo'];
     return null;
   };
   const inviteConfirmDialog = () => !state.inviteConfirmOpen ? '' : `<div class="family-invite-confirm-mask" role="presentation"><section class="family-invite-confirm-dialog" role="dialog" aria-modal="true" aria-label="确认邀请家长绑定"><h2>确认邀请家长绑定</h2><p>${esc(student.school)}<br>${esc(student.className)} ${esc(student.name)}吗？</p><div class="family-invite-confirm-actions">${button('取消','cancelInvite','secondary')}${button('邀请并分享','requestInviteShare')}</div></section></div>`;
@@ -225,7 +226,9 @@ window.parentPrototype = (() => {
     if(name==='requestInviteShare') {if(!state.inviteConfirmOpen||capacityFull())return true;f.inviteStatus='valid';f.inviteCreated=true;state.inviteConfirmOpen=false;state.inviteShareStarted=true;state.view='familyManage';save();render();return true;}
     if(name==='openInviteLink') {if(state.view!=='familyManage'||!state.inviteShareStarted)return true;state.inviteShareStarted=false;familyReview('newRecipient');return true;}
     if(name==='switchManagerForDemo') {if(state.view==='pending'&&appRequest?.status==='pending')familyReview('manager');return true;}
+    if(name==='openManagerRequestNoticeForDemo') {if(state.view==='pending'&&appRequest?.status==='pending'){const requestId=appRequest.id;familyReview('manager');familySelectRequest(requestId);}return true;}
     if(name==='switchRecipientForDemo') {if(state.view==='familyManage'&&appRequest?.status==='approved')familyReview('recipient');return true;}
+    if(name==='openRejectionNoticeForDemo') {if(state.view==='familyManage'&&appRequest?.status==='rejected')familyReview('recipient');return true;}
     if(name==='revokeInvite') {f.inviteStatus='revoked';f.inviteCreated=false;state.inviteShareStarted=false;Object.values(f.applications).filter(r=>r.status==='pending').forEach(r=>r.status='revoked');state.view='familyManage';state.notice='邀请已撤回，未完成的申请已失效。';save();render();return true;}
     if(name==='beginRequest') {
       if(f.inviteStatus!=='valid'){state.view='inviteUnavailable';render();return true;}
@@ -356,7 +359,7 @@ window.parentPrototype = (() => {
     twoChildren: ['两个孩子均已关联', '切换孩子查看学情', '保留当前孩子查看作业'],
     otherDevice: ['新设备发现账号已在另一设备登录', '确认继续登录', '新设备进入，原设备退出', '原设备看到下线提示'],
     second: ['打开邀请卡片', '填写本人信息（手机号可跳过）', '等待主管理家长审核', '主管理家长同意或拒绝', '申请方查看结果'],
-    invitationJourney: ['A 手机确认并发起微信分享', 'B 手机打开并接受邀请', 'B 手机提交申请并等待', 'A 手机审核绑定申请', 'B 手机查看结果与孩子内容'],
+    invitationJourney: ['A 手机确认并发起微信分享', 'B 手机打开并接受邀请', 'B 手机提交申请并等待', 'A 点击申请通知后审核', 'B 点击结果通知后查看结果'],
     third: ['打开邀请卡片','填写本人信息（手机号可跳过）','等待主管理家长审核','主管理家长同意或拒绝','申请方查看结果'],
     fifth: ['打开邀请卡片','填写本人信息（手机号可跳过）','等待主管理家长审核','主管理家长同意或拒绝','申请方查看结果'],
     sixth: ['打开邀请卡片','填写本人信息（手机号可跳过）','等待主管理家长审核','主管理家长同意或拒绝','申请方查看结果'],
@@ -374,8 +377,8 @@ window.parentPrototype = (() => {
     if (flow === 'invitationJourney') {
       const status = family().application?.status;
       if (view === 'home' && !isManager()) return 4;
-      if (view === 'pending' && status === 'approved') return 4;
-      if (view === 'familyManage' && status === 'approved') return 4;
+      if (view === 'pending' && ['approved','rejected'].includes(status)) return 4;
+      if (view === 'familyManage' && ['approved','rejected'].includes(status)) return 4;
       if (isManager() && status === 'pending') return 3;
       if (view === 'pending' && status === 'pending') return 2;
       if (['inviteLanding','requestForm','phone'].includes(view)) return 1;
