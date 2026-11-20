@@ -104,7 +104,6 @@ export function guardianQrSvg(token: string): string {
 }
 
 const safeName = (name: string) => name.replace(/[\\/:*?"<>|]/g, '_').trim() || '未命名';
-const csvCell = (value: string) => `"${value.replace(/"/g, '""')}"`;
 const download = (file: Blob, name: string) => {
   const url = URL.createObjectURL(file);
   const anchor = document.createElement('a');
@@ -140,21 +139,62 @@ export async function downloadGuardianCard(student: GuardianStudent, school: str
   download(await makeGuardianCard(student, school), `${safeName(student.className)}-${safeName(student.name)}-${safeName(student.account)}-家长绑定卡.png`);
 }
 
-export async function downloadGuardianBundle(students: GuardianStudent[], school: string, label: string, onProgress: (count: number) => void, isCancelled: () => boolean): Promise<void> {
-  if (!students.length) throw new Error('当前范围没有可下载的学生');
+const xml = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const bytes = (value: string) => new TextEncoder().encode(value);
+const declaration = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+const packageRels = 'http://schemas.openxmlformats.org/package/2006/relationships';
+const officeRels = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+
+async function qrPng(token: string): Promise<Uint8Array> {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 148;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('浏览器无法生成绑定码图片');
+  context.fillStyle = '#fff'; context.fillRect(0, 0, 148, 148);
+  context.fillStyle = '#0f172a';
+  createGuardianQrMatrix(token).forEach((row, y) => row.forEach((on, x) => { if (on) context.fillRect((x + 4) * 4, (y + 4) * 4, 4, 4); }));
+  const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((result) => result ? resolve(result) : reject(new Error('绑定码图片生成失败')), 'image/png'));
+  return new Uint8Array(await blob.arrayBuffer());
+}
+
+async function classWorkbook(className: string, students: GuardianStudent[], onStudent: () => void, isCancelled: () => boolean): Promise<Blob> {
   const files: { name: string; data: Uint8Array }[] = [];
-  const rows = ['班级,学生姓名,学号,卡片文件'];
+  const add = (name: string, content: string) => files.push({ name, data: bytes(declaration + content) });
+  const cell = (column: string, row: number, value: string) => `<c r="${column}${row}" t="inlineStr"><is><t>${xml(value)}</t></is></c>`;
+  const rows = [`<row r="1" ht="30" customHeight="1">${['班级名称', '学生姓名', '学生编号', '家长绑定码'].map((title, index) => cell('ABCD'[index], 1, title)).join('')}</row>`];
+  const anchors: string[] = [];
   for (const [index, student] of students.entries()) {
     if (isCancelled()) throw new Error('已取消生成');
-    const grade = student.className.match(/^(.+?年级)/)?.[1] ?? '其他年级';
-    const path = `${safeName(grade)}/${safeName(student.className)}/${safeName(student.name)}-${safeName(student.account)}-家长绑定卡.png`;
-    files.push({ name: path, data: new Uint8Array(await (await makeGuardianCard(student, school)).arrayBuffer()) });
-    rows.push([student.className, student.name, student.account, path].map(csvCell).join(','));
-    onProgress(index + 1);
+    if (!student.guardianToken) throw new Error(`${student.name}尚未生成绑定码`);
+    const row = index + 2;
+    rows.push(`<row r="${row}" ht="118" customHeight="1">${cell('A', row, className)}${cell('B', row, student.name)}${cell('C', row, student.account)}${cell('D', row, '')}</row>`);
+    files.push({ name: `xl/media/qr${index + 1}.png`, data: await qrPng(student.guardianToken) });
+    anchors.push(`<xdr:oneCellAnchor><xdr:from><xdr:col>3</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${index + 1}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="1410000" cy="1410000"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${index + 1}" name="${xml(student.name)}家长绑定码"/><xdr:cNvPicPr/></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId${index + 1}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1410000" cy="1410000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`);
+    onStudent();
     if (index % 10 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
   }
-  files.push({ name: '卡片索引.csv', data: new TextEncoder().encode(`\ufeff${rows.join('\r\n')}`) });
-  const archive = await createZipArchive(files, isCancelled);
+  add('[Content_Types].xml', `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>`);
+  add('_rels/.rels', `<Relationships xmlns="${packageRels}"><Relationship Id="rId1" Type="${officeRels}/officeDocument" Target="xl/workbook.xml"/></Relationships>`);
+  add('xl/workbook.xml', `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="${officeRels}"><sheets><sheet name="${xml(safeName(className).slice(0, 31))}" sheetId="1" r:id="rId1"/></sheets></workbook>`);
+  add('xl/_rels/workbook.xml.rels', `<Relationships xmlns="${packageRels}"><Relationship Id="rId1" Type="${officeRels}/worksheet" Target="worksheets/sheet1.xml"/></Relationships>`);
+  add('xl/worksheets/sheet1.xml', `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="${officeRels}"><dimension ref="A1:D${students.length + 1}"/><cols><col min="1" max="1" width="23" customWidth="1"/><col min="2" max="2" width="20" customWidth="1"/><col min="3" max="3" width="22" customWidth="1"/><col min="4" max="4" width="23" customWidth="1"/></cols><sheetData>${rows.join('')}</sheetData><drawing r:id="rId1"/></worksheet>`);
+  add('xl/worksheets/_rels/sheet1.xml.rels', `<Relationships xmlns="${packageRels}"><Relationship Id="rId1" Type="${officeRels}/drawing" Target="../drawings/drawing1.xml"/></Relationships>`);
+  add('xl/drawings/drawing1.xml', `<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="${officeRels}">${anchors.join('')}</xdr:wsDr>`);
+  add('xl/drawings/_rels/drawing1.xml.rels', `<Relationships xmlns="${packageRels}">${students.map((_, index) => `<Relationship Id="rId${index + 1}" Type="${officeRels}/image" Target="../media/qr${index + 1}.png"/>`).join('')}</Relationships>`);
+  return createZipArchive(files, isCancelled);
+}
+
+export async function downloadGuardianBundle(students: GuardianStudent[], school: string, label: string, onProgress: (count: number) => void, isCancelled: () => boolean): Promise<void> {
+  if (!students.length) throw new Error('当前范围没有可下载的学生');
+  const groups = [...new Set(students.map((student) => student.className))].sort((a, b) => a.localeCompare(b, 'zh-CN'));
+  const files: { name: string; data: Uint8Array }[] = [];
+  let completed = 0;
+  for (const className of groups) {
+    if (isCancelled()) throw new Error('已取消生成');
+    const members = students.filter((student) => student.className === className).sort((a, b) => a.account.localeCompare(b.account, 'zh-CN'));
+    const workbook = await classWorkbook(className, members, () => onProgress(++completed), isCancelled);
+    files.push({ name: `${safeName(className)}-家长绑定码.xlsx`, data: new Uint8Array(await workbook.arrayBuffer()) });
+  }
   if (isCancelled()) throw new Error('已取消生成');
-  download(archive, `${safeName(school)}-${safeName(label)}-家长绑定码.zip`);
+  download(await createZipArchive(files, isCancelled), `${safeName(school)}-${safeName(label)}-家长绑定码.zip`);
 }
