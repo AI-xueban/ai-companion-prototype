@@ -46,7 +46,7 @@ native.retryHomeworkNotification(task.id,teacher.userId,true);assert.equal(nativ
 native.retryHomeworkNotification(task.id,teacher.userId);assert.equal(native.getHomeworkTask(task.id).notification.status,'pending');
 
 // Native teacher: custom title, mixed per-class recipients and time edits.
-const t=page('teacher/homework');t.data.scope=view;t.data.readOnly=false;t.data.draft={...t.data.draft,...input(),titleCustomized:true,classIds:['c1','c2'],recipientModes:{c1:'all',c2:'selected'},targetStudentIds:[]};
+const t=page('teacher/homework');t.data.mode='compose';t.data.scope=view;t.data.readOnly=false;t.data.draft={...t.data.draft,...input(),titleCustomized:true,classIds:['c1','c2'],recipientModes:{c1:'all',c2:'selected'},targetStudentIds:[]};
 // Draft lifecycle: another draft retains the first, storage failure cannot replace it.
 const drafts=page('teacher/homework');drafts.data.scope=view;drafts.data.readOnly=false;drafts.startCompose();drafts.changeTitle(event({},'第一份草稿'));drafts.newTeacherDraft();
 assert.equal(drafts.data.otherDrafts.length,1);assert.equal(drafts.data.otherDrafts[0].title,'第一份草稿');
@@ -69,7 +69,7 @@ for(const [name,controller] of [['teacher/homework',t],['guardian/homework',page
   for(const binding of template.matchAll(/(?:bind(?:tap|change|input|blur|load|touchstart|touchend|touchcancel)|catchtap|bind:[\w-]+)="([a-zA-Z]\w*)"/g))assert.equal(typeof controller[binding[1]],'function',`${name}: missing handler ${binding[1]}`);
 }
 t.refreshDraft();assert.equal(t.data.draft.title,'自定义多页任务');t.previewPublish();assert.match(t.data.composeError,/至少选择一人/);
-const c2=roster.DEMO_STUDENTS.find(s=>s.classId==='c2').id;t.data.draft.targetStudentIds=[c2];t.data.recognitionStale=false;t.previewPublish();assert.equal(t.data.previewTargetCount,roster.DEMO_STUDENTS.filter(s=>s.classId==='c1').length+1);assert.match(t.data.previewStudents,/部分 · 1 人/);
+const c2=roster.DEMO_STUDENTS.find(s=>s.classId==='c2').id;t.data.draft.targetStudentIds=[c2];t.data.recognitionStale=false;t.previewPublish();assert.equal(t.data.previewTargetCount,roster.DEMO_STUDENTS.filter(s=>s.classId==='c1').length+1);assert.equal(t.data.previewOpen,false);assert.equal(t.data.classes.find(row=>row.id==='c2').count,1);
 t.data.draft.supplementTouched=true;t.data.draft.submitDeadline=day(15);t.data.datePickerTarget='deadline';t.data.datePickerValue=day(4);t.confirmDatePicker();assert.equal(t.data.draft.submitDeadline,day(15));
 t.data.previewOpen=true;t.data.draft.deadline=day(-1);t.confirmPublish();assert.equal(t.data.previewOpen,false);assert.match(t.data.composeError,/截止时间已过/);
 
@@ -396,11 +396,11 @@ console.log('PASS question entry: all/correct/wrong/pending scope, stale-roster 
 
 // Confirmed decisions: actual teacher controller accepts audio in both type-setting modes.
 profile=teacher;view={view:'subject',classId:'c1',period:'7d',grade:'all'};
-const audioTeacher=page('teacher/homework');audioTeacher.data.scope=view;audioTeacher.data.readOnly=false;
+const audioTeacher=page('teacher/homework');audioTeacher.data.mode='compose';audioTeacher.data.scope=view;audioTeacher.data.readOnly=false;
 audioTeacher.data.draft={...audioTeacher.data.draft,...input(),title:'原生录音发布验收',titleCustomized:true,recipientModes:{c1:'all'},attachments:[{id:'ready-document',name:'要求.pdf',path:'/saved/要求.pdf',type:'file',size:10,source:'微信',uploadState:'complete',previewState:'pending'}]};
 audioTeacher.selectUniformType(event({type:'audio'}));assert.equal(audioTeacher.data.draft.items[0].submitType,'audio');assert.equal(audioTeacher.data.draft.items[0].gradingEnabled,false);
 audioTeacher.selectItemType(event({index:0,type:'photo'}));audioTeacher.data.draft.items[0].gradingEnabled=true;audioTeacher.selectItemType(event({index:0,type:'audio'}));assert.equal(audioTeacher.data.draft.items[0].gradingEnabled,false);
-audioTeacher.previewPublish();assert.equal(audioTeacher.data.previewOpen,true);assert.doesNotMatch(audioTeacher.data.previewItems[0].type,/自动批改/);audioTeacher.confirmPublish();assert.equal(audioTeacher.data.mode,'success');
+audioTeacher.previewPublish();assert.equal(audioTeacher.data.previewOpen,false);assert.equal(audioTeacher.data.draftItems[0].gradingEnabled,false);audioTeacher.confirmPublish();assert.equal(audioTeacher.data.mode,'success');
 const audioNative=native.listHomeworkTasks().find(task=>task.title==='原生录音发布验收');assert.equal(audioNative.items[0].submitType,'audio');assert.equal(audioNative.attachments[0].previewState,'pending');
 p.setScope({view:'subject',classIds:['c1','c2'],teacherId:teacher.userId});p.compose();p.setField('description','朗读课文并提交录音');p.applyRecognition();p.setUniformType('audio');p.setTitle('浏览器录音发布验收');p.quickDeadline(2);p.nextCompose();p.nextCompose();p.publish();const audioWeb=p.inspect().tasks.find(task=>task.title==='浏览器录音发布验收');assert.equal(audioWeb.items[0].type,'audio');assert.equal(audioWeb.items[0].gradingEnabled,false);assert.equal(audioWeb.items[0].required,true);
 console.log('PASS confirmed audio controllers: browser/native teacher publishing, uniform/per-item choices, no grading, all-required and READY-original/pending-preview publish.');

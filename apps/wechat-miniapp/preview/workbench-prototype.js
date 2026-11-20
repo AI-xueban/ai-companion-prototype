@@ -16,6 +16,24 @@ window.workbenchPrototype = (() => {
   let focusStudentId = '';
   let focusScroll = 0;
   let subjectPeriod = '7d';
+  let correctionRoute = null, correctionTrail = [], correctionLegacy = false;
+  const correctionHome = () => state.tab === 'overview' && !state.studentId && !issueBrowse && !focusPage;
+  function correctionModel() {
+    const full = learning.queryLearning('30d','all',state.view === 'subject' ? learningSubject : 'all','all',true);
+    const ids = classIds(), allowed = new Set(full.roster.filter(s=>ids.includes(s.classId)).map(s=>s.id));
+    const source = window.correctionLearning.correctionSource({...full,roster:full.roster.filter(s=>allowed.has(s.id)),activities:full.activities.filter(a=>allowed.has(a.studentId)),answers:full.answers.filter(a=>allowed.has(a.studentId))},state.view==='subject'?learningSubject:'all');
+    return window.correctionLearning.correctionPage(source,{role:state.view,subject:state.view==='subject'?learningSubject:'all',days:parseInt(state.view==='subject'?subjectPeriod:state.period)},correctionRoute||{page:'home'});
+  }
+  const correctionAction = route => `workbenchPrototype.correctionGo(${esc(JSON.stringify(route))})`;
+  function renderCorrection() {
+    const m=correctionModel(), base=correctionRoute||{page:'home'};
+    const row=x=>`<${x.route?'button':'div'} class="cl-row" ${x.route?`onclick="${correctionAction(x.route)}"`:''}><span><strong>${esc(x.title)}</strong>${x.detail?`<small>${esc(x.detail)}</small>`:''}</span><span class="cl-value ${esc(x.state||'')}">${esc(x.value||'')}${x.route?' ›':''}</span></${x.route?'button':'div'}>`;
+    const cards=m.cards.map(c=>`<section class="cl-card ${c.layout==='entries'?'cl-entries':''}">${c.title || c.action ? `<div class="cl-head"><h3>${esc(c.title)}</h3>${c.action?`<button onclick="${correctionAction(c.summary?{...base,page:'explain'}:c.route)}">${esc(c.action)}${c.summary?' ⓘ':' ›'}</button>`:''}</div>` : ''}${c.summary?`<button class="cl-summary" aria-label="查看学生订正情况" onclick="${correctionAction(c.route)}"><span>错题<b>${c.summary.questions}</b>道</span><span>涉及<b>${c.summary.people}</b>人</span><span>有订正<b>${c.summary.submitted}</b>人</span><span>全部改对<b>${c.summary.fixed}</b>人</span><i>›</i></button>`:''}${c.text?`<p class="cl-text">${esc(c.text)}</p>`:''}${c.states?`<div class="cl-states">${c.states.map(s=>`<button class="${s.id} ${s.active?'active':''}" onclick="${correctionAction(s.route)}"><b>${s.value}<small> 人</small></b><span>${s.label}</span></button>`).join('')}</div>`:''}${c.rows.map(row).join('')}${!c.rows.length&&!c.text&&!c.summary&&!c.states&&!c.note?'<p class="cl-muted">当前范围暂无记录</p>':''}${c.note?`<p class="cl-muted">${esc(c.note)}</p>`:''}</section>`);
+    // Filters/search sit immediately before the result list, after the state panel.
+    const controls=(m.filters.length?`<div class="cl-filters">${m.filters.map(f=>`<button class="${f.active?'active':''}" onclick="${correctionAction(f.route)}">${esc(f.label)}</button>`).join('')}</div>`:'')+(m.search?`<input class="cl-search" aria-label="按姓名查找学生" placeholder="按姓名查找学生（输入后回车）" value="${esc(m.query)}" onchange="workbenchPrototype.correctionSearch(this.value)">`:'');
+    if(controls)cards.splice(Math.max(1,cards.length-1),0,controls);
+    return `<div class="cl-learning">${!m.home?`<p class="cl-muted">${esc(m.scope)}</p>`:''}${m.week?`<div class="cl-week"><button aria-label="上一周" onclick="${correctionAction(m.week.previous)}">‹</button><strong>${esc(m.week.label)}</strong><button aria-label="下一周" ${m.week.next?`onclick="${correctionAction(m.week.next)}"`:'disabled'}>›</button></div>`:''}<div class="cl-period"><span title="${esc(m.date)}">${esc(m.compactDate)}</span><div>${m.periods.map(d=>`<button class="${d===m.days?'active':''}" onclick="workbenchPrototype.correctionPeriod(${d})">${d===1?'今天':'近'+d+'天'}</button>`).join('')}</div></div><p class="cl-snapshot">${esc(m.snapshot)}</p>${cards.join('')}<div class="cl-footer">${m.footer.map(row).join('')}</div></div>`;
+  }
   let personalRange = null, personalFilter = 'all', personalTopic = 'all', personalExpanded = [];
   let personalDatesOpen = false, personalDraftStart = '', personalDraftEnd = '', personalDateError = '';
   let studentOriginScroll = 0;
@@ -70,12 +88,12 @@ window.workbenchPrototype = (() => {
     const grades = state.view === 'school' ? `<div class="wb-filter-row"><span class="wb-filter-label">年级</span><div class="wb-filter-options">${[['all','全校'],['7','七年级'],['8','八年级']].map(([id,label]) => chip(label, `grade('${id}')`, state.grade === id)).join('')}</div></div>` : '';
     const classChoices = state.view === 'school' ? chip('全部班级', "class('all')", state.classId === 'all') : '';
     const classRow = state.view === 'homeroom' ? '' : `<div class="wb-filter-row"><span class="wb-filter-label">班级</span><div class="wb-filter-options wb-class-options">${classChoices}${classes().map(item => chip(item.name, `class('${item.id}')`, state.classId === item.id)).join('')}</div></div>`;
-    const period = domain === 'learning' && (state.view === 'school' || (state.view !== 'homeroom' && !['overview', 'week'].includes(state.tab))) ? learningPeriodControl() : '';
+    const period = domain === 'learning' && ((state.view === 'school' && state.tab !== 'overview') || (state.view !== 'homeroom' && !['overview', 'week'].includes(state.tab))) ? learningPeriodControl() : '';
     const selectedScope = state.view === 'school' ? state.classId === 'all' ? state.grade === 'all' ? '全校' : state.grade + '年级' : scopeName() : state.view === 'homeroom' ? '七年级(2)班' : domain === 'homework' ? scopeName() : `${scopeName()} · ${subjectName()}`;
     const scopeFilter = grades || classRow ? `<details class="wb-scope-details"><summary aria-label="调整查看范围，当前${esc(selectedScope)}"><span class="wb-scope-key">范围</span><strong>${esc(selectedScope)}</strong><span class="wb-chevron" aria-hidden="true"></span></summary><div class="wb-scope-options">${grades}${classRow}</div></details>` : `<div class="wb-scope-static"><span class="wb-scope-key">范围</span><strong>${esc(selectedScope)}</strong></div>`;
 
 
-    const controls = domain === 'homework' ? showControls ? `<div class="wb-condition-row wb-homework-toolbar"><div class="wb-homework-identity">${role||'<span>'+designation+'</span>'}</div>${state.view==='school'?'<div class="wb-homework-context"><span class="wb-readonly">只读</span>'+scopeFilter+'</div>':''}${state.view!=='school'?'<button class="hp-my-drafts-entry" onclick="homeworkPrototype.openTeacherDrafts()"><span class="hp-draft-entry-icon" aria-hidden="true"></span>我的草稿<span class="hp-draft-count">'+(window.homeworkPrototype?.getTeacherDraftCount?.()||0)+'</span><span aria-hidden="true">›</span></button>':''}</div>` : '' : state.studentId || focusPage || issueBrowse || isHomeroomRoster() || (state.view === 'subject' && state.tab === 'students') ? '' : isSubjectHome()
+    const controls = domain === 'learning' && correctionRoute && !correctionLegacy ? '' : domain === 'homework' ? showControls ? `<div class="wb-condition-row wb-homework-toolbar"><div class="wb-homework-identity">${role||'<span>'+designation+'</span>'}</div>${state.view==='school'?'<div class="wb-homework-context"><span class="wb-readonly">只读</span>'+scopeFilter+'</div>':''}${state.view!=='school'?'<button class="hp-my-drafts-entry" onclick="homeworkPrototype.openTeacherDrafts()"><span class="hp-draft-entry-icon" aria-hidden="true"></span>我的草稿<span class="hp-draft-count">'+(window.homeworkPrototype?.getTeacherDraftCount?.()||0)+'</span><span aria-hidden="true">›</span></button>':''}</div>` : '' : state.studentId || focusPage || issueBrowse || isHomeroomRoster() || (state.view === 'subject' && state.tab === 'students') ? '' : isSubjectHome()
       ? `<div class="wb-condition-row wb-learning-toolbar lr-preview-subject-role"><span class="ml-scope-label">任教学情 · 演示数据</span>${role}</div>${subjectScopePicker()}`
       : `<div class="wb-condition-row wb-learning-toolbar">${scopeFilter}${role}</div>${period ? `<div class="wb-condition-row">${period}</div>` : ''}`;
     const pageClass = domain === 'homework' ? ' wb-homework-page' : state.view === 'subject' ? ' wb-subject-learning' + ((isSubjectHome() || issueBrowse?.materialRoute) && !state.studentId ? ' ml-page' : '') : '';
@@ -86,7 +104,7 @@ window.workbenchPrototype = (() => {
   const reportLink = (label, action, detail = '') => `<button class="lr-preview-link" onclick="workbenchPrototype.${action}"><span>${label}</span><b>${esc(detail)} ›</b></button>`;
   const reportMetrics = rows => `<div class="lr-preview-metrics">${rows.map(([value,label])=>`<div><strong>${esc(value)}</strong><small>${label}</small></div>`).join('')}</div>`;
   const weekReport = () => learning.reportWeeklyComparison(report('all','7d'));
-  const clearDetails = () => { focusPage = null; issueBrowse = null; rosterReturn = null; rosterPeriodOverride = ''; rosterSubject = ''; rosterName = ''; rosterFrom = 'overview'; rosterFilter = 'all'; focusStudentId = ''; focusScroll = 0; return Object.assign(state,{ studentId:'', knowledge:'', questionId:'', activityId:'', followup:false, pairId:'', weekEvidence:false, dayQuestion:'' }); };
+  const clearDetails = () => { correctionRoute=null; correctionTrail=[]; correctionLegacy=false; focusPage = null; issueBrowse = null; rosterReturn = null; rosterPeriodOverride = ''; rosterSubject = ''; rosterName = ''; rosterFrom = 'overview'; rosterFilter = 'all'; focusStudentId = ''; focusScroll = 0; return Object.assign(state,{ studentId:'', knowledge:'', questionId:'', activityId:'', followup:false, pairId:'', weekEvidence:false, dayQuestion:'' }); };
   function periodDates(period) {
     if (period === '1d') return learning.learningReportDays[0];
     return learning.learningReportDays[period === '30d' ? 29 : period === '14d' ? 13 : 6] + ' 至 ' + learning.learningReportDays[0];
@@ -274,10 +292,10 @@ window.workbenchPrototype = (() => {
   function mlRefresh(keep=false){const p=document.getElementById('teacher-tab-panel'),y=keep?p?.scrollTop||0:0;refresh();if(p)p.scrollTop=y;}
 
   const personalScope = () => learning.personalLearningReport(report(state.studentId,'30d'), personalRange || learning.personalLearningRange(state.studentPeriod));
-  function personalView() { return learning.personalLearningView(report(state.studentId,'30d'),state.studentId,personalRange || learning.personalLearningRange(state.studentPeriod),personalFilter,personalTopic); }
+  function personalView() { return window.correctionLearning.correctionPersonalView(report(state.studentId,'30d'),state.studentId,personalRange || learning.personalLearningRange(state.studentPeriod),personalFilter,personalTopic); }
   function personalPair(chain) {
     const last=chain.latest;
-    return '<div class="pl-pair"><div><small>'+esc(chain.date.slice(5)+' '+chain.time)+' 作答</small><strong class="'+(chain.answer.length>12?'pl-long':'')+'">'+esc(chain.answer)+'</strong><span>'+(chain.correct?'答对':'答错')+'</span></div><span class="pl-arrow">→</span><div><small>'+(last?esc(last.date.slice(5)+' '+last.time)+' 订正':'订正')+'</small><strong class="'+(last?.correct?'pl-fixed ':'')+(last?.answer.length>12?'pl-long':'')+'">'+(last?esc(last.answer):'—')+'</strong><span>'+(last?last.correct?'本次答对':'本次仍错':'暂无记录')+'</span></div></div>';
+    return '<div class="pl-pair"><div><small>'+esc(chain.date.slice(5)+' '+chain.time)+' 作答</small><strong class="'+(chain.answer.length>12?'pl-long':'')+'">'+esc(chain.answer)+'</strong><span>'+(chain.correct?'答对':'答错')+'</span></div><span class="pl-arrow">→</span><div><small>'+(last?esc(last.date.slice(5)+' '+last.time)+' 订正':'订正')+'</small><strong class="'+(last?.correct?'pl-fixed ':'')+(last?.answer.length>12?'pl-long':'')+'">'+(last?esc(last.answer):'—')+'</strong><span>'+(last?last.pending?'结果待确认':last.correct?'本次答对':'本次仍错':'暂无记录')+'</span></div></div>';
   }
   function personalDateSheet() {
     if(!personalDatesOpen)return '';
@@ -289,13 +307,13 @@ window.workbenchPrototype = (() => {
     const metric=(key,value,label,cls='')=>'<button class="pl-metric '+cls+'" onclick="workbenchPrototype.personalQuestionFilter(\''+key+'\',true)"><strong>'+value+'<em>道</em></strong><span>'+label+'<i>›</i></span></button>';
     const questionRows=v.visible.map(q=>{
       const person=q.students[0],expanded=personalExpanded.includes(q.id);
-      return '<details class="pl-qrow" data-personal-question="'+esc(q.id)+'" '+(expanded?'open':'')+' ontoggle="workbenchPrototype.personalRememberQuestion(\''+q.id+'\',this.open)"><summary><span class="pl-qhead"><b>'+esc(q.knowledge||'知识点暂未明确')+'</b><span class="pl-tag '+(person.status==='fixed'?'pl-fixed':'')+'">'+esc(person.statusLabel)+' ⌄</span></span><span class="pl-qstem">'+esc(q.stem)+'</span></summary><small>'+esc(person.date)+' · '+(person.wrong?'答错':'答对')+'</small>'+person.chains.map((chain,index)=>(person.chains.length>1?'<p class="pl-subline">作答记录 '+(index+1)+'</p>':'')+personalPair(chain)+(chain.corrections.length>1?'<details class="pl-history"><summary>全部 '+chain.corrections.length+' 次订正</summary>'+chain.corrections.map(r=>'<p>'+esc(r.date+' '+r.time)+' · '+esc(r.answer)+' · '+(r.correct?'答对':'仍错')+'</p>').join('')+'</details>':'')).join('')+'<div class="pl-reference">参考答案　'+esc(q.reference)+'</div></details>';
+      return '<details class="pl-qrow" data-personal-question="'+esc(q.id)+'" '+(expanded?'open':'')+' ontoggle="workbenchPrototype.personalRememberQuestion(\''+q.id+'\',this.open)"><summary><span class="pl-qhead"><b>'+esc(q.knowledge||'知识点暂未明确')+'</b><span class="pl-tag '+(person.status==='fixed'?'pl-fixed':'')+'">'+esc(person.statusLabel)+' ⌄</span></span><span class="pl-qstem">'+esc(q.stem)+'</span></summary><small>'+esc(person.date)+' · '+(person.wrong?'答错':'答对')+'</small>'+person.chains.map((chain,index)=>(person.chains.length>1?'<p class="pl-subline">作答记录 '+(index+1)+'</p>':'')+personalPair(chain)+(chain.corrections.length>1?'<details class="pl-history"><summary>全部 '+chain.corrections.length+' 次订正</summary>'+chain.corrections.map(r=>'<p>'+esc(r.date+' '+r.time)+' · '+esc(r.answer)+' · '+(r.pending?'结果待确认':r.correct?'答对':'仍错')+'</p>').join('')+'</details>':'')).join('')+'<div class="pl-reference">参考答案　'+esc(q.reference)+'</div></details>';
     }).join('');
-    return '<div class="pl-personal"><div class="pl-compact"><strong>'+esc(student.name+' · '+student.className+' · '+subjectName())+'</strong><button onclick="workbenchPrototype.personalToTop()">'+v.label+' ⌃</button><p>'+title+'</p></div><div class="pl-identity"><div class="pl-avatar">'+esc(student.name.slice(0,1))+'</div><div><h2>'+esc(student.name)+'</h2><small>'+esc(student.className)+'</small></div><span class="pl-subject">'+esc(subjectName())+'</span></div><div class="pl-range-control"><div class="pl-seg">'+[['7d','近7天'],['30d','近30天'],['term','本学期'],['custom','自选日期']].map(([key,label])=>'<button class="'+(range.mode===key||(key==='custom'&&['1d','14d'].includes(range.mode))?'pl-active':'')+'" onclick="workbenchPrototype.personalMode(\''+key+'\')">'+label+'</button>').join('')+'</div><div class="pl-period-caption">'+title+'</div></div>'+
+    return '<div class="pl-personal"><div class="pl-compact"><strong>'+esc(student.name+' · '+student.className+' · '+subjectName())+'</strong><button onclick="workbenchPrototype.personalToTop()">'+v.label+' ⌃</button><p>'+title+'</p></div><div class="pl-identity"><div class="pl-avatar">'+esc(student.name.slice(0,1))+'</div><div><h2>'+esc(student.name)+'</h2><small>'+esc(student.className)+'</small></div><span class="pl-subject">'+esc(subjectName())+'</span></div><div class="pl-range-control"><div class="pl-seg">'+[['7d','近7天'],['30d','近30天'],['term','本学期'],['custom','自选日期']].map(([key,label])=>'<button class="'+(range.mode===key||(key==='custom'&&['1d','14d'].includes(range.mode))?'pl-active':'')+'" onclick="workbenchPrototype.personalMode(\''+key+'\')">'+label+'</button>').join('')+'</div><div class="pl-period-caption">'+title+'</div><div class="pl-micro-note">订正进展截至 '+v.correctionAsOf+'</div></div>'+
       (!complete?'<div class="pl-demo-notice">当前只有 '+learning.learningReportDays[29]+' 至 '+learning.learningReportDays[0]+' 的记录，暂不生成完整学期结论。</div>':'')+
-      '<section class="pl-card"><div class="pl-section-head"><h2 class="pl-rail">时段总览</h2><small>'+v.label+'</small></div><p class="pl-subline">'+(complete?'练过 '+c.totalCount+' 道题 · 涉及 '+v.topics.length+' 个知识点':'当前尚无完整学期统计')+'</p><div class="pl-metrics">'+metric('correct',complete?c.correctCount:'—','答对')+metric('wrong',complete?c.wrongCount:'—','答错','pl-wrong')+metric('corrected',complete?c.correctedCount:'—','已订正','pl-corrected')+'</div><div class="pl-micro-note">订正单独统计，不抵扣答错题数。</div></section>'+
-      (v.unknownCount?'<div class="pl-topic-help">其中 '+v.unknownCount+' 道题的知识点暂未明确，已计入总览。</div>':'')+'<section class="pl-card"><div class="pl-section-head"><h2>知识点情况</h2><small>全部练过的知识点</small></div>'+(v.topics.length?'<table class="pl-knowledge-table"><thead><tr><th>知识点</th><th>答对</th><th>答错</th><th>已订正</th><th></th></tr></thead><tbody>'+v.topics.map((t,i)=>'<tr tabindex="0" class="pl-data-row" onclick="workbenchPrototype.personalKnowledge('+i+',true)" onkeydown="if(event.key===\'Enter\')workbenchPrototype.personalKnowledge('+i+',true)"><td>'+esc(t.name)+'</td><td>'+t.correct+'</td><td class="pl-wrong-number">'+t.wrong+'</td><td class="pl-fixed-number">'+t.corrected+'</td><td>›</td></tr>').join('')+'</tbody></table><div class="pl-topic-help">数量单位：道 · 点知识点查看对应题目</div>':'<div class="pl-empty">'+(complete?(v.unknownCount?'已有作答结果，知识点暂未明确':'这个时段暂无作答记录'):'完整学期数据暂缺')+'</div>')+'</section>'+
-      '<section class="pl-card" id="personal-questions"><div class="pl-section-head"><h2>题目与作答</h2><small>'+v.visible.length+' 道题</small></div><div class="pl-q-tabs">'+[['all','全部'],['correct','答对'],['wrong','答错'],['corrected','已订正']].map(([key,label])=>'<button class="'+(key===personalFilter?'pl-active':'')+'" onclick="workbenchPrototype.personalQuestionFilter(\''+key+'\')">'+label+' '+v.counts[key]+'</button>').join('')+'</div><div class="pl-topic-select"><span>知识点</span><select aria-label="筛选知识点" onchange="workbenchPrototype.personalKnowledge(Number(this.value))">'+v.topicOptions.map((t,i)=>'<option value="'+(i-1)+'" '+((i===0?v.selectedTopic==='all':v.selectedTopic===t)?'selected':'')+'>'+esc(t)+'</option>').join('')+'</select></div>'+(questionRows||'<div class="pl-empty">'+(complete?'这个时段暂无'+({all:'作答',correct:'答对',wrong:'答错',corrected:'订正'}[personalFilter])+'记录':'完整学期数据暂缺')+'</div>')+'</section>'+
+      '<section class="pl-card"><div class="pl-section-head"><h2 class="pl-rail">时段总览</h2><small>'+v.label+'</small></div><p class="pl-subline">'+(complete?'练过 '+c.totalCount+' 道题 · 涉及 '+v.topics.length+' 个知识点':'当前尚无完整学期统计')+'</p><div class="pl-metrics">'+metric('correct',complete?c.correctCount:'—','答对')+metric('wrong',complete?c.wrongCount:'—','答错','pl-wrong')+metric('corrected',complete?c.correctedCount:'—','有订正','pl-corrected')+'</div><div class="pl-micro-note">有订正包含结果待确认的提交，不抵扣答错题数。</div></section>'+
+      (v.unknownCount?'<div class="pl-topic-help">其中 '+v.unknownCount+' 道题的知识点暂未明确，已计入总览。</div>':'')+'<section class="pl-card"><div class="pl-section-head"><h2>知识点情况</h2><small>全部练过的知识点</small></div>'+(v.topics.length?'<table class="pl-knowledge-table"><thead><tr><th>知识点</th><th>答对</th><th>答错</th><th>有订正</th><th></th></tr></thead><tbody>'+v.topics.map((t,i)=>'<tr tabindex="0" class="pl-data-row" onclick="workbenchPrototype.personalKnowledge('+i+',true)" onkeydown="if(event.key===\'Enter\')workbenchPrototype.personalKnowledge('+i+',true)"><td>'+esc(t.name)+'</td><td>'+t.correct+'</td><td class="pl-wrong-number">'+t.wrong+'</td><td class="pl-fixed-number">'+t.corrected+'</td><td>›</td></tr>').join('')+'</tbody></table><div class="pl-topic-help">数量单位：道 · 点知识点查看对应题目</div>':'<div class="pl-empty">'+(complete?(v.unknownCount?'已有作答结果，知识点暂未明确':'这个时段暂无作答记录'):'完整学期数据暂缺')+'</div>')+'</section>'+
+      '<section class="pl-card" id="personal-questions"><div class="pl-section-head"><h2>题目与作答</h2><small>'+v.visible.length+' 道题</small></div><div class="pl-q-tabs">'+[['all','全部'],['correct','答对'],['wrong','答错'],['corrected','有订正']].map(([key,label])=>'<button class="'+(key===personalFilter?'pl-active':'')+'" onclick="workbenchPrototype.personalQuestionFilter(\''+key+'\')">'+label+' '+v.counts[key]+'</button>').join('')+'</div><div class="pl-topic-select"><span>知识点</span><select aria-label="筛选知识点" onchange="workbenchPrototype.personalKnowledge(Number(this.value))">'+v.topicOptions.map((t,i)=>'<option value="'+(i-1)+'" '+((i===0?v.selectedTopic==='all':v.selectedTopic===t)?'selected':'')+'>'+esc(t)+'</option>').join('')+'</select></div>'+(questionRows||'<div class="pl-empty">'+(complete?'这个时段暂无'+({all:'作答',correct:'答对',wrong:'答错',corrected:'订正'}[personalFilter])+'记录':'完整学期数据暂缺')+'</div>')+'</section>'+
       '<section class="pl-card"><details class="pl-activities"><summary>其他学习活动 · '+(complete?v.activities.length:'—')+' 项</summary>'+v.activities.map(a=>'<button class="pl-activity" onclick="workbenchPrototype.activity(\''+a.id+'\')"><span>'+esc(a.date+' · '+a.feature)+'</span><b>查看 ›</b></button>').join('')+'</details></section>'+personalDateSheet()+'</div>';
   }
 
@@ -426,6 +444,8 @@ window.workbenchPrototype = (() => {
       reportCard('更多学习记录', reportLink('查看个人学情', `student('${row.studentId}')`));
   }
   const renderLearning = () => {
+    if(correctionLegacy && correctionHome())correctionLegacy=false;
+    if (window.correctionLearning && !correctionLegacy && (correctionRoute || correctionHome())) return `${header('learning','学情')}${renderCorrection()}</div>`;
     if (focusPage && !state.studentId) {
       return `${header('learning', '学情')}${renderFocusPage()}</div>`;
     }
@@ -479,7 +499,7 @@ window.workbenchPrototype = (() => {
         body += panel(scopeLabel+' · '+rosterCount+' 人',
           `<p class="lr-preview-muted">${periodDates(rosterPeriod)}</p>${sourceLine}${rosterFilters}${search}${subjectIssues}` +
           students.map(item => {
-            if (state.view === 'subject') { const c=learning.subjectStudentCounts(result,item.id); return `<button class="lp-list-button lr-subject-student-row" data-roster-name="${esc(item.name)}" style="${item.name.includes(rosterName)?'':'display:none'}" onclick="workbenchPrototype.student('${item.id}')"><span><strong>${esc(item.name)}</strong><small>${c.totalCount ? `答对 ${c.correctCount} 道 · 答错 ${c.wrongCount} 道 · 已订正 ${c.correctedCount} 道` : '所选区间暂无作答记录'}</small></span><b>查看学情 ›</b></button>`; }
+            if (state.view === 'subject') { const c=window.correctionLearning.correctionPersonalView(report(item.id,'30d'),item.id,learning.personalLearningRange(rosterPeriod)).summary; return `<button class="lp-list-button lr-subject-student-row" data-roster-name="${esc(item.name)}" style="${item.name.includes(rosterName)?'':'display:none'}" onclick="workbenchPrototype.student('${item.id}')"><span><strong>${esc(item.name)}</strong><small>${c.totalCount ? `答对 ${c.correctCount} 道 · 答错 ${c.wrongCount} 道 · 有订正 ${c.correctedCount} 道` : '所选区间暂无作答记录'}</small></span><b>查看学情 ›</b></button>`; }
             const learned = learners.has(item.id);
             const last = lastRecords.find(row => row.studentId === item.id);
             const lastText = last ? ' · 最近记录 '+last.date+' '+last.subject+'·'+last.feature : rosterFilter === 'missing' ? ' · 近 30 天无记录' : '';
@@ -522,7 +542,19 @@ window.workbenchPrototype = (() => {
     });
   }
   return { renderLearning, renderHomework, getScope: () => ({ ...state, classIds: classIds() }), getGrantedViews: () => [...granted],
+    getCorrectionModel: correctionModel,
+    correctionGo(route) {
+      if(!route||typeof route.page!=='string')return;
+      if(route.page.startsWith('legacy-')&&state.view!=='subject')return;
+      const y=document.getElementById('teacher-tab-panel')?.scrollTop||0;
+      if(route.page.startsWith('legacy-')){correctionLegacy=true;if(route.page==='legacy-stage')this.materialGo({kind:'stage',days:route.days||7});else if(route.page==='legacy-roster'){state.tab='students';refresh();}else this.student(route.studentId,(route.days||correctionModel().days)+'d');return;}
+      if(correctionRoute?.page!==route.page||correctionRoute?.classId!==route.classId||correctionRoute?.subject!==route.subject||correctionRoute?.knowledge!==route.knowledge||correctionRoute?.questionId!==route.questionId||correctionRoute?.studentId!==route.studentId||correctionRoute?.originalId!==route.originalId||correctionRoute?.eventId!==route.eventId)correctionTrail.push({route:correctionRoute,scroll:y});
+      correctionRoute={...route};refresh();const p=document.getElementById('teacher-tab-panel');if(p)p.scrollTop=0;
+    },
+    correctionSearch(value){if(!correctionRoute)return;correctionRoute.search=value.trim();refresh();},
+    correctionPeriod(days){if(![1,7,14,30].includes(days))return;if(correctionRoute){correctionRoute={...correctionRoute,days};refresh();}else if(state.view==='subject')this.subjectPeriod(days+'d');else this.period(days+'d');},
     getLearningNavigation() {
+      if(correctionRoute&&!correctionLegacy)return{title:correctionModel().title,back:true};
       if(state.view==='subject'&&issueBrowse?.materialRoute&&!state.studentId){const r=issueBrowse.materialRoute;return{title:r.kind==='stage'?'阶段回顾':r.kind==='question'?'题目与学生作答':r.unknown?(r.unknownFromMistakes?'其他错题':'其他题目'):r.knowledge|| (r.onlyWrong&&!r.sourceId?'班级错题':'作业题目'),back:true};}
       if (state.view === 'school') {
         return state.classId === 'all' ? { title: '学情', back: false } : { title: '班级学习覆盖', back: true };
@@ -532,6 +564,7 @@ window.workbenchPrototype = (() => {
       }
       return { title: state.studentId ? '学生个人学情' : focusStudentId ? '学生本题作答' : focusPage ? '本题有误学生' : issueBrowse ? issueBrowse.selected !== null ? (state.view === 'subject' ? '原题与学生作答' : '本题详情') : issueBrowse.groupIndex !== null ? '知识点错题' : issueBrowse.reviewFollowup ? (issueBrowse.reviewStudent ? '学生两次作答' : '两次都有误的学生') : issueBrowse.reviewDays ? issueBrowse.recent ? '班级错题' : issueBrowse.subject ? '各科作答情况' : '知识点回顾' : issueBrowse.practiceList ? '班级错题' : '当天错题与知识点' : state.followup ? '周报跟进名单' : '学情', back: Boolean(state.studentId||state.followup||focusPage||issueBrowse) }; },
     backLearning() {
+      if(correctionRoute&&!correctionLegacy){const prev=correctionTrail.pop();correctionRoute=prev?.route||null;refresh();const p=document.getElementById('teacher-tab-panel');if(p)p.scrollTop=prev?.scroll||0;return;}
       if (state.view === 'subject') {
         if (state.studentId && personalDatesOpen) { this.closePersonalDates(); return; }
         if (state.activityId) { this.activity(''); return; }
@@ -624,13 +657,13 @@ window.workbenchPrototype = (() => {
       refresh();
     },
     ranking(value) { if(value!=='people'&&value!=='count')return;state.rankingBy=value;refresh(); },
-    student(id) {
+    student(id, inheritedPeriod) {
       if (state.view === 'school' || (id && !report().roster.some(row => row.id === id))) return;
       const restore = !id && state.studentId && state.view === 'subject';
       if (id && state.view === 'subject') studentOriginScroll = document.getElementById('teacher-tab-panel')?.scrollTop || 0;
       if (!id && !state.studentId) state.followup = false;
       state.studentId = id;
-      state.studentPeriod = state.view === 'subject' ? (id && issueBrowse?.reviewDays ? issueBrowse.reviewDays + 'd' : rosterPeriodOverride || subjectPeriod) : state.view === 'homeroom' && rosterFrom === 'week' ? '7d' : state.period;
+      state.studentPeriod = state.view === 'subject' ? (['1d','7d','14d','30d'].includes(inheritedPeriod) ? inheritedPeriod : id && issueBrowse?.reviewDays ? issueBrowse.reviewDays + 'd' : rosterPeriodOverride || subjectPeriod) : state.view === 'homeroom' && rosterFrom === 'week' ? '7d' : state.period;
       if(id && state.view==='subject'){personalRange=learning.personalLearningRange(state.studentPeriod);personalFilter='all';personalTopic='all';personalExpanded=[];}
       personalDatesOpen=false;
       state.questionId = ''; state.dayQuestion = ''; state.activityId = ''; state.pairId = '';

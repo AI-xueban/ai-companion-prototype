@@ -1,0 +1,23 @@
+<template name="correctionRows">
+  <view wx:for="{{rows}}" wx:for-item="row" wx:key="index" class="cl-row" data-route="{{row.route}}" bindtap="correctionGo"><view><text class="cl-row-title">{{row.title}}</text><text wx:if="{{row.detail}}" class="cl-row-detail">{{row.detail}}</text></view><text class="cl-value {{row.state}}">{{row.value}}{{row.route ? ' ›' : ''}}</text></view>
+</template>
+<template name="correctionPage">
+  <view class="cl-learning">
+    <view wx:if="{{!m.home}}" class="cl-muted">{{m.scope}}</view>
+    <view wx:if="{{m.week}}" class="cl-week"><button data-route="{{m.week.previous}}" bindtap="correctionGo">‹</button><text>{{m.week.label}}</text><button disabled="{{!m.week.next}}" data-route="{{m.week.next}}" bindtap="correctionGo">›</button></view>
+    <view class="cl-period"><text>{{m.compactDate}}</text><view class="cl-period-controls"><button wx:for="{{m.periods}}" wx:key="*this" class="{{item === m.days ? 'active' : ''}}" data-days="{{item}}" bindtap="correctionPeriod">{{item === 1 ? '今天' : '近'+item+'天'}}</button></view></view>
+    <view class="cl-snapshot">{{m.snapshot}}</view>
+    <block wx:for="{{m.cards}}" wx:for-item="card" wx:for-index="ci" wx:key="index">
+      <block wx:if="{{ci === m.cards.length - 1}}"><view wx:if="{{m.filters.length}}" class="cl-filters"><button wx:for="{{m.filters}}" wx:key="id" class="{{item.active ? 'active' : ''}}" data-route="{{item.route}}" bindtap="correctionGo">{{item.label}}</button></view><input wx:if="{{m.search}}" class="cl-search" placeholder="按姓名查找学生（输入后确认）" value="{{m.query}}" bindconfirm="correctionSearch" bindblur="correctionSearch" /></block>
+      <view class="cl-card {{card.layout === 'entries' ? 'cl-entries' : ''}}">
+        <view wx:if="{{card.title || card.action}}" class="cl-head"><text class="cl-title">{{card.title}}</text><button wx:if="{{card.summary}}" bindtap="correctionExplain">统计说明 ⓘ</button><button wx:elif="{{card.action}}" data-route="{{card.route}}" bindtap="correctionGo">{{card.action}} ›</button></view>
+        <button wx:if="{{card.summary}}" class="cl-summary" data-route="{{card.route}}" bindtap="correctionGo"><view>错题<text class="cl-num">{{card.summary.questions}}</text>道</view><view>涉及<text class="cl-num">{{card.summary.people}}</text>人</view><view>有订正<text class="cl-num">{{card.summary.submitted}}</text>人</view><view>全部改对<text class="cl-num">{{card.summary.fixed}}</text>人</view><text>›</text></button>
+        <view wx:if="{{card.text}}" class="cl-text">{{card.text}}</view>
+        <view wx:if="{{card.states}}" class="cl-states"><button wx:for="{{card.states}}" wx:key="id" class="cl-state {{item.id}} {{item.active ? 'active' : ''}}" data-route="{{item.route}}" bindtap="correctionGo"><text class="cl-state-num">{{item.value}}人</text><text>{{item.label}}</text></button></view>
+        <template is="correctionRows" data="{{rows:card.rows}}" />
+        <view wx:if="{{!card.rows.length && !card.text && !card.summary && !card.states && !card.note}}" class="cl-muted">当前范围暂无记录</view><view wx:if="{{card.note}}" class="cl-muted">{{card.note}}</view>
+      </view>
+    </block>
+    <view class="cl-footer"><template is="correctionRows" data="{{rows:m.footer}}" /></view>
+  </view>
+</template>

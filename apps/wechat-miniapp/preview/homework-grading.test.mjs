@@ -284,8 +284,8 @@ if(!p.inspectDraft().classIds.includes('c2'))p.toggleClass('c2');
 const firstChild=roster.DEMO_STUDENTS.find(s=>s.classId==='c1'),secondChild=roster.DEMO_STUDENTS.find(s=>s.classId==='c2');
 p.setClassRecipientMode('c1','selected');p.nextCompose();assert.match(p.renderTeacher(),/至少指定一名学生/);
 p.toggleStudent(firstChild.id);p.filterStudents('不存在的姓名');assert.match(p.renderTeacher(),/确定 · 1 名学生/);
-p.closeRecipientPicker();assert.match(p.renderTeacher(),/已选 2 个班 · 共发送/);
-p.nextCompose();assert.match(p.renderTeacher(),/部分学生 · 1 人/);assert.match(p.renderTeacher(),/全班 · 28 人/);p.publish();
+p.closeRecipientPicker();assert.match(p.renderTeacher(),/2 个班 · \d+ 名学生/);
+p.nextCompose();assert.match(p.renderTeacher(),/部分\s+1人 ›/);assert.match(p.renderTeacher(),/全班 28人/);p.publish();
 const crossPublished=p.inspect().tasks[0];assert.deepEqual(Array.from(crossPublished.targetSnapshotIds).sort(),[firstChild.id,...roster.DEMO_STUDENTS.filter(s=>s.classId==='c2').map(s=>s.id)].sort());assert.equal(crossPublished.classIds.length,2);
 
 resultProfile={userId:'teacher-demo-001',roles:['teacher'],teachingAssignments:[{subject:'数学',classIds:['c1','c2']}]};resultScope={view:'subject',classId:'all',grade:'all',period:'7d'};page.data.scope=resultScope;page.data.draft={...page.data.draft,subject:'数学',classIds:['c1','c2'],targetMode:'selected',targetStudentIds:[]};page.refreshDraft();

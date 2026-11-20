@@ -1,4 +1,6 @@
 import { getSession } from '../../../stores/session';
+import { correctionPage, correctionSource, correctionPersonalView } from '../../../services/correctionLearning';
+import type { CorrectionPage, CorrectionRoute } from '../../../services/correctionLearning';
 import { historyDays, subjectLearningHome, subjectLearningPage } from './subjectIssues';
 import type { SubjectRoute } from './subjectIssues';
 import { withSubjectMaterialData, personalLearningRange, personalLearningReport, personalLearningView, subjectStudentCounts, subjectAnswerQuestions, activityEvidence, featureRows, getLearningQuestion, getStudentLearning, knowledgeRows, learningReportDays, pct, reportSubjects, reportWeeklyComparison, subjectRows, timelineRows } from '../../../services/learningMock';
@@ -38,6 +40,7 @@ function scopedReport(scope: LearningScope, studentId = 'all') {
 }
 
 Page({
+  correctionTrail: [] as {route:CorrectionRoute|null;scroll:number}[],
   learningOwner: '',
   savedLearningScopes: {} as Partial<Record<WorkView, LearningScope>>,
   scrollTop: 0,
@@ -50,6 +53,7 @@ Page({
     if (this.data.scope.view === 'subject' && this.data.selectedStudentId && this.data.personalCompact !== (event.scrollTop > 230)) this.setData({ personalCompact: event.scrollTop > 230 });
   },
   data: {
+    correctionPage: null as CorrectionPage|null, correctionRoute:null as CorrectionRoute|null, correctionLegacy:false,correctionScopeNames:[] as string[],
     scope: { view: 'school', period: '7d', grade: 'all', classId: 'all' } as LearningScope,
     tab: 'overview' as LearningTab, asOf: REPORT_END, schoolName: SCHOOL_NAME, title: '', viewLabel: '', scopeLabel: '', filterSummary: '', filtersOpen: false,
     greetingName: '', teacherDesignation: '', views: [] as Array<{ id: WorkView; label: string; selected: boolean }>, switchableViews: [] as Array<{ id: WorkView; label: string }>, roleMenuOpen: false,
@@ -78,12 +82,12 @@ Page({
     subjectTrail: [] as SubjectRoute[], subjectRoute: null as SubjectRoute | null, subjectPage: null as ReturnType<typeof subjectLearningPage>,
     week: null as ReturnType<typeof reportWeeklyComparison>, weekActivities: 0, weekDetails: false, followup: false,
     selectedPair: null as Comparison['pairs'][number] | null,
-    personalRange: null as PersonalLearningRange | null, personalView: null as ReturnType<typeof personalLearningView> | null,
+    personalRange: null as PersonalLearningRange | null, personalView: null as ReturnType<typeof correctionPersonalView> | null,
     personalFilter: 'all' as PersonalQuestionFilter, personalTopic: 'all', personalTopicIndex: 0,
     personalDatesOpen: false, personalDraftStart: '', personalDraftEnd: '', personalDateError: '',
     personalCompact: false, personalNavHeight: 64, personalBottomSpace: 20, personalActivitiesOpen: false, personalClassName: '', personalInitial: '',
     personalModes: [{id:'7d',label:'近7天'},{id:'30d',label:'近30天'},{id:'term',label:'本学期'},{id:'custom',label:'自选日期'}],
-    personalFilters: [{id:'all',label:'全部'},{id:'correct',label:'答对'},{id:'wrong',label:'答错'},{id:'corrected',label:'已订正'}],
+    personalFilters: [{id:'all',label:'全部'},{id:'correct',label:'答对'},{id:'wrong',label:'答错'},{id:'corrected',label:'有订正'}],
     studentPeriod: '30d' as LearningPeriod, studentSubjects: [] as ReturnType<typeof reportSubjects>,
     studentWeek: null as ReturnType<typeof reportWeeklyComparison>,
     recordedClasses: 0, schoolActivitySources: [] as Array<{name: string; count: number}>,
@@ -135,6 +139,7 @@ Page({
     const profile = getSession()?.profile;
     const view = event.currentTarget.dataset.view as WorkView;
     if (!profile || !availableWorkViews(profile).includes(view)) return;
+    this.correctionTrail=[];this.setData({correctionRoute:null,correctionLegacy:false});
     this.savedLearningScopes[this.data.scope.view] = { ...this.data.scope };
     const initial = selectWorkView(profile, view);
     const scope = learningScope(profile, this.savedLearningScopes[view] ?? initial);
@@ -244,6 +249,7 @@ Page({
     const report = route && scopedReport({ ...this.data.scope, period: '30d' });
     const position = this.subjectScrollTrail[trail.length] ?? 0;
     this.subjectScrollTrail = this.subjectScrollTrail.slice(0, trail.length);
+    if(!route)this.setData({correctionLegacy:false});
     this.setData({ subjectTrail: trail, subjectRoute: route ?? null, subjectPage: report ? subjectLearningPage(report, route) : null },
       () => wx.pageScrollTo({ scrollTop: position, duration: 0 }));
   },
@@ -295,7 +301,7 @@ Page({
     const classes = scope.view === 'subject' && profile ? learningClasses(profile)
       : DEMO_CLASSES.filter(row => scope.view === 'school' ? scope.grade === 'all' || row.grade === scope.grade : row.id === 'c1');
     const classIndex = classes.findIndex(row => row.id === scope.classId);
-    const studentRows = report.roster.map(student => ({ ...getStudentLearning(report, student.id), name: student.name, className: student.className, counts: subjectStudentCounts(report,student.id) }));
+    const studentRows = report.roster.map(student => ({ ...getStudentLearning(report, student.id), name: student.name, className: student.className, counts: scope.view==='subject'&&full?correctionPersonalView(full,student.id,personalLearningRange(period)!).summary:subjectStudentCounts(report,student.id) }));
     const classComparisons = scope.view === 'school' && scope.classId === 'all' ? classes.map(row => {
       const classmates = studentRows.filter(student => report.roster.find(person => person.id === student.studentId)?.classId === row.id);
       return { id: row.id, name: row.name, learned: classmates.filter(student => student.learned).length, enrolled: classmates.length, coverage: pct(classmates.filter(student => student.learned).length, classmates.length) };
@@ -330,7 +336,30 @@ Page({
       timeRows: timelineRows(report).map(row => ({ ...row, studentName: report.roster.find(student => student.id === row.studentId)?.name || '学生', className: report.roster.find(student => student.id === row.studentId)?.className || '' })),
       timeDays: new Set(report.activities.map(row => row.day)).size,
     });
+    this.refreshCorrection();
   },
+  refreshCorrection() {
+    const profile=getSession()?.profile,scope=this.data.scope;
+    if(!profile||!availableWorkViews(profile).includes(scope.view)){this.setData({correctionPage:null});return;}
+    const subject=workLearningSubject(scope,profile),base=queryWorkLearning({...scope,period:'30d'},'all',profile,true);
+    const source=correctionSource(base,scope.view==='subject'?subject:'all');
+    this.setData({correctionScopeNames:['全部班级',...this.data.classes.map(c=>c.name)],correctionPage:correctionPage(source,{role:scope.view,subject:scope.view==='subject'?subject:'all',days:parseInt(scope.period)},this.data.correctionRoute||{page:'home'})});
+  },
+  changeCorrectionClass(event:WechatMiniprogram.CustomEvent<{value:string}>){const n=Number(event.detail.value);if(this.data.scope.view!=='school')return;this.changeClass({currentTarget:{dataset:{id:n?this.data.classes[n-1]?.id:'all'}}} as unknown as WechatMiniprogram.BaseEvent);},
+  changeCorrectionGrade(event:WechatMiniprogram.CustomEvent<{value:string}>){const grade=['all','7','8'][Number(event.detail.value)];if(this.data.scope.view!=='school'||!grade)return;this.changeGrade({currentTarget:{dataset:{grade}}} as unknown as WechatMiniprogram.BaseEvent);},
+  correctionGo(event:WechatMiniprogram.BaseEvent) {
+    const route=event.currentTarget.dataset.route as CorrectionRoute;if(!route?.page)return;
+    if(route.page.startsWith('legacy-')&&this.data.scope.view!=='subject')return;
+    if(route.page==='legacy-stage'){this.setData({correctionLegacy:true});this.showSubjectRoute({kind:'review',days:route.days||7});return;}
+    if(route.page==='legacy-roster'){this.setData({correctionLegacy:true,tab:'students'});this.refresh();return;}
+    if(route.page==='legacy-student'){if(this.data.scope.view!=='subject'||!route.studentId)return;this.setData({correctionLegacy:true});this.showStudent(route.studentId,((route.days||7)+'d') as LearningPeriod);return;}
+    const current=this.data.correctionRoute;
+    if(current?.page!==route.page||current?.classId!==route.classId||current?.subject!==route.subject||current?.knowledge!==route.knowledge||current?.questionId!==route.questionId||current?.studentId!==route.studentId||current?.originalId!==route.originalId||current?.eventId!==route.eventId)this.correctionTrail.push({route:current,scroll:this.scrollTop});
+    this.setData({correctionRoute:{...route},roleMenuOpen:false,filtersOpen:false});this.refreshCorrection();wx.pageScrollTo({scrollTop:0,duration:0});
+  },
+  correctionExplain(){this.correctionGo({currentTarget:{dataset:{route:{...this.data.correctionRoute,page:'explain'}}}} as unknown as WechatMiniprogram.BaseEvent);},
+  correctionSearch(event:WechatMiniprogram.CustomEvent<{value:string}>){if(!this.data.correctionRoute)return;this.setData({correctionRoute:{...this.data.correctionRoute,search:event.detail.value.trim()}});this.refreshCorrection();},
+  correctionPeriod(event:WechatMiniprogram.BaseEvent){const days=Number(event.currentTarget.dataset.days);if(![1,7,14,30].includes(days))return;if(this.data.correctionRoute)this.setData({correctionRoute:{...this.data.correctionRoute,days}});else{if(!this.data.correctionPage?.periods.includes(days))return;this.setData({scope:{...this.data.scope,period:(days+'d') as LearningPeriod}});}this.refreshCorrection();},
   openStudent(event: WechatMiniprogram.BaseEvent) {
     const sourceRange = [...this.data.subjectTrail].reverse().find(route => 'days' in route);
     const sourcePeriod = sourceRange && 'days' in sourceRange ? (sourceRange.days + 'd') as LearningPeriod : this.data.scope.period;
@@ -360,7 +389,7 @@ Page({
     if(scope.view!=='subject'||!selectedStudentId||!personalRange)return;
     const report=scopedReport({...scope,period:'30d'},selectedStudentId);
     if(!report || !report.roster.some(s=>s.id===selectedStudentId))return;
-    const personalView=personalLearningView(report,selectedStudentId,personalRange,personalFilter,personalTopic);
+    const personalView=correctionPersonalView(report,selectedStudentId,personalRange,personalFilter,personalTopic);
     this.setData({personalView,personalTopic:personalView.selectedTopic,personalTopicIndex:personalView.selectedTopic==='all'?0:personalView.topicOptions.indexOf(personalView.selectedTopic),selectedCounts:personalView.summary,selectedTimeline:personalView.activities},afterRender);
   },
   changePersonalMode(event: WechatMiniprogram.BaseEvent) {
@@ -429,6 +458,7 @@ Page({
     });
   },
   returnToModuleHome(position?: number | WechatMiniprogram.BaseEvent) {
+    this.correctionTrail=[];this.setData({correctionRoute:null,correctionLegacy:false});
     if (this.data.schoolDetail) {
       this.changeClass({ currentTarget: { dataset: { id: 'all' } } } as unknown as WechatMiniprogram.BaseEvent);
       return;
@@ -493,6 +523,8 @@ Page({
   },
   closePair() { this.setData({ selectedPair: null }); },
   backFromDetail() {
+    if(this.data.correctionRoute&&!this.data.correctionLegacy){const prev=this.correctionTrail.pop();this.setData({correctionRoute:prev?.route||null});this.refreshCorrection();wx.pageScrollTo({scrollTop:prev?.scroll||0,duration:0});return;}
+    if(this.data.correctionLegacy&&this.data.selectedStudentId){this.closeStudent();this.setData({correctionLegacy:false});this.refreshCorrection();return;}
     if (this.data.scope.view === 'subject' && this.data.selectedStudentId && this.data.personalDatesOpen) { this.closePersonalDates(); return; }
     if (this.data.scope.view === 'school' && this.data.scope.classId !== 'all') {
       this.changeClass({ currentTarget: { dataset: { id: 'all' } } } as unknown as WechatMiniprogram.BaseEvent);
