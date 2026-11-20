@@ -1,0 +1,35 @@
+const assert=require('assert/strict'),fs=require('fs'),ts=require('typescript');
+require.extensions['.ts']=(m,f)=>m._compile(ts.transpileModule(fs.readFileSync(f,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,f);
+const l=require('../miniprogram/services/learningMock.ts'),c=require('../miniprogram/services/correctionLearning.ts');
+const original=l.queryLearning('30d','c1','数学','all',true),saved=JSON.stringify(original),source=c.correctionSource(original,'数学');
+assert.equal(JSON.stringify(original),saved);
+const gs=c.correctionGroups(source,7),n=c.correctionSummary(gs);
+assert.deepEqual([n.questions,n.people,n.submitted,n.fixed],[7,18,6,0]);assert.equal(n.none+n.pending+n.follow+n.fixed,n.people);
+const all=c.correctionSource(l.queryLearning('30d','all','all','all',true),'all');
+assert.deepEqual(c.correctionSummary(c.correctionGroups(all,7).filter(g=>g.classId==='c1'&&g.subject==='数学')),n,'all roles share the same source and formulas');
+const home=c.correctionPage(source,{role:'subject',subject:'数学',days:7});assert.deepEqual(home.cards[0].summary,n);assert(home.cards[1].rows.some(r=>r.title==='其他错题'));
+const school={role:'school',subject:'all',days:7};for(const page of ['student','question','timeline','wrong'])assert(c.correctionPage(all,school,{page,studentId:'c1-s01'}).blocked);
+assert(!JSON.stringify(c.correctionPage(all,school,{page:'progress'})).includes('李涵'));
+assert(c.correctionPage(all,{role:'homeroom',subject:'all',days:7},{page:'timeline',studentId:'c1-s01'}).blocked);
+const schoolList=c.correctionPage(all,school,{page:'progress'});assert.equal(schoolList.cards[1].rows[0].route.page,'progress');assert.equal(schoolList.cards[1].rows[0].route.classId,'c1');
+// One source question, two students, multiple error chains and later correction.
+const template=source.answers.find(a=>a.kind==='首次'&&!a.correct),activity=source.activities.find(a=>a.id===template.activityId);
+const records=[['a1','c1-s01',10,'首次',false],['a2','c1-s01',2,'首次',false],['b1','c1-s02',2,'首次',false],['r1','c1-s01',0,'订正',true,'a1'],['r2','c1-s01',0,'订正',true,'a2'],['r3','c1-s02',0,'订正',true,'b1']];
+const report={...source,activities:records.map(([id,studentId,day])=>({...activity,id,studentId,day,start:'17:00'})),answers:records.map(([id,studentId,day,kind,correct,originalAttemptId])=>({...template,id,activityId:id,studentId,kind,correct,originalAttemptId})),pendingAnswers:[]};
+assert.deepEqual([c.correctionSummary(c.correctionGroups(report,7)).questions,c.correctionSummary(c.correctionGroups(report,7)).fixed],[1,2]);
+const onlyOld={...report,answers:report.answers.filter(a=>['a1','r1'].includes(a.id))};assert.equal(c.correctionSummary(c.correctionGroups(onlyOld,7)).people,0);const activityPage=c.correctionPage(onlyOld,{role:'subject',subject:'数学',days:7},{page:'activity'});assert(activityPage.cards[0].text.includes('1人 · 1次'));
+const pending={...report,answers:report.answers.filter(a=>a.id!=='r2'),pendingAnswers:[report.answers.find(a=>a.id==='r2')]};const np=c.correctionSummary(c.correctionGroups(pending,30));assert.deepEqual([np.questions,np.people,np.submitted,np.fixed,np.pending],[1,2,2,1,1]);
+const repeat={...report,activities:[...report.activities,{...activity,id:'a3',studentId:'c1-s01',day:0,start:'18:00'}],answers:[...report.answers,{...template,id:'a3',activityId:'a3',studentId:'c1-s01',kind:'首次',correct:false}]};assert.equal(c.correctionSummary(c.correctionGroups(repeat,30)).fixed,1,'another independent wrong attempt cannot be covered by earlier correction');
+const outOfScope={...report,roster:report.roster.filter(s=>s.id==='c1-s01')};assert.equal(c.correctionSummary(c.correctionGroups(outOfScope,30)).people,1);
+const empty=c.correctionPage({...source,answers:[],pendingAnswers:[]},{role:'subject',subject:'数学',days:7});assert.equal(empty.cards[0].summary.people,0);assert.equal(empty.cards[1].rows.length,0);
+// Native uses the shared page model, maintains filter/history, and validates roles.
+let definition,session;global.Page=x=>definition=x;global.wx={getStorageSync:()=>session,pageScrollTo(){},reLaunch(){}};require('../miniprogram/pages/teacher/learning/index.ts');
+session={expiresAt:Date.now()+600000,profile:{userId:'teacher-demo-001',displayName:'老师',roles:['teacher','school_admin'],teachingAssignments:[{subject:'数学',classIds:['c1','c2']},{subject:'英语',classIds:['c1']}]}};
+const native={...definition,data:structuredClone(definition.data),correctionTrail:[],setData(x,cb){Object.assign(this.data,x);cb?.()}};native.onShow();native.changeView({currentTarget:{dataset:{view:'subject'}}});assert.equal(native.data.correctionPage.cards[0].summary.questions,7);
+const go=route=>native.correctionGo({currentTarget:{dataset:{route}}});go({page:'progress',days:7,filter:'open'});native.correctionSearch({detail:{value:'李涵'}});go({page:'student',days:7,studentId:'c1-s01'});native.backFromDetail();assert.equal(native.data.correctionRoute.search,'李涵');assert.equal(native.data.correctionRoute.filter,'open');native.returnToModuleHome();assert.equal(native.data.correctionRoute,null);
+go({page:'legacy-stage',days:7});assert(native.data.subjectPage.material);native.backFromDetail();assert.equal(native.data.correctionLegacy,false);assert.equal(native.data.subjectPage,null);
+go({page:'legacy-roster',days:7});assert.equal(native.data.tab,'students');native.backFromDetail();assert.equal(native.data.tab,'overview');assert.equal(native.data.correctionLegacy,false);
+native.changeView({currentTarget:{dataset:{view:'homeroom'}}});assert.deepEqual(native.data.correctionPage.cards[0].summary,c.correctionSummary(c.correctionGroups(all,7).filter(g=>g.classId==='c1')));
+native.changeView({currentTarget:{dataset:{view:'school'}}});assert.deepEqual(native.data.correctionPage.cards[0].summary,c.correctionSummary(c.correctionGroups(all,7)));go({page:'legacy-student',studentId:'c1-s01'});assert.equal(native.data.selectedStudentId,'');
+const wxml=fs.readFileSync(require('path').join(__dirname,'../miniprogram/pages/teacher/learning/correction.wxml'),'utf8');for(const match of wxml.matchAll(/bind(?:tap|confirm|blur)="([^"]+)"/g))assert.equal(typeof native[match[1]],'function',match[1]);
+console.log('PASS correction: shared role totals, deduplication, cross-period activity, repeat chains, pending latest, unauthorized/empty cases, native navigation and bindings.');

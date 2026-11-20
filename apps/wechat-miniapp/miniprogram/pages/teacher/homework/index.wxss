@@ -228,3 +228,12 @@ button.hw-task-list-grading::after{border:0}
 .hw-task-grading-note{display:block;min-height:48rpx;margin:0;padding:0;border:0;background:transparent;color:#a25d27;font-size:24rpx;line-height:48rpx;white-space:nowrap}
 .hw-task-grading-note::after{border:0}
 .hw-graded-basis{margin-top:16rpx;color:#758a9b;font-size:24rpx;line-height:1.6}
+.hw-compose{padding-bottom:0}
+.hw-compose-toolbar{justify-content:flex-start}
+.hw-recipient-summary-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16rpx;margin-bottom:20rpx}
+.hw-recipient-summary-head .hw-card-title{flex:none;font-size:28rpx}
+.hw-publish-range-summary{min-width:0;text-align:right;color:#118fd9;font-size:24rpx;line-height:1.55}
+.hw-publish-range-summary text{display:block;margin-top:5rpx;color:#8a9dad;font-size:20rpx;font-weight:400;overflow-wrap:anywhere}
+.hw-compose-publish-footer{position:sticky;bottom:0;z-index:15;margin-top:20rpx;padding:20rpx 0 max(20rpx,env(safe-area-inset-bottom));background:#f4f9fc}
+.hw-compose-publish-footer .hw-primary{width:100%;margin:0}
+.hw-compose-draft-note{text-align:center;font-size:20rpx;color:#91a3b1;margin:20rpx 0 0}

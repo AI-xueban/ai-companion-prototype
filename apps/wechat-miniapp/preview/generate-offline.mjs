@@ -23,13 +23,31 @@ const compile = async name => ts.transpileModule(await readFile(join(services, n
 
 const roster = await compile('schoolDemoRoster.ts');
 const learning = await compile('learningMock.ts');
+const correction = await compile('correctionLearning.ts');
 const grading = await compile('homeworkGrading.ts');
 const filters = await compile('homeworkFilters.ts');
 const homeworkLearning = await compile('homeworkLearning.ts');
 const homeworkTutor = await compile('homeworkTutor.ts');
 const homeworkWorksheets = await compile('homeworkWorksheets.ts');
-const dataScript = `(function(){const sources={roster:${JSON.stringify(roster)},learning:${JSON.stringify(learning)},grading:${JSON.stringify(grading)},filters:${JSON.stringify(filters)},homeworkLearning:${JSON.stringify(homeworkLearning)},homeworkTutor:${JSON.stringify(homeworkTutor)},homeworkWorksheets:${JSON.stringify(homeworkWorksheets)}};const cache={};function load(name){if(cache[name])return cache[name];const exports={};cache[name]=exports;new Function('require','exports',sources[name])((path)=>load(path==='./schoolDemoRoster'?'roster':path==='./homeworkGrading'?'grading':path),exports);return exports}window.schoolDemoRoster=load('roster');window.learningData=load('learning');window.homeworkGrading=load('grading');window.homeworkFilters=load('filters');window.homeworkLearning=load('homeworkLearning');window.homeworkTutor=load('homeworkTutor');window.homeworkWorksheets=load('homeworkWorksheets')})();`;
+const dataScript = `(function(){const sources={roster:${JSON.stringify(roster)},learning:${JSON.stringify(learning)},correction:${JSON.stringify(correction)},grading:${JSON.stringify(grading)},filters:${JSON.stringify(filters)},homeworkLearning:${JSON.stringify(homeworkLearning)},homeworkTutor:${JSON.stringify(homeworkTutor)},homeworkWorksheets:${JSON.stringify(homeworkWorksheets)}};const cache={};function load(name){if(cache[name])return cache[name];const exports={};cache[name]=exports;new Function('require','exports',sources[name])((path)=>load(path==='./learningMock'?'learning':path==='./schoolDemoRoster'?'roster':path==='./homeworkGrading'?'grading':path),exports);return exports}window.schoolDemoRoster=load('roster');window.learningData=load('learning');window.correctionLearning=load('correction');window.homeworkGrading=load('grading');window.homeworkFilters=load('filters');window.homeworkLearning=load('homeworkLearning');window.homeworkTutor=load('homeworkTutor');window.homeworkWorksheets=load('homeworkWorksheets')})();`;
 await saveOrCheck('learning-data.js', dataScript);
+
+// Refresh only learning-owned embedded blocks while another task edits homework.
+if (process.argv.includes('--learning-only')) {
+  for (const name of ['homework-preview.html','教师发布任务-新版预览.html']) {
+    let html=await readFile(join(root,name),'utf8');
+    for(const shared of ['learning-data.js','workbench-prototype.js','learning-prototype.css']){
+      const tag=shared.endsWith('.css')?'style':'script';
+      const pattern=new RegExp(`(<${tag} data-offline-source="${shared.replaceAll('.', '\\.')}">)[\\s\\S]*?(</${tag}>)`);
+      if(!pattern.test(html))throw new Error(`Missing learning block: ${name}/${shared}`);
+      const raw=shared==='learning-data.js'?dataScript:await readFile(join(root,shared),'utf8');
+      html=html.replace(pattern,(_,open,close)=>`${open}\n${tag==='script'?raw.replace(/<\/script/gi,'<\\/script'):raw}\n${close}`);
+    }
+    await saveOrCheck(name,html);
+  }
+  if(outdated.length)throw new Error('Outdated learning blocks: '+outdated.join(', '));
+  console.log('Learning-only offline blocks synchronized.');process.exit(0);
+}
 
 const index = await readFile(join(root, 'index.html'), 'utf8');
 let offline = index.replace("let stage=params.get('page')||'home'", "let stage=params.get('page')||'teacherDesk'");

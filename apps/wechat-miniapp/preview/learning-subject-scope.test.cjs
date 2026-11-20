@@ -95,7 +95,7 @@ assert.deepEqual(answerPage.corrections.slice(-2).map(row => [row.id, row.result
 
 function browserModel(assignments) {
   const context = vm.createContext({
-    window: { learningData: learning, schoolDemoRoster: { ...roster, getDemoTeachingAssignments: () => assignments } },
+    window: { learningData: learning, correctionLearning: require('../miniprogram/services/correctionLearning.ts'), schoolDemoRoster: { ...roster, getDemoTeachingAssignments: () => assignments } },
     document: { addEventListener() {}, getElementById() { return null; }, querySelector() { return null; } },
   });
   vm.runInContext(fs.readFileSync(path.join(__dirname, 'workbench-prototype.js'), 'utf8'), context);
@@ -111,13 +111,13 @@ assert(markup.includes('lr-preview-subject-static">数学'));
 assert(!markup.includes('近 7 天学科学习概况'));
 web.selectLearningClass('c1'); web.subjectPeriod('7d');
 markup = web.renderLearning();
-assert(markup.includes('14人答错'));
-assert(markup.includes('29人有判定 · 2道题有误'));
-assert(markup.includes('3道 · 12人答错'));
+assert(markup.includes('2道 · 14人'));
+assert.equal(web.getCorrectionModel().cards[0].summary.questions,7);
+assert(markup.includes('3道 · 12人'));
 web.openRecentIssues(); assert.equal(web.getLearningNavigation().title, '班级错题');
 web.materialGo({kind:'list',knowledge:'找整体',onlyWrong:true}); assert(web.renderLearning().includes('查看学生'));
 web.backLearning(); web.backLearning();
-assert(web.renderLearning().includes('14人答错'));
+assert(web.renderLearning().includes('2道 · 14人'));
 for (const days of [14, 30]) {
   web.openKnowledgeReview(); web.setReviewDays(days); web.materialGo({kind:'list',unknown:true}); web.materialGo({kind:'question',qid:'material:u1'});
   const student = learning.reportDayIssues(full, 0, 'question')[0].answerGroups[0].students[0];
@@ -125,7 +125,7 @@ for (const days of [14, 30]) {
   assert.equal(web.getScope().studentPeriod, days + 'd');
   assert(web.renderLearning().includes(learning.learningReportDays[days - 1]));
   web.navigateLearningHome();
-  assert(web.renderLearning().includes('10-06 至 10-12'));
+  assert(web.renderLearning().includes('2026-10-06 至 2026-10-12'));
 }
 console.log('PASS: daily boundaries, weekly deduplication, empty today, class/subject authorization, single/empty scopes, route and student time preservation (web + native).');
 

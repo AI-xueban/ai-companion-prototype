@@ -996,3 +996,31 @@ body.dw-ui-new #app .hp-student-browse .hp-card.hp-student-submission{padding:18
 .hp-teacher-task-list .hp-task-grading-status{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex:0 1 auto;min-width:0;max-width:54%;margin-left:auto}
 .hp-teacher-task-list .hp-task-grading-note{display:block;min-height:24px;margin:0;padding:0;border:0;background:transparent;color:#a25d27;font:inherit;font-size:12px;line-height:24px;white-space:nowrap;cursor:pointer}
 .hp-graded-basis{margin:8px 0 0;color:#758a9b;font-size:12px;line-height:1.6}
+.hp-compose-onepage{padding-bottom:0}
+.hp-compose-onepage>.hp-compose-toolbar{justify-content:flex-start}
+.hp-compose-onepage .hp-compose-card>.hp-submit-settings{margin:12px 0 0;padding:12px 0 0;border:0;border-top:1px solid #e7eef4;border-radius:0;box-shadow:none}
+.hp-compose-onepage .hp-setting-head{align-items:center}
+.hp-compose-onepage .hp-setting-head h3{font-size:13px}
+.hp-compose-onepage .hp-grade-scope-entry-inline{font-size:10px}
+.hp-compose-onepage .hp-uniform-summary{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:38px;margin-top:5px;padding:0;border:0;background:none;font:inherit;font-size:12px;text-align:left;cursor:pointer}
+.hp-compose-onepage .hp-uniform-summary>span{color:#8b9faf;font-size:11px}
+.hp-compose-onepage .hp-uniform-summary>strong{color:#098bd4;font-size:12px;font-weight:500}
+.hp-compose-onepage .hp-requirement-toggle{flex-wrap:wrap;column-gap:4px}
+.hp-compose-onepage .hp-requirement-toggle small{margin:0;color:#178dcc;font-size:10px;font-weight:400}
+.hp-compose-onepage .hp-recipient-merged-head{align-items:flex-start}
+.hp-compose-onepage .hp-recipient-merged-head h3{flex:none;font-size:14px}
+.hp-compose-range-summary{min-width:0;text-align:right;line-height:1.55}
+.hp-compose-range-summary strong{display:block;color:#118fd9;font-size:12px;font-weight:600}
+.hp-compose-range-summary small{display:block;margin-top:3px;color:#8a9dad;font-size:10px;font-weight:400;overflow-wrap:anywhere}
+.hp-compose-onepage .hp-recipient-class-list{margin-top:10px}
+.hp-compose-onepage .hp-compose-footer{z-index:15;display:flex;justify-content:flex-end;padding:10px 0 max(10px,env(safe-area-inset-bottom));margin:10px 0 0;background:#f4f9fc}
+.hp-compose-onepage .hp-compose-footer .hp-primary{width:100%;margin:0}
+.hp-compose-draft-note{text-align:center;font-size:10px;color:#91a3b1;margin:12px 0 0}
+@media(max-width:350px){.hp-compose-range-summary strong{font-size:11px}.hp-compose-range-summary small{font-size:9px}.hp-compose-onepage .hp-mode-switch button{padding-inline:7px}.hp-compose-onepage .hp-setting-head{gap:4px}}
+
+.hp-compose-onepage .hp-recipient-class-list{grid-template-columns:minmax(0,1fr)}
+.hp-compose-onepage .hp-recipient-class-row{width:100%;min-width:0;padding-inline:8px}
+.hp-compose-onepage .hp-recipient-mode-buttons{width:112px;min-height:34px}
+
+.hp-compose-onepage .hp-requirement-editor .hp-paste-area{min-height:80px;max-height:260px}
+.hp-compose-onepage .hp-requirement-editor .hp-attachment-field{padding-block:8px}

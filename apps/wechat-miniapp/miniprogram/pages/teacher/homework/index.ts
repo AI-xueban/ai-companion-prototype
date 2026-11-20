@@ -337,6 +337,7 @@ Page({
     const recipientClassId=draft.classIds.includes(this.data.recipientClassId)?this.data.recipientClassId:draft.classIds[0]||'';
     const recipientTabs=DEMO_CLASSES.filter(c=>draft.classIds.includes(c.id)).map(c=>({id:c.id,name:c.name,total:DEMO_STUDENTS.filter(student=>student.classId===c.id).length,selectedCount:draft.targetStudentIds.filter(id=>DEMO_STUDENTS.some(student=>student.id===id&&student.classId===c.id)).length}));
     this.setData({recipientClassId,recipientTabs,recipientSelectedClassCount:recipientTabs.filter(c=>c.selectedCount>0).length, studentGroups: DEMO_CLASSES.filter(row => row.id===recipientClassId).map(row => ({ id: row.id, name: row.name, total: DEMO_STUDENTS.filter(student => student.classId === row.id).length, selectedCount: draft.targetStudentIds.filter(id => DEMO_STUDENTS.some(student => student.id === id && student.classId === row.id)).length, students: matches.filter(student => student.classId === row.id).map(student => ({ ...student, selected: draft.targetStudentIds.includes(student.id) })) })), classes: DEMO_CLASSES.filter(row => allowed.includes(row.id)).map(row => ({ ...row, selected: draft.classIds.includes(row.id),recipientMode:draft.recipientModes[row.id]||'all',count:draft.recipientModes[row.id]==='selected'?draft.targetStudentIds.filter(id=>DEMO_STUDENTS.some(s=>s.id===id&&s.classId===row.id)).length:DEMO_STUDENTS.filter(s=>s.classId===row.id).length })), studentOptions: matches.map(student => ({ ...student, className: DEMO_CLASSES.find(row => row.id === student.classId)?.name || '', selected: draft.targetStudentIds.includes(student.id) })), draftItems: draft.items.map(item => ({ ...item, submitLabel: item.submitType === 'none' ? '线下完成' : item.submitType ? SUBMIT_LABEL[item.submitType] : '请选择', submitIndex: item.submitType ? TYPES.indexOf(item.submitType) : -1 })), deadlineDate: draft.deadline.split(' ')[0], deadlineTime: draft.deadline.split(' ')[1] || '20:00', submitDeadlineDate: draft.submitDeadline.split(' ')[0], submitDeadlineTime: draft.submitDeadline.split(' ')[1] || '20:00', deadlineDisplay: displayDateTime(draft.deadline), submitDeadlineDisplay: displayDateTime(draft.submitDeadline), previewTargetCount: this.draftRecipients(draft).length });
+    this.setData({rosterSignature:this.currentRosterSignature()});
   },
   readTeacherDraftArchive(): Array<{id:string;saved:SavedTeacherDraft}>{
     const id=getSession()?.profile.userId;if(!id)return [];
@@ -381,7 +382,7 @@ Page({
     }catch(error){const message=error instanceof Error?error.message:'';this.setData({draftDeleteError:message.includes('已')?message:'删除失败，草稿仍保留，请重试。'});}
   },
   resumeOtherDraft(event:WechatMiniprogram.BaseEvent){if(this.data.readOnly)return;const userId=getSession()?.profile.userId;if(!userId)return;
-    try{const key=teacherDraftKey(userId),row=this.readTeacherDraftArchive().find(r=>r.id===String(event.currentTarget.dataset.id));if(!row){this.setData({draftFeedback:'这份草稿已不存在，请刷新列表。'});return;}if(!row.saved.draft.classIds.every(id=>publishingClassIds(getSession()!.profile,this.data.scope).includes(id))){this.setData({draftFeedback:'接收范围已变化，请核对工作身份后继续。'});return;}if(!this.archiveCurrentDraft())return;wx.setStorageSync(key,row.saved);wx.setStorageSync(key+':archive',this.readTeacherDraftArchive().filter(r=>r.id!==row.id));this.setData({...row.saved,hasDraft:true,previewOpen:false,mode:'compose'});this.refreshDraft();this.refreshOtherDrafts();if(this.data.deadlineExpired)this.setData({composeStep:0});}
+    try{const key=teacherDraftKey(userId),row=this.readTeacherDraftArchive().find(r=>r.id===String(event.currentTarget.dataset.id));if(!row){this.setData({draftFeedback:'这份草稿已不存在，请刷新列表。'});return;}if(!row.saved.draft.classIds.every(id=>publishingClassIds(getSession()!.profile,this.data.scope).includes(id))){this.setData({draftFeedback:'接收范围已变化，请核对工作身份后继续。'});return;}if(!this.archiveCurrentDraft())return;wx.setStorageSync(key,row.saved);wx.setStorageSync(key+':archive',this.readTeacherDraftArchive().filter(r=>r.id!==row.id));this.setData({...row.saved,composeStep:0,hasDraft:true,previewOpen:false,mode:'compose'});this.refreshDraft();this.refreshOtherDrafts();if(this.data.deadlineExpired)this.setData({composeStep:0});}
     catch{this.setData({draftFeedback:'草稿切换失败，内容仍保留，请重试。'});}
   },
   quickDeadline(event:WechatMiniprogram.BaseEvent) {const date=new Date();date.setDate(date.getDate()+Number(event.currentTarget.dataset.days));date.setHours(20,0,0,0);if(date.getTime()<=Date.now()){wx.showToast({title:'今天20点已过，请选更晚时间',icon:'none'});this.setData({datePickerTarget:'deadline',datePickerOpen:true});this.updateDatePicker(formatDateTime(new Date(Date.now()+3600000)));return;}this.setData({datePickerTarget:'deadline',datePickerValue:formatDateTime(date)});this.confirmDatePicker();},
@@ -391,7 +392,7 @@ Page({
     const existing=this.data.hasDraft,profile=getSession()?.profile;
     const draft=existing?this.data.draft:emptyDraft(this.data.listClassId!=='all'?this.data.listClassId:scopeClassIds(this.data.scope)[0]||TEACHER_CLASSES[0].id);
     if(!existing&&profile&&this.data.listSubject!=='all'&&teachingSubjectOptions(profile,this.data.scope).includes(this.data.listSubject)){draft.subject=this.data.listSubject;const allowed=subjectClassIds(profile,this.data.scope,draft.subject);draft.classIds=draft.classIds.filter(id=>allowed.includes(id));if(!draft.classIds.length)draft.classIds=allowed.slice(0,1);draft.title=formatHomeworkTitle(draft.subject,draft.kind);}
-    this.setData({mode:'compose',draft,composeStep:existing&&homeworkTime(draft.deadline)>Date.now()?this.data.composeStep:0,uniformType:existing?this.data.uniformType:'',settingMode:existing?this.data.settingMode:'uniform',composeError:'',studentSearch:'',previewOpen:false,hasDraft:true});this.refreshDraft();
+    this.setData({mode:'compose',draft,composeStep:0,uniformType:existing?this.data.uniformType:'',settingMode:existing?this.data.settingMode:'uniform',composeError:'',studentSearch:'',previewOpen:false,hasDraft:true});this.refreshDraft();
   },
   backCompose() { if (this.data.composeStep > 0) this.setData({ composeStep: this.data.composeStep - 1, composeError: '' }); else if(this.data.draftReturnMode==='drafts')this.openTeacherDrafts();else this.backToList(); },
   navigateBack() {if(this.data.reviewDraft){this.closeReview();return;}if(this.data.mode==='answer'){this.backQuestionList();return;}if(this.data.gradeScopeOpen){this.closeGradeScope();return;}if(this.data.studentPhotoOpen){this.closeStudentPhoto();return;}
@@ -404,27 +405,21 @@ Page({
     else if (this.data.mode === 'success') this.returnToHomeworkHome();
     else this.backToList();
   },
+  composeValidationError(message:string,section='content') {
+    this.setData({composeError:message,composeStep:0,previewOpen:false});
+    wx.pageScrollTo?.({selector:'#hw-compose-'+section,duration:160});return false;
+  },
   nextCompose() {
-    if (this.data.attachmentSaving) return;
+    if(this.data.attachmentSaving)return this.composeValidationError('附件仍在处理中，请等待完成。');
     this.refreshDraft();
-    if (this.data.recognitionStale && this.data.settingMode === 'individual' && (this.data.recognizedCount > 0 || this.data.draft.items.length > 1)) { this.setData({ composeError: '内容已修改，请先确认重新识别，避免覆盖逐条设置' }); return; }
-    if (this.data.recognitionStale) this.applyRecognition();
-    const draft = this.data.draft;
-    const step = this.data.composeStep;
-    let error = '';
-    if (step === 0) {
-      if (!this.data.subjectOptions.includes(draft.subject)) error = '暂无可发布学科，请核对任教关系';
-      else if (!draft.description.trim() && !draft.attachments.length) error = '请填写任务描述或添加附件';
-      else if (draft.items.some(item => !item.submitType || !TYPES.includes(item.submitType))) error = '请为每条要求选择提交方式';
-      else if (!draft.deadline || Number.isNaN(new Date(draft.deadline.replace(' ', 'T')).getTime()) || new Date(draft.deadline.replace(' ', 'T')).getTime() <= Date.now()) error = '截止时间请选择未来的日期和时间';
-      else if (!draft.submitDeadline || new Date(draft.submitDeadline.replace(' ', 'T')).getTime() < new Date(draft.deadline.replace(' ', 'T')).getTime()) error = '补交截止时间必须晚于原截止时间';
-    } else if (step === 1) {
-      if (!draft.classIds.length) error = '请至少选择一个班级';
-      else if (draft.classIds.some(id=>draft.recipientModes[id]==='selected'&&!DEMO_STUDENTS.some(s=>s.classId===id&&draft.targetStudentIds.includes(s.id)))) error = '请选择要接收作业的学生';
-    }
-    if (error) { this.setData({ composeError: error }); return; }
-    this.setData({ composeError: '' });
-    if (step < 1) this.setData({ composeStep: step + 1 }); else this.previewPublish();
+    if(this.data.recognitionStale&&this.data.settingMode==='individual'&&(this.data.recognizedCount>0||this.data.draft.items.length>1))return this.composeValidationError('内容已修改，请先确认重新识别，避免覆盖逐条设置','submission');
+    if(this.data.recognitionStale)this.applyRecognition();
+    const draft=this.data.draft;
+    const error=homeworkPublishError(draft);if(error)return this.composeValidationError(error);
+    if(!this.data.subjectOptions.includes(draft.subject))return this.composeValidationError('暂无可发布学科，请核对任教关系');
+    if(!draft.classIds.length)return this.composeValidationError('请至少选择一个班级','recipients');
+    if(draft.classIds.some(id=>draft.recipientModes[id]==='selected'&&!DEMO_STUDENTS.some(student=>student.classId===id&&draft.targetStudentIds.includes(student.id))))return this.composeValidationError('请选择要接收作业的学生，部分班级至少选择一人。','recipients');
+    this.setData({composeError:'',composeStep:0,previewOpen:false});return true;
   },
   returnToHomeworkHome() { if(this.saveTeacherDraft()===false)return; this.setData({ fromSeries: false, entryTaskId: '', mode: 'list', previewOpen: false, gradeScopeOpen:false, selectedTask: null, summary: null, datePickerOpen: false }); returnToHomeworkModuleHome(); this.refreshList(); },
   backToList() { if(this.data.mode==='compose'&&this.saveTeacherDraft()===false)return;if (this.data.fromSeries) { wx.navigateBack({ delta: 1 }); return; } this.setData({ mode: 'list', previewOpen: false, selectedTask: null, summary: null }); this.refreshList(); },
@@ -797,20 +792,16 @@ Page({
   changeItemTitle(event: WechatMiniprogram.CustomEvent<{ value: string }>) { const index = Number(event.currentTarget.dataset.index); const items = this.data.draft.items.map((item, offset) => offset === index ? { ...item, title: event.detail.value } : item); this.setData({ draft: { ...this.data.draft, items }, demoPasteActive: false }); this.refreshDraft(); },
   changeItemInstruction(event: WechatMiniprogram.CustomEvent<{ value: string }>) { const index = Number(event.currentTarget.dataset.index); const items = this.data.draft.items.map((item, offset) => offset === index ? { ...item, instruction: event.detail.value } : item); this.setData({ draft: { ...this.data.draft, items }, demoPasteActive: false }); this.refreshDraft(); },
   changeItemType(event: WechatMiniprogram.CustomEvent<{ value: string }>) { const index = Number(event.currentTarget.dataset.index); const type = TYPES[Number(event.detail.value)]; if (!type) return; const items = this.data.draft.items.map((item, offset) => offset === index ? { ...item, submitType: type } : item); this.setData({ draft: { ...this.data.draft, items }, demoPasteActive: false }); this.refreshDraft(); },
-  previewPublish() {
-    this.refreshDraft();if(this.data.readOnly)return;
-    const draft=this.data.draft,error=homeworkPublishError(draft);
-    if(error){this.setData({composeError:error,composeStep:0});return;}
-    if(!draft.classIds.length||draft.classIds.some(id=>draft.recipientModes[id]==='selected'&&!DEMO_STUDENTS.some(s=>s.classId===id&&draft.targetStudentIds.includes(s.id)))){this.setData({composeError:'每个选择部分学生的班级，至少选择一人。'});return;}
-    this.setData({previewOpen:true,rosterSignature:this.currentRosterSignature(),previewTargetCount:this.draftRecipients(draft).length,previewClasses:draft.classIds.map(id=>DEMO_CLASSES.find(c=>c.id===id)?.name||id).join('、'),previewStudents:draft.classIds.map(id=>{const selected=DEMO_STUDENTS.filter(s=>s.classId===id&&(draft.recipientModes[id]!=='selected'||draft.targetStudentIds.includes(s.id)));return (DEMO_CLASSES.find(c=>c.id===id)?.name||id)+' · '+(draft.recipientModes[id]==='selected'?'部分':'全班')+' · '+selected.length+' 人'+(draft.recipientModes[id]==='selected'?'：'+selected.map(s=>s.name).join('、'):'');}).join('；'),previewItems:draft.items.map(i=>({id:i.id,title:i.title,instruction:i.instruction,type:(i.submitType==='none'?'家长确认':SUBMIT_LABEL[i.submitType as SubmitType])+' · '+(i.gradingEnabled&&draft.kind==='homework'?'自动批改':'仅收集，不批改')}))});
-  },
+  previewPublish() { return this.nextCompose(); },
   closePreview(){this.setData({previewOpen:false});},
   confirmPublish(){
-    if(this.data.readOnly||this.data.publishing)return;
+    if(this.data.readOnly||this.data.publishing||this.data.mode!=='compose'||this.data.recipientPickerOpen)return;
     const session=getSession(),profile=session?.profile;if(!profile||!session?.expiresAt||session.expiresAt<=Date.now())return;
     const draft=this.data.draft,allowed=subjectClassIds(profile,this.data.scope,draft.subject),error=homeworkPublishError(draft);
+    if(this.data.rosterSignature&&this.currentRosterSignature()!==this.data.rosterSignature){this.refreshDraft();return this.composeValidationError('接收名单或任教权限已变化，请核对当前班级和学生后再发布。','recipients');}
+    if(!this.nextCompose())return;
     if(error){this.setData({composeError:error,composeStep:0,previewOpen:false});return;}
-    if(!draft.classIds.length||!draft.classIds.every(id=>allowed.includes(id))||this.currentRosterSignature()!==this.data.rosterSignature){this.setData({composeError:'接收名单或任教权限已变化，请重新核对班级和学生。',previewOpen:false,composeStep:1});return;}
+    if(!draft.classIds.length||!draft.classIds.every(id=>allowed.includes(id))){this.setData({composeError:'接收名单或任教权限已变化，请重新核对班级和学生。',previewOpen:false,composeStep:1});return;}
     const ids=this.draftRecipients(draft).map(s=>s.id);if(!ids.length||draft.classIds.some(id=>draft.recipientModes[id]==='selected'&&!DEMO_STUDENTS.some(s=>s.classId===id&&ids.includes(s.id)))){this.setData({composeError:'请为每个班级选择有效接收人。',previewOpen:false});return;}
     this.setData({publishing:true});
     try{
