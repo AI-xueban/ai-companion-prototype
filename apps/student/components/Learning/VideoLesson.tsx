@@ -32,6 +32,8 @@ export interface VideoPlaylistItem {
 }
 
 interface VideoLessonProps {
+  knowledgePreview?: { title: string; steps: string[] };
+  onWatched?: () => void;
   onComplete: (action?: 'lesson-practice') => void;
   onExit: () => void;
   task?: Task | null;
@@ -159,7 +161,7 @@ const LESSON_DB: Record<string, LessonData> = {
   }
 };
 
-export const VideoLesson: React.FC<VideoLessonProps> = ({ onComplete, onExit, task, onRewardGranted }) => {
+export const VideoLesson: React.FC<VideoLessonProps> = ({ onComplete, onExit, task, onRewardGranted, knowledgePreview, onWatched }) => {
   // 1. Identify Subject & Load Data
   const subjectStr = task?.subject || '数学';
   // Fallback map for loose matching
@@ -214,8 +216,15 @@ export const VideoLesson: React.FC<VideoLessonProps> = ({ onComplete, onExit, ta
   const effectiveWatchRatio = playbackDuration > 0
     ? Math.min(100, (effectiveWatchedSec / playbackDuration) * 100)
     : 0;
-  const requiredWatchRatio = getMicroLessonWatchThreshold(task);
+  const requiredWatchRatio = knowledgePreview ? 100 : getMicroLessonWatchThreshold(task);
   const requiredWatchSec = (requiredWatchRatio / 100) * playbackDuration;
+  const watchNotified = useRef(false);
+  useEffect(() => {
+    if (!watchNotified.current && knowledgePreview && currentTime >= playbackDuration && effectiveWatchedSec >= playbackDuration * 0.8) {
+      watchNotified.current = true;
+      onWatched?.();
+    }
+  }, [knowledgePreview, currentTime, playbackDuration, effectiveWatchedSec, onWatched]);
 
   const panelTabs = isScopeSyncLesson
     ? [{ id: 'kpoints', label: '本节知识点' }]
@@ -564,6 +573,15 @@ export const VideoLesson: React.FC<VideoLessonProps> = ({ onComplete, onExit, ta
 
   // A. The Video Player Area (Subject Specific Visuals)
   const renderPlayerVisual = () => {
+    if (knowledgePreview) {
+      const index = Math.min(knowledgePreview.steps.length - 1, Math.floor(currentTime / playbackDuration * knowledgePreview.steps.length));
+      return <div className="absolute inset-0 bg-[#171c30] flex flex-col items-center justify-center px-10 gap-6 text-white text-center">
+        <span className="text-xs text-indigo-300">知识点讲解 · 原型演示</span>
+        <h2 className="text-2xl font-bold">{knowledgePreview.title}</h2>
+        <p className="text-xl leading-relaxed max-w-xl">{knowledgePreview.steps[index]}</p>
+        <span className="text-xs text-slate-400">{index + 1} / {knowledgePreview.steps.length}</span>
+      </div>;
+    }
     if (task?.syncLesson?.coverUrl || activeSyncLesson?.cover_url) {
       return (
         <div className="absolute inset-0 bg-black overflow-hidden">
@@ -1095,7 +1113,7 @@ export const VideoLesson: React.FC<VideoLessonProps> = ({ onComplete, onExit, ta
              <div className="absolute top-0 left-0 right-0 p-4 flex justify-end items-start bg-gradient-to-b from-black/60 to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 z-20 pointer-events-none">
                  <div className={`text-right pointer-events-none ${!sidePanelOpen && isScopeSyncLesson ? 'mt-10' : ''}`}>
                      <h2 className="text-white font-bold text-sm md:text-base shadow-sm">{displayTitle}</h2>
-                     <span className="text-white/60 text-xs font-mono">{activeSubject}课堂</span>
+                     <span className="text-white/60 text-xs font-mono">{knowledgePreview ? subjectStr : activeSubject}课堂</span>
                  </div>
              </div>
 

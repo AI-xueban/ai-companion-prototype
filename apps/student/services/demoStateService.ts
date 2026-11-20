@@ -1,6 +1,7 @@
 import { clearPaperDocuments } from './printedFileService';
 
 const LOCAL_STORAGE_KEYS = new Set([
+  'ai_friend_book_knowledge_progress_v1',
   'ai_friend_daily_word_check_ins',
   'ai_friend_mistake_reasons',
   'ai_friend_question_feedback',

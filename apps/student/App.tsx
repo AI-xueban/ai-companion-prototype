@@ -8,7 +8,7 @@ import { SubjectMap } from './components/SubjectMap/SubjectMap';
 import {
   SubjectMap as PersonalizedLearningSubjectMap,
   type ExpeditionScreen,
-} from './components/PersonalizedLearning/SubjectMap';
+} from './components/PersonalizedLearning/BookKnowledgeLearning';
 import { isExpeditionNodeId } from './components/PersonalizedLearning/expeditionMapNodes';
 import { expeditionSession } from './components/PersonalizedLearning/expeditionSessionBridge';
 import { MistakeVault } from './components/MistakeVault/MistakeVault';
@@ -965,7 +965,7 @@ const App: React.FC = () => {
 
             {journeyPhase === 'dashboard' && (
                 <motion.div key="dashboard" variants={pushVariants} initial="initial" animate="animate" exit="exit" transition={{ type: 'spring', damping: 25, stiffness: 200 }} className="absolute inset-0 flex flex-col">
-                    {activeTab !== 'today' && activeTab !== 'me' && activeTab !== 'partner' && (
+                    {activeTab !== 'today' && activeTab !== 'me' && activeTab !== 'partner' && !(activeTab === 'subject' && mapMode === 'sync' && personalizedScreen === 'textbook-video') && (
                         <TopStatusBar 
                             key={`status-${dataVersion}`} 
                             stats={userStats} 
@@ -1032,8 +1032,8 @@ const App: React.FC = () => {
                     <div className="flex-1 min-h-0 bg-surface relative z-10 overflow-hidden flex flex-col shadow-[0_-20px_60px_rgba(0,0,0,0.2)]">
                     {activeTab === 'subject' ? (
                         mapMode === 'sync' ? (
-                        <div className="relative h-full min-h-0 w-full pl-14 bg-[#F5F7FA]">
-                            <div className="absolute left-0 top-0 bottom-0 z-30 w-14 bg-[#FAF9F6] pointer-events-none">
+                        <div className={`relative h-full min-h-0 w-full ${personalizedScreen === 'textbook-video' ? '' : 'pl-14'} bg-[#F5F7FA]`}>
+                            <div hidden={personalizedScreen === 'textbook-video'} className="absolute left-0 top-0 bottom-0 z-30 w-14 bg-[#FAF9F6] pointer-events-none">
                                 <div className="relative pt-[72px] pointer-events-auto">
                                     <ModeSwitchRail
                                         mapMode="sync"
@@ -1043,6 +1043,7 @@ const App: React.FC = () => {
                                 </div>
                             </div>
                             <PersonalizedLearningSubjectMap
+                                onKnowledgeReward={handleRewardGranted}
                                 key={`personalized-map-${activeSubject}-${dataVersion}`}
                                 activeSubject={activeSubject}
                                 isAssessed={isAssessed}
