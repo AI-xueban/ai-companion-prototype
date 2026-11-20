@@ -1,4 +1,4 @@
-export type Point = { id: string; name: string };
+export type Point = { id: string; name: string; treePath?: string[] };
 export type Catalog = { id: string; name: string; children: Catalog[]; points: Point[] };
 export type GraphGroup = { catalog: Catalog; points: Point[] };
 

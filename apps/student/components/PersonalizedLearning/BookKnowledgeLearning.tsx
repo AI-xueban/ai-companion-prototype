@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { BookOpen, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { SubjectMap as ThemeLearning, type ExpeditionScreen } from './SubjectMap';
 import { loadAcademicContext } from '../../services/academicContextStore';
 import { getAvailableTextbookVersions, resolveTextbookVersion } from '../../services/textbookVersionStore';
@@ -17,7 +17,7 @@ import type { RewardGrantResult } from '../../types/reward';
 export type { ExpeditionScreen };
 type Book = { id: string; name: string; edition: string; grade: string; term: string; children: Catalog[] };
 type Props = React.ComponentProps<typeof ThemeLearning> & { onKnowledgeReward?: (result: RewardGrantResult) => void };
-const loaders = import.meta.glob('../../data/learning-books/*.json');
+const loaders = import.meta.glob(['../../data/learning-books/*.json', '../../data/learning-books/grade7-first-term/*.json']);
 const codes: Record<string, string> = { 数学: 'math', 语文: 'chinese', 英语: 'english', 物理: 'physics', 化学: 'chemistry', 生物: 'bio', 地理: 'geography', 历史: 'history', 道德与法治: 'politics', 科学: 'science' };
 const grades = ['一年级', '二年级', '三年级', '四年级', '五年级', '六年级'];
 const firstLeaf = (nodes: Catalog[]): Catalog | undefined => {
@@ -56,17 +56,32 @@ export function SubjectMap(props: Props) {
     const code = codes[props.activeSubject];
     const elementary = grades.includes(academic.grade) && !(academic.grade === '六年级' && academic.schoolSystem === '五四制');
     const key = `${code}${elementary ? '3' : ''}`;
-    const loader = loaders[`../../data/learning-books/${key}.json`];
+    const grade7FirstTerm = academic.grade === '七年级' && academic.term === '上册';
+    const loader = (grade7FirstTerm ? loaders[`../../data/learning-books/grade7-first-term/${key}.json`] : undefined)
+      ?? loaders[`../../data/learning-books/${key}.json`];
     (async () => {
       if (!loader) return;
       const { default: books } = await loader() as { default: Book[] };
       if (cancelled) return;
       const term = academic.term.includes('下') ? '下' : '上';
-      const candidates = books.filter(b => b.grade === academic.grade && b.term.includes(term) && b.edition.replace(/（.*?）|\(.*?\)/g, '') === version);
+      const publisher = (edition: string) => edition.replace(/[（(]\d{4}[）)]/g, '').replace(/^部编版/, '统编版');
+      // These unified textbooks are labeled 人教版 in the shared settings.
+      const unifiedSubject = ['语文', '历史', '道德与法治'].includes(props.activeSubject);
+      const graphPublisher = unifiedSubject && version === '人教版' ? '统编版' : publisher(version);
+      const candidates = books.filter(b => b.grade === academic.grade && b.term.includes(term) && (
+        grade7FirstTerm ? publisher(b.edition) === graphPublisher : b.edition.replace(/（.*?）|\(.*?\)/g, '') === version
+      ));
       // The shared textbook setting identifies the publisher; use its 2024 edition for this graph preview.
-      const match = (version === '北师大版' ? candidates.find(b => /[（(]2024[）)]/.test(b.edition)) : undefined) ?? candidates[0];
+      const match = candidates.find(b => b.edition === version && /2024/.test(version))
+        ?? ((version === '北师大版' || (grade7FirstTerm && props.activeSubject === '语文'))
+          ? candidates.find(b => /[（(]2024[）)]/.test(b.edition)) : undefined)
+        ?? candidates[0];
       setBook(match ?? null);
-      const initial = match ? firstLeaf(match.children) : undefined;
+      const firstMappedSection = grade7FirstTerm && match
+        ? match.children.flatMap(chapter => chapter.children.length ? chapter.children : [chapter])
+          .find(section => buildBookGraph(section).length > 0)
+        : undefined;
+      const initial = firstMappedSection ?? (match ? firstLeaf(match.children) : undefined);
       setLeaf(initial ?? null); setPoint(initial ? buildBookGraph(initial).flatMap(g => g.points)[0] ?? null : null);
     })().catch(() => { if (!cancelled) setError('教材目录加载失败，请重试'); })
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -109,7 +124,6 @@ export function SubjectMap(props: Props) {
   useEffect(() => {
     if (session) props.onExpeditionScreenChange?.('textbook-video');
   }, [Boolean(session), props.onExpeditionScreenChange]);
-  const noPointsSubject = props.activeSubject === '语文' || props.activeSubject === '英语';
   const themeFullScreen = view === 'theme' && themeVisited;
   if (session) return <div className="bkl-session">
     {session.phase === 'video' ? <VideoLesson key={session.task.id} task={session.task}
@@ -161,7 +175,7 @@ export function SubjectMap(props: Props) {
             </label> : <span>{props.activeSubject} / 暂无教材目录</span>}
         </div>
         <div className="bkl-canvas-heading"><h2>{leaf?.name ?? '知识图谱学习'}</h2>{leaf && <p>{points.length} 个知识点</p>}</div>
-        {loading ? <div className="bkl-graph-empty">正在加载知识点…</div> : error ? <div className="bkl-graph-empty" role="alert"><h3>教材数据加载失败</h3><p>请检查本地预览服务是否运行，然后重试</p><button onClick={() => setRetry(n => n + 1)}>重新加载</button></div> : noPointsSubject ? <div className="bkl-graph-empty"><BookOpen size={34} /><h3>当前学科暂无知识点图谱</h3><p>可以切换到主题学习继续学习</p><button onClick={() => changeView('theme')}>进入主题学习 →</button></div> : !book ? <div className="bkl-graph-empty">暂无与当前教材匹配的目录，请在「我的课本」核对教材信息</div> : !points.length ? <div className="bkl-graph-empty">当前目录暂无知识点</div> :
+        {loading ? <div className="bkl-graph-empty">正在加载知识点…</div> : error ? <div className="bkl-graph-empty" role="alert"><h3>教材数据加载失败</h3><p>请检查本地预览服务是否运行，然后重试</p><button onClick={() => setRetry(n => n + 1)}>重新加载</button></div> : !book ? <div className="bkl-graph-empty">暂无与当前教材匹配的目录，请在「我的课本」核对教材信息</div> : !points.length ? <div className="bkl-graph-empty">本节暂无教材关联的知识点</div> :
           <BookBranchGraph key={leaf?.id} groups={groups} selected={point?.id} onSelect={openPoint} statuses={statuses} recommendedId={recommended?.id} />}
         <div className="bkl-canvas-footer"><span>● 未测　<span style={{ color: '#9b7cdc' }}>● 已观看</span>　<span style={{ color: '#42b7ad' }}>● 已练习</span></span></div>
       </main>

@@ -105,9 +105,10 @@ export function BookBranchGraph({ groups, selected, onSelect, statuses = {}, rec
             fill="none" stroke="#b4a4ef" strokeWidth="2" markerEnd="url(#bkl-order-arrow)" />;
         })}
       </svg>
-      {pointNodes.map(n => <button key={n.point.id} data-point-id={n.point.id} className={`bkl-branch-point ${statuses[n.point.id] ?? 'new'} ${selected === n.point.id ? 'is-selected' : ''}`} style={{ left: n.x, top: n.y }} aria-pressed={selected === n.point.id} onClick={event => { if (event.detail === 0) onSelect(n.point); }}>
+      {pointNodes.map(n => <button key={n.point.id} data-point-id={n.point.id} className={`bkl-branch-point ${statuses[n.point.id] ?? 'new'} ${selected === n.point.id ? 'is-selected' : ''}`} style={{ left: n.x, top: n.y }} title={n.point.treePath?.length ? [...n.point.treePath, n.point.name].join(' / ') : undefined} aria-pressed={selected === n.point.id} onClick={event => { if (event.detail === 0) onSelect(n.point); }}>
         {n.point.id === recommendedId && <span className="bkl-recommend-badge">推荐学习</span>}
         <span className="bkl-gem"><span /></span><span className="bkl-branch-name">{n.point.name}</span>
+        {!!n.point.treePath?.length && <span className="bkl-branch-category">{n.point.treePath[n.point.treePath.length - 1]}</span>}
       </button>)}
     </div>
   </div>;
