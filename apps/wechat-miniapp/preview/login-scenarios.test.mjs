@@ -191,6 +191,7 @@ assert.equal(parent.inspect().bound, false);
 assert.doesNotMatch(context.app.innerHTML, /B 手机 · 受邀家长/);
 assert.match(reviewUi['parent-review-context'].innerHTML, /B 手机 · 受邀家长/);
 assert.match(context.app.innerHTML, /接受邀请，申请绑定/);
+assert.doesNotMatch(context.app.innerHTML, /接受邀请后仍需审核|以本人微信填写姓名和与孩子的关系/);
 parent.action('beginRequest');
 parent.familyInput('name', '陈女士');
 parent.familyInput('relationChoice', '妈妈');
