@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, Plus, HelpCircle, AlertCircle, RefreshCw, CirclePlay, Check, X } from 'lucide-react';
-import scanDemoImg from '@/assets/lingjing-scan-demo.png';
+import scanDemoImg from '@/assets/zhiyue-homework-photo.png';
 import knowledgeLoadingImg from '@/assets/lingjing-knowledge-loading.png';
 import { ZhiyueGradeMark, ZhiyueQuestionGrade } from './ZhiyueHomework/types';
 
