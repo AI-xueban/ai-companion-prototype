@@ -90,7 +90,7 @@ export const ZhiyueCropPage = ({ imageSrc, onBack, onConfirm }: ZhiyueCropPagePr
           src={imageSrc}
           alt="作业照片"
           draggable={false}
-          className="w-full h-full object-cover select-none"
+          className="w-full h-full object-contain select-none"
           style={{ transform: `rotate(${rotation}deg)` }}
         />
 

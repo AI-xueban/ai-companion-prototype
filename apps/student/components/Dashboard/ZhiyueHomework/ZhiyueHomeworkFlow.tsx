@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import scanDemoImg from '@/assets/lingjing-scan-demo.png';
+import scanDemoImg from '@/assets/zhiyue-homework-photo.png';
+import scanClassroomImg from '@/assets/zhiyue-scan-classroom.png';
 import { LingjingTutorPage } from '../LingjingTutorPage';
 import { ZhiyueCameraPage } from './ZhiyueCameraPage';
 import { ZhiyueCropPage } from './ZhiyueCropPage';
@@ -8,28 +9,29 @@ import { ZhiyueHistoryPage } from './ZhiyueHistoryPage';
 import { formatRecordDate, INITIAL_ZHIYUE_RECORDS } from './mockRecords';
 import { ZhiyueCapturedPage, ZhiyueMode, ZhiyueQuestionGrade, ZhiyueRecord, ZhiyueStep } from './types';
 
-const ANALYZE_DELAY_MS = 1800;
+const ANALYZE_DELAY_MS = 2000;
 const MAX_PAGES = 3;
 
-const AnalyzingView = ({ onCancel }: { onCancel: () => void }) => (
-  <div className="relative w-full h-full overflow-hidden bg-[#14102e]">
-    <img src={scanDemoImg} alt="" className="absolute inset-0 w-full h-full object-contain opacity-80" />
-    <div className="absolute inset-0 bg-[#14102e]/45" />
-    <motion.div
-      className="absolute left-[8%] right-[8%] h-1 rounded-full bg-[#d4c4f8] shadow-[0_0_18px_rgba(212,196,248,0.9)]"
-      animate={{ top: ['16%', '84%'] }}
-      transition={{ repeat: Infinity, duration: 1.6, ease: 'linear' }}
+const AnalyzingView = ({ imageSrc }: { imageSrc: string }) => (
+  <div className="relative w-full h-full overflow-hidden bg-[#55529a]">
+    <div
+      aria-hidden="true"
+      className="absolute inset-0"
+      style={{ backgroundImage: `url(${scanClassroomImg})`, backgroundSize: '110% 145%', backgroundPosition: 'center 80%' }}
     />
-    <button
-      type="button"
-      onClick={onCancel}
-      className="absolute top-5 left-5 z-20 text-sm font-bold text-white/80 hover:text-white"
-    >
-      取消
-    </button>
-    <div className="absolute inset-x-0 bottom-10 text-center">
-      <p className="text-white text-lg font-black">正在扫描批改…</p>
-      <p className="text-white/70 text-sm font-medium mt-2">好未来正在识别题目并切题</p>
+    <div className="absolute inset-0 bg-gradient-to-b from-[#30236e]/25 to-[#85b6dd]/50" />
+    <div className="absolute left-1/2 top-[10%] -translate-x-1/2 w-[58%] h-[66%] flex items-center justify-center">
+      <div className="relative h-full aspect-[638/514] max-w-full overflow-hidden rounded-xl border-2 border-[#d8c4ff] bg-white shadow-[0_0_32px_rgba(183,145,255,0.55)]">
+        <img src={imageSrc} alt="正在扫描的作业照片" className="w-full h-full object-contain" />
+        <motion.div
+          className="absolute inset-x-0 h-1 bg-[#b998ff] shadow-[0_0_20px_4px_rgba(167,125,255,0.8)]"
+          animate={{ top: ['0%', '100%', '0%'] }}
+          transition={{ repeat: Infinity, duration: 1.6, ease: 'linear' }}
+        />
+      </div>
+    </div>
+    <div className="absolute inset-x-0 bottom-[8%] text-center">
+      <p className="text-white text-lg font-black">小晤正在逐题批改，请稍等...</p>
     </div>
   </div>
 );
@@ -155,7 +157,7 @@ export const ZhiyueHomeworkFlow = ({ onBack }: ZhiyueHomeworkFlowProps) => {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
           >
-            <AnalyzingView onCancel={() => openCamera(mode !== 'multi')} />
+            <AnalyzingView imageSrc={capturedPages[0]?.src ?? scanDemoImg} />
           </motion.div>
         )}
 
