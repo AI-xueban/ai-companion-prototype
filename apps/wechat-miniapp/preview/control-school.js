@@ -109,8 +109,9 @@ function showEditor(){return editor?.modal?actionModal():form();}
 function restrictedCount(d,module){return M.rows(d,gs()).filter(({ref})=>module==='lock'?(d.schoolSettings.temporaryClassStates?.[ref.className]??d.schoolSettings.temporaryLock?.active):(d.schoolSettings.borrowing.temporaryClasses[ref.className]??d.schoolSettings.borrowing.schoolTemporaryActive)).length;}
 function entryCard(module){
  const d=read(),locked=module==='lock',total=M.rows(d,gs()).length,all=gs().filter(g=>M.rows(d,[g]).length),count=all.filter(g=>hasRestriction(d,g,module)).length,stopped=all.length&&all.every(g=>status(d,g,module));
- const borrowing=d.schoolSettings.borrowing,today=R.today(),rules=Object.values(borrowing.classRules).flat(),dateCount=borrowing.dateRestrictionEnabled===false?0:new Set(rules.filter(r=>r.mode==='dates'&&r.startDate<=today&&r.endDate>=today).map(M.borrowKey)).size,weeklyCount=borrowing.weeklyRestrictionEnabled===false?0:new Set(rules.filter(r=>r.mode==='weekly'&&r.weekdays?.length).map(M.borrowKey)).size;
- const summary=locked?'<p class="parity-note">已锁屏 '+count+'/'+all.length+' 年级</p>':(count?'<p class="parity-note">已停止借用 '+count+'/'+all.length+' 年级</p>':'')+'<p class="parity-note school-borrow-count">'+dateCount+'条生效日期规则，'+weeklyCount+'条生效每周规则</p>';
+ const borrowing=d.schoolSettings.borrowing,today=R.today(),rules=Object.values(borrowing.classRules).flat(),dateCount=borrowing.dateRestrictionEnabled===false?0:new Set(rules.filter(r=>r.mode==='dates'&&r.endDate>=today).map(M.borrowKey)).size,weeklyCount=borrowing.weeklyRestrictionEnabled===false?0:new Set(rules.filter(r=>r.mode==='weekly'&&r.weekdays?.length).map(M.borrowKey)).size;
+ const ruleSummary=[dateCount?dateCount+'条生效日期规则':'',weeklyCount?weeklyCount+'条生效每周规则':''].filter(Boolean).join('，');
+ const summary=locked?(count?'<p class="parity-note">已锁屏 '+count+'/'+all.length+' 年级</p>':''):(count?'<p class="parity-note">已停止借用 '+count+'/'+all.length+' 年级</p>':'')+(ruleSummary?'<p class="parity-note school-borrow-count">'+ruleSummary+'</p>':'');
  const label=locked?(stopped?'全校解除临时锁屏':'全校临时锁屏'):(stopped?'全校恢复借用':'全校停止借用');
  return '<section class="control-entry-lock school-entry-card"><div class="school-panel-heading"><h3>'+(locked?'全校临时锁屏':'柜机借用管控')+'</h3><button type="button" class="school-entry-detail" onclick="enterAdminModule(\''+module+'\')">'+(locked?'设置年级锁屏':'设置年级借用')+' ›</button></div>'+summary+'<div class="school-global-action">'+btn(label,"allAction('"+module+"','"+(stopped?'resume':'stop')+"')",false,!total,stopped?'release':'restrict')+'</div></section>';
 }
@@ -150,7 +151,7 @@ function refreshSchoolRules(){
  if(controlDemoRole!=='admin'||document.hidden)return;
  const result=M.clean(JSON.parse(localStorage.getItem(key)||'null')||controlData);
  if(result.changed){write(result.data);schoolExpiryRefreshPending=true;}
- // Expired records are removed even while a form is open. Preserve the draft UI;
+ // Expired records leave the active view and are archived even while a form is open. Preserve the draft UI;
  // its original version will no longer pass final-save validation.
  if(typeof stage!=='undefined'&&stage!=='teacherDesk'||typeof teacherTab!=='undefined'&&teacherTab!=='control')return;
  if(schoolExpiryRefreshPending&&!schoolControl.busy()&&!timeDraft&&!dateDraft&&!document.querySelector?.('#control-overlay .control-shade')){schoolExpiryRefreshPending=false;window.renderControl();}
