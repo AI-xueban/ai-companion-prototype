@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { type GraphGroup, type Point } from './bookLearningGraph';
 
-export function BookBranchGraph({ groups, selected, onSelect, statuses = {}, recommendedId }: { groups: GraphGroup[]; selected: string | undefined; onSelect: (point: Point) => void; statuses?: Record<string, string>; recommendedId?: string }) {
+export function BookBranchGraph({ groups, selected, onSelect, onClearSelection, statuses = {}, recommendedId }: { groups: GraphGroup[]; selected: string | undefined; onSelect: (point: Point) => void; onClearSelection?: () => void; statuses?: Record<string, string>; recommendedId?: string }) {
   // Keep the imported catalog/Points order; alternate row direction for a continuous reading path.
   const orderedPoints = groups.flatMap(g => g.points);
   const columns = Math.min(3, Math.max(1, orderedPoints.length));
@@ -56,12 +56,13 @@ export function BookBranchGraph({ groups, selected, onSelect, statuses = {}, rec
     if (!cancelled && pointers.current.size === 1 && !gesture.current.moved) {
       const node = pointNodes.find(n => n.point.id === gesture.current.pointId);
       if (node) onSelect(node.point);
+      else onClearSelection?.();
     }
     pointers.current.delete(event.pointerId);
     gesture.current.distance = 0;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   };
-  return <div ref={viewport} className="bkl-branch-viewport" aria-label="可拖动缩放的知识点图谱"
+  return <div ref={viewport} className="bkl-branch-viewport" aria-label="可拖动缩放的知识点图谱" tabIndex={0} onKeyDown={event => { if (event.key === 'Escape') onClearSelection?.(); }}
     onPointerDown={event => {
       if (event.button !== 0) return;
       const p = localPoint(event.clientX, event.clientY);
@@ -108,7 +109,6 @@ export function BookBranchGraph({ groups, selected, onSelect, statuses = {}, rec
       {pointNodes.map(n => <button key={n.point.id} data-point-id={n.point.id} className={`bkl-branch-point ${statuses[n.point.id] ?? 'new'} ${selected === n.point.id ? 'is-selected' : ''}`} style={{ left: n.x, top: n.y }} title={n.point.treePath?.length ? [...n.point.treePath, n.point.name].join(' / ') : undefined} aria-pressed={selected === n.point.id} onClick={event => { if (event.detail === 0) onSelect(n.point); }}>
         {n.point.id === recommendedId && <span className="bkl-recommend-badge">推荐学习</span>}
         <span className="bkl-gem"><span /></span><span className="bkl-branch-name">{n.point.name}</span>
-        {!!n.point.treePath?.length && <span className="bkl-branch-category">{n.point.treePath[n.point.treePath.length - 1]}</span>}
       </button>)}
     </div>
   </div>;

@@ -1,3 +1,4 @@
+import { applyMistakeCorrectionStates } from './knowledgePointMistakes';
 
 import { 
     DayPlan, SubjectData, SubjectType, MistakeVaultData, UserProfileData, 
@@ -514,7 +515,7 @@ export const getSubjectMapData = async (subject: SubjectType, mode: MapMode = 's
 }
 
 export const getMistakeVaultData = async (): Promise<MistakeVaultData> => {
-  return new Promise((resolve) => {
+  return new Promise<MistakeVaultData>((resolve) => {
     setTimeout(() => {
         if (currentPersona === 'newbie') {
             resolve({
@@ -761,7 +762,7 @@ export const getMistakeVaultData = async (): Promise<MistakeVaultData> => {
           groups: Object.values(groups),
         });
     }, 400);
-  });
+  }).then(applyMistakeCorrectionStates);
 };
 
 export const generateMistakeVariant = async (originalId: string): Promise<VariantQuestion> => {

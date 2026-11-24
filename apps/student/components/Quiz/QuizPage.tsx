@@ -242,7 +242,7 @@ export const QuizPage: React.FC<QuizPageProps> = ({
               { skillId: 'sk1', skillName: '代数思维', oldLevel: 40, newLevel: 45 },
               { skillId: 'sk2', skillName: '逻辑推理', oldLevel: 60, newLevel: 62 }
           ],
-          aiComment: task?.id.startsWith('book-knowledge-') ? `本次${task.title.includes('流程模拟') ? '流程模拟' : ''}练习答对 ${correctCount}/${questions.length} 题。已记录练习结果，尚未进行知识点掌握评估。` : score === 100
+          aiComment: task?.id.startsWith('book-knowledge-') ? `本次${task.title.includes('流程模拟') ? '流程模拟' : ''}练习答对 ${correctCount}/${questions.length} 题。${task.title.includes('流程模拟') ? '模拟结果不参与学科掌握评估。' : '已按逐题掌握状态更新知识点健康分，返回图谱查看。'}` : score === 100
               ? "太棒了！你的表现无可挑剔，知识掌握得非常牢固。" 
               : score >= 60 
                   ? "整体表现不错，但在细节上还有提升空间，建议复盘错题。" 

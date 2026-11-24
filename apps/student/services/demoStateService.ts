@@ -4,6 +4,7 @@ const LOCAL_STORAGE_KEYS = new Set([
   'ai_friend_student_community_v1',
   'hivemate_platform_v3',
   'ai_friend_book_knowledge_progress_v1',
+  'ai_friend_mistake_correction_states_v1',
   'ai_friend_daily_word_check_ins',
   'ai_friend_mistake_reasons',
   'ai_friend_question_feedback',

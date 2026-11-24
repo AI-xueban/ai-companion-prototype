@@ -45,7 +45,6 @@
 .bkl-branch-point.weak .bkl-gem{background:conic-gradient(#ffcdc9,#f67c74,#ffd9d2,#fa9b8e,#ffcdc9)}
 .bkl-branch-point.is-selected .bkl-gem{box-shadow:0 0 0 4px #fff,0 0 0 10px #ad95ea24}
 .bkl-branch-name{font-size:11px;font-weight:600;text-align:center;max-width:115px;padding:0 4px;color:#53516c}
-.bkl-branch-category{margin-top:-6px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#776393}
 .bkl-recommend-badge{position:absolute;top:-24px;background:#fff;color:#e68c82;font-size:10px;border-radius:16px;padding:3px 8px;white-space:nowrap;box-shadow:0 3px 10px #de92841f}
 .bkl-canvas-footer{flex-shrink:0;font-size:10px;color:#a2a7b7;display:flex;padding-top:8px}
 .bkl-canvas-footer>span{background:#ffffffb8;padding:6px 10px;border-radius:18px}
@@ -81,3 +80,57 @@
 @media(max-width:650px){.bkl-mastery,.bkl-recommend{padding:11px}.bkl-ring{width:54px;height:54px}.bkl-mastery-body{gap:9px}.bkl-mastery h3,.bkl-recommend h3{font-size:12px;margin-bottom:10px}.bkl-recommend p{font-size:9px}}
 
 .bkl-session{position:absolute;inset:0;z-index:70;background:#fff;overflow:hidden}.bkl-branch-point.practiced .bkl-gem{background:conic-gradient(#9af0df,#31bfb2,#b5fff1,#5dcbba,#9af0df)}.bkl-branch-point.learning .bkl-gem{background:conic-gradient(#ddc8ff,#9b78e6,#eee3ff,#b49be9,#ddc8ff)}.bkl-mastery-numbers span:first-child strong{color:#9aa6bd}.bkl-mastery-numbers span:nth-child(2) strong{color:#9b7cdc}.bkl-mastery-numbers span:nth-child(3) strong{color:#42b7ad}
+
+.bkl-branch-point.unknown .bkl-gem{background:#b8c0d0}.bkl-branch-point.exploring .bkl-gem{background:#6d9ee8}.bkl-branch-point.weak .bkl-gem{background:#ed6b75}.bkl-branch-point.reviewing .bkl-gem{background:#e4b342}.bkl-branch-point.mastered .bkl-gem{background:#42b7ad}.bkl-point-health{font-size:10px;line-height:1.5;color:#6e7188}.bkl-mastery>p{font-size:10px;color:#85889d;margin:8px 0}.bkl-mastery>b{font-size:12px;margin-bottom:10px}.bkl-selected-learn{background:#eee7ff;color:#7352c4;border-radius:10px;padding:8px;margin-top:8px;font-size:12px}.bkl-mastery{overflow:auto}.bkl-branch-point.weak .bkl-point-health{color:#cd4358}.bkl-branch-point.reviewing .bkl-point-health{color:#96700b}.bkl-branch-point.mastered .bkl-point-health{color:#208d80}
+/* A single contextual panel occupies the full sidebar. */
+.bkl-sidebar{display:flex;flex-direction:column;gap:0;overflow:hidden}.bkl-sidebar>.bkl-mastery,.bkl-sidebar>.bkl-recommend{height:100%;flex:1;min-height:0;overflow:auto;justify-content:flex-start;display:flex;flex-direction:column;gap:12px}.bkl-section-progress{display:flex;align-items:center;gap:7px;padding-bottom:12px;border-bottom:1px solid #eeeaf6;color:#85839a;font-size:11px}.bkl-section-progress strong{color:#7753f2;font-size:17px}.bkl-section-progress button{margin-left:auto;font-size:20px;line-height:24px;padding:0 5px;color:#9b94ac}.bkl-mastery h3{margin:0}.bkl-mastery>b{font-size:15px;margin:0;line-height:1.5}.bkl-detail-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:auto}.bkl-detail-actions button{font-size:12px;border-radius:10px;min-height:38px;padding:8px;background:#eee7ff;color:#7352c4;margin:0}.bkl-detail-actions .bkl-selected-learn{grid-column:1/-1;background:#7753f2;color:#fff}.bkl-detail-actions button:last-child{grid-column:1/-1;background:#f5f3fa}.bkl-detail-actions button:disabled{opacity:.5;cursor:not-allowed}.bkl-all-mastered{justify-content:center!important;text-align:center}.bkl-all-mastered>span{font-size:40px;color:#e6b549}.bkl-all-mastered h3{line-height:1.8;font-size:17px}.bkl-mastery-numbers span:first-child strong{color:#ed6b75}.bkl-mastery-numbers span:nth-child(2) strong{color:#e4b342}
+.bkl-canvas-footer{align-items:center;justify-content:space-between;gap:8px}.bkl-difficulty-trigger{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;border:1px solid #ddd3f7;border-radius:12px;background:#fff;color:#7753f2;padding:8px 10px;font-size:11px;min-height:36px}.bkl-difficulty-trigger:hover{background:#f2ecff}.bkl-difficulty-dialog{position:fixed;inset:0;margin:auto;width:min(430px,90vw);max-height:85vh;overflow:auto;border:0;border-radius:22px;padding:24px;color:#303650;background:#fff;box-shadow:0 24px 80px #30204e33}.bkl-difficulty-dialog::backdrop{background:#29233e66;backdrop-filter:blur(3px)}.bkl-difficulty-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;margin-bottom:18px}.bkl-difficulty-heading h2{font-size:20px;font-weight:800;margin:0}.bkl-difficulty-heading p{color:#9390a6;font-size:12px;margin:7px 0 0}.bkl-difficulty-heading>button{background:#f5f2fa;color:#8c839f;border-radius:50%;padding:7px}.bkl-difficulty-options{display:grid;gap:10px}.bkl-difficulty-option{display:flex;align-items:center;justify-content:space-between;gap:16px;text-align:left;background:#faf9fd;border:1.5px solid #eae5f4;border-radius:14px;padding:15px 16px;width:100%}.bkl-difficulty-option[aria-pressed=true]{background:#f4efff;border-color:#9473e4}.bkl-difficulty-option strong{font-size:16px;color:#44345f}.bkl-difficulty-option small{display:block;font-size:12px;color:#8f879f;margin-top:5px}.bkl-difficulty-check{display:flex;align-items:center;justify-content:center;width:22px;height:22px;flex-shrink:0;border:1.5px solid #d3cce2;border-radius:50%;color:#fff}.bkl-difficulty-option[aria-pressed=true] .bkl-difficulty-check{border-color:#7753f2;background:#7753f2}.bkl-difficulty-note{font-size:11px;text-align:center;color:#a29aaf;margin:16px 0 0}
+.bkl-point-title{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.bkl-point-title>b{font-size:15px;line-height:1.5}.bkl-point-title>span{flex-shrink:0;font-size:9px;font-weight:500;background:#f0eaff;color:#8966dc;padding:3px 6px;border-radius:10px}.bkl-mastery>.bkl-common-types{margin:0;color:#91869f;font-size:11px;line-height:1.6}
+.bkl-mastery-body{justify-content:space-between}.bkl-trace-link{display:flex;align-items:center;gap:4px;padding:10px 0 10px 8px;color:#8a70ca;font-size:11px;white-space:nowrap}.bkl-trace-link>span{font-size:20px}.bkl-mastery-numbers{flex:0;width:100%;margin:0}.bkl-mastery-numbers>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:0;text-align:center}.bkl-mastery-numbers span{font-size:10px;line-height:1.5}.bkl-mastery-numbers strong{display:block;font-size:19px;margin:0 0 3px}.bkl-placeholder-page{display:flex;flex-direction:column;padding:28px;color:#303650}.bkl-placeholder-page header{display:flex;align-items:center;gap:20px}.bkl-placeholder-page header button{padding:12px;color:#7753f2}.bkl-placeholder-page h2{font-size:18px;font-weight:700}.bkl-placeholder-page main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px}.bkl-placeholder-page main>button{padding:12px 20px;border-radius:12px;background:#7753f2;color:white}.bkl-placeholder-page p{color:#9390a6}
+/* Compact diagnosis card: secondary counts, primary action anchored below correction. */
+.bkl-sidebar>.bkl-mastery{box-sizing:border-box;height:100%;padding:12px 14px;gap:7px;overflow:visible;justify-content:flex-start}
+.bkl-mastery .bkl-section-progress{padding-bottom:7px;font-size:10px;min-height:25px;flex-shrink:0}
+.bkl-mastery .bkl-section-progress strong{font-size:15px}.bkl-mastery .bkl-section-progress button{font-size:18px;line-height:22px}
+.bkl-mastery .bkl-point-title{gap:6px;flex-shrink:0}.bkl-mastery .bkl-point-title>b{font-size:14px;line-height:1.4}
+.bkl-mastery>.bkl-common-types{font-size:10px;line-height:1.45}.bkl-mastery .bkl-mastery-body{flex-shrink:0;gap:10px;margin:1px 0}
+.bkl-mastery .bkl-ring{width:58px;height:58px;padding:5px}.bkl-mastery .bkl-ring strong{font-size:18px}.bkl-mastery .bkl-trace-link{font-size:10px;padding:8px 0 8px 5px}
+.bkl-mastery .bkl-mastery-numbers{flex-shrink:0;padding:6px 0;border-top:1px solid #f1eef6;border-bottom:1px solid #f1eef6}
+.bkl-mastery .bkl-mastery-numbers>div{gap:4px}.bkl-mastery .bkl-mastery-numbers span{display:flex;align-items:baseline;justify-content:center;gap:4px;font-size:9px;line-height:1.4;color:#a09bad;white-space:nowrap}
+.bkl-mastery .bkl-mastery-numbers span strong{display:inline;font-size:13px;font-weight:500;color:#898295;margin:0}
+.bkl-mastery>p:not(.bkl-common-types){font-size:9px;line-height:1.4;margin:0;color:#a49daf}
+.bkl-mastery .bkl-detail-actions{display:flex;flex-direction:column;gap:6px;margin-top:auto;flex-shrink:0}
+.bkl-mastery .bkl-detail-actions button{width:100%;min-height:32px;padding:7px 10px;background:#f3effb;color:#8b78ae;font-size:11px;border-radius:10px}
+.bkl-mastery .bkl-detail-actions .bkl-selected-learn{background:#7753f2;color:#fff}
+@media(max-height:580px){.bkl-sidebar>.bkl-mastery{padding:10px 12px;gap:5px}.bkl-mastery .bkl-ring{width:52px;height:52px}.bkl-mastery .bkl-point-title>b{font-size:13px}}
+
+/* Detail cards size to their content; their container controls short-panel spacing. */
+.bkl-sidebar{container-name:point-detail;container-type:size}
+.bkl-sidebar>.bkl-mastery{height:auto;max-height:100%;flex:0 1 auto;padding:12px 14px;gap:8px}
+.bkl-mastery .bkl-point-title{align-items:flex-start}.bkl-mastery .bkl-point-title>b{min-width:0;overflow-wrap:anywhere}.bkl-mastery .bkl-point-title>span{white-space:nowrap}
+.bkl-mastery .bkl-detail-actions{margin-top:8px;gap:7px}
+@container point-detail (max-height:360px){.bkl-sidebar>.bkl-mastery{padding:10px 12px;gap:5px}.bkl-mastery .bkl-section-progress{min-height:21px;padding-bottom:5px}.bkl-mastery .bkl-ring{width:48px;height:48px}.bkl-mastery .bkl-detail-actions{margin-top:4px}.bkl-mastery .bkl-detail-actions button{min-height:30px;padding:6px 8px}}
+
+/* Main graph detail panel uses the full sidebar with a flexible diagnosis area. */
+.bkl-workspace>.bkl-sidebar>.bkl-mastery{height:100%;max-height:100%;flex:1 1 0;padding:14px 16px;gap:8px;border:1px solid #fff;border-radius:20px;box-shadow:0 5px 18px #7060a808}
+.bkl-workspace .bkl-mastery .bkl-section-progress{min-height:25px;padding-bottom:8px;font-size:11px}
+.bkl-workspace .bkl-mastery .bkl-point-title{align-items:center;gap:7px}.bkl-workspace .bkl-mastery .bkl-point-title>b{font-size:15px;line-height:1.4}
+.bkl-workspace .bkl-mastery>.bkl-common-types{font-size:10px;line-height:1.4}
+.bkl-workspace .bkl-mastery .bkl-mastery-body{flex:1 1 68px;min-height:68px;align-items:center;justify-content:space-between;gap:10px;margin:0}
+.bkl-workspace .bkl-mastery .bkl-ring{width:64px;height:64px;padding:5px}.bkl-workspace .bkl-mastery .bkl-ring strong{font-size:21px}.bkl-workspace .bkl-mastery .bkl-ring small{font-size:8px}
+.bkl-workspace .bkl-mastery .bkl-trace-link{font-size:10px;padding:8px 0}
+.bkl-workspace .bkl-mastery .bkl-mastery-numbers{padding:8px 0}.bkl-workspace .bkl-mastery .bkl-mastery-numbers span{align-items:center;gap:3px;font-size:9px}.bkl-workspace .bkl-mastery .bkl-mastery-numbers span strong{font-size:14px;font-weight:500;color:#898295}
+.bkl-workspace .bkl-mastery .bkl-detail-actions{margin-top:0;gap:7px}.bkl-workspace .bkl-mastery .bkl-detail-actions button{min-height:34px;padding:8px 10px;border-radius:11px;font-size:12px}
+@container point-detail (max-height:360px){
+ .bkl-workspace>.bkl-sidebar>.bkl-mastery{padding:10px 12px;gap:5px;border-radius:18px}
+ .bkl-workspace .bkl-mastery .bkl-section-progress{min-height:21px;padding-bottom:5px;font-size:10px}
+ .bkl-workspace .bkl-mastery .bkl-point-title>b{font-size:14px}
+ .bkl-workspace .bkl-mastery .bkl-mastery-body{flex-basis:54px;min-height:54px}
+ .bkl-workspace .bkl-mastery .bkl-ring{width:52px;height:52px}.bkl-workspace .bkl-mastery .bkl-ring strong{font-size:18px}
+ .bkl-workspace .bkl-mastery .bkl-mastery-numbers{padding:6px 0}.bkl-workspace .bkl-mastery .bkl-mastery-numbers span{gap:2px}.bkl-workspace .bkl-mastery .bkl-mastery-numbers span strong{font-size:13px}
+ .bkl-workspace .bkl-mastery .bkl-detail-actions{gap:6px}.bkl-workspace .bkl-mastery .bkl-detail-actions button{min-height:30px;padding:6px 8px;font-size:11px}
+}
+@container point-detail (max-height:280px){
+ .bkl-workspace>.bkl-sidebar>.bkl-mastery{padding:8px 10px;gap:4px}
+ .bkl-workspace .bkl-mastery .bkl-mastery-body{flex-basis:44px;min-height:44px}.bkl-workspace .bkl-mastery .bkl-ring{width:42px;height:42px;padding:4px}.bkl-workspace .bkl-mastery .bkl-ring strong{font-size:16px}
+ .bkl-workspace .bkl-mastery .bkl-mastery-numbers{padding:4px 0}.bkl-workspace .bkl-mastery .bkl-detail-actions button{min-height:28px;padding:5px 8px}
+}

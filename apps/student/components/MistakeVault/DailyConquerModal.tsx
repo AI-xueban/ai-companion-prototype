@@ -16,6 +16,8 @@ import { resolveQuestionCorrectness } from '../../utils/manualGrade';
 
 interface DailyConquerModalProps {
     items: MistakeItem[];
+    maxQuestions?: number;
+    onSessionResult?: (result: QuizSessionResult) => void;
     onClose: () => void;
     onComplete: (results: { masteredIds: string[], xpEarned: number, coinsEarned: number }) => void;
     onRewardGranted?: (result: RewardGrantResult) => void;
@@ -77,6 +79,8 @@ export const DailyConquerModal: React.FC<DailyConquerModalProps> = ({
     onRewardGranted,
     userStats,
     mode = 'daily',
+    maxQuestions = DAILY_CONQUER_MAX,
+    onSessionResult,
     subjectLabel,
     onOpenAITutor,
 }) => {
@@ -95,13 +99,13 @@ export const DailyConquerModal: React.FC<DailyConquerModalProps> = ({
 
         const pendingItems = items.filter(item => item.status !== 'mastered');
         const source = pendingItems.length > 0 ? pendingItems : items;
-        const limit = Math.min(source.length, DAILY_CONQUER_MAX);
+        const limit = Math.min(source.length, maxQuestions);
         const playable = source.slice(0, limit).map(mapMistakeItemToQuestion);
         setQueue(playable);
         if (mode === 'batch' && playable.length > 0) {
             setPhase('quiz');
         }
-    }, [items, mode]);
+    }, [items, mode, maxQuestions]);
 
     // 结果页先展示，再触发金币动画（避免与提交同帧导致父级重挂载）
     useEffect(() => {
@@ -194,6 +198,7 @@ export const DailyConquerModal: React.FC<DailyConquerModalProps> = ({
         setResultPayload(res);
         setPhase('result');
         if (res.grantResult?.invalidLearning) return;
+        onSessionResult?.(res);
         const masteredIds = res.questions.filter(q => q.isCorrect).map(q => q.questionId);
         onComplete({
             masteredIds,
