@@ -36,7 +36,7 @@ h1, h2, h3, p { margin: 0; }
 .hw-period-context { display: flex; gap: 22px; align-items: center; padding: 13px 16px; }
 .hw-period-context .hw-field { min-width: 245px; }
 .hw-period-context > div { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 18px; color: var(--sub); font-size: 12px; }
-.hw-student-filters { display: grid; grid-template-columns: 1fr 1.2fr 1fr auto; align-items: end; gap: 12px; padding: 13px; border: 1px solid var(--line); border-radius: 6px; background: #fafbfd; margin: 15px 0; }
+.hw-student-filters { display: grid; grid-template-columns: 1fr 1.2fr 1fr 1fr auto; align-items: end; gap: 12px; padding: 13px; border: 1px solid var(--line); border-radius: 6px; background: #fafbfd; margin: 15px 0; }
 .hw-inline-actions { display: flex; gap: 8px; }
 .hw-version-group { margin-top: 12px; border: 1px solid #e0e7ef; border-radius: 6px; background: #fff; }
 .hw-version-group summary { cursor: pointer; padding: 11px 13px; color: #435569; }
@@ -91,7 +91,10 @@ h1, h2, h3, p { margin: 0; }
 .hw-tab-content { padding: 20px; }
 .hw-tab-content h2 { font-size: 15px; font-weight: 650; margin-bottom: 10px; }
 .hw-tab-content h3 { font-size: 14px; font-weight: 650; margin: 17px 0 9px; }
-.hw-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+/* 两栏允许收缩，避免附件长表格挤窄任务信息；溢出内容由各自表格容器滚动。 */
+.hw-two-col { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; }
+.hw-two-col > div { min-width: 0; }
+.hw-two-col .hw-table { min-width: 0; }
 .hw-subsection { border-top: 1px solid var(--line); margin-top: 20px; padding-top: 20px; }
 .hw-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; margin: 0; }
 .hw-facts div:last-child { grid-column: 1 / -1; }
@@ -120,6 +123,19 @@ h1, h2, h3, p { margin: 0; }
 .hw-period-items { display: grid; gap: 8px; }
 .hw-period-items > div { border: 1px solid #e7ecf2; background: #fff; border-radius: 6px; display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; }
 .hw-period-items span { color: #758393; font-size: 12px; }
+.hw-pipeline { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.hw-pipeline button { text-align: left; color: inherit; }
+.hw-pipeline button:hover { border-color: var(--blue); background: #f4f9ff; }
+.hw-facts + h3 { margin-top: 20px; }
+.hw-task-context { padding: 12px 16px; margin-bottom: 12px; }
+.hw-task-context > div { display: flex; flex-wrap: wrap; gap: 8px 26px; color: var(--sub); font-size: 12px; }
+.hw-task-context strong { color: #334050; font-weight: 500; margin-left: 6px; }
+.hw-task-context p { margin-top: 7px; color: #334050; font-size: 13px; }
+.hw-task-context p > span { color: var(--sub); margin-right: 12px; }
+/* 展开内容属于上一行学生；仅设置外层单元格，不影响其中嵌套的提交记录表格。 */
+.hw-student-table > tbody > .hw-expanded-row > td { padding: 0 12px 12px; background: #f5faff; }
+.hw-expanded-row .hw-student-detail { margin-top: 0; }
+.hw-disclosure-body { padding: 12px; }
 @media (max-width: 1180px) { .hw-summary-grid, .hw-grade-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .hw-filter-grid, .hw-student-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 800px) { .hw-two-col { grid-template-columns: 1fr; } .hw-heading { display: block; } .hw-asof { display: block; margin-top: 8px; } .hw-tab-content { padding: 14px; } .hw-period-context { align-items: stretch; flex-direction: column; gap: 12px; } }
 @media (max-width: 560px) { .hw-summary-grid, .hw-grade-grid, .hw-filter-grid { grid-template-columns: 1fr; } .hw-review-controls em { display: none; } .hw-filter-actions span { display: none; } }

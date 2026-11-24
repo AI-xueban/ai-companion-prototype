@@ -14,7 +14,7 @@ function initHomeworkManagementPage() {
   const rate = (part, total) => total ? `${Math.round(part / total * 100)}%` : '—';
   const kindLabel = kind => kind === 'checkin' ? '连续打卡' : '作业';
   const typeLabel = type => ({ photo: '图片', video: '视频', audio: '录音', file: '文件', none: '家长确认' }[type] || type);
-  const statusClass = status => /失败|撤回|未提交/.test(status) ? 'warn' : /待|部分|补交|处理中/.test(status) ? 'wait' : /已交齐|已批改|已提交|已结束|成功/.test(status) ? 'done' : 'info';
+  const statusClass = status => /失败|撤回|未提交|失效/.test(status) ? 'warn' : /待|部分|补交|处理中|排队/.test(status) ? 'wait' : /已交齐|已批改|已提交|已结束|成功|已完成|可用|已结算/.test(status) ? 'done' : 'info';
   const tag = status => `<span class="hw-tag ${statusClass(status)}">${h(status)}</span>`;
 
   const tasks = [
@@ -26,7 +26,7 @@ function initHomeworkManagementPage() {
       notice: { recipients: 57, sent: 55, pending: 1, failed: 1 },
       changes: ['10-27 08:30 · 教师发布任务，接收名单冻结', '10-28 09:10 · 教师更正文字说明，作业项及接收范围未变'],
       items: [
-        { id: 'photo', name: '练习题拍照', instruction: '拍摄清晰完整的答题页', type: 'photo', required: true, grading: true, expectedPages: 2, submitted: 35, grade: { effective: 127, correct: 95, wrong: 32, review: 8, unreadable: 3, noAnswer: 2 }, questions: [
+        { id: 'photo', name: '练习题拍照', instruction: '拍摄清晰完整的答题页', type: 'photo', required: true, grading: true, submitted: 35, grade: { effective: 127, correct: 95, wrong: 32, review: 8, unreadable: 3, noAnswer: 2 }, questions: [
           { label: '第1题', effective: 33, correct: 28, wrong: 5, review: 1, unreadable: 1, noAnswer: 0 },
           { label: '第2题', effective: 32, correct: 21, wrong: 11, review: 2, unreadable: 0, noAnswer: 1 },
           { label: '第3题', effective: 31, correct: 22, wrong: 9, review: 3, unreadable: 1, noAnswer: 0 },
@@ -126,22 +126,67 @@ function initHomeworkManagementPage() {
     },
   ];
 
+  // 补充只读查询样例；不与教师端本地存储或真实服务关联。
+  Object.assign(tasks[0], {
+    settings: { scheduledAt: '10-27 08:30', reminder: true, reward: false },
+    attachments: [{ name: '分数练习.pdf', type: 'PDF', status: '可用' }, { name: '课堂讲解.mp4', type: '视频', status: '已失效' }],
+    events: [{ time: '10-27 08:30', actor: '陈老师', action: '定时发布', before: '尚未发布', after: '已发布 · 冻结48人', reason: '按设定时间发送' }, { time: '10-28 09:10', actor: '陈老师', action: '更正说明', before: '录制练习题讲解', after: '录制一道自己选择的题的讲解', reason: '明确讲解范围' }],
+    notices: [
+      { type: '新作业', time: '10-27 08:30', target: 57, sent: 55, pending: 1, failed: 1, skipped: 0, reason: '处理中1；渠道发送失败1', event: '定时发布' },
+      { type: '未完成提醒', time: '10-28 18:00', target: 27, sent: 24, pending: 0, failed: 0, skipped: 3, reason: '当日催交额度已用3', event: '教师催交' }
+    ]
+  });
+  tasks[0].classes[1].source = '巩固组（发布时）';
+  tasks[0].items[0].pipeline = { done: 26, queued: 3, processing: 3, review: 2, failed: 1 };
+  tasks[0].students[0].items.photo.phase = 'done';
+  tasks[0].students[0].items.photo.reviews = [{ time: '10-28 19:30', actor: '陈老师', question: '第3题', before: '错误', after: '正确', reason: '核对原作答，计算结果正确', version: 2 }];
+  tasks[0].students[1].items.photo.phase = 'queued';
+  tasks[0].students[3].items.photo.phase = 'processing';
+  tasks[0].students.push({ id: 's11', name: '林知夏', className: '三年级3班', status: '部分完成', latest: '10-28 20:10', items: { photo: { status: '批改失败', phase: 'failed', reason: '图像解析失败', version: 1, time: '10-28 20:10', timing: '按时', operator: '林女士' } } });
+  tasks[0].students.push({ id: 's12', name: '许知远', className: '三年级2班', status: '部分完成', latest: '10-28 20:12', items: { photo: { status: '待复核', phase: 'review', reason: '部分题目识别不清，等待教师核对', version: 1, time: '10-28 20:12', timing: '按时', operator: '许女士' } } });
+  tasks[0].events.push({ time: '10-28 20:15', actor: '陈老师', action: '延长截止', before: '10-28 20:00', after: '10-29 20:00', reason: '为未交齐学生延长提交时间' });
+  tasks[0].changes.push('10-28 20:15 · 陈老师延长截止至10-29 20:00');
+  tasks[0].notices.push({ type: '重要变更', time: '10-28 20:15', target: 27, sent: 26, pending: 0, failed: 1, skipped: 0, reason: '渠道发送失败1；仅通知获新提交机会且未交齐者', event: '延长截止' });
+  Object.assign(tasks[1], {
+    settings: { scheduledAt: null, reminder: false, reward: true },
+    attachments: [{ name: '英语听写.docx', type: 'Word', status: '可用' }],
+    events: [{ time: '10-24 08:00', actor: '刘老师', action: '立即发布', before: '尚未发布', after: '已发布 · 冻结28人', reason: '—' }]
+  });
+  tasks[1].items[0].pipeline = { done: 17, queued: 1, processing: 1, review: 0, failed: 1 };
+  tasks[1].students[0].items.file.phase = 'processing';
+  tasks[1].students[0].coins = { due: 5, paid: 5, time: '10-26 19:41', status: '已结算', reason: '首次有效完成已结算；重新提交不重复发放', id: 'COIN-HW006-S5' };
+  tasks[1].students[1].coins = { due: null, paid: null, time: null, status: '未满足条件', reason: '尚未有效完成', id: null };
+  tasks[1].students.push({ id: 's10', name: '陆予安', className: '五年级3班', status: '已交齐', latest: '10-26 20:20', items: { file: { status: '已批改', phase: 'done', grade: '2题：2对', operator: '陆先生', version: 1, time: '10-26 20:20', timing: '按时' } }, coins: { due: 5, paid: 2, time: '10-26 20:21', status: '已结算', reason: '当日150金币常规额度仅剩2金币', id: 'COIN-HW006-S10' } });
+  tasks[2].settings = { scheduledAt: null, reminder: false, reward: false };
+  tasks[3].settings = { scheduledAt: null, reminder: false, reward: false };
+  tasks[3].events = [{ time: '10-20 09:00', actor: '赵老师', action: '立即发布', before: '尚未发布', after: '已发布 · 冻结31人', reason: '—' }, { time: '10-20 10:06', actor: '赵老师', action: '撤回', before: '进行中', after: '已撤回 · 停止接收新提交', reason: '要求有误，另发新任务' }];
+  tasks.push({ id: 'HW-20261028-021', kind: 'homework', title: '英语朗读练习', school: '晨光小学', teacher: '刘老师', subject: '英语', status: '进行中', published: '10-28 16:00', deadline: null, makeup: null, target: 12, complete: 8, partial: 0, missing: 4, description: '朗读课文并提交录音。', classes: [{ name: '五年级3班', mode: '部分学生', target: 12, source: '朗读组（发布时）' }], items: [{ id: 'audio', name: '课文朗读', instruction: '提交一段朗读录音', type: 'audio', required: true, grading: false, submitted: 8 }], students: [], attachments: [], settings: { scheduledAt: null, reminder: false, reward: false }, notice: { recipients: 14, sent: 14, pending: 0, failed: 0 }, changes: ['10-28 16:00 · 刘老师立即发布，接收名单冻结'] });
+  // 批改状态按当前有效提交互斥计数；不替代“已交齐/部分完成”等整份完成状态。
+  const phases = [['queued', '排队中'], ['processing', '处理中'], ['review', '待复核'], ['failed', '批改失败'], ['done', '已完成']];
+  const phaseText = key => phases.find(row => row[0] === key)?.[1] || '状态未记录';
+  const deadlineText = task => task.deadline || '不限提交时间';
+  const makeupText = task => task.deadline ? task.makeup || '不允许补交' : '不适用';
+  const operatorText = submission => submission?.operator && !/^家长/.test(submission.operator) ? submission.operator : submission ? '家长（姓名未记录）' : '—';
+
   // 每期持有自己的学生记录；缺少某期数据时不回退到其他期次。
   tasks.filter(task => task.kind === 'checkin').forEach(task => { task.periods.at(-1).students = task.students; });
   const studentNo = student => `ST-${student.id.slice(1).padStart(6, '0')}`;
   const fullTime = time => time && time !== '—' ? `2026-${time}` : '—';
-  const state = { view: 'list', kind: 'all', scenario: 'normal', school: 'all', className: 'all', subject: 'all', status: 'all', query: '', taskId: null, tab: 'overview', itemId: null, studentId: null, studentStatus: 'all', studentClass: 'all', studentQuery: '', periodId: null };
+  const state = { view: 'list', kind: 'all', scenario: 'normal', school: 'all', className: 'all', subject: 'all', status: 'all', query: '', dateStart: '', dateEnd: '', taskId: null, tab: 'overview', itemId: null, studentId: null, studentStatus: 'all', studentClass: 'all', studentQuery: '', phase: 'all', phaseItemId: null, periodId: null };
   const getTask = () => tasks.find(task => task.id === state.taskId);
   const getPeriod = task => task.periods?.find(period => period.id === state.periodId) || task.periods?.at(-1);
+  // 打卡仅替换当前期的截止、人数和提交记录；发布设置与系列通知仍属于整组任务。
   const getContext = task => {
     const period = getPeriod(task);
     return period ? { ...task, ...period, id: task.id, period, items: task.items.map((item, i) => ({ ...item, submitted: period.itemCounts[i] })), students: period.students || [] } : task;
   };
-  const resetStudentFilters = () => { state.studentStatus = 'all'; state.studentClass = 'all'; state.studentQuery = ''; state.studentId = null; };
+  // 切换任务/期次或汇总范围时，同时清空学生展开项和批改项范围，防止记录串联。
+  const resetStudentFilters = () => { state.studentStatus = 'all'; state.studentClass = 'all'; state.studentQuery = ''; state.studentId = null; state.phase = 'all'; state.phaseItemId = null; };
   const readStudentFilters = () => {
     state.studentStatus = root.getElementById('hw-student-status').value;
     state.studentClass = root.getElementById('hw-student-class').value;
     state.studentQuery = root.getElementById('hw-student-query').value.trim();
+    state.phase = root.getElementById('hw-phase').value;
     state.studentId = null;
   };
   const readFilters = () => {
@@ -150,12 +195,16 @@ function initHomeworkManagementPage() {
     state.subject = root.getElementById('hw-subject').value;
     state.status = root.getElementById('hw-status').value;
     state.query = root.getElementById('hw-query').value.trim();
+    state.dateStart = root.getElementById('hw-date-start').value;
+    state.dateEnd = root.getElementById('hw-date-end').value;
   };
   const visibleTasks = () => state.scenario === 'empty' || state.scenario === 'denied' ? [] : tasks.filter(task =>
     (state.kind === 'all' || task.kind === state.kind) && (state.school === 'all' || task.school === state.school) &&
     (state.className === 'all' || task.classes.some(row => row.name === state.className)) &&
     (state.subject === 'all' || task.subject === state.subject) && (state.status === 'all' || task.status === state.status) &&
-    (!state.query || `${task.id} ${task.title} ${task.teacher}`.toLowerCase().includes(state.query.toLowerCase()))
+    (!state.query || `${task.id} ${task.title} ${task.teacher}`.toLowerCase().includes(state.query.toLowerCase())) &&
+    (!state.dateStart || fullTime(task.published).slice(0, 10) >= state.dateStart) &&
+    (!state.dateEnd || fullTime(task.published).slice(0, 10) <= state.dateEnd)
   );
 
   function render() {
@@ -181,6 +230,8 @@ function initHomeworkManagementPage() {
         ${selectField('class', '班级', [['all', '全部班级'], ...Array.from(new Set(tasks.flatMap(t => t.classes.map(c => c.name)))).map(v => [v, v])], state.className)}
         ${selectField('subject', '学科', [['all', '全部学科'], ...Array.from(new Set(tasks.map(t => t.subject))).map(v => [v, v])], state.subject)}
         ${selectField('status', '任务状态', [['all', '全部状态'], ['进行中', '进行中'], ['补交中', '补交中'], ['已结束', '已结束'], ['已撤回', '已撤回']], state.status)}
+        <label class="hw-field"><span>发布起始日期</span><input id="hw-date-start" type="date" value="${h(state.dateStart)}" max="${h(state.dateEnd)}"></label>
+        <label class="hw-field"><span>发布结束日期</span><input id="hw-date-end" type="date" value="${h(state.dateEnd)}" min="${h(state.dateStart)}"></label>
       </div><div class="hw-filter-actions"><button type="button" class="hw-button primary" data-action="search">查询</button><button type="button" class="hw-button" data-action="reset">重置</button><span>当前筛选：${homeworkCount} 份作业 · ${checkinCount} 组连续打卡</span></div></section>
       <section class="hw-panel"><div class="hw-segments">${[['all', '全部'], ['homework', '作业'], ['checkin', '连续打卡']].map(([key, label]) => `<button type="button" data-action="kind" data-value="${key}" class="${state.kind === key ? 'active' : ''}">${label}</button>`).join('')}</div>
         ${rows.length ? `<div class="hw-table-scroll"><table class="hw-table hw-task-table"><thead><tr><th>任务 / 类型</th><th>学校</th><th>发布教师</th><th>发布时间</th><th>目标范围</th><th>整份完成</th><th>截止时间</th><th>状态</th><th>操作</th></tr></thead><tbody>${rows.map(renderTaskRow).join('')}</tbody></table></div>` : '<div class="hw-empty"><strong>没有符合条件的任务</strong><p>可调整学校、任务类型或状态后重新查询。</p></div>'}
@@ -196,36 +247,47 @@ function initHomeworkManagementPage() {
     return `<tr><td><strong>${h(task.title)}</strong><small>${h(task.id)} · ${kindLabel(task.kind)} · ${h(task.subject)}${isCheckin ? ` · ${task.periods.length} 期` : ` · ${task.items.length} 项`}</small></td>
       <td>${h(task.school)}</td><td>${h(task.teacher)}</td><td title="${h(fullTime(task.published))}">${h(task.published)}</td><td>${task.classes.length} 个班 · ${task.target} 人<small>${h(task.classes.map(c => c.name).join('、'))}${task.classes.some(c => c.mode === '部分学生') ? ' · 含指定学生' : ''}</small></td>
       <td><strong>${count(task.complete, task.target)}</strong><small>${isCheckin ? `当前第${task.periods.length}期 · 部分 ${task.partial} · 未交 ${task.missing}` : '部分 ' + task.partial + ' · 未交 ' + task.missing}</small></td>
-      <td>正常 ${h(task.deadline)}<small>补交至 ${h(task.makeup)}</small></td><td>${tag(task.status)}</td><td><button type="button" class="hw-text-button" data-action="open" data-id="${h(task.id)}">查看详情 ›</button></td></tr>`;
+      <td>${h(deadlineText(task))}<small>${task.makeup ? '补交至 ' + h(task.makeup) : h(makeupText(task))}</small></td><td>${tag(task.status)}</td><td><button type="button" class="hw-text-button" data-action="open" data-id="${h(task.id)}">查看详情 ›</button></td></tr>`;
   }
 
   function renderDetail() {
     const task = getTask();
     if (!task) { state.view = 'list'; return renderList(); }
-    const tabs = [['overview', '任务概况'], ['items', '作业项进度'], ['students', '学生明细']];
-    if (task.kind === 'checkin') tabs.splice(1, 0, ['periods', '打卡期次']);
+    // 优先处理单个学生的问题，同时保留任务、作业项及通知视角供整体排查。
+    const tabs = [['students', '学生明细'], ['overview', '任务概况'], ['items', '作业项进度'], ['logs', '通知与变更']];
+    if (task.kind === 'checkin') tabs.splice(2, 0, ['periods', '打卡期次']);
     const summary = getContext(task);
     const period = summary.period;
     return `<div class="hw-detail-heading"><button type="button" class="hw-back" data-action="back">← 返回任务列表</button><div class="hw-heading"><div><div class="hw-title-row"><h1>${h(task.title)}</h1>${tag(task.status)}<span class="hw-type">${kindLabel(task.kind)}</span></div><p>${h(task.id)} · ${h(task.school)} · ${h(task.teacher)} · ${h(task.subject)}</p></div><span class="hw-asof">演示数据 · 截至 2026-10-28 20:30</span></div></div>
       ${state.scenario === 'lag' ? '<div class="hw-banner warning">数据同步延迟：详情仅为 20:30 快照，不能作为当前最新结果。</div>' : ''}
-      <div class="hw-banner">只读查询 · ${period ? '切换期次后，概况、作业项和学生明细同步切换；各期独立统计。' : '整份完成与批改结果分别统计；不计算跨作业项总正确率。'}</div>
+      <section class="hw-panel hw-task-context" aria-label="当前任务摘要"><div><span>实际发布 <strong>${h(fullTime(task.published))}</strong></span>${!period ? `<span>提交截止 <strong>${h(task.deadline ? fullTime(task.deadline) : deadlineText(task))}</strong></span><span>补交 <strong>${h(task.makeup ? fullTime(task.makeup) : makeupText(task))}</strong></span>` : ''}</div><p><span>作业要求</span>${h(task.description)}</p></section>
       ${period ? `<div class="hw-panel hw-period-context">${selectField('period', '查看期次', task.periods.map(p => [p.id, `${p.label} · ${p.date}${p.id === task.periods.at(-1).id ? '（最新期）' : ''}`]), period.id)}<div>${tag(period.status)}<span>正常截止 ${h(fullTime(period.deadline))}</span><span>补交至 ${h(fullTime(period.makeup))}</span></div></div>` : ''}
       <div class="hw-summary-grid">${summaryCard('目标学生', summary.target, period ? period.label + ' · 接收快照' : '发布时接收快照', 'all')}${summaryCard('已交齐', summary.complete, rate(summary.complete, summary.target) + ' · 全部必交项', '已交齐')}${summaryCard('部分完成', summary.partial, '至少一项有效提交', '部分完成')}${summaryCard('未提交', summary.missing, '尚无必交项有效提交', '未提交')}</div>
-      <section class="hw-panel"><div class="hw-tabbar">${tabs.map(([key, text]) => `<button type="button" data-action="tab" data-value="${key}" class="${state.tab === key ? 'active' : ''}">${text}</button>`).join('')}</div><div class="hw-tab-content">${state.tab === 'overview' ? renderOverview(summary) : state.tab === 'items' ? renderItems(summary) : state.tab === 'students' ? renderStudents(summary) : renderPeriods(task)}</div></section>`;
+      <section class="hw-panel"><div class="hw-tabbar">${tabs.map(([key, text]) => `<button type="button" data-action="tab" data-value="${key}" class="${state.tab === key ? 'active' : ''}">${text}</button>`).join('')}</div><div class="hw-tab-content">${state.tab === 'overview' ? renderOverview(summary) : state.tab === 'items' ? renderItems(summary) : state.tab === 'students' ? renderStudents(summary) : state.tab === 'logs' ? renderLogs(task) : renderPeriods(task)}</div></section>`;
   }
 
   function renderOverview(task) {
-    return `<div class="hw-two-col"><div><h2>任务信息</h2><dl class="hw-facts"><div><dt>发布时间</dt><dd>${h(task.published)}</dd></div><div><dt>正常截止</dt><dd>${h(task.deadline)}</dd></div><div><dt>补交截止</dt><dd>${h(task.makeup)}</dd></div><div><dt>完成项目</dt><dd>${task.items.length} 项 · 均为必交</dd></div><div><dt>教师附件</dt><dd>${task.attachmentCount ? task.attachmentCount + ' 份（仅显示数量）' : '无'}</dd></div><div><dt>任务说明</dt><dd>${h(task.description)}</dd></div></dl></div>
-      <div><h2>接收范围 · 发布时冻结</h2><table class="hw-table compact"><thead><tr><th>班级</th><th>布置方式</th><th>目标学生</th></tr></thead><tbody>${task.classes.map(c => `<tr><td>${h(c.name)}</td><td>${h(c.mode)}</td><td>${c.target} 人</td></tr>`).join('')}</tbody></table><p class="hw-note">跨班人数按学生 ID 去重；后续转班不改写发布时快照。</p></div></div>
+    return `<div class="hw-two-col"><div><h2>任务信息</h2><dl class="hw-facts"><div><dt>实际发布时间</dt><dd>${h(fullTime(task.published))}</dd></div><div><dt>发送方式</dt><dd>${task.settings.scheduledAt ? '定时发送 · ' + h(fullTime(task.settings.scheduledAt)) : '立即发送'}</dd></div><div><dt>提交截止</dt><dd>${h(task.deadline ? fullTime(task.deadline) : deadlineText(task))}</dd></div><div><dt>补交截止</dt><dd>${h(task.makeup ? fullTime(task.makeup) : makeupText(task))}</dd></div><div><dt>截止前提醒</dt><dd>${task.settings.reminder ? '已开启' : '未开启'}</dd></div><div><dt>自动奖励金币</dt><dd>${task.settings.reward ? '已开启 · 每份应得5金币' : '未开启'}</dd></div><div><dt>完成项目</dt><dd>${task.items.length} 项 · 均为必交</dd></div><div><dt>任务说明</dt><dd>${h(task.description)}</dd></div></dl></div>
+      <div><h2>接收范围 · 发布时冻结</h2><table class="hw-table compact"><thead><tr><th>班级</th><th>布置方式 / 来源</th><th>目标学生</th></tr></thead><tbody>${task.classes.map(c => `<tr><td>${h(c.name)}</td><td>${h(c.mode)}${c.source ? '<small>' + h(c.source) + '</small>' : ''}</td><td>${c.target} 人</td></tr>`).join('')}</tbody></table><p class="hw-note">跨班人数按学生 ID 去重；后续转班或编辑分组不改写发布名单。</p><h3>教师附件</h3>${task.attachments?.length ? table(['名称', '类型', '可用状态'], task.attachments.map(file => [h(file.name), h(file.type), tag(file.status)])) : '<p class="hw-note">无附件</p>'}</div></div>
       <div class="hw-two-col hw-subsection"><div><h2>作业项摘要</h2>${task.items.map(item => `<div class="hw-item-line"><div><strong>${h(item.name)}</strong><small>${typeLabel(item.type)} · ${item.grading ? '自动批改' : '无需批改'} · 必交</small></div><span>${count(item.submitted, task.target)} 已提交</span></div>`).join('')}</div>
-      <div><h2>${task.period ? '系列发布通知与变更记录' : '通知与变更记录'}</h2><p class="hw-note">有效家长账号 ${task.notice.recipients} 个；已送达 ${task.notice.sent}、处理中 ${task.notice.pending}、未送达 ${task.notice.failed}。通知人数与学生人数不同。</p><ul class="hw-event-list">${task.changes.map(text => `<li>${h(text)}</li>`).join('')}</ul></div></div>`;
+      <div><h2>${task.period ? '系列发布通知与变更记录' : '发布通知与变更摘要'}</h2><p class="hw-note">首次发布：有效家长账号 ${task.notice.recipients} 个；已送达 ${task.notice.sent}、处理中 ${task.notice.pending}、未送达 ${task.notice.failed}。</p><ul class="hw-event-list">${task.changes.map(text => `<li>${h(text)}</li>`).join('')}</ul></div></div>`;
+  }
+  function table(headers, rows) {
+    return `<div class="hw-table-scroll"><table class="hw-table"><thead><tr>${headers.map(label => `<th>${h(label)}</th>`).join('')}</tr></thead><tbody>${rows.map(cells => `<tr>${cells.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  }
+  function renderLogs(task) {
+    const notices = task.notices || [{ type: '新作业', time: task.published, target: task.notice.recipients, sent: task.notice.sent, pending: task.notice.pending, failed: task.notice.failed, skipped: 0, reason: task.notice.failed ? '渠道发送失败' : '—', event: '首次发布' }];
+    return `<h2>${task.kind === 'checkin' ? '系列通知记录' : '通知记录'}</h2>${table(['通知类型', '触发时间', '关联事件', '目标家长账号', '已送达', '处理中', '失败', '未发送', '原因'], notices.map(row => [h(row.type), h(fullTime(row.time)), h(row.event), row.target, row.sent, row.pending, row.failed, row.skipped, h(row.reason)]))}<p class="hw-note">按通知事件分别统计家长账号，同一账号可能参与多次事件；不将多次通知相加为学生人数。仅查询，不提供重发。</p><h3>任务变更记录</h3>${task.events?.length ? table(['操作时间', '操作人', '操作', '变更前', '变更后', '原因'], task.events.map(row => [h(fullTime(row.time)), h(row.actor), h(row.action), h(row.before), h(row.after), h(row.reason)])) : `<ul class="hw-event-list">${task.changes.map(text => `<li>${h(text)}</li>`).join('')}</ul><p class="hw-note">旧记录未记录结构化前后值。</p>`}`;
   }
   function renderItems(task) {
     const item = task.items.find(row => row.id === state.itemId) || task.items[0];
     return `<h2>${task.period ? h(task.period.label) + ' · ' : ''}逐项提交情况</h2><p class="hw-note">提交人数按该项当前有效版本统计；完成整份任务只看必交项，批改是否完成不改变已提交人数。</p>
       <div class="hw-table-scroll"><table class="hw-table"><thead><tr><th>作业项</th><th>提交方式</th><th>批改方式</th><th>已提交</th><th>未提交</th><th></th></tr></thead><tbody>${task.items.map(row => `<tr class="${row.id === item.id ? 'selected' : ''}"><td><strong>${h(row.name)}</strong><small>${h(row.instruction)}</small></td><td>${typeLabel(row.type)}</td><td>${row.grading ? '自动批改' : '无需批改'}</td><td>${count(row.submitted, task.target)}</td><td>${task.target - row.submitted}</td><td><button type="button" class="hw-text-button" data-action="item" data-id="${h(row.id)}">查看项统计</button></td></tr>`).join('')}</tbody></table></div>
-      <div class="hw-item-detail" tabindex="-1"><div class="hw-section-head"><h2>${h(item.name)} · 项目统计</h2><span>提交方式：${typeLabel(item.type)}${item.expectedPages ? ` · 预计 ${item.expectedPages} 页` : ''}</span></div>
-        ${item.grading ? renderItemGrades(item) : '<div class="hw-empty slim"><strong>本项无需批改</strong><p>仅统计有效提交人数，不显示题目、对错或正确率。</p></div>'}</div>`;
+      <div class="hw-item-detail" tabindex="-1"><div class="hw-section-head"><h2>${h(item.name)} · 项目统计</h2><span>提交方式：${typeLabel(item.type)}</span></div>
+        ${item.grading ? renderPipeline(item) + renderItemGrades(item) : '<div class="hw-empty slim"><strong>本项无需批改</strong><p>仅统计有效提交人数，不显示题目、对错或正确率。</p></div>'}</div>`;
+  }
+  function renderPipeline(item) {
+    return `<h3>当前提交批改状态</h3><div class="hw-pipeline">${phases.map(([key, label]) => `<button type="button" class="hw-panel hw-summary" data-action="phase-scope" data-id="${h(item.id)}" data-value="${key}"><small>${label}</small><strong>${item.pipeline?.[key] ?? '—'}</strong><span>查看学生 ›</span></button>`).join('')}</div><p class="hw-note">按本项当前有效提交分组，每份提交只计入一种主状态；待复核题数另列于下方。</p>`;
   }
   function renderItemGrades(item) {
     const grade = item.grade;
@@ -235,20 +297,37 @@ function initHomeworkManagementPage() {
   function renderStudents(task) {
     const query = state.studentQuery.toLowerCase();
     const rows = task.students.filter(student => (state.studentStatus === 'all' || student.status === state.studentStatus) &&
+      (state.phase === 'all' || task.items.some(item => (!state.phaseItemId || item.id === state.phaseItemId) && student.items[item.id]?.phase === state.phase)) &&
       (state.studentClass === 'all' || student.className === state.studentClass) &&
       (!query || `${student.name} ${studentNo(student)}`.toLowerCase().includes(query)));
-    const student = rows.find(row => row.id === state.studentId) || rows[0];
     return `<div class="hw-section-head"><div><h2>${task.period ? h(task.period.label) + ' · ' : ''}目标学生明细</h2><p class="hw-note">目标 ${task.target} 人；本原型提供 ${task.students.length} 条学生样例，当前筛选显示 ${rows.length} 条。汇总人数按完整目标范围统计。</p></div></div>
       <div class="hw-student-filters">${selectField('student-class', '班级', [['all', '全部目标班级'], ...task.classes.map(c => [c.name, c.name])], state.studentClass)}
         <label class="hw-field"><span>学生姓名 / 编号</span><input id="hw-student-query" value="${h(state.studentQuery)}" placeholder="输入姓名或 ST-000001"></label>
         ${selectField('student-status', '完成状态', [['all', '全部状态'], ['已交齐', '已交齐'], ['部分完成', '部分完成'], ['未提交', '未提交']], state.studentStatus)}
+        ${selectField('phase', state.phaseItemId ? '批改状态 · ' + (task.items.find(item => item.id === state.phaseItemId)?.name || '') : '批改状态', [['all', '全部批改状态'], ...phases], state.phase)}
         <div class="hw-inline-actions"><button type="button" class="hw-button primary" data-action="student-search">查询</button><button type="button" class="hw-button" data-action="student-reset">重置</button></div></div>
-      ${rows.length ? `<div class="hw-table-scroll"><table class="hw-table"><thead><tr><th>学生</th><th>班级</th><th>整份完成</th>${task.items.map(item => `<th>${h(item.name)}</th>`).join('')}<th>最近提交</th><th></th></tr></thead><tbody>${rows.map(row => `<tr class="${student?.id === row.id ? 'selected' : ''}"><td>${h(row.name)}<small>${h(studentNo(row))}</small></td><td>${h(row.className)}</td><td>${tag(row.status)}</td>${task.items.map(item => `<td>${row.items[item.id] ? tag(row.items[item.id].status) : tag('未提交')}</td>`).join('')}<td>${h(row.latest)}</td><td><button type="button" class="hw-text-button" data-action="student" data-id="${h(row.id)}">查看记录</button></td></tr>`).join('')}</tbody></table></div>${student ? renderStudentDetail(task, student) : ''}` : '<div class="hw-empty slim"><strong>当前条件下没有学生样例</strong><p>可调整班级、姓名或完成状态；也可重置为本任务全部样例。</p><button type="button" class="hw-text-button" data-action="student-reset">重置学生筛选</button></div>'}`;
+      ${rows.length ? `<div class="hw-table-scroll"><table class="hw-table hw-student-table"><thead><tr><th>学生</th><th>班级</th><th>整份完成</th>${task.items.map(item => `<th>${h(item.name)}</th>`).join('')}<th>最近提交</th><th>操作</th></tr></thead><tbody>${rows.map(row => {
+        // 一次仅展开一位学生，详情紧随本人所在行；不自动选中筛选结果的第一人。
+        const expanded = state.studentId === row.id;
+        return `<tr class="${expanded ? 'selected' : ''}"><td>${h(row.name)}<small>${h(studentNo(row))}</small></td><td>${h(row.className)}</td><td>${tag(row.status)}</td>${task.items.map(item => `<td>${row.items[item.id] ? tag(row.items[item.id].status) : tag('未提交')}</td>`).join('')}<td>${h(row.latest)}</td><td><button type="button" class="hw-text-button" data-action="student" data-id="${h(row.id)}" aria-expanded="${expanded}" aria-controls="hw-student-detail-${h(row.id)}">${expanded ? '收起记录' : '查看记录'}</button></td></tr>${expanded ? `<tr class="hw-expanded-row"><td colspan="${task.items.length + 5}">${renderStudentDetail(task, row)}</td></tr>` : ''}`;
+      }).join('')}</tbody></table></div>` : '<div class="hw-empty slim"><strong>当前条件下没有学生样例</strong><p>可调整班级、姓名或完成状态；也可重置为本任务全部样例。</p><button type="button" class="hw-text-button" data-action="student-reset">重置学生筛选</button></div>'}`;
   }
   function renderStudentDetail(task, student) {
     const historyItems = task.items.filter(item => student.items[item.id]?.history?.length);
-    return `<div class="hw-student-detail" tabindex="-1"><div class="hw-section-head"><h2>${h(student.name)} · ${task.period ? h(task.period.label) + ' · ' : ''}逐项记录</h2><span>${tag(student.status)} · ${h(student.className)} · ${h(studentNo(student))}</span></div><div class="hw-table-scroll"><table class="hw-table compact"><thead><tr><th>作业项</th><th>提交状态</th><th>当前有效版本</th><th>提交时间</th><th>时效</th><th>批改/确认</th></tr></thead><tbody>${task.items.map(item => { const sub = student.items[item.id]; return `<tr><td>${h(item.name)}<small>${typeLabel(item.type)} · ${item.grading ? '自动批改' : '无需批改'}</small></td><td>${tag(sub?.status || '未提交')}</td><td>${sub ? '第' + sub.version + '版 · 当前有效' : '—'}</td><td>${h(fullTime(sub?.time))}</td><td>${h(sub?.timing || '—')}</td><td>${h(sub?.grade || (sub ? item.grading ? '结果尚未返回' : '无需批改' : '—'))}</td></tr>`; }).join('')}</tbody></table></div>
-      ${historyItems.length ? `<div class="hw-history"><h3>按作业项查看提交记录</h3><p class="hw-note">历史版本仅供追溯；展开记录不会替换当前有效版本或改变统计。</p>${historyItems.map(item => renderSubmissionHistory(item, student.items[item.id])).join('')}</div>` : ''}</div>`;
+    return `<section class="hw-student-detail" id="hw-student-detail-${h(student.id)}" aria-label="${h(student.name)}的当前有效提交" tabindex="-1"><div class="hw-section-head"><h2>${h(student.name)} · ${task.period ? h(task.period.label) + ' · ' : ''}当前有效提交</h2><span>${tag(student.status)} · ${h(student.className)} · ${h(studentNo(student))}</span></div><div class="hw-table-scroll"><table class="hw-table"><thead><tr><th>作业项</th><th>提交状态</th><th>当前有效版本</th><th>提交时间</th><th>提交人</th><th>时效</th><th>批改状态 / 原因</th><th>批改/确认</th></tr></thead><tbody>${task.items.map(item => { const sub = student.items[item.id]; return `<tr><td>${h(item.name)}<small>${typeLabel(item.type)} · ${item.grading ? '自动批改' : '无需批改'}</small></td><td>${tag(sub ? '已提交' : '未提交')}</td><td>${sub ? '第' + sub.version + '版 · 当前有效' : '—'}</td><td>${h(fullTime(sub?.time))}</td><td>${h(operatorText(sub))}</td><td>${h(sub?.timing || '—')}</td><td>${item.grading && sub ? tag(phaseText(sub.phase)) + (sub.reason ? '<small>' + h(sub.reason) + '</small>' : '') : '—'}</td><td>${h(sub?.grade || (sub ? item.grading ? '结果尚未返回' : '无需批改' : '—'))}</td></tr>`; }).join('')}</tbody></table></div>
+      <details class="hw-version-group"><summary>教师复核记录</summary><div class="hw-disclosure-body">${renderReviews(task, student)}</div></details>
+      <details class="hw-version-group"><summary>金币结算</summary><div class="hw-disclosure-body">${renderCoins(task, student)}</div></details>
+      ${historyItems.length ? `<div class="hw-history"><h3>按作业项查看提交记录</h3><p class="hw-note">历史版本仅供追溯；展开记录不会替换当前有效版本或改变统计。</p>${historyItems.map(item => renderSubmissionHistory(item, student.items[item.id])).join('')}</div>` : ''}</section>`;
+  }
+  function renderReviews(task, student) {
+    const rows = task.items.flatMap(item => (student.items[item.id]?.reviews || []).map(review => [h(item.name), '第' + review.version + '版', h(review.question), h(fullTime(review.time)), h(review.actor), h(review.before), h(review.after), h(review.reason)]));
+    return `<h3>教师复核记录</h3>${rows.length ? table(['作业项', '提交版本', '题目', '复核时间', '教师', '原判定', '复核后', '原因'], rows) : '<p class="hw-note">暂无已记录的教师复核。</p>'}`;
+  }
+  function renderCoins(task, student) {
+    if (!task.settings.reward) return '<h3>金币结算</h3><p class="hw-note">本任务未开启自动奖励金币。</p>';
+    // 缺少记录不能显示为0；重交沿用任务级首次结算，不依据当前提交版本再次计算。
+    const coin = student.coins;
+    return `<h3>金币结算</h3>${coin ? table(['状态', '应得', '实发', '结算时间', '结算记录', '说明'], [[tag(coin.status), coin.due ?? '—', coin.paid ?? '—', h(fullTime(coin.time)), h(coin.id || '—'), h(coin.reason)]]) : '<p class="hw-note">结算记录未返回，不能判定为未发放。</p>'}<p class="hw-note">每名学生每份作业只结算一次；应得5金币，实发受小程序与平板共用的每日150金币常规额度限制。</p>`;
   }
   function renderSubmissionHistory(item, submission) {
     const versions = [{ ...submission, current: true }, ...submission.history.map(version => ({ ...version, current: false }))];
@@ -268,19 +347,20 @@ function initHomeworkManagementPage() {
     if (action === 'scenario') { state.scenario = value; state.view = 'list'; }
     if (action === 'kind') { readFilters(); state.kind = value; }
     if (action === 'search') readFilters();
-    if (action === 'reset') { state.kind = 'all'; state.school = 'all'; state.className = 'all'; state.subject = 'all'; state.status = 'all'; state.query = ''; state.scenario = 'normal'; }
-    if (action === 'open') { state.view = 'detail'; state.taskId = id; state.tab = 'overview'; state.itemId = null; resetStudentFilters(); state.periodId = null; }
+    if (action === 'reset') { state.kind = 'all'; state.school = 'all'; state.className = 'all'; state.subject = 'all'; state.status = 'all'; state.query = ''; state.dateStart = ''; state.dateEnd = ''; state.scenario = 'normal'; }
+    if (action === 'open') { state.view = 'detail'; state.taskId = id; state.tab = 'students'; state.itemId = null; resetStudentFilters(); state.periodId = null; }
     if (action === 'back') state.view = 'list';
     if (action === 'tab') state.tab = value;
     if (action === 'item') state.itemId = id;
-    if (action === 'student') state.studentId = id;
+    if (action === 'student') state.studentId = state.studentId === id ? null : id;
     if (action === 'period') { state.periodId = id; state.itemId = null; resetStudentFilters(); }
     if (action === 'student-scope') { resetStudentFilters(); state.studentStatus = value; state.tab = 'students'; }
+    if (action === 'phase-scope') { resetStudentFilters(); state.phase = value; state.phaseItemId = id; state.tab = 'students'; }
     if (action === 'student-search') readStudentFilters();
     if (action === 'student-reset') resetStudentFilters();
     render();
     if (action === 'open' || action === 'back') window.scrollTo({ top: 0, behavior: 'instant' });
-    if (action === 'tab' || action === 'student-scope') root.querySelector('.hw-tabbar')?.scrollIntoView({ block: 'start', behavior: 'instant' });
+    if (action === 'tab' || action === 'student-scope' || action === 'phase-scope') root.querySelector('.hw-tabbar')?.scrollIntoView({ block: 'start', behavior: 'instant' });
     if (action === 'item' || action === 'period' || action === 'student') {
       const detail = root.querySelector(action === 'student' ? '.hw-student-detail' : '.hw-item-detail');
       detail?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -295,7 +375,7 @@ function initHomeworkManagementPage() {
       render();
       root.getElementById('hw-period')?.focus({ preventScroll: true });
     }
-    if (['hw-student-status', 'hw-student-class'].includes(event.target.id)) { readStudentFilters(); render(); }
+    if (['hw-student-status', 'hw-student-class', 'hw-phase'].includes(event.target.id)) { readStudentFilters(); render(); }
   });
   root.addEventListener('keydown', event => {
     if (event.key !== 'Enter') return;
