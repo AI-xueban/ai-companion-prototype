@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import scanDemoImg from '@/assets/zhiyue-homework-photo.png';
-import scanClassroomImg from '@/assets/zhiyue-scan-classroom.png';
+import { ZhiyueAnalyzingPage } from './ZhiyueAnalyzingPage';
 import { LingjingTutorPage } from '../LingjingTutorPage';
 import { ZhiyueCameraPage } from './ZhiyueCameraPage';
 import { ZhiyueCropPage } from './ZhiyueCropPage';
@@ -9,32 +9,7 @@ import { ZhiyueHistoryPage } from './ZhiyueHistoryPage';
 import { formatRecordDate, INITIAL_ZHIYUE_RECORDS } from './mockRecords';
 import { ZhiyueCapturedPage, ZhiyueMode, ZhiyueQuestionGrade, ZhiyueRecord, ZhiyueStep } from './types';
 
-const ANALYZE_DELAY_MS = 2000;
 const MAX_PAGES = 3;
-
-const AnalyzingView = ({ imageSrc }: { imageSrc: string }) => (
-  <div className="relative w-full h-full overflow-hidden bg-[#55529a]">
-    <div
-      aria-hidden="true"
-      className="absolute inset-0"
-      style={{ backgroundImage: `url(${scanClassroomImg})`, backgroundSize: '110% 145%', backgroundPosition: 'center 80%' }}
-    />
-    <div className="absolute inset-0 bg-gradient-to-b from-[#30236e]/25 to-[#85b6dd]/50" />
-    <div className="absolute left-1/2 top-[10%] -translate-x-1/2 w-[58%] h-[66%] flex items-center justify-center">
-      <div className="relative h-full aspect-[638/514] max-w-full overflow-hidden rounded-xl border-2 border-[#d8c4ff] bg-white shadow-[0_0_32px_rgba(183,145,255,0.55)]">
-        <img src={imageSrc} alt="正在扫描的作业照片" className="w-full h-full object-contain" />
-        <motion.div
-          className="absolute inset-x-0 h-1 bg-[#b998ff] shadow-[0_0_20px_4px_rgba(167,125,255,0.8)]"
-          animate={{ top: ['0%', '100%', '0%'] }}
-          transition={{ repeat: Infinity, duration: 1.6, ease: 'linear' }}
-        />
-      </div>
-    </div>
-    <div className="absolute inset-x-0 bottom-[8%] text-center">
-      <p className="text-white text-lg font-black">小晤正在逐题批改，请稍等...</p>
-    </div>
-  </div>
-);
 
 interface ZhiyueHomeworkFlowProps {
   onBack: () => void;
@@ -51,32 +26,18 @@ export const ZhiyueHomeworkFlow = ({ onBack }: ZhiyueHomeworkFlowProps) => {
   const [activeRecordId, setActiveRecordId] = useState<string | null>(null);
   const [activeQuestionGrades, setActiveQuestionGrades] = useState<Record<string, ZhiyueQuestionGrade>>({});
 
-  useEffect(() => {
-    if (step !== 'analyzing') return undefined;
-
-    const timer = window.setTimeout(() => {
-      const now = new Date();
-      const stamped = formatRecordDate(now);
-      const pageCount = mode === 'multi' ? Math.max(capturedPages.length, 1) : 1;
-      const recordId = `r-${now.getTime()}`;
-      setResultPageCount(pageCount);
-      setActiveRecordId(recordId);
-      setActiveQuestionGrades({});
-      setRecords(prev => [
-        {
-          id: recordId,
-          ...stamped,
-          mode,
-          pageCount,
-        },
-        ...prev,
-      ]);
-      setFromHistory(false);
-      setStep('result');
-    }, ANALYZE_DELAY_MS);
-
-    return () => window.clearTimeout(timer);
-  }, [step, mode, capturedPages.length]);
+  const handleAnalyzingComplete = useCallback(() => {
+    const now = new Date();
+    const stamped = formatRecordDate(now);
+    const pageCount = mode === 'multi' ? Math.max(capturedPages.length, 1) : 1;
+    const recordId = `r-${now.getTime()}`;
+    setResultPageCount(pageCount);
+    setActiveRecordId(recordId);
+    setActiveQuestionGrades({});
+    setRecords(prev => [{ id: recordId, ...stamped, mode, pageCount }, ...prev]);
+    setFromHistory(false);
+    setStep('result');
+  }, [mode, capturedPages.length]);
 
   const openCamera = (resetPages = true) => {
     setFromHistory(false);
@@ -157,7 +118,7 @@ export const ZhiyueHomeworkFlow = ({ onBack }: ZhiyueHomeworkFlowProps) => {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
           >
-            <AnalyzingView imageSrc={capturedPages[0]?.src ?? scanDemoImg} />
+            <ZhiyueAnalyzingPage images={mode === 'multi' && capturedPages.length ? capturedPages.map(page => page.src) : [scanDemoImg]} onBack={() => openCamera(false)} onComplete={handleAnalyzingComplete} />
           </motion.div>
         )}
 
