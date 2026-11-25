@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { type GraphGroup, type Point } from './bookLearningGraph';
 
-export function BookBranchGraph({ groups, selected, onSelect, onClearSelection, statuses = {}, recommendedId }: { groups: GraphGroup[]; selected: string | undefined; onSelect: (point: Point) => void; onClearSelection?: () => void; statuses?: Record<string, string>; recommendedId?: string }) {
+export function BookBranchGraph({ groups, selected, onSelect, statuses = {}, recommendedId }: { groups: GraphGroup[]; selected: string | undefined; onSelect: (point: Point) => void; statuses?: Record<string, string>; recommendedId?: string }) {
   // Keep the imported catalog/Points order; alternate row direction for a continuous reading path.
   const orderedPoints = groups.flatMap(g => g.points);
   const columns = Math.min(3, Math.max(1, orderedPoints.length));
@@ -56,13 +56,12 @@ export function BookBranchGraph({ groups, selected, onSelect, onClearSelection, 
     if (!cancelled && pointers.current.size === 1 && !gesture.current.moved) {
       const node = pointNodes.find(n => n.point.id === gesture.current.pointId);
       if (node) onSelect(node.point);
-      else onClearSelection?.();
     }
     pointers.current.delete(event.pointerId);
     gesture.current.distance = 0;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   };
-  return <div ref={viewport} className="bkl-branch-viewport" aria-label="可拖动缩放的知识点图谱" tabIndex={0} onKeyDown={event => { if (event.key === 'Escape') onClearSelection?.(); }}
+  return <div ref={viewport} className="bkl-branch-viewport" aria-label="可拖动缩放的知识点图谱" tabIndex={0}
     onPointerDown={event => {
       if (event.button !== 0) return;
       const p = localPoint(event.clientX, event.clientY);

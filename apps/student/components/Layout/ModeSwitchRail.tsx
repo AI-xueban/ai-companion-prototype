@@ -1,17 +1,19 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Zap, BookA } from 'lucide-react';
+import { Zap, BookA, Compass } from 'lucide-react';
 import { MapMode } from '../../types';
 
 interface ModeSwitchRailProps {
   mapMode: MapMode;
   onModeChange: (mode: MapMode) => void;
   variant?: 'dark' | 'light';
+  learningView?: 'map' | 'theme';
+  onLearningViewChange?: (view: 'map' | 'theme') => void;
 }
 
 const MODES = [
   { id: 'pro' as MapMode, label: '课本同步学', icon: Zap },
-  { id: 'sync' as MapMode, label: '个性化学习', icon: BookA },
+  { id: 'sync' as MapMode, label: '精准学', icon: BookA },
 ];
 
 /** 左侧模式切换按钮组（外层由 TopStatusBar 提供通栏底） */
@@ -19,21 +21,29 @@ export const ModeSwitchRail: React.FC<ModeSwitchRailProps> = ({
   mapMode,
   onModeChange,
   variant = 'light',
+  learningView = 'map',
+  onLearningViewChange,
 }) => {
   const isDark = variant === 'dark';
+  const modes: Array<{ id: MapMode; label: string; icon: typeof Zap; view?: 'map' | 'theme' }> = onLearningViewChange ? [
+    MODES[0],
+    { ...MODES[1], view: 'map' },
+    { id: 'sync', label: '个性化学习', icon: Compass, view: 'theme' },
+  ] : MODES;
 
   return (
-    <div className="pointer-events-auto flex flex-col w-full">
-      {MODES.map(({ id, label, icon: Icon }, index) => {
-        const isActive = mapMode === id;
+    <div className="pointer-events-auto flex flex-col w-full" aria-label="学习方式">
+      {modes.map(({ id, label, icon: Icon, view }, index) => {
+        const isActive = mapMode === id && (!view || learningView === view);
         return (
-          <React.Fragment key={id}>
+          <React.Fragment key={`${id}-${view ?? ''}`}>
             {index > 0 && (
               <div className={`h-px shrink-0 mx-2 ${isDark ? 'bg-white/8' : 'bg-transparent'}`} />
             )}
             <button
               type="button"
-              onClick={() => onModeChange(id)}
+              aria-pressed={isActive}
+              onClick={() => { if (view) onLearningViewChange?.(view); onModeChange(id); }}
               className={`relative flex flex-col items-center justify-center gap-1 py-3 px-1 w-full transition-colors ${
                 isActive
                   ? isDark

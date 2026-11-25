@@ -163,6 +163,8 @@ interface SubjectMapProps {
     isAssessed?: boolean;
     mapMode?: MapMode;
     onModeChange?: (mode: MapMode) => void;
+    learningView?: 'map' | 'theme';
+    onLearningViewChange?: (view: 'map' | 'theme') => void;
     onBlockingOverlayChange?: (active: boolean) => void;
     onDetailModeChange?: (open: boolean) => void;
     userPersona?: UserPersona;
@@ -446,6 +448,8 @@ export const SubjectMap: React.FC<SubjectMapProps> = ({
     isAssessed = true,
     mapMode = 'pro', 
     onModeChange,
+    learningView,
+    onLearningViewChange,
     onBlockingOverlayChange,
     onDetailModeChange,
     userPersona = 'average',
@@ -1549,6 +1553,8 @@ export const SubjectMap: React.FC<SubjectMapProps> = ({
             <ModeSwitchRail
               mapMode={mapMode}
               onModeChange={onModeChange}
+              learningView={learningView}
+              onLearningViewChange={onLearningViewChange}
               variant={modeRailVariant}
             />
           </div>

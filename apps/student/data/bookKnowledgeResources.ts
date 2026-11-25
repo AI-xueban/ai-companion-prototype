@@ -76,3 +76,27 @@ export function getBookPointResource(subject: string, point: { id: string; name:
   }));
   return { steps: resource.steps, questions, simulated };
 }
+
+/** Chapter-level player preview for subjects without a point graph. */
+export function getBookChapterVideoResource(subject: string, chapterName: string): ReturnType<typeof getBookPointResource> {
+  return {
+    steps: [
+      subject + ' · ' + chapterName + '：当前为课文讲解流程演示，不代表真实课程。',
+      '当前课文的讲解视频由基础、进阶、拓展三种训练共用，后续将替换为对应的正式课程。',
+      '观看完成后返回精准学页面，可以自主选择当前课文的训练难度。',
+    ],
+    questions: [],
+    simulated: true,
+  };
+}
+
+export type KnowledgeVideo = { id: string; title: string; durationSec: number; steps: string[]; simulated: boolean };
+
+/** Temporary source record; use each source title verbatim, without sync video categories. */
+export function getBookTextVideos(subject: string, textId: string, textName: string): KnowledgeVideo[] {
+  return [{
+    id: `text-video-demo:${encodeURIComponent(subject)}:${textId}`,
+    title: '知识点视频演示', durationSec: 20, simulated: true,
+    steps: getBookChapterVideoResource(subject, textName).steps,
+  }];
+}

@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ChevronDown, ChevronUp, ChevronRight, Compass } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
 import type { Point } from './bookLearningGraph';
 import { getPointTrace, type TracePoint } from './pointTrace';
-import { PointLearningCard, pointColors } from './PointLearningCard';
+import { pointColors } from './PointLearningCard';
 import { getPointHealth, readBookPointProgress } from '../../services/bookKnowledgeProgress';
 import { selectPointMistakes } from '../../services/knowledgePointMistakes';
 import type { MistakeItem } from '../../types';
@@ -27,8 +27,7 @@ export function KnowledgeTracePage(props: Props) {
     return () => { cancelled = true; };
   }, [props.code]);
   const [chain, setChain] = useState<TracePoint[]>([]);
-  const selected = chain.find(node => node.id === props.selected.id);
-  const selectedNode = useRef<HTMLButtonElement>(null);
+  const selectedNode = useRef<HTMLLIElement>(null);
   const routeScroll = useRef<HTMLDivElement>(null);
   const lastVisibleNode = useRef<HTMLLIElement>(null);
   const revealNext = useRef(false);
@@ -36,6 +35,13 @@ export function KnowledgeTracePage(props: Props) {
   const [error, setError] = useState(false);
   const [retry, setRetry] = useState(0);
   const [visibleCount, setVisibleCount] = useState(2);
+  const [detailsOpen, setDetailsOpen] = useState(true);
+  const selected = chain.slice(1, visibleCount).find(node => node.id === props.selected.id);
+  const locations = selected ? affiliations[selected.id] : undefined;
+  const location = locations?.[0];
+  useEffect(() => {
+    setDetailsOpen(true);
+  }, [props.selected.id]);
   useEffect(() => {
     let cancelled = false;
     setLoading(true); setError(false);
@@ -44,13 +50,16 @@ export function KnowledgeTracePage(props: Props) {
       const index = (module.default as Record<string, Record<string, TracePoint>>)[props.code] ?? {};
       const nextChain = getPointTrace(index, props.origin);
       setChain(nextChain);
-      setVisibleCount(Math.max(2, nextChain.findIndex(node => node.id === props.selected.id) + 1));
+      const nextSelected = nextChain.slice(1).find(node => node.id === props.selected.id) ?? nextChain[1];
+      setVisibleCount(Math.max(2, nextChain.findIndex(node => node.id === nextSelected?.id) + 1));
+      if (nextSelected && nextSelected.id !== props.selected.id) props.onSelect(nextSelected);
     }).catch(() => { if (!cancelled) setError(true); }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [props.code, props.origin.id, retry]);
   useEffect(() => {
+    if (revealNext.current) return;
     selectedNode.current?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
-  }, [chain, props.selected.id, loading]);
+  }, [chain, props.selected.id, loading, detailsOpen]);
   useEffect(() => {
     if (!revealNext.current) return;
     revealNext.current = false;
@@ -66,36 +75,43 @@ export function KnowledgeTracePage(props: Props) {
     if (index + 1 < visibleCount) {
       revealNext.current = false;
       setVisibleCount(index + 1);
-      if (chain.findIndex(node => node.id === props.selected.id) > index) props.onSelect(chain[index]);
+      if (chain.findIndex(node => node.id === props.selected.id) > index) props.onSelect(chain[Math.max(1, index)]);
     } else {
       revealNext.current = true;
       setVisibleCount(index + 2);
+      setDetailsOpen(true);
+      props.onSelect(chain[index + 1]);
     }
   };
   return <div className="bkl-trace-page">
-    <header className="bkl-trace-header"><button onClick={props.onBack} aria-label="返回知识图谱"><ArrowLeft size={20} /></button><div><h1>知识点溯源</h1><p>沿着知识脉络，回顾前序知识点</p></div><span><Compass size={19} />精准学</span></header>
-    <div className="bkl-trace-layout">
-      <aside className="bkl-trace-aside">
-        <div className="bkl-sidebar">{selected ? <PointLearningCard point={selected} health={health} academicLocations={affiliations[selected.id]} academicLabel={affiliationLoading ? '正在读取教材归属…' : '暂无教材归属数据'} commonTypes={props.commonTypes[selected.id]} mistakeCount={pending.length} onLearn={() => props.onLearn(selected)} onCorrect={() => props.onCorrect(selected)} /> : <p className="bkl-trace-empty">{loading ? '正在读取知识点…' : '暂无该知识点的 point 数据'}</p>}</div>
-      </aside>
-      <main className="bkl-trace-route" aria-label="同级前序知识点路径">
-        <div className="bkl-trace-route-heading"><div><span>溯源知识路径</span><h2>{chain[0]?.name ?? '知识点回溯'}</h2></div><small>{loading ? '加载中' : `${Math.max(0, chain.length - 1)} 个前序知识点`}</small></div>
+    <header className="bkl-trace-header"><button onClick={props.onBack} aria-label="返回知识图谱"><ArrowLeft size={20} /></button><h1>知识点溯源</h1><small>{loading ? '加载中' : `${Math.max(0, chain.length - 1)} 个前序知识点`}</small></header>
+      <main className="bkl-trace-route" aria-label="溯源知识路径">
         <div ref={routeScroll} className="bkl-trace-route-scroll">
           {loading ? <p className="bkl-trace-empty">正在读取知识路径…</p> : error ? <div className="bkl-trace-empty"><p>知识路径加载失败</p><button onClick={() => setRetry(n => n + 1)}>重新加载</button></div> : !chain.length ? <p className="bkl-trace-empty">暂无该知识点的溯源数据</p> : <>
             <ol>{chain.slice(0, visibleCount).map((node, i) => {
               const status = getPointHealth(readBookPointProgress(props.context, node.id)).status;
               const isSelected = selected?.id === node.id;
               const isOrigin = node.id === props.origin.id;
-              return <li key={node.id} ref={i === Math.min(visibleCount, chain.length) - 1 ? lastVisibleNode : undefined}><button ref={isSelected ? selectedNode : undefined} className={`bkl-trace-step ${isSelected ? 'is-selected' : ''}`} aria-label={`${node.name}${isOrigin ? '，当前学习' : ''}`} aria-pressed={isSelected} onClick={() => props.onSelect(node)}>
-                {isOrigin && <span className="bkl-trace-node-badges"><span className="bkl-trace-origin">当前学习</span></span>}
-                <i className="bkl-trace-orb" style={{ background: pointColors[status] }} />
+              const isExpanded = i + 1 < visibleCount;
+              const hasNext = i < chain.length - 1;
+              const isDetailOpen = isSelected && detailsOpen;
+              return <li key={node.id} className={`${hasNext ? 'has-next' : ''} ${isExpanded ? 'is-path-open' : ''} ${isOrigin ? 'is-origin' : ''}`} ref={element => { if (isSelected) selectedNode.current = element; if (i === Math.min(visibleCount, chain.length) - 1) lastVisibleNode.current = element; }}>
+                <i className="bkl-trace-dot" style={{ background: isOrigin ? '#b9bbc5' : pointColors[status] }} aria-hidden="true" />
+                <article className={`bkl-trace-point ${isSelected ? 'is-selected' : ''} ${isOrigin ? 'is-origin' : ''}`}>
+                <button className="bkl-trace-step" aria-label={`${node.name}${isOrigin ? '，当前学习' : ''}`} aria-pressed={isSelected} aria-expanded={isOrigin ? undefined : isDetailOpen} disabled={isOrigin} onClick={isOrigin ? undefined : () => { if (isSelected) setDetailsOpen(open => !open); else { setDetailsOpen(true); props.onSelect(node); } }}>
                 <strong title={node.name}>{node.name}</strong>
-                <ChevronRight className="bkl-trace-node-chevron" size={18} aria-hidden="true" />
-              </button>{i < chain.length - 1 && <span className={`bkl-trace-connector ${i + 1 < visibleCount ? 'is-expanded' : 'is-collapsed'}`}><button className="bkl-trace-toggle" aria-expanded={i + 1 < visibleCount} aria-label={`${i + 1 < visibleCount ? '收起' : '展开'}${node.name}的前序知识点`} onClick={() => toggleNext(i)}>{i + 1 < visibleCount ? <ChevronUp size={17} /> : <ChevronDown size={17} />}</button></span>}</li>;
+                {isOrigin ? <span className="bkl-trace-origin">当前学习</span> : isDetailOpen ? <ChevronUp size={17} /> : <ChevronDown size={17} />}
+                </button>
+                {isDetailOpen && selected && <div className="bkl-trace-details" aria-label={`${node.name}学习详情`}>
+                  <div className="bkl-trace-academic">{location ? <><strong>{location[0]} · {location[1]}</strong></> : <span>{affiliationLoading ? '正在读取教材归属…' : '暂无教材归属数据'}</span>}</div>
+                  <div className="bkl-trace-detail-bottom"><div className="bkl-trace-summary"><div><span>健康分 <b style={{ color: pointColors[health.status] }}>{health.score == null ? '—' : Math.round(health.score * 10) / 10}</b></span>{!!props.commonTypes[selected.id]?.length && <span>常考：{props.commonTypes[selected.id].join('、')}</span>}</div><p>待攻克 {health.weak}　待复习 {health.reviewing}　已掌握 {health.mastered}</p></div><div className="bkl-trace-actions">{!!pending.length && <button onClick={() => props.onCorrect(selected)}>订正错题（{pending.length}）</button>}<button className="bkl-trace-learn" onClick={() => props.onLearn(selected)}>去学习 →</button></div></div>
+                </div>}
+                </article>
+                {hasNext && <button className="bkl-trace-toggle" aria-expanded={isExpanded} aria-label={`${isExpanded ? '收起' : '展开'}${node.name}的前序知识点`} onClick={() => toggleNext(i)}>{isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}</button>}
+              </li>;
             })}</ol>
           </>}
         </div>
       </main>
-    </div>
   </div>;
 }

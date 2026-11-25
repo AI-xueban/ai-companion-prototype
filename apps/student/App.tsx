@@ -174,6 +174,7 @@ const App: React.FC = () => {
   const [mapMode, setMapMode] = useState<MapMode>('pro');
   const [personalizedScreen, setPersonalizedScreen] = useState<ExpeditionScreen>('main');
   const [personalizedLearningSignal, setPersonalizedLearningSignal] = useState(0);
+  const [personalizedView, setPersonalizedView] = useState<'map' | 'theme'>('map');
   const [currentUserPersona, setCurrentUserPersona] = useState<UserPersona>('average');
   const [learningStrategy, setLearningStrategy] = useState<'sync-mode' | 'exam-mode'>('sync-mode');
   const [isStoreOpen, setIsStoreOpen] = useState(false);
@@ -707,6 +708,7 @@ const App: React.FC = () => {
       if (shouldReturnToPersonalizedPath) {
           expeditionSession.returnScreen = 'path';
           setPersonalizedLearningSignal((value) => value + 1);
+          setPersonalizedView('theme');
           setPersonalizedScreen('path');
           setMapMode('sync');
           setActiveTab('subject');
@@ -1048,6 +1050,8 @@ const App: React.FC = () => {
                                     <ModeSwitchRail
                                         mapMode="sync"
                                         onModeChange={setMapMode}
+                                        learningView={personalizedView}
+                                        onLearningViewChange={setPersonalizedView}
                                         variant="light"
                                     />
                                 </div>
@@ -1067,6 +1071,8 @@ const App: React.FC = () => {
                                 skipWizard={shouldSkipMapWizard}
                                 userName={userName}
                                 learningSessionSignal={personalizedLearningSignal}
+                                learningView={personalizedView}
+                                onLearningViewChange={setPersonalizedView}
                                 onReturnHome={() => setActiveTab('today')}
                                 onExpeditionScreenChange={setPersonalizedScreen}
                             />
@@ -1079,6 +1085,8 @@ const App: React.FC = () => {
                             isAssessed={isAssessed} 
                             mapMode={mapMode}
                             onModeChange={setMapMode}
+                            learningView={personalizedView}
+                            onLearningViewChange={setPersonalizedView}
                             userPersona={currentUserPersona}
                             learningStrategy={learningStrategy}
                             onStrategyChange={setLearningStrategy}

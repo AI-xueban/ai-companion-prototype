@@ -1,11 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { ChevronDown, SlidersHorizontal, X, Check } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal, X, Check } from 'lucide-react';
 import { SubjectMap as ThemeLearning, type ExpeditionScreen } from './SubjectMap';
 import { loadAcademicContext } from '../../services/academicContextStore';
 import { getAvailableTextbookVersions, resolveTextbookVersion } from '../../services/textbookVersionStore';
 import './bookKnowledgeLearning.css';
 import { KnowledgeTracePage } from './KnowledgeTracePage';
 import { PointLearningCard } from './PointLearningCard';
+import { ChapterTrainingPanel, chapterTrainingId, type TextTrainingDifficulty } from './ChapterTrainingPanel';
+import { KnowledgeVideoListPage, knowledgeVideoProgressId } from './KnowledgeVideoListPage';
 import { hasPointPredecessor, type TracePoint } from './pointTrace';
 import { BookBranchGraph } from './BookBranchGraph';
 import { buildBookGraph, type Point, type Catalog } from './bookLearningGraph';
@@ -15,7 +17,7 @@ import { DailyConquerModal } from '../MistakeVault/DailyConquerModal';
 import { getMistakeVaultData } from '../../services/geminiService';
 import { selectPointMistakes, recordPointCorrections, registerPointMistakes } from '../../services/knowledgePointMistakes';
 import type { MistakeItem } from '../../types';
-import { getBookPointResource } from '../../data/bookKnowledgeResources';
+import { getBookPointResource, getBookTextVideos, type KnowledgeVideo } from '../../data/bookKnowledgeResources';
 import { readBookPointProgress, writeBookPointProgress, getPointHealth, applyPointPractice } from '../../services/bookKnowledgeProgress';
 import { KG_SCOPE_MICRO_LESSON, sectionPracticeQuizFields } from '../../utils/kgMicroLesson';
 import type { Task } from '../../types';
@@ -23,7 +25,11 @@ import type { RewardGrantResult } from '../../types/reward';
 
 export type { ExpeditionScreen };
 type Book = { id: string; name: string; edition: string; grade: string; term: string; children: Catalog[] };
-type Props = React.ComponentProps<typeof ThemeLearning> & { onKnowledgeReward?: (result: RewardGrantResult) => void };
+type Props = React.ComponentProps<typeof ThemeLearning> & {
+  onKnowledgeReward?: (result: RewardGrantResult) => void;
+  learningView?: 'map' | 'theme';
+  onLearningViewChange?: (view: 'map' | 'theme') => void;
+};
 const loaders = import.meta.glob(['../../data/learning-books/*.json', '../../data/learning-books/grade7-first-term/*.json']);
 const codes: Record<string, string> = { 数学: 'math', 语文: 'chinese', 英语: 'english', 物理: 'physics', 化学: 'chemistry', 生物: 'bio', 地理: 'geography', 历史: 'history', 道德与法治: 'politics', 科学: 'science' };
 const grades = ['一年级', '二年级', '三年级', '四年级', '五年级', '六年级'];
@@ -43,11 +49,13 @@ const findPath = (nodes: Catalog[], id: string, path: Catalog[] = []): Catalog[]
 };
 
 export function SubjectMap(props: Props) {
-  const [view, setView] = useState<'map' | 'theme'>('map');
+  const chapterTrainingMode = props.activeSubject === '语文' || props.activeSubject === '英语';
+  const [localView, setView] = useState<'map' | 'theme'>('map');
+  const view = props.learningView ?? localView;
   const [themeVisited, setThemeVisited] = useState(false);
   const [book, setBook] = useState<Book | null>(null);
   const [leaf, setLeaf] = useState<Catalog | null>(null);
-  const [point, setPoint] = useState<Point | null>(null);
+  const [selectedPoint, setPoint] = useState<Point | null>(null);
   const [vaultItems, setVaultItems] = useState<MistakeItem[]>([]);
   const [correction, setCorrection] = useState<{ point: Point; context: string; items: MistakeItem[] } | null>(null);
   const [traceOrigin, setTraceOrigin] = useState<Point | null>(null);
@@ -65,7 +73,8 @@ export function SubjectMap(props: Props) {
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
   const [progressRevision, updateProgress] = useState(0);
-  const [session, setSession] = useState<{ point: Point; context: string; resource: NonNullable<ReturnType<typeof getBookPointResource>>; phase: 'video' | 'quiz'; task: Task } | null>(null);
+  const [session, setSession] = useState<{ point: Point; context: string; resource: NonNullable<ReturnType<typeof getBookPointResource>>; phase: 'video' | 'quiz'; task: Task; chapterVideo?: boolean; chapterTraining?: boolean } | null>(null);
+  const [videoList, setVideoList] = useState<{ textId: string; title: string; context: string; videos: KnowledgeVideo[] } | null>(null);
   const [chapterDifficulties, setChapterDifficulties] = useState<Record<string, '基础' | '进阶' | '拓展'>>({});
   const difficultyDialog = useRef<HTMLDialogElement>(null);
   const lastSignal = useRef(props.learningSessionSignal);
@@ -101,7 +110,7 @@ export function SubjectMap(props: Props) {
           ? candidates.find(b => /[（(]2024[）)]/.test(b.edition)) : undefined)
         ?? candidates[0];
       setBook(match ?? null); setCommonTypes(allTypes[key] ?? {});
-      const firstMappedSection = grade7FirstTerm && match
+      const firstMappedSection = !chapterTrainingMode && grade7FirstTerm && match
         ? match.children.flatMap(chapter => chapter.children.length ? chapter.children : [chapter])
           .find(section => buildBookGraph(section).length > 0)
         : undefined;
@@ -116,17 +125,36 @@ export function SubjectMap(props: Props) {
     if (props.learningSessionSignal !== lastSignal.current) {
       lastSignal.current = props.learningSessionSignal;
       setView('theme'); setThemeVisited(true);
+      props.onLearningViewChange?.('theme');
     }
   }, [props.learningSessionSignal]);
 
-  const changeView = (next: 'map' | 'theme') => {
-    setView(next);
-    if (next === 'theme') setThemeVisited(true);
+  useEffect(() => {
+    if (view === 'theme') setThemeVisited(true);
     else props.onExpeditionScreenChange?.('main');
-  };
+  }, [view, props.onExpeditionScreenChange]);
+  const onThemeScreenChange = useCallback((screen: ExpeditionScreen) => {
+    if (view === 'theme') props.onExpeditionScreenChange?.(screen);
+  }, [view, props.onExpeditionScreenChange]);
   const groups = leaf ? buildBookGraph(leaf) : [];
+  const sections = book?.children.flatMap(chapter => chapter.children.length ? chapter.children : [chapter]) ?? [];
+  const sectionIndex = sections.findIndex(section => section.id === leaf?.id);
+  const selectSection = (section: Catalog | undefined) => {
+    if (!section || loading || error) return;
+    setLeaf(section); setPoint(null);
+  };
   const points = groups.flatMap(g => g.points);
   const context = `${props.activeSubject}|${academic.schoolSystem}|${book?.id}|${version}|${academic.grade}|${academic.term}`;
+  const difficultyScope = `${context}|${leaf?.id ?? ''}`;
+  const difficulty = chapterDifficulties[difficultyScope] ?? '基础';
+  const progress = Object.fromEntries(points.map(p => [p.id, readBookPointProgress(context, p.id)]));
+  const health = Object.fromEntries(points.map(p => [p.id, getPointHealth(progress[p.id])]));
+  const priority = ['weak', 'reviewing', 'exploring', 'unknown'];
+  const recommended = priority.flatMap(status => points.filter(p => health[p.id].status === status))[0];
+  const point = points.find(p => p.id === selectedPoint?.id) ?? recommended ?? points[0] ?? null;
+  useEffect(() => {
+    if (point && selectedPoint?.id !== point.id) setPoint(point);
+  }, [point?.id, selectedPoint?.id]);
   useEffect(() => {
     let cancelled = false;
     const activePoint = traceSelection ?? point;
@@ -137,12 +165,6 @@ export function SubjectMap(props: Props) {
     getMistakeVaultData().then(data => { if (!cancelled) setVaultItems(data.groups.flatMap(group => group.items)); });
     return () => { cancelled = true; };
   }, [context, point?.id, traceSelection?.id, progressRevision]);
-  const difficultyScope = `${context}|${leaf?.id ?? ''}`;
-  const difficulty = chapterDifficulties[difficultyScope] ?? '基础';
-  const progress = Object.fromEntries(points.map(p => [p.id, readBookPointProgress(context, p.id)]));
-  const health = Object.fromEntries(points.map(p => [p.id, getPointHealth(progress[p.id])]));
-  const priority = ['weak', 'reviewing', 'exploring', 'unknown'];
-  const recommended = priority.flatMap(status => points.filter(p => health[p.id].status === status))[0];
   const masteredCount = points.filter(p => health[p.id].status === 'mastered').length;
   const statuses = Object.fromEntries(points.map(p => [p.id, health[p.id].status]));
   const pointMistakes = point ? selectPointMistakes(vaultItems, props.activeSubject, point.name) : [];
@@ -150,7 +172,13 @@ export function SubjectMap(props: Props) {
   const traceSubjectCode = codes[props.activeSubject] + (grades.includes(academic.grade) && !(academic.grade === '六年级' && academic.schoolSystem === '五四制') ? '3' : '');
   const canTrace = (id: string) => hasPointPredecessor(traceIndex[traceSubjectCode] ?? {}, id);
   const openPoint = (p: Point, mode: 'video' | 'trace' = 'video') => {
-    if (mode === 'trace') { if (!canTrace(p.id)) return; setTraceOrigin(p); setTraceSelection(p); return; }
+    if (mode === 'trace') {
+      const index = traceIndex[traceSubjectCode] ?? {};
+      const previousId = index[p.id]?.previousId;
+      const previous = previousId ? index[previousId] : undefined;
+      if (!previous) return;
+      setTraceOrigin(p); setTraceSelection(previous); return;
+    }
     if (!traceOrigin) setPoint(p);
     const resource = getBookPointResource(props.activeSubject, p);
 
@@ -162,10 +190,35 @@ export function SubjectMap(props: Props) {
       sectionPractice: { id: `${id}-practice`, title: `${p.name} · 知识点练习`, questionCount: resource.questions.length },
     } });
   };
-  const closeSession = () => { setSession(null); setCorrection(null); props.onExpeditionScreenChange?.(traceOrigin ? 'textbook-video' : 'main'); };
+  const openChapterVideo = () => {
+    if (!chapterTrainingMode || !book || !leaf) return;
+    setVideoList({ textId: leaf.id, title: leaf.name, context, videos: getBookTextVideos(props.activeSubject, leaf.id, leaf.name) });
+  };
+  const openTextTraining = (difficulty: TextTrainingDifficulty) => {
+    if (!chapterTrainingMode || !book || !leaf) return;
+    const id = chapterTrainingId(leaf.id, difficulty);
+    setSession({ point: { id, name: leaf.name }, context, phase: 'quiz', chapterTraining: true,
+      resource: { steps: [], questions: [], simulated: true }, task: {
+        ...sectionPracticeQuizFields(),
+        id: `book-knowledge-training-${book.id}-${id}`,
+        title: `${leaf.name} · ${difficulty}训练（流程模拟）`, subject: props.activeSubject, completed: false,
+        questionCount: 6, practiceDifficulty: difficulty === '基础' ? 2 : difficulty === '进阶' ? 3 : 4,
+        practiceDifficultyLabel: difficulty,
+      },
+    });
+  };
+  const playKnowledgeVideo = (video: KnowledgeVideo) => {
+    if (!videoList) return;
+    const id = `book-knowledge-video-${video.id}`;
+    setSession({ point: { id: knowledgeVideoProgressId(videoList.textId, video.id), name: video.title }, context: videoList.context, resource: { steps: video.steps, questions: [], simulated: video.simulated }, phase: 'video', chapterVideo: true, task: {
+      id, title: video.title, subject: props.activeSubject, durationMinutes: Math.ceil(video.durationSec / 60), completed: false, aiReasoning: KG_SCOPE_MICRO_LESSON,
+      sectionVideoPlaylist: { items: [{ id, title: video.title, topicTitle: videoList.title, durationSec: video.durationSec }], currentIndex: 0, scopeLabel: videoList.title },
+    } });
+  };
+  const closeSession = () => { setSession(null); setCorrection(null); props.onExpeditionScreenChange?.(traceOrigin || videoList ? 'textbook-video' : 'main'); };
   useEffect(() => {
-    if (session || correction || traceOrigin) props.onExpeditionScreenChange?.('textbook-video');
-  }, [Boolean(session || correction || traceOrigin), props.onExpeditionScreenChange]);
+    if (session || correction || traceOrigin || videoList) props.onExpeditionScreenChange?.('textbook-video');
+  }, [Boolean(session || correction || traceOrigin || videoList), props.onExpeditionScreenChange]);
   const themeFullScreen = view === 'theme' && themeVisited;
   if (correction) return <DailyConquerModal items={correction.items} maxQuestions={correction.items.length} mode="batch" subjectLabel={props.activeSubject} onClose={closeSession} onComplete={() => {}} onRewardGranted={props.onKnowledgeReward} onSessionResult={result => {
     setVaultItems(recordPointCorrections(vaultItems, result.questions, result.sessionId));
@@ -173,12 +226,16 @@ export function SubjectMap(props: Props) {
     writeBookPointProgress(correction.context, correction.point.id, applyPointPractice(previous, result));
     updateProgress(n => n + 1);
   }} />;
+  if (session?.chapterTraining) return <div className="bkl-session bkl-text-training-session">
+    <header><span>{session.point.name} · {session.task.practiceDifficultyLabel}训练</span><small>演示题不计入课文健康分</small></header>
+    <div className="bkl-text-training-body"><QuizPage key={session.task.id} task={session.task} onExit={closeSession} onRewardGranted={props.onKnowledgeReward} /></div>
+  </div>;
   if (session) return <div className="bkl-session">
     {session.phase === 'video' ? <VideoLesson key={session.task.id} task={session.task}
       knowledgePreview={{ title: session.point.name, steps: session.resource.steps }}
       onWatched={() => { writeBookPointProgress(session.context, session.point.id, { watched: true }); updateProgress(n => n + 1); }}
       onRewardGranted={props.onKnowledgeReward}
-      onExit={closeSession} onComplete={() => setSession(old => old ? { ...old, phase: 'quiz' } : old)} /> :
+      onExit={closeSession} onComplete={() => { if (session.chapterVideo) closeSession(); else setSession(old => old ? { ...old, phase: 'quiz' } : old); }} /> :
       <QuizPage key={`${session.task.id}-quiz`} task={{ ...session.task, ...sectionPracticeQuizFields(), title: `${session.point.name} · ${session.resource.simulated ? '流程模拟练习' : '知识点练习'}`, questionCount: session.resource.questions.length }}
         overrideQuestions={session.resource.questions} onExit={closeSession} onRewardGranted={props.onKnowledgeReward}
         onSessionResult={result => {
@@ -188,46 +245,43 @@ export function SubjectMap(props: Props) {
           updateProgress(n => n + 1);
         }} />}
   </div>;
+  if (videoList) return <KnowledgeVideoListPage title={videoList.title} textId={videoList.textId} context={videoList.context} videos={videoList.videos} onPlay={playKnowledgeVideo} onBack={() => { setVideoList(null); props.onExpeditionScreenChange?.('main'); }} />;
   if (traceOrigin) return <KnowledgeTracePage origin={traceOrigin} selected={traceSelection ?? traceOrigin} onSelect={setTraceSelection} context={context} subject={props.activeSubject} code={codes[props.activeSubject] + (grades.includes(academic.grade) && !(academic.grade === '六年级' && academic.schoolSystem === '五四制') ? '3' : '')} commonTypes={commonTypes} mistakes={vaultItems} onLearn={openPoint} onCorrect={p => {
     const items = selectPointMistakes(vaultItems, props.activeSubject, p.name);
     if (items.length) setCorrection({ point: p, context, items });
   }} onBack={() => { setTraceOrigin(null); setTraceSelection(null); props.onExpeditionScreenChange?.('main'); }} />;
   return <div className="bkl-shell">
-    <div className="bkl-mode-bar">
-      <div className="bkl-mode-switch" role="group" aria-label="学习方式">
-        <button aria-pressed={view === 'map'} onClick={() => changeView('map')}>精准学</button>
-        <button aria-pressed={view === 'theme'} onClick={() => changeView('theme')}>主题学习</button>
-      </div>
-      <span className="bkl-book-meta">{book?.edition || version} · {academic.grade} · {academic.term}</span>
-    </div>
-    <div className="bkl-workspace" hidden={view !== 'map'}>
-      <aside className="bkl-sidebar">
-        {!!points.length && !error && (point ? <>
-          <PointLearningCard point={point} health={selectedHealth!} commonTypes={commonTypes[point.id]} masteredCount={masteredCount} totalCount={points.length} mistakeCount={pointMistakes.length} onLearn={() => openPoint(point)} onCorrect={() => setCorrection({ point, context, items: pointMistakes })} onTrace={canTrace(point.id) ? () => openPoint(point, 'trace') : undefined} onClear={() => setPoint(null)} />
-        </> : recommended ? <section className="bkl-recommend" aria-label="推荐学习"><h3>推荐学习</h3><strong>{recommended.name}</strong><p>优先攻克薄弱点，再复习与探索</p><button onClick={() => openPoint(recommended)}>开始学习 →</button></section> : <section className="bkl-recommend bkl-all-mastered" role="status"><span aria-hidden="true">✦</span><h3>太棒了！这部分内容都完成了！</h3></section>)}
-      </aside>
-      <main className="bkl-canvas">
-        <div className="bkl-breadcrumb">
+    <div className={`bkl-workspace ${chapterTrainingMode ? 'bkl-chapter-workspace' : ''}`} hidden={view !== 'map'}>
+        <div className="bkl-breadcrumb bkl-section-toolbar">
           {loading ? <span>正在加载章节…</span> : error ? <span>教材目录加载失败</span> : book ?
             <label className="bkl-path-selector">
-              <span>{[props.activeSubject, ...(leaf ? findPath(book.children, leaf.id).map(n => n.name) : [])].join(' / ')}</span>
+              <span>{leaf ? findPath(book.children, leaf.id).map(n => n.name).join(' / ') : '请选择章节'}</span>
               <ChevronDown size={14} aria-hidden="true" />
               <select aria-label="选择章节" value={leaf?.id ?? ''} onChange={event => {
                 const path = findPath(book.children, event.target.value);
                 const section = path[path.length - 1];
                 if (!section) return;
-                setLeaf(section); setPoint(null);
+                selectSection(section);
               }}>
                 {book.children.map(chapter => chapter.children.length ?
                   <optgroup key={chapter.id} label={chapter.name}>{chapter.children.map(section => <option key={section.id} value={section.id}>{section.name}</option>)}</optgroup> :
                   <option key={chapter.id} value={chapter.id}>{chapter.name}</option>)}
               </select>
-            </label> : <span>{props.activeSubject} / 暂无教材目录</span>}
+            </label> : <span>暂无教材目录</span>}
+          <nav className="bkl-section-navigation" aria-label="课文与章节切换">
+            <button type="button" aria-label="上一课" title={sections[sectionIndex - 1] ? `上一课：${sections[sectionIndex - 1].name}` : '已经是第一课'} disabled={loading || !!error || sectionIndex <= 0} onClick={() => selectSection(sections[sectionIndex - 1])}><ChevronLeft size={19} aria-hidden="true" /></button>
+            <button type="button" aria-label="下一课" title={sections[sectionIndex + 1] ? `下一课：${sections[sectionIndex + 1].name}` : '已经是最后一课'} disabled={loading || !!error || sectionIndex < 0 || sectionIndex >= sections.length - 1} onClick={() => selectSection(sections[sectionIndex + 1])}><ChevronRight size={19} aria-hidden="true" /></button>
+          </nav>
         </div>
-        <div className="bkl-canvas-heading"><h2>{leaf?.name ?? '知识图谱学习'}</h2>{leaf && <p>{points.length} 个知识点</p>}</div>
-        {loading ? <div className="bkl-graph-empty">正在加载知识点…</div> : error ? <div className="bkl-graph-empty" role="alert"><h3>教材数据加载失败</h3><p>请检查本地预览服务是否运行，然后重试</p><button onClick={() => setRetry(n => n + 1)}>重新加载</button></div> : !book ? <div className="bkl-graph-empty">暂无与当前教材匹配的目录，请在「我的课本」核对教材信息</div> : !points.length ? <div className="bkl-graph-empty">本节暂无教材关联的知识点</div> :
-          <BookBranchGraph key={leaf?.id} groups={groups} selected={point?.id} onSelect={setPoint} onClearSelection={() => setPoint(null)} statuses={statuses} recommendedId={recommended?.id} />}
-        <div className="bkl-canvas-footer"><span>● 未知　<span style={{ color: '#6d9ee8' }}>● 探索中</span>　<span style={{ color: '#ed6b75' }}>● 待攻克</span>　<span style={{ color: '#e4b342' }}>● 待复习</span>　<span style={{ color: '#42b7ad' }}>● 已掌握</span></span><button className="bkl-difficulty-trigger" aria-label={`难度设置，当前${difficulty}`} aria-haspopup="dialog" onClick={() => difficultyDialog.current?.showModal()}><SlidersHorizontal size={16} /><span>{difficulty}</span></button></div>
+      {!chapterTrainingMode && <aside className="bkl-sidebar">
+        {point && !error && <PointLearningCard point={point} health={selectedHealth!} commonTypes={commonTypes[point.id]} masteredCount={masteredCount} totalCount={points.length} mistakeCount={pointMistakes.length} onLearn={() => openPoint(point)} onCorrect={() => setCorrection({ point, context, items: pointMistakes })} onTrace={canTrace(point.id) ? () => openPoint(point, 'trace') : undefined} />}
+      </aside>}
+      <main className={`bkl-canvas ${chapterTrainingMode ? 'bkl-chapter-canvas' : ''}`}>
+
+        {!chapterTrainingMode && <div className="bkl-canvas-heading"><h2>{leaf?.name ?? '精准学'}</h2>{leaf && <p>{points.length} 个知识点</p>}</div>}
+        {loading ? <div className="bkl-graph-empty">{chapterTrainingMode ? '正在加载课文…' : '正在加载知识点…'}</div> : error ? <div className="bkl-graph-empty" role="alert"><h3>教材数据加载失败</h3><p>请检查本地预览服务是否运行，然后重试</p><button onClick={() => setRetry(n => n + 1)}>重新加载</button></div> : !book ? <div className="bkl-graph-empty">暂无与当前教材匹配的目录，请在「我的课本」核对教材信息</div> : chapterTrainingMode ? (leaf ? <ChapterTrainingPanel key={`${context}|${leaf.id}`} context={context} chapterId={leaf.id} subject={props.activeSubject} videos={getBookTextVideos(props.activeSubject, leaf.id, leaf.name)} onVideo={openChapterVideo} onTraining={openTextTraining} /> : <div className="bkl-graph-empty">暂无可训练的课文</div>) : !points.length ? <div className="bkl-graph-empty">本节暂无教材关联的知识点</div> :
+          <BookBranchGraph key={leaf?.id} groups={groups} selected={point?.id} onSelect={setPoint} statuses={statuses} recommendedId={recommended?.id} />}
+        {!chapterTrainingMode && <div className="bkl-canvas-footer"><span>● 未知　<span style={{ color: '#6d9ee8' }}>● 探索中</span>　<span style={{ color: '#ed6b75' }}>● 待攻克</span>　<span style={{ color: '#e4b342' }}>● 待复习</span>　<span style={{ color: '#42b7ad' }}>● 已掌握</span></span><button className="bkl-difficulty-trigger" aria-label={`难度设置，当前${difficulty}`} aria-haspopup="dialog" onClick={() => difficultyDialog.current?.showModal()}><SlidersHorizontal size={16} /><span>{difficulty}</span></button></div>}
       </main>
     </div>
     <dialog ref={difficultyDialog} className="bkl-difficulty-dialog" aria-labelledby="bkl-difficulty-title" onClick={event => {
@@ -247,6 +301,6 @@ export function SubjectMap(props: Props) {
       </div>
       <p className="bkl-difficulty-note">三种难度共用知识讲解视频</p>
     </dialog>
-    {themeVisited && <div className="bkl-theme" hidden={!themeFullScreen}><ThemeLearning {...props} /></div>}
+    {themeVisited && <div className="bkl-theme" hidden={!themeFullScreen}><ThemeLearning {...props} onExpeditionScreenChange={onThemeScreenChange} /></div>}
   </div>;
 }
