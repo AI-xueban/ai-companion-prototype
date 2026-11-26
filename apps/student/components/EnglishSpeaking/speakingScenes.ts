@@ -1,17 +1,16 @@
+import { buildSpeakingPrompts, type SpeakingPrompt } from './speakingFollowUps';
+
 export type SpeakingScene = {
   title: string;
   en: string;
   description: string;
   words: string[];
-  prompts: string[][];
+  prompts: SpeakingPrompt[];
 };
 
-const scene = (title: string, en: string, description: string, words: string[], question: string, translation: string, answer: string, answerTranslation: string, followUp?: string[]): SpeakingScene => ({
+const scene = (title: string, en: string, description: string, words: string[], question: string, translation: string, answer: string, answerTranslation: string, followUp?: SpeakingPrompt): SpeakingScene => ({
   title, en, description, words,
-  prompts: [
-    [question, translation, answer, answerTranslation],
-    followUp ?? ['Can you tell me a little more?', '你能再多说一点吗？', answer + ' I can share more with you.', answerTranslation + '我还可以与你多分享一点。'],
-  ],
+  prompts: buildSpeakingPrompts(en, [question, translation, answer, answerTranslation], followUp),
 });
 
 export const speakingScenes: SpeakingScene[][] = [

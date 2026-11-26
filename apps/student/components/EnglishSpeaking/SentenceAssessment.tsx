@@ -22,18 +22,20 @@ function analyzeSentence(sentence: string) {
   return { structure: '主语 + 谓语动词 + 宾语 / 补充信息', explanation: '句子先说明谁做什么，再用后面的内容补充对象、时间、地点或原因。一般现在时可描述习惯和喜好。', focus: text.split(/\s+/).filter(word => word.length > 5)[0]?.replace(/[.,!?]/g, '') ?? '', suggestion: '按意思分组朗读，突出主要动作和关键词，句尾完整收音。' };
 }
 
-export function SentenceAssessment({ turn, onClose, renderAudio }: {
+export function SentenceAssessment({ turn, onClose, renderAudio, audioError, returnFocusTo }: {
   turn: AssessmentTurn;
   onClose: () => void;
   renderAudio: (text: string) => React.ReactNode;
+  audioError?: string;
+  returnFocusTo?: HTMLElement | null;
 }) {
   const dialog = useRef<HTMLDivElement>(null);
   const sentences = turn.answer.match(/[^.!?]+[.!?]?/g)?.map(sentence => sentence.trim()).filter(Boolean) ?? [turn.answer];
 
   useEffect(() => {
-    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousFocus = returnFocusTo ?? document.activeElement as HTMLElement | null;
     dialog.current?.querySelector<HTMLButtonElement>('button')?.focus();
-    return () => previousFocus?.focus();
+    return () => { window.requestAnimationFrame(() => { if (previousFocus?.isConnected && !previousFocus.closest('[inert]')) previousFocus.focus(); }); };
   }, []);
 
   function handleKeyDown(event: React.KeyboardEvent) {
@@ -51,6 +53,7 @@ export function SentenceAssessment({ turn, onClose, renderAudio }: {
       <header className="es-sentence-header"><div><h2 id="es-sentence-title">这句话说得怎么样</h2><small>AI 逐句测评 · 示例结果</small></div><button type="button" aria-label="关闭逐句测评" onClick={onClose}><X size={20} /></button></header>
       <div className="es-sentence-body" tabIndex={0}>
         <section className="es-assessed-original"><div className="es-spoken-line">{renderAudio(turn.answer)}<strong lang="en">{turn.answer}</strong></div>{turn.answerZh && <p>{turn.answerZh}</p>}</section>
+        {audioError && <p className="es-audio-error" role="status">{audioError}</p>}
         <div className="es-sentence-scores">
           <div><span>发音准确度</span><strong>{turn.textOnly ? '—' : turn.pronunciation}<small>{!turn.textOnly && '/100'}</small></strong></div>
           <div><span>流利度</span><strong>{turn.textOnly ? '—' : Math.min(100, turn.pronunciation + 2)}<small>{!turn.textOnly && '/100'}</small></strong></div>

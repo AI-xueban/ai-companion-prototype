@@ -382,7 +382,9 @@
 .es-conversation .es-exit-actions { gap: 9px; }
 .es-conversation .es-exit-direct { font-size: 13px; color: #93839f; }
 
-.es-conversation .es-sentence-assessment{display:flex;flex-direction:column;width:min(700px,94%);max-height:88%;padding:0;gap:0;overflow:hidden}
+.es-shell .es-sentence-assessment{display:flex;flex-direction:column;width:min(700px,94%);max-height:88%;padding:0;gap:0;overflow:hidden;background:#faf7ff;color:#493458}
+.es-shell .es-sentence-assessment p,.es-shell .es-sentence-assessment li,.es-shell .es-sentence-assessment header small{color:#7f6e8d}
+.es-shell .es-sentence-assessment .es-audio-error{color:#b13b52}
 .es-sentence-header{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:18px 22px;border-bottom:1px solid #ece5f3;flex:none}
 .es-sentence-header small{font-size:11px}
 .es-sentence-header>button{display:grid;place-items:center;width:34px;height:34px;flex:none;color:#9581aa}
@@ -419,7 +421,7 @@
 .es-conversation .es-spoken-line>strong{padding-top:3px}
 .es-conversation .es-audio-button{min-width:25px;width:25px;min-height:31px}
 .es-conversation .es-translation{margin:5px 0 0 31px;font-size:13px;line-height:1.6;color:#8a7398}
-.es-conversation .es-message-actions{margin:3px 0 0 16px;gap:0}
+.es-conversation .es-message-actions{margin:3px 0 0 31px;gap:0}
 .es-conversation .es-user{align-items:flex-start;margin-bottom:18px;gap:9px}
 .es-user-content{max-width:70%;min-width:0;display:flex;flex-direction:column;align-items:flex-end}
 .es-conversation .es-user .es-bubble{width:fit-content;max-width:100%;background:linear-gradient(100deg,#a17be1,#9570d3);border:0;border-radius:20px;padding:10px 16px}
@@ -443,8 +445,12 @@
 .es-conversation .es-user{margin-bottom:12px}
 .es-conversation .es-ai{margin-bottom:10px}
 .es-conversation .es-ai .es-bubble{padding:10px 15px}
-.es-conversation .es-assessment{min-height:23px;font-size:11px}
-.es-conversation .es-message-actions button,.es-conversation .es-hint-actions>button{min-height:26px;min-width:26px;width:26px}
+.es-conversation .es-assessment{min-height:32px;font-size:12px;background:transparent}
+.es-conversation .es-message-actions .es-translation-toggle{min-height:36px;min-width:36px;width:36px;justify-content:center}
+.es-conversation .es-user .es-message-actions .es-translation-toggle{color:#fff}
+.es-conversation .es-user .es-message-actions .es-translation-toggle[aria-pressed=false]{opacity:.65}
+.es-conversation .es-listening .es-message-actions{margin-left:0;gap:16px}
+.es-shell .es-review-score{min-height:36px;min-width:44px;color:#7548c4;text-decoration:underline;text-underline-offset:3px}
 .es-conversation .es-inline-hint{width:46%;padding:9px 14px;margin-bottom:8px}
 .es-conversation .es-inline-hint strong{font-size:13px;line-height:1.5}
 .es-conversation .es-hint-label{font-size:12px;margin-bottom:3px}
@@ -459,7 +465,7 @@
 .es-conversation .es-user{margin-bottom:8px}
 .es-conversation .es-ai{margin-bottom:7px}
 .es-conversation .es-audio-button{min-height:28px}
-.es-conversation .es-assessment{min-height:20px}
+.es-conversation .es-assessment{min-height:32px}
 .es-audio-glyph{display:flex;align-items:center;justify-content:center;gap:2px;width:22px;height:24px}
 .es-audio-glyph i{position:static;transform:none;width:2px!important;border:0;border-radius:2px;background:currentColor;opacity:.85}
 .es-audio-glyph i:nth-child(1){height:7px}
@@ -479,3 +485,13 @@
 .es-generated-word { animation: es-word-appear .18s ease-out; }
 @keyframes es-word-appear { from { opacity: .2; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .es-thinking-dots i, .es-generated-word { animation: none; } }
+.es-meter-empty { height: 8px; border-radius: 10px; background: #eee9fa; }
+.es-conversation .es-round-progress{font-size:12px;font-weight:500;color:#927da3;margin-left:6px;white-space:nowrap}
+.es-conversation .es-message-footer{display:flex;align-items:center;gap:6px;margin:3px 0 0}
+.es-conversation .es-message-footer>.es-translation{margin:0;flex:1;min-width:0}
+.es-conversation .es-message-footer>.es-translation-toggle{flex:none}
+.es-conversation .es-audio-button{width:36px;min-width:36px;min-height:36px}
+.es-conversation .es-inline-hint .es-audio-button{min-height:32px}
+.es-conversation .es-listening .is-playing .es-replay-icon{animation:es-replay 1.5s linear infinite}
+@keyframes es-replay{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.es-conversation .es-listening .is-playing .es-replay-icon{animation:none}}
