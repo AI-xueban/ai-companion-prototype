@@ -1,4 +1,6 @@
 import type { UniversalQuizQuestion } from '../components/Quiz/UniversalQuizView';
+import { getPointDifficulty, type PointKnowledgeDetails } from '../components/PersonalizedLearning/pointKnowledgeDetails';
+import { knowledgePracticeLevels, type KnowledgePracticeDifficulty } from './knowledgePracticeConfig';
 
 type Item = [string, string[], number, string];
 type Resource = { steps: string[]; questions: Item[] };
@@ -51,14 +53,14 @@ const math: Record<string, Resource> = {
   ] },
 };
 
-export function getBookPointResource(subject: string, point: { id: string; name: string }) {
-  const sample = subject === '数学' && Object.prototype.hasOwnProperty.call(math, point.name) ? math[point.name] : undefined;
+export function getBookPointResource(subject: string, point: { id: string; name: string }, forceSimulation = false) {
+  const sample = !forceSimulation && subject === '数学' && Object.prototype.hasOwnProperty.call(math, point.name) ? math[point.name] : undefined;
   const simulated = !sample;
   const resource: Resource = sample ?? {
     steps: [
-      `${subject} · ${point.name}：本节为模拟讲解，用于体验知识点学习流程。`,
-      `这里将展示「${point.name}」的概念、方法与例题。当前内容为占位演示，不代表真实课程。`,
-      `接下来进入「${point.name}」模拟练习，提交后查看结果，再返回原章节图谱。`,
+      `${subject} · ${point.name}：梳理本节的核心概念与学习方法。`,
+      `结合例题，理解「${point.name}」的解题思路与应用。`,
+      `学习后可进入「${point.name}」练习，巩固本节内容。`,
     ],
     questions: [
       [`【流程模拟题】本节正在学习哪个知识点？`, [point.name, '设备使用设置', '消息通知', '账号绑定'], 0, `本节当前知识点是「${point.name}」。本题仅用于体验答题流程，不评估学科掌握情况。`],
@@ -77,12 +79,40 @@ export function getBookPointResource(subject: string, point: { id: string; name:
   return { steps: resource.steps, questions, simulated };
 }
 
+/** Follow the configured allocation; missing formal resources remain explicit workflow previews. */
+export function getBookPointPractice(subject: string, point: { id: string; name: string }, difficulty: KnowledgePracticeDifficulty) {
+  const resource = getBookPointResource(subject, point);
+  const used = new Set<string>();
+  let simulated = resource.simulated;
+  const previews: Item[] = [
+    [`本轮阶段练习对应哪个知识点？`, [point.name, '设备设置', '消息通知', '账户绑定'], 0, `本轮学习对象是「${point.name}」。`],
+    ['练习中需要回顾知识讲解时，应查看哪个模块？', ['知识精讲', '账户设置', '消息中心', '设备管理'], 0, '知识点学练中的知识精讲用于观看对应视频。'],
+    ['一次阶段练习的题目总数是多少？', ['2道', '4道', '6道', '10道'], 2, '三类阶段练习均为6道题。'],
+    ['阶段练习按什么区分类型？', ['头像', '练习难度', '设备颜色', '登录方式'], 1, '专项攻克、巩固强化、挑战高阶对应不同难度配比。'],
+    ['练习结果页左上角返回会进入哪里？', ['消息中心', '设备管理', '知识图谱', '账户设置'], 2, '结果页返回当前教材知识图谱。'],
+    ['仅观看知识精讲视频会直接改变知识点健康分吗？', ['会自动满分', '不会', '每次加10分', '随机加分'], 1, '视频观看不直接改变练习健康分。'],
+  ];
+  const questions = knowledgePracticeLevels(difficulty).map((level, index): UniversalQuizQuestion => {
+    const sample = !resource.simulated ? resource.questions.find(question => question.difficulty === level && !used.has(question.id)) : undefined;
+    if (sample) { used.add(sample.id); return sample; }
+    simulated = true;
+    const [stem, options, answer, explanation] = previews[index];
+    return {
+      id: `book-practice-preview-${encodeURIComponent(subject)}-${point.id}-${difficulty}-${index + 1}`,
+      type: 'single_choice', subject, difficulty: level, tags: ['流程模拟题'], knowledgePoints: [point.name],
+      content: { stem: `【流程模拟题·${level}级位置】${stem}`, options },
+      result: { correctAnswer: options[answer], explanation: `${explanation} 本题仅演示${level}级题量位置，不评估学科掌握情况。` },
+    };
+  });
+  return { ...resource, questions, simulated };
+}
+
 /** Chapter-level player preview for subjects without a point graph. */
 export function getBookChapterVideoResource(subject: string, chapterName: string): ReturnType<typeof getBookPointResource> {
   return {
     steps: [
-      subject + ' · ' + chapterName + '：当前为课文讲解流程演示，不代表真实课程。',
-      '当前课文的讲解视频由基础、进阶、拓展三种训练共用，后续将替换为对应的正式课程。',
+      subject + ' · ' + chapterName + '：梳理本课的主要内容与学习重点。',
+      '结合具体内容理解重点与难点，掌握本课的学习方法。',
       '观看完成后返回精准学页面，可以自主选择当前课文的训练难度。',
     ],
     questions: [],
@@ -90,13 +120,39 @@ export function getBookChapterVideoResource(subject: string, chapterName: string
   };
 }
 
-export type KnowledgeVideo = { id: string; title: string; durationSec: number; steps: string[]; simulated: boolean };
+export type KnowledgeVideo = { id: string; title: string; topicTitle?: string; durationSec: number; steps: string[]; simulated: boolean };
+
+/** One sample per in-section point; never borrow unrelated questions to fill a paper. */
+export function getBookSectionPretest(subject: string, points: { id: string; name: string }[], health: Record<string, { status: string }>, details: Record<string, PointKnowledgeDetails>) {
+  const missingDifficultyPoints: string[] = [];
+  const entries = [...new Map(points.filter(point => health[point.id]?.status === 'unknown').map(point => [point.id, point])).values()].flatMap(point => {
+    const difficulty = getPointDifficulty(details[point.id]).stars;
+    if (difficulty == null) { missingDifficultyPoints.push(point.name); return []; }
+    const resource = getBookPointResource(subject, point);
+    const sample = !resource.simulated ? resource.questions.find(question => question.difficulty === difficulty) : undefined;
+    // Never relabel a subject sample from another difficulty. Unavailable resources stay explicit workflow simulations.
+    const question = sample ?? { ...getBookPointResource(subject, point, true).questions[0], difficulty };
+    return [{ point, question, simulated: !sample }];
+  });
+  return { entries, questions: entries.map(entry => entry.question), simulated: entries.some(entry => entry.simulated), missingDifficultyPoints };
+}
+
+function makePrototypeVideos(scope: string, topics: string[], steps: string[]): KnowledgeVideo[] {
+  return topics.flatMap((topicTitle, group) => ['视频名称', '例题1', '例题2'].map((title, index) => ({
+    id: `${scope}:topic-${group}:video-${index}`, title, topicTitle,
+    durationSec: 20 + index * 5, steps, simulated: true,
+  })));
+}
+
+export function getBookPointVideos(subject: string, point: { id: string; name: string }): KnowledgeVideo[] {
+  return makePrototypeVideos(`point-video:${subject}:${point.id}`,
+    [`${point.name}的概念`, `${point.name}的方法应用`, `${point.name}的综合运用`],
+    getBookPointResource(subject, point).steps);
+}
 
 /** Temporary source record; use each source title verbatim, without sync video categories. */
 export function getBookTextVideos(subject: string, textId: string, textName: string): KnowledgeVideo[] {
-  return [{
-    id: `text-video-demo:${encodeURIComponent(subject)}:${textId}`,
-    title: '知识点视频演示', durationSec: 20, simulated: true,
-    steps: getBookChapterVideoResource(subject, textName).steps,
-  }];
+  return makePrototypeVideos(`text-video:${encodeURIComponent(subject)}:${textId}`,
+    subject === '英语' ? ['词汇与表达', '语法与句型', '阅读与交流'] : ['内容理解', '语言赏析', '表达运用'],
+    getBookChapterVideoResource(subject, textName).steps);
 }

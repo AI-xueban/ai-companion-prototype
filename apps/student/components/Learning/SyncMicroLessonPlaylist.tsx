@@ -41,6 +41,7 @@ interface SyncMicroLessonPlaylistProps {
   };
   /** path：数学 / catalog 学·练路径；list：英语等平铺列表 */
   layout?: 'path' | 'list';
+  knowledgeTitle?: string;
 }
 
 const SyncMicroLessonPlaylist: React.FC<SyncMicroLessonPlaylistProps> = ({
@@ -56,6 +57,7 @@ const SyncMicroLessonPlaylist: React.FC<SyncMicroLessonPlaylistProps> = ({
   footerHint = '看完微课后可测本章掌握',
   practiceMark,
   layout = 'path',
+  knowledgeTitle,
 }) => {
   const progressVersion = useSyncExternalStore(subscribeSyncLessonProgress, getSyncLessonProgressVersion, () => 0);
   const practiceVersion = useSyncExternalStore(subscribeSyncBookProgress, getSyncBookProgressVersion, () => 0);
@@ -80,7 +82,7 @@ const SyncMicroLessonPlaylist: React.FC<SyncMicroLessonPlaylistProps> = ({
           originalIndex: index,
         };
       })
-      .sort((a, b) => a.sortBucket - b.sortBucket || a.originalIndex - b.originalIndex);
+      .sort((a, b) => (knowledgeTitle ? 0 : a.sortBucket - b.sortBucket) || a.originalIndex - b.originalIndex);
 
     const rows: Array<{
       key: string;
@@ -135,7 +137,7 @@ const SyncMicroLessonPlaylist: React.FC<SyncMicroLessonPlaylistProps> = ({
     }
 
     return rows;
-  }, [activeLessonId, footerLabel, isPathLayout, lessons, onEnterChapterQuiz, practice.status, practice.tone, progressVersion, practiceVersion]);
+  }, [activeLessonId, footerLabel, isPathLayout, knowledgeTitle, lessons, onEnterChapterQuiz, practice.status, practice.tone, progressVersion, practiceVersion]);
 
   const handleSelect = (index: number) => {
     const step = pathSteps[index];
@@ -157,6 +159,7 @@ const SyncMicroLessonPlaylist: React.FC<SyncMicroLessonPlaylistProps> = ({
     if (isPathLayout) {
       return (
         <LearningPathStepList
+          knowledgeTitle={knowledgeTitle}
           steps={pathSteps.map((step): LearningPathStepView => ({
             key: step.key,
             label: step.label,

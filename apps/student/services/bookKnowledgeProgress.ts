@@ -1,7 +1,7 @@
 const KEY = 'ai_friend_book_knowledge_progress_v1';
 export type PointStatus = 'unknown' | 'exploring' | 'weak' | 'reviewing' | 'mastered';
 export type QuestionHealthState = 'mastered' | 'reviewing' | 'weak';
-export type BookPointProgress = { watched?: boolean; practiced?: boolean; correctCount?: number; totalCount?: number; questionStates?: Record<string, QuestionHealthState>; lastHealthSessionId?: string };
+export type BookPointProgress = { watched?: boolean; practiced?: boolean; pretestCompleted?: boolean; prototypeRevision?: number; correctCount?: number; totalCount?: number; questionStates?: Record<string, QuestionHealthState>; lastHealthSessionId?: string };
 export const pointStatusLabels: Record<PointStatus, string> = { unknown: '未知', exploring: '探索中', weak: '待攻克', reviewing: '待复习', mastered: '已掌握' };
 /** PRD: aggregate current question states, never substitute session accuracy or completion. */
 export function getPointHealth(progress: BookPointProgress) {
@@ -15,6 +15,25 @@ export function getPointHealth(progress: BookPointProgress) {
   return { score, status, mastered, reviewing, weak, total };
 }
 export const bookPointKey = (context: string, pointId: string) => `${context}|${pointId}`;
+export const sectionPretestId = (sectionId: string) => `section-pretest:${encodeURIComponent(sectionId)}`;
+export const prototypeChapterId = (chapterId: string) => `prototype-chapter:${encodeURIComponent(chapterId)}`;
+/** A new demo revision resets the chapter without deleting prior or real learning records. */
+export function resetPrototypeChapter(context: string, chapterId: string) {
+  const revision = (readBookPointProgress(context, prototypeChapterId(chapterId)).prototypeRevision ?? 0) + 1;
+  writeBookPointProgress(context, prototypeChapterId(chapterId), { prototypeRevision: revision });
+  return revision;
+}
+export function hasPointLearningRecord(progress: BookPointProgress, hasVideoProgress = false) {
+  return hasVideoProgress || progress.watched === true || progress.practiced === true
+    || (progress.totalCount ?? 0) > 0 || Object.keys(progress.questionStates ?? {}).length > 0;
+}
+export function recommendSectionPoint<T extends { id: string }>(points: T[], health: Record<string, { status: PointStatus }>): T | undefined {
+  for (const status of ['weak', 'exploring', 'unknown', 'reviewing'] as const) {
+    const point = points.find(point => health[point.id]?.status === status);
+    if (point) return point;
+  }
+  return undefined;
+}
 export function readBookPointProgress(context: string, pointId: string): BookPointProgress {
   try { return JSON.parse(localStorage.getItem(KEY) || '{}')[bookPointKey(context, pointId)] || {}; } catch { return {}; }
 }

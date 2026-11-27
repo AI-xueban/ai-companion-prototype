@@ -1,26 +1,21 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { type GraphGroup, type Point } from './bookLearningGraph';
+import { layoutBookGraph, knowledgeEdgePath, type GraphGroup, type Point } from './bookLearningGraph';
 
-export function BookBranchGraph({ groups, selected, onSelect, statuses = {}, recommendedId }: { groups: GraphGroup[]; selected: string | undefined; onSelect: (point: Point) => void; statuses?: Record<string, string>; recommendedId?: string }) {
-  // Keep the imported catalog/Points order; alternate row direction for a continuous reading path.
-  const orderedPoints = groups.flatMap(g => g.points);
-  const columns = Math.min(3, Math.max(1, orderedPoints.length));
-  const width = columns * 150 + 30;
-  const height = Math.ceil(orderedPoints.length / columns) * 125 + 40;
-  const pointNodes = orderedPoints.map((point, index) => {
-    const row = Math.floor(index / columns);
-    const column = row % 2 ? columns - 1 - index % columns : index % columns;
-    return { point, index, x: 90 + column * 150, y: 85 + row * 125 };
-  });
+export function BookBranchGraph({ groups, selected, onSelect, onBackgroundClick, statuses = {}, recommendedId }: { groups: GraphGroup[]; selected: string | undefined; onSelect: (point: Point) => void; onBackgroundClick?: () => void; statuses?: Record<string, string>; recommendedId?: string }) {
+  const { nodes: pointNodes, edges } = layoutBookGraph(groups);
+  const statusNames: Record<string, string> = { unknown: '未知', new: '未知', exploring: '探索中', weak: '待攻克', reviewing: '待复习', mastered: '已掌握' };
+  const statusColors: Record<string, string> = { unknown: '#a7a6bd', new: '#a7a6bd', exploring: '#7da5e9', weak: '#ed7b88', reviewing: '#e7ba58', mastered: '#59bdb5' };
   const viewport = useRef<HTMLDivElement>(null);
   const [camera, setCamera] = useState({ x: 0, y: 0, scale: 1 });
   const pointers = useRef(new Map<number, { x: number; y: number }>());
-  const gesture = useRef({ moved: false, distance: 0, pointId: '' });
+  const gesture = useRef({ moved: false, distance: 0, pointId: '', startX: 0, startY: 0 });
   const positions = pointNodes;
-  const left = Math.min(...positions.map(p => p.x)) - 85;
-  const top = Math.min(...positions.map(p => p.y)) - 72;
-  const right = Math.max(...positions.map(p => p.x)) + 85;
-  const bottom = Math.max(...positions.map(p => p.y)) + 65;
+  const left = Math.min(0, ...positions.map(p => p.x - 140));
+  const top = Math.min(0, ...positions.map(p => p.y - 50));
+  const right = Math.max(160, ...positions.map(p => p.x + 140));
+  const bottom = Math.max(130, ...positions.map(p => p.y + 90));
+  const width = right - left;
+  const height = bottom - top;
   const fit = useCallback(() => {
     const el = viewport.current;
     if (!el || !el.clientWidth || !el.clientHeight) return;
@@ -56,6 +51,7 @@ export function BookBranchGraph({ groups, selected, onSelect, statuses = {}, rec
     if (!cancelled && pointers.current.size === 1 && !gesture.current.moved) {
       const node = pointNodes.find(n => n.point.id === gesture.current.pointId);
       if (node) onSelect(node.point);
+      else onBackgroundClick?.();
     }
     pointers.current.delete(event.pointerId);
     gesture.current.distance = 0;
@@ -65,7 +61,7 @@ export function BookBranchGraph({ groups, selected, onSelect, statuses = {}, rec
     onPointerDown={event => {
       if (event.button !== 0) return;
       const p = localPoint(event.clientX, event.clientY);
-      if (!pointers.current.size) gesture.current = { moved: false, distance: 0, pointId: (event.target as HTMLElement).closest('[data-point-id]')?.getAttribute('data-point-id') ?? '' };
+      if (!pointers.current.size) gesture.current = { moved: false, distance: 0, pointId: (event.target as HTMLElement).closest('[data-point-id]')?.getAttribute('data-point-id') ?? '', startX: p.x, startY: p.y };
       pointers.current.set(event.pointerId, p);
       if (pointers.current.size > 1) gesture.current.moved = true;
       event.currentTarget.setPointerCapture(event.pointerId);
@@ -87,7 +83,7 @@ export function BookBranchGraph({ groups, selected, onSelect, statuses = {}, rec
         if (oldDistance > 0) zoom(newDistance / oldDistance, center.x, center.y);
       } else {
         const dx = next.x - previous.x, dy = next.y - previous.y;
-        if (Math.abs(dx) + Math.abs(dy) > 2) gesture.current.moved = true;
+        if (Math.hypot(next.x - gesture.current.startX, next.y - gesture.current.startY) > 4) gesture.current.moved = true;
         setCamera(old => ({ ...old, x: old.x + dx, y: old.y + dy }));
       }
     }}
@@ -96,18 +92,19 @@ export function BookBranchGraph({ groups, selected, onSelect, statuses = {}, rec
     <div className="bkl-branch-world" style={{ width, height, transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})` }}>
       <svg width={width} height={height} aria-hidden="true" className="bkl-branch-lines">
         <defs><marker id="bkl-order-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7Z" fill="#a592f2" /></marker></defs>
-        {pointNodes.slice(1).map((node, i) => {
-          const previous = pointNodes[i];
-          const dx = node.x - previous.x, dy = node.y - previous.y;
-          const distance = Math.hypot(dx, dy);
-          return <path key={node.point.id} data-order-from={previous.point.id} data-order-to={node.point.id}
-            d={`M${previous.x + dx / distance * 31},${previous.y - 20 + dy / distance * 31} L${node.x - dx / distance * 34},${node.y - 20 - dy / distance * 34}`}
-            fill="none" stroke="#b4a4ef" strokeWidth="2" markerEnd="url(#bkl-order-arrow)" />;
+        {edges.map(edge => {
+          const { from: previous, to: node, kind } = edge;
+          return <path key={`${kind}-${previous.point.id}-${node.point.id}`} data-edge-kind={kind} data-order-from={previous.point.id} data-order-to={node.point.id}
+            d={knowledgeEdgePath(edge, pointNodes, selected, Math.min(24, Math.max(12, 11 / camera.scale)))}
+            fill="none" stroke="#b4a4ef" strokeWidth={kind === 'order' ? 1.6 : 1.2} markerEnd="url(#bkl-order-arrow)" />;
         })}
       </svg>
-      {pointNodes.map(n => <button key={n.point.id} data-point-id={n.point.id} className={`bkl-branch-point ${statuses[n.point.id] ?? 'new'} ${selected === n.point.id ? 'is-selected' : ''}`} style={{ left: n.x, top: n.y }} title={n.point.treePath?.length ? [...n.point.treePath, n.point.name].join(' / ') : undefined} aria-pressed={selected === n.point.id} onClick={event => { if (event.detail === 0) onSelect(n.point); }}>
+      {pointNodes.map(n => <button key={n.point.id} data-point-id={n.point.id} data-depth={n.depth} className={`bkl-branch-point ${n.depth === 0 ? 'is-mainline' : 'is-child'} ${statuses[n.point.id] ?? 'new'} ${selected === n.point.id ? 'is-selected' : ''}`} style={{ left: n.x, top: n.y }} title={n.point.treePath?.length ? [...n.point.treePath, n.point.name].join(' / ') : undefined} aria-label={`${n.point.name}，${statusNames[statuses[n.point.id] ?? 'unknown']}`} aria-pressed={selected === n.point.id} onClick={event => { if (event.detail === 0) onSelect(n.point); }}>
         {n.point.id === recommendedId && <span className="bkl-recommend-badge">推荐学习</span>}
-        <span className="bkl-gem"><span /></span><span className="bkl-branch-name">{n.point.name}</span>
+        <span className="bkl-gem" aria-hidden="true" style={{ background: 'transparent', color: statusColors[statuses[n.point.id] ?? 'unknown'] ?? statusColors.unknown }}>
+          <svg className="bkl-node-hexagon" viewBox="0 0 40 44"><path d="M17.5 2.5Q20 1 22.5 2.5L35 9.7Q37.5 11.2 37.5 14V30Q37.5 32.8 35 34.3L22.5 41.5Q20 43 17.5 41.5L5 34.3Q2.5 32.8 2.5 30V14Q2.5 11.2 5 9.7Z" fill="currentColor" stroke="white" strokeWidth="3" strokeLinejoin="round" /><path d="M6 12L20 4L34 12L20 22Z" fill="white" opacity=".18" /><path d="M20 22L34 14V30L20 38Z" fill="#514879" opacity=".09" /></svg>
+          {selected === n.point.id && <svg className="bkl-selection-anchor" viewBox="0 0 56 56"><circle cx="28" cy="28" r="23" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M28 0V7M28 49V56M0 28H7M49 28H56" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>}
+        </span><span className="bkl-branch-name" title={n.point.name} style={{ fontSize: Math.min(24, Math.max(12, 11 / camera.scale)) }}>{n.point.name}</span>
       </button>)}
     </div>
   </div>;

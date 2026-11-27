@@ -175,6 +175,10 @@ const App: React.FC = () => {
   const [personalizedScreen, setPersonalizedScreen] = useState<ExpeditionScreen>('main');
   const [personalizedLearningSignal, setPersonalizedLearningSignal] = useState(0);
   const [personalizedView, setPersonalizedView] = useState<'map' | 'theme'>('map');
+  const isPersonalizedSubpage = activeTab === 'subject' && mapMode === 'sync' && activeSubject !== '语文' && activeSubject !== '英语' && personalizedView === 'theme';
+  useEffect(() => {
+    if (activeSubject === '语文' || activeSubject === '英语') setPersonalizedView('map');
+  }, [activeSubject]);
   const [currentUserPersona, setCurrentUserPersona] = useState<UserPersona>('average');
   const [learningStrategy, setLearningStrategy] = useState<'sync-mode' | 'exam-mode'>('sync-mode');
   const [isStoreOpen, setIsStoreOpen] = useState(false);
@@ -976,7 +980,7 @@ const App: React.FC = () => {
 
             {journeyPhase === 'dashboard' && (
                 <motion.div key="dashboard" variants={pushVariants} initial="initial" animate="animate" exit="exit" transition={{ type: 'spring', damping: 25, stiffness: 200 }} className="absolute inset-0 flex flex-col">
-                    {activeTab !== 'today' && activeTab !== 'me' && activeTab !== 'partner' && !(activeTab === 'subject' && mapMode === 'sync' && personalizedScreen === 'textbook-video') && (
+                    {activeTab !== 'today' && activeTab !== 'me' && activeTab !== 'partner' && !isPersonalizedSubpage && !(activeTab === 'subject' && mapMode === 'sync' && personalizedScreen === 'textbook-video') && (
                         <TopStatusBar 
                             key={`status-${dataVersion}`} 
                             stats={userStats} 
@@ -1044,8 +1048,8 @@ const App: React.FC = () => {
                     <div className="flex-1 min-h-0 bg-surface relative z-10 overflow-hidden flex flex-col shadow-[0_-20px_60px_rgba(0,0,0,0.2)]">
                     {activeTab === 'subject' ? (
                         mapMode === 'sync' ? (
-                        <div className={`relative h-full min-h-0 w-full ${personalizedScreen === 'textbook-video' ? '' : 'pl-14'} bg-[#F5F7FA]`}>
-                            <div hidden={personalizedScreen === 'textbook-video'} className="absolute left-0 top-0 bottom-0 z-30 w-14 bg-[#FAF9F6] pointer-events-none">
+                        <div className={`relative h-full min-h-0 w-full ${personalizedScreen === 'textbook-video' || isPersonalizedSubpage ? '' : 'pl-14'} bg-[#F5F7FA]`}>
+                            <div hidden={personalizedScreen === 'textbook-video' || isPersonalizedSubpage} className="absolute left-0 top-0 bottom-0 z-30 w-14 bg-[#FAF9F6] pointer-events-none">
                                 <div className="relative pt-[72px] pointer-events-auto">
                                     <ModeSwitchRail
                                         mapMode="sync"
@@ -1168,7 +1172,7 @@ const App: React.FC = () => {
                     </div>
                     )}
                     <AnimatePresence initial={false}>
-                        {!communityPage && !demoLockScreen && !rewardAccount && !isDailyConquerActive && !isMistakeVaultDetailOpen && !isSyncSectionPageOpen && !(activeTab === 'subject' && mapMode === 'sync' && personalizedScreen !== 'main') && !isCharityPageOpen && !isTextbooksPageOpen && !isCameraFlowOpen && !isTutorLayerOpen && !isNotificationLayerOpen && !isDiscoveryFullPageOpen && !isSettingsOpen && !isStoreOpen && !isReportOpen && !isMoodModalOpen && !isEssayLabOpen && !showQuestionBankModal && !isSelfPracticeOpen && !isLessonPracticeOpen && !isSyncStudyPickerOpen && !isSyncStudySubjectOpen && !isLumiChromeHidden && (
+                        {!isPersonalizedSubpage && !communityPage && !demoLockScreen && !rewardAccount && !isDailyConquerActive && !isMistakeVaultDetailOpen && !isSyncSectionPageOpen && !(activeTab === 'subject' && mapMode === 'sync' && personalizedScreen !== 'main') && !isCharityPageOpen && !isTextbooksPageOpen && !isCameraFlowOpen && !isTutorLayerOpen && !isNotificationLayerOpen && !isDiscoveryFullPageOpen && !isSettingsOpen && !isStoreOpen && !isReportOpen && !isMoodModalOpen && !isEssayLabOpen && !showQuestionBankModal && !isSelfPracticeOpen && !isLessonPracticeOpen && !isSyncStudyPickerOpen && !isSyncStudySubjectOpen && !isLumiChromeHidden && (
                             <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
                         )}
                     </AnimatePresence>

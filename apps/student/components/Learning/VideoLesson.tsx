@@ -32,8 +32,9 @@ export interface VideoPlaylistItem {
 }
 
 interface VideoLessonProps {
-  knowledgePreview?: { title: string; steps: string[] };
+  knowledgePreview?: { title: string; steps: string[]; playlistSteps?: string[][] };
   onWatched?: () => void;
+  onPractice?: () => void;
   onComplete: (action?: 'lesson-practice') => void;
   onExit: () => void;
   task?: Task | null;
@@ -161,7 +162,7 @@ const LESSON_DB: Record<string, LessonData> = {
   }
 };
 
-export const VideoLesson: React.FC<VideoLessonProps> = ({ onComplete, onExit, task, onRewardGranted, knowledgePreview, onWatched }) => {
+export const VideoLesson: React.FC<VideoLessonProps> = ({ onComplete, onExit, task, onRewardGranted, knowledgePreview, onWatched, onPractice }) => {
   // 1. Identify Subject & Load Data
   const subjectStr = task?.subject || '数学';
   // Fallback map for loose matching
@@ -179,6 +180,7 @@ export const VideoLesson: React.FC<VideoLessonProps> = ({ onComplete, onExit, ta
   const [syncPlaylist, setSyncPlaylist] = useState<SyncMicroLesson[]>([]);
   const [playlistLoading, setPlaylistLoading] = useState(false);
   const [playlistOpen, setPlaylistOpen] = useState(false);
+  const [practiceExpanded, setPracticeExpanded] = useState(true);
   const [showEndPrompt, setShowEndPrompt] = useState(false);
   const [playbackError, setPlaybackError] = useState<PlaybackErrorKind | null>(null);
   const [retryFlash, setRetryFlash] = useState(false);
@@ -219,6 +221,7 @@ export const VideoLesson: React.FC<VideoLessonProps> = ({ onComplete, onExit, ta
   const requiredWatchRatio = knowledgePreview ? 100 : getMicroLessonWatchThreshold(task);
   const requiredWatchSec = (requiredWatchRatio / 100) * playbackDuration;
   const watchNotified = useRef(false);
+  useEffect(() => { watchNotified.current = false; }, [activeSyncLesson?.id]);
   useEffect(() => {
     if (!watchNotified.current && knowledgePreview && currentTime >= playbackDuration && effectiveWatchedSec >= playbackDuration * 0.8) {
       watchNotified.current = true;
@@ -433,6 +436,17 @@ export const VideoLesson: React.FC<VideoLessonProps> = ({ onComplete, onExit, ta
     : task?.id ?? `video_${activeSubject}_${data.title}`;
 
   const handleCompleteLesson = () => {
+    if (knowledgePreview) {
+      setIsPlaying(false);
+      setShowEndPrompt(false);
+      if (effectiveWatchRatio >= requiredWatchRatio) {
+        const result = grantVideoReward({ videoId, durationSec: playbackDuration, effectiveWatchRatio, isMicroLesson: true, requiredWatchRatio });
+        if (result.xp > 0 || result.coins > 0) onRewardGranted?.(result);
+      }
+      if (onPractice) onPractice();
+      else onComplete();
+      return;
+    }
     if (activeSyncLesson) persistWatchProgress(activeSyncLesson);
 
     if (isScopeSyncLesson) {
@@ -574,12 +588,12 @@ export const VideoLesson: React.FC<VideoLessonProps> = ({ onComplete, onExit, ta
   // A. The Video Player Area (Subject Specific Visuals)
   const renderPlayerVisual = () => {
     if (knowledgePreview) {
-      const index = Math.min(knowledgePreview.steps.length - 1, Math.floor(currentTime / playbackDuration * knowledgePreview.steps.length));
+      const steps = knowledgePreview.playlistSteps?.[activeLessonIndex] ?? knowledgePreview.steps;
+      const index = Math.min(Math.max(0, steps.length - 1), Math.floor(currentTime / playbackDuration * steps.length));
       return <div className="absolute inset-0 bg-[#171c30] flex flex-col items-center justify-center px-10 gap-6 text-white text-center">
-        <span className="text-xs text-indigo-300">知识点讲解 · 原型演示</span>
         <h2 className="text-2xl font-bold">{knowledgePreview.title}</h2>
-        <p className="text-xl leading-relaxed max-w-xl">{knowledgePreview.steps[index]}</p>
-        <span className="text-xs text-slate-400">{index + 1} / {knowledgePreview.steps.length}</span>
+        <p className="text-xl leading-relaxed max-w-xl">{steps[index]}</p>
+        {steps.length > 0 && <span className="text-xs text-slate-400">{index + 1} / {steps.length}</span>}
       </div>;
     }
     if (task?.syncLesson?.coverUrl || activeSyncLesson?.cover_url) {
@@ -1070,7 +1084,7 @@ export const VideoLesson: React.FC<VideoLessonProps> = ({ onComplete, onExit, ta
                      </p>
                      <p className="mt-1.5 text-[13px] text-slate-500">
                        {endPromptIsLast
-                         ? '去做一课一练，巩固这一小节'
+                         ? knowledgePreview ? onPractice ? '可重新播放，或从右侧去做题' : '可重新播放，或返回视频列表' : '去做一课一练，巩固这一小节'
                          : '重新播放，或继续看下一集'}
                      </p>
                      <div className="mt-5 flex flex-col gap-2.5">
@@ -1083,7 +1097,7 @@ export const VideoLesson: React.FC<VideoLessonProps> = ({ onComplete, onExit, ta
                          重新播放
                        </button>
                        {endPromptIsLast ? (
-                         hasSectionPractice ? (
+                         hasSectionPractice && !knowledgePreview ? (
                          <button
                            type="button"
                            onClick={handleCompleteLesson}
@@ -1113,7 +1127,7 @@ export const VideoLesson: React.FC<VideoLessonProps> = ({ onComplete, onExit, ta
              <div className="absolute top-0 left-0 right-0 p-4 flex justify-end items-start bg-gradient-to-b from-black/60 to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 z-20 pointer-events-none">
                  <div className={`text-right pointer-events-none ${!sidePanelOpen && isScopeSyncLesson ? 'mt-10' : ''}`}>
                      <h2 className="text-white font-bold text-sm md:text-base shadow-sm">{displayTitle}</h2>
-                     <span className="text-white/60 text-xs font-mono">{knowledgePreview ? subjectStr : activeSubject}课堂</span>
+                     <span className="text-white/60 text-xs font-mono">{knowledgePreview ? knowledgePreview.title : `${activeSubject}课堂`}</span>
                  </div>
              </div>
 
@@ -1142,23 +1156,40 @@ export const VideoLesson: React.FC<VideoLessonProps> = ({ onComplete, onExit, ta
                </button>
              ) : null}
 
+             {knowledgePreview && onPractice && (
+               <div className="absolute right-0 top-1/2 -translate-y-1/2 z-[35] flex items-center bg-transparent text-white [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.9))]">
+                 {practiceExpanded ? <>
+                   <button type="button" aria-label="收起去做题" aria-expanded={true} onClick={() => setPracticeExpanded(false)} className="self-stretch px-1 bg-transparent text-white/80 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white rounded-lg">
+                     <ChevronRight size={14} />
+                   </button>
+                   <button type="button" onClick={handleCompleteLesson} className="flex flex-col items-center gap-1.5 py-3 pl-1 pr-4 bg-transparent text-white hover:text-violet-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white rounded-lg">
+                     <PenTool size={23} />
+                     <span className="text-xs font-bold">去做题</span>
+                   </button>
+                 </> : <button type="button" aria-label="展开去做题" aria-expanded={false} onClick={() => setPracticeExpanded(true)} className="py-5 px-1.5 bg-transparent text-white hover:text-violet-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white rounded-lg">
+                   <ChevronLeft size={16} />
+                 </button>}
+               </div>
+             )}
+
              {isScopeSyncLesson ? (
                <SyncMicroLessonPlaylist
                  open={playlistOpen}
                  scopeLabel={sectionPlaylist?.scopeLabel ?? task?.syncLesson?.scopeLabel}
+                 knowledgeTitle={knowledgePreview?.title}
                  lessons={syncPlaylist}
                  activeLessonId={activeSyncLesson?.id}
                  loading={playlistLoading}
                  onClose={() => setPlaylistOpen(false)}
                  onSelect={handleSelectPlaylistLesson}
-                 onEnterChapterQuiz={hasSectionPractice ? () => {
+                 onEnterChapterQuiz={hasSectionPractice && !knowledgePreview ? () => {
                    setPlaylistOpen(false);
                    handleCompleteLesson();
                  } : undefined}
                  footerLabel={hasSectionPractice ? '进入一课一练' : undefined}
                  footerHint={hasSectionPractice ? '看完本小节同步微课后做配套练习' : undefined}
                  practiceMark={task?.sectionPractice?.syncPracticeMark}
-                 layout={activeSubject === '英语' ? 'list' : 'path'}
+                 layout={knowledgePreview ? 'path' : activeSubject === '英语' ? 'list' : 'path'}
                />
              ) : null}
 
@@ -1228,7 +1259,7 @@ export const VideoLesson: React.FC<VideoLessonProps> = ({ onComplete, onExit, ta
                          >
                              {isPlaying ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" />}
                          </button>
-                         {showPlaylistNav ? (
+                         {showPlaylistNav && (!knowledgePreview || !isLastInPlaylist) ? (
                            <button
                              type="button"
                              onClick={handlePlaylistNext}

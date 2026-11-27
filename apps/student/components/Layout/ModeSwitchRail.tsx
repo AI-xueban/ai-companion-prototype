@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Zap, BookA, Compass } from 'lucide-react';
+import { Zap, BookA } from 'lucide-react';
 import { MapMode } from '../../types';
 
 interface ModeSwitchRailProps {
@@ -13,7 +13,7 @@ interface ModeSwitchRailProps {
 
 const MODES = [
   { id: 'pro' as MapMode, label: '课本同步学', icon: Zap },
-  { id: 'sync' as MapMode, label: '精准学', icon: BookA },
+  { id: 'sync' as MapMode, label: '知识精准学', icon: BookA },
 ];
 
 /** 左侧模式切换按钮组（外层由 TopStatusBar 提供通栏底） */
@@ -28,7 +28,6 @@ export const ModeSwitchRail: React.FC<ModeSwitchRailProps> = ({
   const modes: Array<{ id: MapMode; label: string; icon: typeof Zap; view?: 'map' | 'theme' }> = onLearningViewChange ? [
     MODES[0],
     { ...MODES[1], view: 'map' },
-    { id: 'sync', label: '个性化学习', icon: Compass, view: 'theme' },
   ] : MODES;
 
   return (

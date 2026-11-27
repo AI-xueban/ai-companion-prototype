@@ -247,10 +247,12 @@ export function LearningPathStepList({
   steps,
   onSelect,
   showIndex = true,
+  knowledgeTitle,
 }: {
   steps: LearningPathStepView[];
   onSelect: (index: number) => void;
   showIndex?: boolean;
+  knowledgeTitle?: string;
 }) {
   if (steps.length === 0) return null;
 
@@ -267,11 +269,11 @@ export function LearningPathStepList({
         const phaseMeta = PHASE_META[step.phase];
         const isLast = index === steps.length - 1;
         const isActive = Boolean(step.isActive);
-        const contextLabel = step.topicTitle && step.topicTitle !== step.label ? step.topicTitle : '';
+        const contextLabel = !knowledgeTitle && step.topicTitle && step.topicTitle !== step.label ? step.topicTitle : '';
 
         return (
           <React.Fragment key={step.key}>
-            {showPhase && (
+            {knowledgeTitle ? (index === 0 || step.topicTitle !== steps[index - 1].topicTitle) && <p className={`${index > 0 ? 'mt-4' : ''} mb-2 text-[13px] font-semibold text-slate-700`}>{step.topicTitle || knowledgeTitle}</p> : showPhase && (
               <div className={`flex items-center gap-2 ${index > 0 ? 'mt-3' : ''} mb-2`}>
                 <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-600">
                   {phaseMeta.label}
@@ -327,7 +329,7 @@ export function LearningPathStepList({
                       </span>
                     ) : null}
                   </span>
-                  {step.tagLabel ? (
+                  {step.tagLabel && !knowledgeTitle ? (
                     <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
                       {step.tagLabel}
                     </span>

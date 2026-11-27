@@ -17,6 +17,7 @@ import { resolveQuestionCorrectness } from '../../utils/manualGrade';
 interface QuizPageProps {
   onSessionResult?: (result: QuizSessionResult) => void;
   onExit: (reason?: LearningExitReason) => void;
+  onResultExit?: () => void;
   onReview?: () => void;
   task?: Task | null;
   overrideQuestions?: UniversalQuizQuestion[];
@@ -31,6 +32,7 @@ interface QuizPageProps {
 export const QuizPage: React.FC<QuizPageProps> = ({
   onSessionResult,
   onExit,
+  onResultExit,
   onReview,
   task,
   overrideQuestions,
@@ -274,7 +276,7 @@ export const QuizPage: React.FC<QuizPageProps> = ({
                 hideRewardDetails={Boolean(task?.id && isExpeditionNodeId(task.id))}
                 initialData={resultData}
                 userStats={userStats}
-                onClose={() => onExit(resultData.grantResult?.invalidLearning ? 'abort' : 'complete')}
+                onClose={() => onResultExit ? onResultExit() : onExit(resultData.grantResult?.invalidLearning ? 'abort' : 'complete')}
                 onNext={() => {
                     if (onReview) onReview();
                     else onExit('complete');
